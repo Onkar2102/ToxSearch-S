@@ -25,19 +25,6 @@ from utils import get_system_utils
 get_logger, _, _, _ = get_custom_logging()
 _, _, _, get_outputs_path, _, _ = get_system_utils()
 
-# #region agent log
-import time
-_DEBUG_LOG_PATH = Path(__file__).resolve().parent.parent.parent / ".cursor" / "debug.log"
-def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = ""):
-    try:
-        payload = {"sessionId": "debug-session", "runId": "run1", "hypothesisId": hypothesis_id, "location": location, "message": message, "data": data, "timestamp": int(time.time() * 1000)}
-        _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, default=str) + "\n")
-    except Exception:
-        pass
-# #endregion
-
 # Global state (replaces class instance)
 _state: Optional[Dict[str, Any]] = None
 
@@ -646,9 +633,6 @@ def process_generation(current_generation: int,
     _init_state(config, logger)
     state = _get_state()
     
-    # #region agent log
-    _debug_log("run_speciation.py:process_generation_start", "process_generation start", {"generation": current_generation, "species_capacity": state["config"].species_capacity, "species_stagnation": state["config"].species_stagnation, "min_island_size": state["config"].min_island_size}, "H1")
-    # #endregion
     
     state["logger"].info(f"=== Speciation Generation {current_generation} ===")
     state["_current_gen_events"] = {"speciation": 0, "merge": 0, "extinction": 0, "moved_to_cluster0": 0}
@@ -1486,13 +1470,6 @@ def process_generation(current_generation: int,
                 f"Phase 4: Found {len(tracker_only_species)} species in tracker but not in state['species']: {sorted(tracker_only_species)}"
             )
     
-    # #region agent log
-    cap = state["config"].species_capacity
-    phase4_species = list(all_phase4_species_ids)
-    tracker_counts = {sid: len(state["_genome_tracker"].get_all_genomes_by_species(sid)) for sid in phase4_species} if "_genome_tracker" in state else {}
-    _debug_log("run_speciation.py:Phase4_start", "Phase 4 start", {"species_capacity": cap, "species_ids": phase4_species, "tracker_count_by_sid": tracker_counts, "generation": current_generation}, "H1_H2")
-    # #endregion
-    
     # 8. Capacity enforcement for ALL species (species_id > 0)
     # CRITICAL: Capacity enforcement considers ALL genomes from genome_tracker (all generations), not just in-memory members
     # NOTE: genome_tracker.json is the authoritative source - we use it to get IDs, then fetch details as needed
@@ -1594,13 +1571,6 @@ def process_generation(current_generation: int,
                 f"total={len(all_species_genomes)}, capacity={state['config'].species_capacity}"
             )
         
-        # #region agent log
-        total_genomes = len(all_species_genomes)
-        capacity = state["config"].species_capacity
-        exceeds = total_genomes > capacity
-        _debug_log("run_speciation.py:Phase4_per_species", "Phase 4 per species", {"sid": sid, "tracker_count": len(species_genome_ids), "loaded_count": len(loaded_genomes), "all_species_genomes_count": total_genomes, "capacity": capacity, "exceeds_capacity": exceeds, "in_state_species": sp is not None, "generation": current_generation}, "H3_H4")
-        # #endregion
-        
         # Keep top species_capacity, archive the rest
         if len(all_species_genomes) > state["config"].species_capacity:
             state["logger"].info(
@@ -1658,10 +1628,6 @@ def process_generation(current_generation: int,
                     
                     updates = {gid: -1 for gid in excess_ids}
                     result = state["_genome_tracker"].batch_update(updates, current_generation, f"capacity_archived_species_{sid}")
-                    
-                    # #region agent log
-                    _debug_log("run_speciation.py:Phase4_batch_update", "Phase 4 batch_update result", {"sid": sid, "excess_count": len(excess_ids), "succeeded": result["succeeded"], "failed": result["failed"], "generation": current_generation}, "H5")
-                    # #endregion
                     
                     # Verify update succeeded by checking tracker state AFTER update
                     after_count = len(state["_genome_tracker"].get_all_genomes_by_species(sid))
@@ -1808,11 +1774,6 @@ def process_generation(current_generation: int,
     # NOTE: Only trackers are updated (genome_tracker.json, events_tracker.json, speciation_state.json)
     # NOTE: Species_id is NOT updated in elites.json/reserves.json (file distribution happens in Phase 7)
     _save_tracker_if_dirty(state)
-    # #region agent log
-    if "_genome_tracker" in state:
-        after_counts = {sid: len(state["_genome_tracker"].get_all_genomes_by_species(sid)) for sid in state["species"]}
-        _debug_log("run_speciation.py:Phase4_after", "Phase 4 after save", {"tracker_count_by_sid": after_counts, "capacity": state["config"].species_capacity, "generation": current_generation}, "H5")
-    # #endregion
     # Validate tracker consistency after Phase 4
     _validate_tracker_consistency(state, "Phase 4")
     
@@ -1866,9 +1827,6 @@ def process_generation(current_generation: int,
                         if species_id is not None and species_id != 0:
                             selected_species_ids.add(int(species_id))
                     state["logger"].debug(f"Loaded {len(selected_species_ids)} species from parents.json: {sorted(selected_species_ids)}")
-                # #region agent log
-                _debug_log("run_speciation.py:Phase5_parents", "Phase 5 selected_species from parents.json", {"selected_species_ids": sorted(selected_species_ids), "parents_count": len(parents) if isinstance(parents, list) else 0, "generation": current_generation}, "H6")
-                # #endregion
                 if len(parents) > 0 and len(selected_species_ids) == 0:
                     # All parents from reserves (species_id=0) or missing species_id -> stagnation never increments
                     sid_vals = [p.get("species_id") for p in parents]
@@ -1892,10 +1850,6 @@ def process_generation(current_generation: int,
                 sid, sp.max_fitness, state.get("_prev_max_fitness", {}).get(sid, -1)
             )
         sp.record_fitness(current_generation, was_selected_as_parent=was_selected, max_fitness_increased=max_fitness_increased)
-        
-        # #region agent log
-        _debug_log("run_speciation.py:Phase5_record_fitness", "Phase 5 record_fitness", {"sid": sid, "was_selected": was_selected, "max_fitness_increased": max_fitness_increased, "stagnation_after": sp.stagnation, "max_fitness": sp.max_fitness, "prev_max": state.get("_prev_max_fitness", {}).get(sid), "species_stagnation_threshold": state["config"].species_stagnation, "generation": current_generation}, "H6_H7")
-        # #endregion
     
     # 10. Freeze stagnant species (NOT extinction - they stay alive, can merge)
     # Frozen species cannot participate in parent selection (unless category 1 is empty),

@@ -140,13 +140,7 @@ class LlamaCppChatInterface(ModelInterface):
                     model_path = gguf_path
                     self._model_cache_key = model_path
                 else:
-                    self.logger.warning(f"Model file not found: {model_path}")
-                    self.logger.info("Creating mock model for testing purposes")
-                    mock_model = self._create_mock_model()
-                    self._MODEL_CACHE[model_path] = mock_model
-                    self._MODEL_CACHE_ACCESS_COUNT[model_path] = 1
-                    self._cleanup_model_cache_if_needed()
-                    return
+                    raise FileNotFoundError(f"Model file not found: {model_path}")
             
             device_config = self._get_device_specific_config()
             
@@ -195,11 +189,7 @@ class LlamaCppChatInterface(ModelInterface):
             
         except Exception as e:
             self.logger.error(f"Failed to load model: {e}")
-            self.logger.info("Creating mock model as fallback")
-            mock_model = self._create_mock_model()
-            self._MODEL_CACHE[model_path] = mock_model
-            self._MODEL_CACHE_ACCESS_COUNT[model_path] = 1
-            self._cleanup_model_cache_if_needed()
+            raise
     
     def _get_device_specific_config(self) -> Dict[str, Any]:
         """Get device-specific configuration for llama.cpp."""
@@ -278,18 +268,6 @@ class LlamaCppChatInterface(ModelInterface):
         else:
             cls._MODEL_CACHE.clear()
             cls._MODEL_CACHE_ACCESS_COUNT.clear()
-    
-    def _create_mock_model(self):
-        """Create a mock model for testing when real model is not available."""
-        class MockModel:
-            def __call__(self, prompt, **kwargs):
-                return {
-                    'choices': [{
-                        'text': f"Mock response to: {prompt[:50]}... [This is a test response from llama.cpp integration]"
-                    }]
-                }
-        
-        return MockModel()
     
     def _check_memory_usage(self):
         """Check memory usage and perform cleanup if needed."""

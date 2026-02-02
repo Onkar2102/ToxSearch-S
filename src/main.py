@@ -65,16 +65,32 @@ def update_model_configs(rg_model, pg_model, logger):
         def resolve_model_entry(value: str) -> Optional[str]:
             """
             Resolve the provided model value to a concrete path string.
-            - If it's a direct .gguf path, return it as-is (relative or absolute)
+            - If it's a direct .gguf path that exists, return it as-is
+            - If it's a direct .gguf path that does not exist, treat parent dir as alias and pick by preference
             - Otherwise, treat it as an alias directory under models/ and pick a file by preference
             """
             if not value:
                 return None
             if _is_gguf_path(value):
-                return value
+                p = Path(value)
+                if not p.is_absolute():
+                    p = get_project_root() / value
+                if p.exists():
+                    return value
+                # File missing: resolve from parent directory by preference
+                parent = p.parent
+                if parent.exists():
+                    alias = str(Path(value).parent).replace("\\", "/")
+                    value = alias
+                else:
+                    logger.warning("Model file not found and parent dir missing: %s", value)
+                    return None
 
             alias = value
-            base_dir = get_project_root() / "models" / alias
+            if str(alias).startswith("models/") or Path(alias).is_absolute():
+                base_dir = get_project_root() / alias if not Path(alias).is_absolute() else Path(alias)
+            else:
+                base_dir = get_project_root() / "models" / alias
             if not base_dir.exists():
                 logger.warning("Model alias directory not found: %s", base_dir)
                 return None
@@ -88,7 +104,7 @@ def update_model_configs(rg_model, pg_model, logger):
             for pref in pref_order:
                 for f in ggufs:
                     if pref in f.name:
-                        rel = Path("./models") / alias / f.name
+                        rel = (Path(alias) / f.name) if str(alias).startswith("models/") else (Path("./models") / alias / f.name)
                         logger.info("Resolved %s -> %s", alias, rel)
                         return str(rel)
 
