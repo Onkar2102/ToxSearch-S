@@ -114,6 +114,15 @@ def get_max_genome_id_from_all_files(outputs_path: Optional[Union[str, Path]] = 
     return max_id
 
 
+def set_outputs_path(path: Union[str, Path]) -> Path:
+    """Set the outputs directory for this run (e.g. data/outputs/run01_comb). Call before get_outputs_path()."""
+    global _current_outputs_path
+    outputs_dir = Path(path).resolve()
+    outputs_dir.mkdir(parents=True, exist_ok=True)
+    _current_outputs_path = outputs_dir
+    return outputs_dir
+
+
 def get_outputs_path():
     """Get the absolute path to the outputs directory"""
     global _current_outputs_path
