@@ -108,12 +108,16 @@ def _validate_tracker_consistency(state: Dict[str, Any], phase_name: str) -> Non
 
 
 def _load_json_file(file_path: Path, logger, default=None):
-    """Load JSON file with error handling. Returns default if file doesn't exist or fails."""
+    """Load JSON file with error handling. Returns default if file doesn't exist or fails.
+    Uses population_io for elites.json when possible."""
     if default is None:
         default = []
     if not file_path.exists():
         return default
     try:
+        if file_path.name == "elites.json":
+            from utils.population_io import load_elites
+            return load_elites(str(file_path), logger=logger) or default
         with open(file_path, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
@@ -341,7 +345,7 @@ def _load_species_leaders_from_state(outputs_path: Path, logger) -> Dict[int, Tu
 
 
 def _load_genomes_by_ids(genome_ids: List[str], outputs_path: Path, logger) -> List[Dict[str, Any]]:
-    """Load genome data for given IDs from elites.json, temp.json, and reserves.json."""
+    """Load genome data for given IDs from elites.json, temp.json, and reserves.json (archive genomes never rejoin)."""
     genome_ids_set = set(str(gid) for gid in genome_ids)
     loaded_genomes = []
     seen_ids = set()
@@ -411,7 +415,7 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
     temp_genomes = _load_json_file(temp_path_obj, logger, [])
     archive_genomes = _load_json_file(archive_path, logger, [])
     
-    # Update species_id from tracker for each file
+    # Update species_id from tracker for each file (archive is NOT updated - genomes never leave archive)
     _update_genomes_from_tracker(elites_genomes, genome_tracker, current_generation, logger, "elites.json", default_species_id=0)
     _update_genomes_from_tracker(reserves_genomes, genome_tracker, current_generation, logger, "reserves.json", default_species_id=0)
     _update_genomes_from_tracker(temp_genomes, genome_tracker, current_generation, logger, "temp.json", default_species_id=0)
@@ -431,7 +435,7 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
         "temp": (temp_genomes, set(str(g.get("id")) for g in temp_genomes if g.get("id")))
     }
     
-    # Collect all genomes for redistribution
+    # Collect all genomes for redistribution (elites, reserves, temp only - archive genomes never leave)
     tracked_genomes = []
     untracked_by_file = {"elites": [], "reserves": []}
     
@@ -446,7 +450,7 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
     # Redistribute tracked genomes by species_id
     elites_to_save = untracked_by_file["elites"]
     reserves_to_save = untracked_by_file["reserves"]
-    # Preserve ALL existing archived genomes (archive.json is final destination - genomes never leave)
+    # Preserve ALL existing archived genomes (archive is final destination - genomes never leave)
     archive_to_save = [g for g in archive_genomes if g.get("species_id") == -1 or str(g.get("id")) not in tracked_ids]
     movements = []
     
@@ -2063,6 +2067,42 @@ def process_generation(current_generation: int,
         except Exception as e:
             state["logger"].warning(f"Failed to sync in-memory cluster0 with reserves.json: {e}")
     
+    # Sync in-memory species members from genome_tracker so sp.size == len(member_ids) == tracker count.
+    # Ensures members never exceed species_capacity and saved speciation_state size matches elites.json.
+    if "_genome_tracker" in state:
+        elites_path = outputs_path / "elites.json"
+        for sid, sp in list(state["species"].items()):
+            tracker_member_ids = state["_genome_tracker"].get_all_genomes_by_species(sid)
+            current_member_ids = {str(m.id) for m in sp.members}
+            tracker_set = set(str(mid) for mid in tracker_member_ids)
+            if len(tracker_member_ids) != len(sp.members) or tracker_set != current_member_ids:
+                # Rebuild sp.members from tracker (authoritative) and elites
+                loaded_genomes = _load_genomes_by_ids(tracker_member_ids, outputs_path, state["logger"]) if elites_path.exists() else []
+                loaded_by_id = {str(g.get("id")): g for g in loaded_genomes if g.get("id") is not None}
+                new_members = []
+                for mid in tracker_member_ids:
+                    mid_str = str(mid)
+                    existing = next((m for m in sp.members if str(m.id) == mid_str), None)
+                    if existing is not None:
+                        new_members.append(existing)
+                    elif mid_str in loaded_by_id:
+                        try:
+                            ind = Individual.from_genome(loaded_by_id[mid_str])
+                            ind.species_id = sid
+                            new_members.append(ind)
+                        except Exception as e:
+                            state["logger"].debug(f"Failed to create Individual for genome {mid} in species {sid}: {e}")
+                if new_members:
+                    # Ensure leader is first and in list exactly once
+                    best = max(new_members, key=lambda x: x.fitness)
+                    sp.leader = best
+                    sp.members = [best] + [m for m in new_members if m.id != best.id]
+                else:
+                    sp.members = []
+                state["logger"].debug(
+                    f"Phase 7: Synced species {sid} members from tracker: {len(sp.members)} (was {len(current_member_ids)})"
+                )
+    
     # ========================================================================
     # PHASE 8: METRICS & STATISTICS
     # ========================================================================
@@ -2418,8 +2458,8 @@ def save_state(path: str) -> None:
     # Always load elites_genomes for validation and reconstruction (needed even when using tracker)
     if elites_path.exists():
         try:
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                elites_genomes = json.load(f)
+            from utils.population_io import load_elites
+            elites_genomes = load_elites(str(elites_path), logger=logger)
         except Exception as e:
             logger.warning(f"Failed to load elites.json: {e}")
             elites_genomes = []
