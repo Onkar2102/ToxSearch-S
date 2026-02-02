@@ -131,13 +131,13 @@ src/
 
 **Purpose**: 8-phase speciation process for each generation
 
-1. **Existing Species Processing**: Assign variants to species or cluster 0
+1. **Existing Species Processing**: Assign variants to species or cluster 0 (radius enforcement)
 2. **Cluster 0 Speciation**: Form new species from cohesive clusters
-3. **Merging**: Combine similar species (θ_merge threshold)
-4. **Radius & Capacity Enforcement**: Enforce boundaries and limits
+3. **Merging**: Combine similar species (θ_merge); radius enforcement after merging
+4. **Capacity Enforcement**: Enforce species capacity only (radius in Phases 1 and 3)
 5. **Freeze & Incubator**: Track stagnation, freeze/dissolve species
 6. **Cluster 0 Capacity Enforcement**: Archive excess reserves
-7. **Final Redistribution**: Synchronize files with genome_tracker
+7. **Final Redistribution**: Update species_id from tracker for elites, reserves, temp; redistribute to files; archive append-only
 8. **Metrics & Stats**: Calculate diversity and cluster quality
 
 ### 3.4 Genome Tracker
@@ -147,6 +147,7 @@ src/
 - Updated at every speciation event
 - Used in Phase 7 to synchronize file-based species_id values
 - Enables efficient deferred file updates
+- Archive is a final destination: genomes in archive are not moved back to elites or reserves
 
 ---
 
@@ -251,16 +252,12 @@ For all species pairs (S_i, S_j):
     Mark S_i, S_j as extinct
 ```
 
-### 5.4 Phase 4: Radius & Capacity Enforcement
+### 5.4 Phase 4: Capacity Enforcement
+
+Radius enforcement is done in Phase 1 and Phase 3; Phase 4 only enforces species capacity.
 
 ```
-For each species S:
-  # Radius enforcement
-  For each member m:
-    if d_ensemble(m, leader) > θ_sim:
-      move m to cluster 0
-
-  # Capacity enforcement
+For each species S (species_id > 0):
   if |S| > species_capacity:
     Sort members by fitness (descending)
     Archive excess members (lowest fitness)
@@ -292,10 +289,10 @@ if |cluster_0| > cluster0_max_capacity:
 
 ### 5.7 Phase 7: Final Redistribution
 
-Synchronize file-based species_id with genome_tracker (authoritative source).
+Update species_id from genome_tracker for genomes in elites, reserves, and temp only. Redistribute those to the correct files by species_id. Archive is not read for redistribution; genomes in archive are not updated or moved back.
 
 ```
-For each genome g in (elites ∪ reserves ∪ archive ∪ temp):
+For each genome g in (elites ∪ reserves ∪ temp):
   g.species_id = genome_tracker[g.id].species_id
 
 Redistribute:
@@ -303,6 +300,8 @@ Redistribute:
   species_id = 0  → reserves.json
   species_id = -1 → archive.json
 ```
+
+Archive.json is append-only; genomes already in archive stay there.
 
 ### 5.8 Phase 8: Metrics & Stats
 

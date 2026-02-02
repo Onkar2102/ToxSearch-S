@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""RQ1: Quality + diversity comparison (baseline vs speciated ToxSearch). Outputs to experiments/comparison_results/rq1_quality/."""
 
 # ===========================================================================
 # # RQ1: Quality + Diversity Comparison (Baseline vs Speciated ToxSearch)

@@ -1,5 +1,7 @@
 """
-Main script for evolving LLM input prompts using mutation operators.
+Evolution entry point. Reads elites and reserves via population_io; writes variants
+to temp.json. Species assignment and file distribution (elites/reserves/archive) are
+done by speciation Phase 7, not by this module.
 """
 
 import json

@@ -25,6 +25,18 @@ from utils import get_system_utils
 get_logger, _, _, _ = get_custom_logging()
 _, _, _, get_outputs_path, _, _ = get_system_utils()
 
+# #region agent log
+import time
+_DEBUG_LOG_PATH = Path(__file__).resolve().parent.parent.parent / ".cursor" / "debug.log"
+def _debug_log(location: str, message: str, data: dict, hypothesis_id: str = ""):
+    try:
+        payload = {"sessionId": "debug-session", "runId": "run1", "hypothesisId": hypothesis_id, "location": location, "message": message, "data": data, "timestamp": int(time.time() * 1000)}
+        _DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, default=str) + "\n")
+    except Exception:
+        pass
+# #endregion
 
 # Global state (replaces class instance)
 _state: Optional[Dict[str, Any]] = None
@@ -634,6 +646,10 @@ def process_generation(current_generation: int,
     _init_state(config, logger)
     state = _get_state()
     
+    # #region agent log
+    _debug_log("run_speciation.py:process_generation_start", "process_generation start", {"generation": current_generation, "species_capacity": state["config"].species_capacity, "species_stagnation": state["config"].species_stagnation, "min_island_size": state["config"].min_island_size}, "H1")
+    # #endregion
+    
     state["logger"].info(f"=== Speciation Generation {current_generation} ===")
     state["_current_gen_events"] = {"speciation": 0, "merge": 0, "extinction": 0, "moved_to_cluster0": 0}
     state["_archived_count"] = 0
@@ -810,7 +826,48 @@ def process_generation(current_generation: int,
         # Snapshot max_fitness before Phase 1 (leader_follower_clustering and later steps can update it).
         # Used in Phase 5 for record_fitness(max_fitness_increased). Species created this gen are not in
         # _prev_max_fitness -> treated as max_fitness_increased=True.
-        state["_prev_max_fitness"] = {int(sid): sp.max_fitness for sid, sp in state["species"].items()}
+        #
+        # CRITICAL FIX: Compute true max fitness from tracker + loaded genomes, not just in-memory sp.members
+        # In-memory members may be incomplete after load_state() (lazy loading), which causes sp.max_fitness
+        # to be artificially low. This would make max_fitness_increased always True and prevent stagnation.
+        outputs_path_prev_max = get_outputs_path()
+        state["_prev_max_fitness"] = {}
+        
+        if "_genome_tracker" in state:
+            from utils.population_io import _extract_north_star_score
+            
+            for sid, sp in state["species"].items():
+                # Get all genome IDs for this species from tracker (authoritative source)
+                species_genome_ids = state["_genome_tracker"].get_all_genomes_by_species(sid)
+                
+                if species_genome_ids:
+                    # Load genomes and compute true max fitness
+                    loaded_genomes = _load_genomes_by_ids(species_genome_ids, outputs_path_prev_max, state["logger"])
+                    
+                    if loaded_genomes:
+                        # Compute max fitness from loaded genomes
+                        max_fitness = 0.0
+                        for g in loaded_genomes:
+                            fitness = _extract_north_star_score(g, "toxicity")
+                            if fitness is not None and fitness > max_fitness:
+                                max_fitness = fitness
+                        state["_prev_max_fitness"][int(sid)] = max_fitness
+                        
+                        # Log if in-memory max differs significantly from true max
+                        if abs(sp.max_fitness - max_fitness) > 0.001:
+                            state["logger"].debug(
+                                f"Species {sid}: _prev_max_fitness corrected from in-memory {sp.max_fitness:.4f} "
+                                f"to tracker-based {max_fitness:.4f} ({len(loaded_genomes)} genomes)"
+                            )
+                    else:
+                        # Fallback to in-memory if no genomes loaded
+                        state["_prev_max_fitness"][int(sid)] = sp.max_fitness
+                else:
+                    # No genomes in tracker for this species, use in-memory
+                    state["_prev_max_fitness"][int(sid)] = sp.max_fitness
+        else:
+            # No tracker available, fall back to in-memory max_fitness
+            state["_prev_max_fitness"] = {int(sid): sp.max_fitness for sid, sp in state["species"].items()}
 
         # 1. Compute and save embeddings to temp.json
         if temp_path is None:
@@ -1405,13 +1462,52 @@ def process_generation(current_generation: int,
     # NOTE: Radius enforcement is done in Phase 1 (after variant processing) and Phase 3 (after merging)
     # Phase 4 only enforces capacity limits for species_id > 0
     
+    # CRITICAL FIX: Process ALL species_id > 0 from tracker, not just those in state["species"]
+    # Some species may be removed from state["species"] during Phase 3 (radius cleanup) but still have
+    # genomes in the tracker that need capacity enforcement.
+    all_phase4_species_ids = set(state["species"].keys())  # Default to in-memory species
+    
+    if "_genome_tracker" not in state:
+        state["logger"].error("Genome tracker not available for capacity enforcement")
+    else:
+        # Get all species IDs from tracker that have genomes (species_id > 0)
+        tracker_stats = state["_genome_tracker"].get_distribution_stats()
+        tracker_species_ids = {int(sid) for sid, count in tracker_stats["by_species_id"].items() 
+                               if int(sid) > 0 and count > 0}
+        
+        # Combine with species in state["species"] 
+        in_memory_species_ids = set(state["species"].keys())
+        all_phase4_species_ids = tracker_species_ids | in_memory_species_ids
+        
+        # Log species not in state["species"] but in tracker (these were previously missed)
+        tracker_only_species = tracker_species_ids - in_memory_species_ids
+        if tracker_only_species:
+            state["logger"].info(
+                f"Phase 4: Found {len(tracker_only_species)} species in tracker but not in state['species']: {sorted(tracker_only_species)}"
+            )
+    
+    # #region agent log
+    cap = state["config"].species_capacity
+    phase4_species = list(all_phase4_species_ids)
+    tracker_counts = {sid: len(state["_genome_tracker"].get_all_genomes_by_species(sid)) for sid in phase4_species} if "_genome_tracker" in state else {}
+    _debug_log("run_speciation.py:Phase4_start", "Phase 4 start", {"species_capacity": cap, "species_ids": phase4_species, "tracker_count_by_sid": tracker_counts, "generation": current_generation}, "H1_H2")
+    # #endregion
+    
     # 8. Capacity enforcement for ALL species (species_id > 0)
     # CRITICAL: Capacity enforcement considers ALL genomes from genome_tracker (all generations), not just in-memory members
     # NOTE: genome_tracker.json is the authoritative source - we use it to get IDs, then fetch details as needed
     # NOTE: Does NOT update elites.json/reserves.json (only trackers are updated)
     outputs_path = get_outputs_path()
     
-    for sid, sp in list(state["species"].items()):
+    # Process all species IDs (from both state["species"] and tracker)
+    for sid in sorted(all_phase4_species_ids):
+        # Check if this species is in state["species"] (has in-memory representation)
+        sp = state["species"].get(sid, None)
+        
+        # Log if processing tracker-only species (not in state["species"])
+        if sp is None:
+            state["logger"].debug(f"Phase 4: Processing tracker-only species {sid} (not in state['species'])")
+        
         # Load ALL genomes for this species (need full genome data with fitness for sorting)
         # Get genome IDs from tracker (authoritative source), then load actual genome data using helper
         all_species_genomes = []
@@ -1425,14 +1521,17 @@ def process_generation(current_generation: int,
         species_genome_ids_set = set(species_genome_ids)  # Convert to set for efficient lookup
         
         # Get in-memory member IDs (current generation genomes that may not be in tracker yet)
-        in_memory_ids = {str(m.id) for m in sp.members}
-        
-        # Register any in-memory members not yet in tracker
-        for member in sp.members:
-            member_id_str = str(member.id)
-            if member_id_str not in species_genome_ids_set:
-                state["_genome_tracker"].register(member_id_str, sid, current_generation)
-                species_genome_ids_set.add(member_id_str)
+        # Only if species has in-memory representation
+        in_memory_ids = set()
+        if sp is not None:
+            in_memory_ids = {str(m.id) for m in sp.members}
+            
+            # Register any in-memory members not yet in tracker
+            for member in sp.members:
+                member_id_str = str(member.id)
+                if member_id_str not in species_genome_ids_set:
+                    state["_genome_tracker"].register(member_id_str, sid, current_generation)
+                    species_genome_ids_set.add(member_id_str)
         
         # Combine all IDs and fetch genome details using helper (loads from elites.json, temp.json, reserves.json)
         # Note: We use the helper to fetch details, but don't trust species_id in those files - tracker is authoritative
@@ -1446,13 +1545,15 @@ def process_generation(current_generation: int,
         all_species_genomes.extend(loaded_genomes)
         
         # For in-memory members not found in files, convert using helper
-        for member in sp.members:
-            member_id_str = str(member.id)
-            if member_id_str not in loaded_by_id:
-                # Convert Individual to genome dict (not found in files yet)
-                genome = _individual_to_genome_dict(member, current_generation)
-                genome["species_id"] = sid
-                all_species_genomes.append(genome)
+        # Only if species has in-memory representation
+        if sp is not None:
+            for member in sp.members:
+                member_id_str = str(member.id)
+                if member_id_str not in loaded_by_id:
+                    # Convert Individual to genome dict (not found in files yet)
+                    genome = _individual_to_genome_dict(member, current_generation)
+                    genome["species_id"] = sid
+                    all_species_genomes.append(genome)
         
         # Log if genomes are missing (debugging)
         if len(all_species_genomes) < len(all_genome_ids):
@@ -1480,55 +1581,71 @@ def process_generation(current_generation: int,
         all_species_genomes = [g for g, _ in valid_genomes] + invalid_genomes
         
         # Log species state for debugging
-        state["logger"].debug(
-            f"Phase 4: Species {sid} (state={sp.species_state}): "
-            f"tracker={len(species_genome_ids)}, loaded={len(loaded_genomes)}, "
-            f"in_memory={len(sp.members)}, total={len(all_species_genomes)}, capacity={state['config'].species_capacity}"
-        )
+        if sp is not None:
+            state["logger"].debug(
+                f"Phase 4: Species {sid} (state={sp.species_state}): "
+                f"tracker={len(species_genome_ids)}, loaded={len(loaded_genomes)}, "
+                f"in_memory={len(sp.members)}, total={len(all_species_genomes)}, capacity={state['config'].species_capacity}"
+            )
+        else:
+            state["logger"].debug(
+                f"Phase 4: Species {sid} (tracker-only, not in state['species']): "
+                f"tracker={len(species_genome_ids)}, loaded={len(loaded_genomes)}, "
+                f"total={len(all_species_genomes)}, capacity={state['config'].species_capacity}"
+            )
+        
+        # #region agent log
+        total_genomes = len(all_species_genomes)
+        capacity = state["config"].species_capacity
+        exceeds = total_genomes > capacity
+        _debug_log("run_speciation.py:Phase4_per_species", "Phase 4 per species", {"sid": sid, "tracker_count": len(species_genome_ids), "loaded_count": len(loaded_genomes), "all_species_genomes_count": total_genomes, "capacity": capacity, "exceeds_capacity": exceeds, "in_state_species": sp is not None, "generation": current_generation}, "H3_H4")
+        # #endregion
         
         # Keep top species_capacity, archive the rest
         if len(all_species_genomes) > state["config"].species_capacity:
             state["logger"].info(
                 f"Phase 4: Species {sid} exceeds capacity: {len(all_species_genomes)} genomes "
                 f"(capacity: {state['config'].species_capacity}), will archive {len(all_species_genomes) - state['config'].species_capacity}"
+                + (f" (tracker-only species)" if sp is None else "")
             )
             keep_genomes = all_species_genomes[:state["config"].species_capacity]
             excess_genomes = all_species_genomes[state["config"].species_capacity:]
             
-            # Update in-memory members to match kept genomes
-            keep_ids = {g.get("id") for g in keep_genomes if g.get("id") is not None}
-            sp.members = [m for m in sp.members if m.id in keep_ids]
-            
-            # Add any kept genomes that aren't in in-memory members yet (from previous generations)
-            for genome in keep_genomes:
-                gid = genome.get("id")
-                if gid and not any(m.id == gid for m in sp.members):
-                    # Create Individual from genome if needed
-                    from .species import Individual
-                    ind = Individual.from_genome(genome)
-                    sp.members.append(ind)
-            
-            # Reselect leader as highest fitness member (after capacity enforcement)
-            # For merged species: leader was already selected during merge (highest fitness from all members)
-            # Only update if a new genome with higher fitness was added (not applicable in Phase 4)
-            # For non-merged species: ensure leader is highest fitness
-            if sp.members:
-                if sp.cluster_origin == "merge":
-                    # Merged species: leader was set during merge, only update if higher fitness genome exists
-                    current_leader_fitness = sp.leader.fitness if sp.leader else float('-inf')
-                    highest_fitness_member = max(sp.members, key=lambda x: x.fitness)
-                    if highest_fitness_member.fitness > current_leader_fitness:
-                        state["logger"].debug(f"Phase 4: Merged species {sid} leader updated: {sp.leader.id} -> {highest_fitness_member.id} (new higher fitness genome)")
-                        sp.leader = highest_fitness_member
-                else:
-                    # Non-merged species: ensure leader is highest fitness
-                    new_leader = max(sp.members, key=lambda x: x.fitness)
-                    if new_leader != sp.leader:
-                        state["logger"].debug(f"Phase 4: Species {sid} leader updated: {sp.leader.id if sp.leader else None} -> {new_leader.id} (after capacity enforcement)")
-                    sp.leader = new_leader
+            # Update in-memory members to match kept genomes (only if species has in-memory representation)
+            if sp is not None:
+                keep_ids = {g.get("id") for g in keep_genomes if g.get("id") is not None}
+                sp.members = [m for m in sp.members if m.id in keep_ids]
                 
-                if sp.leader not in sp.members:
-                    sp.members.insert(0, sp.leader)
+                # Add any kept genomes that aren't in in-memory members yet (from previous generations)
+                for genome in keep_genomes:
+                    gid = genome.get("id")
+                    if gid and not any(m.id == gid for m in sp.members):
+                        # Create Individual from genome if needed
+                        from .species import Individual
+                        ind = Individual.from_genome(genome)
+                        sp.members.append(ind)
+                
+                # Reselect leader as highest fitness member (after capacity enforcement)
+                # For merged species: leader was already selected during merge (highest fitness from all members)
+                # Only update if a new genome with higher fitness was added (not applicable in Phase 4)
+                # For non-merged species: ensure leader is highest fitness
+                if sp.members:
+                    if sp.cluster_origin == "merge":
+                        # Merged species: leader was set during merge, only update if higher fitness genome exists
+                        current_leader_fitness = sp.leader.fitness if sp.leader else float('-inf')
+                        highest_fitness_member = max(sp.members, key=lambda x: x.fitness)
+                        if highest_fitness_member.fitness > current_leader_fitness:
+                            state["logger"].debug(f"Phase 4: Merged species {sid} leader updated: {sp.leader.id} -> {highest_fitness_member.id} (new higher fitness genome)")
+                            sp.leader = highest_fitness_member
+                    else:
+                        # Non-merged species: ensure leader is highest fitness
+                        new_leader = max(sp.members, key=lambda x: x.fitness)
+                        if new_leader != sp.leader:
+                            state["logger"].debug(f"Phase 4: Species {sid} leader updated: {sp.leader.id if sp.leader else None} -> {new_leader.id} (after capacity enforcement)")
+                        sp.leader = new_leader
+                    
+                    if sp.leader not in sp.members:
+                        sp.members.insert(0, sp.leader)
             
             # Update genome tracker FIRST: mark excess genomes as archived (species_id=-1)
             # This must happen before archiving to ensure tracker is authoritative
@@ -1541,6 +1658,10 @@ def process_generation(current_generation: int,
                     
                     updates = {gid: -1 for gid in excess_ids}
                     result = state["_genome_tracker"].batch_update(updates, current_generation, f"capacity_archived_species_{sid}")
+                    
+                    # #region agent log
+                    _debug_log("run_speciation.py:Phase4_batch_update", "Phase 4 batch_update result", {"sid": sid, "excess_count": len(excess_ids), "succeeded": result["succeeded"], "failed": result["failed"], "generation": current_generation}, "H5")
+                    # #endregion
                     
                     # Verify update succeeded by checking tracker state AFTER update
                     after_count = len(state["_genome_tracker"].get_all_genomes_by_species(sid))
@@ -1687,6 +1808,11 @@ def process_generation(current_generation: int,
     # NOTE: Only trackers are updated (genome_tracker.json, events_tracker.json, speciation_state.json)
     # NOTE: Species_id is NOT updated in elites.json/reserves.json (file distribution happens in Phase 7)
     _save_tracker_if_dirty(state)
+    # #region agent log
+    if "_genome_tracker" in state:
+        after_counts = {sid: len(state["_genome_tracker"].get_all_genomes_by_species(sid)) for sid in state["species"]}
+        _debug_log("run_speciation.py:Phase4_after", "Phase 4 after save", {"tracker_count_by_sid": after_counts, "capacity": state["config"].species_capacity, "generation": current_generation}, "H5")
+    # #endregion
     # Validate tracker consistency after Phase 4
     _validate_tracker_consistency(state, "Phase 4")
     
@@ -1740,6 +1866,9 @@ def process_generation(current_generation: int,
                         if species_id is not None and species_id != 0:
                             selected_species_ids.add(int(species_id))
                     state["logger"].debug(f"Loaded {len(selected_species_ids)} species from parents.json: {sorted(selected_species_ids)}")
+                # #region agent log
+                _debug_log("run_speciation.py:Phase5_parents", "Phase 5 selected_species from parents.json", {"selected_species_ids": sorted(selected_species_ids), "parents_count": len(parents) if isinstance(parents, list) else 0, "generation": current_generation}, "H6")
+                # #endregion
                 if len(parents) > 0 and len(selected_species_ids) == 0:
                     # All parents from reserves (species_id=0) or missing species_id -> stagnation never increments
                     sid_vals = [p.get("species_id") for p in parents]
@@ -1763,6 +1892,10 @@ def process_generation(current_generation: int,
                 sid, sp.max_fitness, state.get("_prev_max_fitness", {}).get(sid, -1)
             )
         sp.record_fitness(current_generation, was_selected_as_parent=was_selected, max_fitness_increased=max_fitness_increased)
+        
+        # #region agent log
+        _debug_log("run_speciation.py:Phase5_record_fitness", "Phase 5 record_fitness", {"sid": sid, "was_selected": was_selected, "max_fitness_increased": max_fitness_increased, "stagnation_after": sp.stagnation, "max_fitness": sp.max_fitness, "prev_max": state.get("_prev_max_fitness", {}).get(sid), "species_stagnation_threshold": state["config"].species_stagnation, "generation": current_generation}, "H6_H7")
+        # #endregion
     
     # 10. Freeze stagnant species (NOT extinction - they stay alive, can merge)
     # Frozen species cannot participate in parent selection (unless category 1 is empty),
@@ -1774,6 +1907,9 @@ def process_generation(current_generation: int,
         if sp.stagnation >= state["config"].species_stagnation and sp.species_state != "frozen":
             sp.species_state = "frozen"
             frozen_count += 1
+            # CRITICAL FIX: Increment extinction_events counter when freezing a species
+            # This ensures extinction_events in metrics and EvolutionTracker.json reflect actual freezes
+            state["_current_gen_events"]["extinction"] += 1
             state["logger"].info(
                 f"Frozen species {sid} (stagnation={sp.stagnation} >= {state['config'].species_stagnation}) - "
                 f"excluded from parent selection, but still alive and can merge"
@@ -1782,7 +1918,7 @@ def process_generation(current_generation: int,
     # Update trackers after freezing
     if frozen_count > 0:
         _save_tracker_if_dirty(state)
-        state["logger"].info(f"Step 10: Frozen {frozen_count} species (trackers updated)")
+        state["logger"].info(f"Step 10: Frozen {frozen_count} species, extinction_events={state['_current_gen_events']['extinction']} (trackers updated)")
     
     # 11. Incubate small species (extinction/dissolution - move to cluster 0)
     # When species have less members than required (min_island_size), we incubate them.
@@ -2744,7 +2880,7 @@ def save_state(path: str) -> None:
         if n < min_island_size:
             logger.debug(
                 "Species %s has size %d < min_island_size %d (count from elites.json); "
-                "process_extinctions should move such species to incubator when in-memory size drops.",
+                "Phase 5 (Stagnation and Incubation) moves such species to incubator when in-memory size drops.",
                 sid_str, n, min_island_size
             )
 
@@ -2891,7 +3027,7 @@ def load_state(path: str) -> bool:
                     genome_by_id = {str(g.get("id")): g for g in loaded_genomes}
                     
                     # Load all members (excluding leader if it's in member_ids).
-                    # Include all that exist so sp.size matches len(member_ids) for process_extinctions.
+                    # Include all that exist so sp.size matches len(member_ids) for Phase 5 stagnation/incubator logic.
                     loaded_count = 0
                     for member_id in member_ids:
                         member_id_str = str(member_id)

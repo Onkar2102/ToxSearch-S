@@ -91,7 +91,8 @@ class GenomeTracker:
         Returns:
             Tuple of (success: bool, reassignment_info: Optional[Tuple[genome_id, old_sid, new_sid]])
             - success: True if updated successfully, False otherwise
-            - reassignment_info: If genome was reassigned from archive (-1) to active (>0), returns (genome_id, old_sid, new_sid), else None
+            - reassignment_info: If genome was reassigned from archive (-1) to active (>0), returns (genome_id, old_sid, new_sid), else None.
+              In the current design, archive genomes are not moved back; this return value supports possible future use or external updates.
         """
         # Convert to string to ensure type consistency (accepts both str and int)
         genome_id = str(genome_id)
@@ -138,7 +139,8 @@ class GenomeTracker:
         Returns:
             Dictionary with results: {"total": N, "succeeded": M, "failed": K, "partial": bool, 
                                      "failed_genome_ids": [...], "errors": [...],
-                                     "reassigned_from_archive": [(genome_id, old_sid, new_sid), ...]}
+                                     "reassigned_from_archive": [(genome_id, old_sid, new_sid), ...]}.
+            In the current design, archive genomes are not moved back; reassigned_from_archive supports possible future use or external updates.
         """
         # Convert all keys to strings for consistency (accepts both str and int keys)
         updates = {str(k): v for k, v in updates.items()}

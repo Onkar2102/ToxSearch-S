@@ -51,13 +51,7 @@ from .reserves import (
 # Merging
 from .merging import process_merges
 
-# Extinction
-from .extinction import (
-    process_extinctions
-)
-
-
-
+# Extinction (process_extinctions not used by main flow; Phase 5 in run_speciation is in-line)
 # Metrics
 from .metrics import (
     GenerationMetrics, SpeciationMetricsTracker, compute_diversity_metrics,
@@ -66,7 +60,7 @@ from .metrics import (
 
 # Labeling (c-TF-IDF based species characterization)
 from .labeling import (
-    extract_species_labels, update_species_labels, get_species_label_summary
+    extract_species_labels, update_species_labels
 )
 
 # Main entry point (similar to run_evolution)
@@ -102,15 +96,12 @@ __all__ = [
     # Merging
     "process_merges",
     
-    # Extinction
-    "process_extinctions",
-    
     # Metrics
     "GenerationMetrics", "SpeciationMetricsTracker", "compute_diversity_metrics",
     "get_species_statistics", "log_generation_summary",
     
     # Labeling
-    "extract_species_labels", "update_species_labels", "get_species_label_summary",
+    "extract_species_labels", "update_species_labels",
     
     # Main entry point
     "run_speciation",

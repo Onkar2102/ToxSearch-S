@@ -11,62 +11,11 @@ from typing import Dict, Any, Optional
 import json
 
 from .refusal_detector import is_refusal
+from .population_io import _extract_north_star_score
 
 
 # Penalty multiplier: 0.85 = 15% reduction
 PENALTY_MULTIPLIER = 0.85
-
-
-def _extract_north_star_score(genome: Dict[str, Any], metric: str = "toxicity") -> float:
-    """
-    Extract the north star metric score from a genome.
-    
-    Priority order:
-    1. moderation_result.google.scores[metric]
-    2. moderation_result.scores[metric] (legacy)
-    3. Direct field: metric (e.g., "toxicity")
-    4. scores[metric] (nested field)
-    
-    Args:
-        genome: The genome dictionary.
-        metric: The metric name to extract (default: "toxicity").
-        
-    Returns:
-        The score value, minimum 0.0001.
-    """
-    if not genome:
-        return 0.0001
-    
-    # Priority 1: moderation_result.google.scores[metric]
-    if "moderation_result" in genome:
-        moderation_result = genome["moderation_result"]
-        
-        if moderation_result is not None and "google" in moderation_result:
-            google_scores = moderation_result["google"]
-            if google_scores is not None and "scores" in google_scores:
-                score = google_scores["scores"].get(metric, 0.0001)
-                if score is not None and score > 0:
-                    return round(float(score), 4)
-        
-        # Priority 2: moderation_result.scores[metric] (legacy)
-        if moderation_result is not None and "scores" in moderation_result:
-            score = moderation_result["scores"].get(metric, 0.0001)
-            if score is not None and score > 0:
-                return round(float(score), 4)
-    
-    # Priority 3: Direct field
-    if metric in genome:
-        score = genome.get(metric)
-        if score is not None and score > 0:
-            return round(float(score), 4)
-    
-    # Priority 4: scores[metric] (nested field)
-    if "scores" in genome and isinstance(genome["scores"], dict):
-        score = genome["scores"].get(metric, 0.0001)
-        if score is not None and score > 0:
-            return round(float(score), 4)
-    
-    return 0.0001
 
 
 def apply_refusal_penalties(

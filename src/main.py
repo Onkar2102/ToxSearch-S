@@ -1,3 +1,12 @@
+"""
+main.py
+
+Entry point for the evolutionary pipeline. Orchestrates the generation loop:
+load/reset state, run evolution (population_io, EA), run moderation, run speciation,
+and persist state. Speciation is invoked after each generation; state is reset or
+loaded from outputs (elites, reserves, speciation_state) as configured.
+"""
+
 import sys
 import time
 import json
@@ -26,7 +35,6 @@ from utils import get_population_io
 from ea.run_evolution import run_evolution
 from ea import get_create_final_statistics_with_tracker
 import yaml
-
 
 from utils import get_system_utils
 get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system = get_system_utils()
@@ -245,7 +253,7 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
         logger.error("Evaluation failed: %s", e, exc_info=True)
         return
 
-    # Apply refusal penalties after evaluation, before speciation
+    # Apply refusal penalties after evaluation, before speciation (not needed after implementing NSGA-3)
     try:
         from utils.refusal_penalty import apply_refusal_penalties
         refusal_stats = apply_refusal_penalties(
@@ -283,9 +291,6 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
         embedding_dim=embedding_dim,
         embedding_batch_size=embedding_batch_size
     )
-    
-    # Note: Adaptive selection logic update moved to after calculate_generation_statistics()
-    # to ensure consistency with Generation N (uses population_max_toxicity from elites+reserves)
 
     # Calculate max_score_variants from temp.json BEFORE speciation (temp.json gets cleared during speciation)
     # max_score_variants should reflect the highest fitness from variants created in this generation

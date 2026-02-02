@@ -198,4 +198,5 @@ data/
 .cursor/
 
 experiments/*.json
+.spvenv/
 

@@ -459,33 +459,20 @@ def get_species_statistics(species: Dict[int, Species], elites_path: Optional[st
             "modes": {"DEFAULT": 0, "EXPLORE": 0, "EXPLOIT": 0}
         }
     
-    # Calculate sizes from files if available (more accurate)
-    sizes = []
-    species_sizes_from_file = {}
-    
+    # Calculate sizes from files if available (more accurate); fallback to in-memory
+    sizes = [sp.size for sp in species.values()]
     if elites_path and Path(elites_path).exists():
         try:
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites_genomes = json.load(f)
-            
-            # Count genomes per species
+            species_sizes_from_file = {}
             for genome in elites_genomes:
                 species_id = genome.get("species_id")
                 if species_id is not None and species_id > 0:
                     species_sizes_from_file[species_id] = species_sizes_from_file.get(species_id, 0) + 1
-            
-            # Use file-based sizes for species that exist in both
-            for sid, sp in species.items():
-                if sid in species_sizes_from_file:
-                    sizes.append(species_sizes_from_file[sid])
-                else:
-                    sizes.append(sp.size)  # Fallback to in-memory
+            sizes = [species_sizes_from_file.get(sid, sp.size) for sid, sp in species.items()]
         except Exception:
-            # Fallback to in-memory sizes
-            sizes = [sp.size for sp in species.values()]
-    else:
-        # Fallback to in-memory sizes
-        sizes = [sp.size for sp in species.values()]
+            pass  # keep in-memory sizes
     
     # Handle case where species exist but might have no members
     best_fitness_values = [sp.best_fitness for sp in species.values() if sp.size > 0]

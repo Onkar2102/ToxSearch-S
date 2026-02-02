@@ -12,7 +12,6 @@ Validates:
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
-from collections import defaultdict
 
 from utils import get_custom_logging
 get_logger, _, _, _ = get_custom_logging()

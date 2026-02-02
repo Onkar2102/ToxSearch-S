@@ -1,8 +1,9 @@
 """
 Comprehensive Population I/O Utility
 
-This module provides unified population loading, saving, and management functionality
-that automatically handles both monolithic and split file formats for optimal memory efficiency.
+Unified population loading, saving, and management (elites, reserves, temp, archive).
+Handles monolithic and split file formats. Species_id in file genomes is updated only
+during speciation Phase 7 (redistribution); this module reads/writes genomes as-is.
 """
 
 from typing import List, Dict, Any, Optional, Union
@@ -662,7 +663,13 @@ def load_and_initialize_population(
     *,
     log_file: Optional[str] = None,
 ) -> None:
-    """Load prompts from Excel file and initialize population as single non_elites.json file"""
+    """Load prompts from seed CSV and create all output files (except figures).
+
+    Creates: temp.json (seed population), elites.json, reserves.json, archive.json,
+    parents.json, top_10.json, EvolutionTracker.json, genome_tracker.json,
+    speciation_state.json, events_tracker.json, operator_effectiveness_cumulative.csv.
+    Figures are not created at init (insufficient data for visualizations).
+    """
 
     get_logger, _, _, PerformanceLogger = get_custom_logging()
     logger = get_logger("initialize_population", log_file)
@@ -867,6 +874,82 @@ def load_and_initialize_population(
                     json.dump(evolution_tracker, f, indent=2)
                 
                 logger.info("Initialized global EvolutionTracker with %d genomes", len(prompts))
+
+            # ----------------------------- Initialize genome_tracker.json ----------------------------
+            with PerformanceLogger(logger, "Initialize genome_tracker.json"):
+                genome_tracker_path = Path(output_path) / "genome_tracker.json"
+                if not genome_tracker_path.exists():
+                    genome_tracker_data = {
+                        "version": "2.0",
+                        "genomes": {},
+                        "summary": {"total_genomes": 0, "by_species_id": {}, "last_updated": datetime.now().isoformat()},
+                        "metadata": {"last_updated": datetime.now().isoformat(), "total_genomes": 0}
+                    }
+                    with open(genome_tracker_path, 'w', encoding='utf-8') as f:
+                        json.dump(genome_tracker_data, f, indent=2, ensure_ascii=False)
+                    logger.info("Initialized empty genome_tracker.json")
+                else:
+                    logger.debug("genome_tracker.json already exists, skipping")
+
+            # ----------------------------- Initialize speciation_state.json ----------------------------
+            with PerformanceLogger(logger, "Initialize speciation_state.json"):
+                speciation_state_path = Path(output_path) / "speciation_state.json"
+                if not speciation_state_path.exists():
+                    try:
+                        from speciation.config import SpeciationConfig
+                        default_config = SpeciationConfig()
+                        config_dict = default_config.to_dict()
+                    except Exception:
+                        config_dict = {
+                            "theta_sim": 0.25, "theta_merge": 0.1,
+                            "cluster0_min_cluster_size": 2, "cluster0_max_capacity": 1000,
+                            "species_capacity": 100, "min_island_size": 2, "species_stagnation": 20,
+                            "embedding_model": "all-MiniLM-L6-v2", "embedding_dim": 384,
+                            "embedding_batch_size": 64, "w_genotype": 0.7, "w_phenotype": 0.3
+                        }
+                    speciation_state_data = {
+                        "species": {},
+                        "incubators": [],
+                        "extinct": [],
+                        "cluster0": {"cluster_id": 0, "size": 0, "max_capacity": config_dict.get("cluster0_max_capacity", 1000), "speciation_events": []},
+                        "cluster0_size_from_reserves": 0,
+                        "global_best_id": None,
+                        "metrics": {"history": [], "summary": {"total_speciation_events": 0, "total_merge_events": 0, "total_extinction_events": 0}},
+                        "config": config_dict
+                    }
+                    with open(speciation_state_path, 'w', encoding='utf-8') as f:
+                        json.dump(speciation_state_data, f, indent=2, ensure_ascii=False)
+                    logger.info("Initialized empty speciation_state.json")
+                else:
+                    logger.debug("speciation_state.json already exists, skipping")
+
+            # ----------------------------- Initialize events_tracker.json ----------------------------
+            with PerformanceLogger(logger, "Initialize events_tracker.json"):
+                events_tracker_path = Path(output_path) / "events_tracker.json"
+                if not events_tracker_path.exists():
+                    events_tracker_data = {
+                        "generations": [],
+                        "summary": {"total_generations": 0, "total_events": 0, "last_updated": datetime.now().isoformat()}
+                    }
+                    with open(events_tracker_path, 'w', encoding='utf-8') as f:
+                        json.dump(events_tracker_data, f, indent=2, ensure_ascii=False)
+                    logger.info("Initialized empty events_tracker.json")
+                else:
+                    logger.debug("events_tracker.json already exists, skipping")
+
+            # ----------------------------- Initialize operator_effectiveness_cumulative.csv ----------------------------
+            with PerformanceLogger(logger, "Initialize operator_effectiveness_cumulative.csv"):
+                csv_path = Path(output_path) / "operator_effectiveness_cumulative.csv"
+                if not csv_path.exists():
+                    expected_columns = [
+                        "generation", "operator", "NE", "EHR", "IR", "cEHR", "Δμ", "Δσ",
+                        "total_variants", "elite_count", "non_elite_count", "rejections", "duplicates"
+                    ]
+                    empty_df = pd.DataFrame(columns=expected_columns)
+                    empty_df.to_csv(csv_path, index=False, na_rep='')
+                    logger.info("Initialized empty operator_effectiveness_cumulative.csv")
+                else:
+                    logger.debug("operator_effectiveness_cumulative.csv already exists, skipping")
 
             logger.info("Population initialization completed successfully")
 
@@ -1297,11 +1380,6 @@ def sort_population_by_elite_criteria(population: List[Dict[str, Any]], north_st
         sorted_population = sorted(population, key=sort_key)
         _logger.info(f"Sorted {len(sorted_population)} genomes by elite criteria")
         return sorted_population
-
-
-from .constants import EvolutionConstants, FileConstants
-
-
 
 
 def load_elites(elites_file_path: str = "data/outputs/elites.json", 

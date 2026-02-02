@@ -102,10 +102,10 @@ def _ensure_unique_leader(species: Dict[int, Species], new_leader: Individual, c
     Ensure new_leader is not already leader of another species.
     
     If duplicate is found, reassigns the old species leader to next highest fitness member.
-    If old species only has that leader, marks it for incubator (will be processed by process_extinctions).
+    If old species only has that leader, marks it for incubator (handled in Phase 5: Stagnation and Incubation).
     
     Note: This function only marks species as incubator but does NOT move members to cluster 0.
-    The caller (process_extinctions) will handle moving members to cluster 0 and removing from dict.
+    Phase 5 (run_speciation) handles moving members to cluster 0 and removing from dict.
     
     Args:
         species: Dict of all species
@@ -130,10 +130,10 @@ def _ensure_unique_leader(species: Dict[int, Species], new_leader: Individual, c
                     sp.members.insert(0, sp.leader)
                 logger.info(f"Reassigned species {sid} leader to genome {sp.leader.id} (fitness={sp.leader.fitness:.4f})")
             else:
-                # No other members - mark for incubator (process_extinctions will handle cleanup)
+                # No other members - mark for incubator (Phase 5 will handle cleanup)
                 sp.species_state = "incubator"
                 sp.leader = None  # No leader if no members
-                logger.info(f"Species {sid} has no other members, marking as incubator (will be processed by process_extinctions)")
+                logger.info(f"Species {sid} has no other members, marking as incubator (will be processed in Phase 5)")
 
 
 def leader_follower_clustering(
@@ -787,7 +787,7 @@ def leader_follower_clustering(
         if result["failed"] > 0:
             logger.warning(f"Genome tracker batch update had {result['failed']} failures")
         
-        # Log reassignment events for genomes that were archived but are now active
+        # Log reassignment events (if any): in current design archive genomes are not moved back; this supports possible future use
         reassigned_from_archive = result.get("reassigned_from_archive", [])
         if reassigned_from_archive:
             # Try to get events tracker from state

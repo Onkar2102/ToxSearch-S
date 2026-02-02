@@ -2,6 +2,7 @@
 extinction.py
 
 Species freezing and small species management for speciation.
+Main flow uses Phase 5 (Stagnation and Incubation) in run_speciation.py in-line; this function is kept for API/script use.
 """
 
 from typing import Dict, List, Tuple, Optional, TYPE_CHECKING

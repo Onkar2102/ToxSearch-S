@@ -7,10 +7,9 @@ Species data structures for speciation framework.
 import numpy as np
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
-from enum import Enum
 
 
-# Note: SpeciesMode/IslandMode removed - mode switching is handled by parent selection, not speciation
+# Mode switching is handled by parent selection, not speciation.
 
 
 @dataclass

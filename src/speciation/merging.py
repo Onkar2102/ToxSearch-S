@@ -132,7 +132,7 @@ def merge_islands(
                     f"({len(all_parent_genome_ids) - len(in_memory_ids)} additional from tracker beyond in-memory members)"
                 )
             
-            # Log reassignment events for genomes that were archived but are now in merged species
+            # Log reassignment events (if any): in current design archive genomes are not moved back; this supports possible future use
             reassigned_from_archive = result.get("reassigned_from_archive", [])
             if reassigned_from_archive:
                 events_tracker = state.get("_events_tracker")

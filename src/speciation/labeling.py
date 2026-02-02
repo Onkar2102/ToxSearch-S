@@ -303,18 +303,3 @@ def update_species_labels(
             species.label_history = species.label_history[-20:]
     
     logger.info(f"Updated labels for {len(species_dict)} species at generation {current_generation}")
-
-
-def get_species_label_summary(species: "Species") -> str:
-    """
-    Get a human-readable label summary for a species.
-    
-    Args:
-        species: Species instance
-        
-    Returns:
-        Comma-separated string of labels, or "unlabeled" if no labels
-    """
-    if hasattr(species, 'labels') and species.labels:
-        return ', '.join(species.labels)
-    return "unlabeled"

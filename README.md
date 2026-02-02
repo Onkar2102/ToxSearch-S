@@ -77,7 +77,7 @@ Where `x` is the prompt, `LLM(x)` is the model's response, and `toxicity_score` 
 
 - **Elites (E)**: Active species members (species_id > 0)
 - **Reserves (R)**: Cluster 0 outliers (species_id = 0)
-- **Archive**: Capacity-overflow genomes (species_id = -1)
+- **Archive**: Capacity-overflow genomes (species_id = -1). Archived genomes are not reintroduced into the active population.
 
 ### Ensemble Distance
 
@@ -212,7 +212,7 @@ All outputs are saved to `data/outputs/YYYYMMDD_HHMM/`:
 |------|-------------|
 | `elites.json` | Species members (species_id > 0) |
 | `reserves.json` | Cluster 0 members (species_id = 0) |
-| `archive.json` | Archived genomes (capacity overflow) |
+| `archive.json` | Archived genomes (capacity overflow); append-only, not moved back to elites/reserves |
 | `EvolutionTracker.json` | Per-generation statistics and speciation metrics |
 | `speciation_state.json` | Species structure and state |
 | `genome_tracker.json` | Genome lineage and species_id tracking |

@@ -36,22 +36,22 @@ fi
 # Add as many experiments as you want - they will all run automatically
 EXPERIMENTS=(
     "python src/main.py \
-        --generations 25 \
+        --generations 50 \
         --threshold 0.99 \
         --moderation-methods google \
-        --stagnation-limit 2 \
+        --stagnation-limit 5 \
         --theta-sim 0.25 \
         --theta-merge 0.25 \
-        --species-capacity 5 \
+        --species-capacity 10 \
         --cluster0-max-capacity 50 \
-        --cluster0-min-cluster-size 2 \
+        --cluster0-min-cluster-size 1 \
         --min-island-size 3 \
-        --species-stagnation 1 \
+        --species-stagnation 4 \
         --embedding-model all-MiniLM-L6-v2 \
         --embedding-dim 384 \
         --embedding-batch-size 64 \
-        --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q3_K_S.gguf \
-        --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q3_K_M.gguf \
+        --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+        --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
         --operators all \
         --max-variants 1 \
         --seed-file data/prompt.csv"
