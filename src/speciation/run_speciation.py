@@ -3,9 +3,18 @@ run_speciation.py
 
 Main entry point functions for Dynamic Islands speciation framework.
 All functionality is provided as module-level functions (no classes).
+
+Species Key Type Convention:
+    - In-memory: state["species"] keys are int (species IDs)
+    - JSON files: keys are str (JSON limitation - keys are always strings)
+    - At load_state: keys are normalized to int when loading from JSON
+    - At save_state: keys are converted to str when writing to JSON
+    - CRITICAL: When performing lookups or set operations, always normalize
+      species IDs to int to avoid type mismatch bugs (e.g., 1 != "1" in Python)
 """
 
 import json
+from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 
@@ -1097,10 +1106,12 @@ def process_generation(current_generation: int,
                 "species": {str(sid): sp.to_dict() for sid, sp in state["species"].items()},
                 "generation": current_generation
             }
-            # Preserve other fields
+            # Preserve other fields (including incubators and extinct)
             state_dict["cluster0"] = existing_state.get("cluster0", {})
             state_dict["global_best_id"] = existing_state.get("global_best_id")
             state_dict["metrics"] = existing_state.get("metrics", {})
+            state_dict["incubators"] = existing_state.get("incubators", [])
+            state_dict["extinct"] = existing_state.get("extinct", [])
             
             # Save immediately (create file if it doesn't exist)
             with open(speciation_state_path, 'w', encoding='utf-8') as f:
@@ -1276,10 +1287,12 @@ def process_generation(current_generation: int,
                     "species": {str(sid): sp.to_dict() for sid, sp in state["species"].items()},
                     "generation": current_generation
                 }
-                # Preserve other fields
+                # Preserve other fields (including incubators and extinct so we don't lose them)
                 state_dict["cluster0"] = existing_state.get("cluster0", {})
                 state_dict["global_best_id"] = existing_state.get("global_best_id")
                 state_dict["metrics"] = existing_state.get("metrics", {})
+                state_dict["incubators"] = existing_state.get("incubators", [])
+                state_dict["extinct"] = existing_state.get("extinct", [])
                 
                 with open(speciation_state_path, 'w', encoding='utf-8') as f:
                     json.dump(state_dict, f, indent=2, ensure_ascii=False)
@@ -1394,9 +1407,10 @@ def process_generation(current_generation: int,
                                 {"from_species": sid, "to_species": CLUSTER_0_ID, "reason": "species_empty_after_radius_cleanup"}
                             )
                 
-                # Remove from active species
-                del state["species"][sid]
-                state["logger"].info(f"Phase 3: Species {sid} became empty after radius cleanup - moved to incubator")
+                # NOTE: Do NOT delete species here - keep in state["species"] with incubator state
+                # Phase 5 Step 9 will run record_fitness() for stagnation tracking
+                # Phase 5 Step 11 will handle actual removal to historical_species
+                state["logger"].info(f"Phase 3: Species {sid} became empty after radius cleanup - marked as incubator (will be processed in Phase 5)")
             elif len(sp.members) < state["config"].min_island_size:
                 # Species too small after cleanup - mark for incubator (will be processed in Phase 5 Step 18)
                 state["logger"].debug(f"Phase 3: Species {sid} size={len(sp.members)} < min_island_size={state['config'].min_island_size} after radius cleanup - will be moved to incubator in Phase 5 Step 18")
@@ -1416,10 +1430,12 @@ def process_generation(current_generation: int,
                 "species": {str(sid): sp.to_dict() for sid, sp in state["species"].items()},
                 "generation": current_generation
             }
-            # Preserve other fields
+            # Preserve other fields (including incubators and extinct)
             state_dict["cluster0"] = existing_state.get("cluster0", {})
             state_dict["global_best_id"] = existing_state.get("global_best_id")
             state_dict["metrics"] = existing_state.get("metrics", {})
+            state_dict["incubators"] = existing_state.get("incubators", [])
+            state_dict["extinct"] = existing_state.get("extinct", [])
             
             with open(speciation_state_path, 'w', encoding='utf-8') as f:
                 json.dump(state_dict, f, indent=2, ensure_ascii=False)
@@ -1459,8 +1475,9 @@ def process_generation(current_generation: int,
         tracker_species_ids = {int(sid) for sid, count in tracker_stats["by_species_id"].items() 
                                if int(sid) > 0 and count > 0}
         
-        # Combine with species in state["species"] 
-        in_memory_species_ids = set(state["species"].keys())
+        # Combine with species in state["species"]
+        # CRITICAL: Normalize keys to int (state["species"] keys are int after load_state, but ensure consistency)
+        in_memory_species_ids = {int(sid) for sid in state["species"].keys()}
         all_phase4_species_ids = tracker_species_ids | in_memory_species_ids
         
         # Log species not in state["species"] but in tracker (these were previously missed)
@@ -1479,7 +1496,8 @@ def process_generation(current_generation: int,
     # Process all species IDs (from both state["species"] and tracker)
     for sid in sorted(all_phase4_species_ids):
         # Check if this species is in state["species"] (has in-memory representation)
-        sp = state["species"].get(sid, None)
+        # CRITICAL: Try both int and str keys for backward compatibility
+        sp = state["species"].get(sid) or state["species"].get(str(sid))
         
         # Log if processing tracker-only species (not in state["species"])
         if sp is None:
@@ -1841,15 +1859,23 @@ def process_generation(current_generation: int,
     for sid, sp in state["species"].items():
         # max_fitness = actual max over current members only (in case members were removed in radius/capacity)
         sp.max_fitness = max((m.fitness for m in sp.members), default=0.0)
-        was_selected = sid in selected_species_ids
+        # CRITICAL: state["species"] keys can be str (from JSON load) or int (from merge); selected_species_ids and _prev_max_fitness use int keys
+        sid_int = int(sid)
+        was_selected = sid_int in selected_species_ids
         # Species created this gen: sid not in _prev_max_fitness -> treat as increased
-        max_fitness_increased = sp.max_fitness > state.get("_prev_max_fitness", {}).get(sid, -1)
+        prev_max = state.get("_prev_max_fitness", {}).get(sid_int, -1)
+        max_fitness_increased = sp.max_fitness > prev_max
         if was_selected and not max_fitness_increased:
             state["logger"].info(
                 "Stagnation: species %s would increment (was_selected, max_fitness not increased: %.4f vs prev %.4f)",
-                sid, sp.max_fitness, state.get("_prev_max_fitness", {}).get(sid, -1)
+                sid, sp.max_fitness, prev_max
             )
         sp.record_fitness(current_generation, was_selected_as_parent=was_selected, max_fitness_increased=max_fitness_increased)
+        if sp.stagnation > 0:
+            state["logger"].debug(
+                "Stagnation updated: species %s stagnation=%d (was_selected=%s, max_fitness_increased=%s)",
+                sid, sp.stagnation, was_selected, max_fitness_increased
+            )
     
     # 10. Freeze stagnant species (NOT extinction - they stay alive, can merge)
     # Frozen species cannot participate in parent selection (unless category 1 is empty),
@@ -2514,10 +2540,10 @@ def save_state(path: str) -> None:
     since reserves.json already stores the complete genome data for cluster 0.
     
     Size calculation:
-    - For active/frozen species: size = count from member_ids (derived from elites.json after capacity enforcement).
+    - For active/frozen species: size = count from member_ids (derived from genome_tracker).
       Capacity enforcement considers ALL genomes from all generations via genome_tracker, sorts by fitness,
       keeps top species_capacity, and archives the rest (species_id=-1 in tracker). The genome_tracker
-      is the authoritative source, and elites.json reflects the tracker state after Phase 7 distribution.
+      is the authoritative source for species membership.
     Species storage strategy:
     - Active species (state="active") - full data saved in species dict (participate in evolution)
     - Frozen species (state="frozen") - full data saved in species dict (stagnated, excluded from parent selection, but still alive)
@@ -2528,105 +2554,63 @@ def save_state(path: str) -> None:
     - Species members are NOT saved as full Individual objects in speciation_state.json
     - Only member_ids (list of genome IDs) are saved for storage efficiency
     - The members list in memory may be empty even if size > 0 - this is EXPECTED
-    - Members are reconstructed lazily from elites.json when load_state() is called
-    - This is a storage optimization: full member data is in elites.json, only IDs are stored in state
+    - Member data is loaded lazily from genome files (elites.json, etc.) when load_state() is called
+    - This is a storage optimization: full member data is in genome files, only IDs are stored in state
     """
     import numpy as np
     
     state = _get_state()
     logger = state["logger"]
     
-    # Calculate actual sizes and member IDs from elites.json for each species
-    # This gives the true current size across all generations
-    # Read elites.json AFTER distribution to ensure we have the latest data
+    # Calculate actual sizes and member IDs from genome_tracker for each species
+    # genome_tracker is the authoritative source for species membership
     outputs_path = get_outputs_path()
     elites_path = outputs_path / "elites.json"
     species_sizes = {}
-    species_member_ids = {}  # species_id -> list of all member IDs from elites.json
-    elites_genomes = []  # Store for later use in species reconstruction
+    species_member_ids = {}  # species_id -> list of all member IDs from tracker
+    elites_genomes = []  # Only used for validation (leader embedding lookup)
     
-    # Always load elites_genomes for validation and reconstruction (needed even when using tracker)
+    # Load elites_genomes for validation only (leader embedding lookup for frozen species)
     if elites_path.exists():
         try:
             from utils.population_io import load_elites
             elites_genomes = load_elites(str(elites_path), logger=logger)
         except Exception as e:
-            logger.warning(f"Failed to load elites.json: {e}")
+            logger.warning(f"Failed to load elites.json for validation: {e}")
             elites_genomes = []
-    else:
-        elites_genomes = []
     
-    # Use genome_tracker as authoritative source for member_ids (not elites.json which may be stale)
-    # But also populate from elites.json for species not in tracker (recovery mechanism)
-    if "_genome_tracker" in state:
-        genome_tracker = state["_genome_tracker"]
-        # Get member IDs from tracker for each species (authoritative source)
-        for species_id in state["species"].keys():
-            member_ids = genome_tracker.get_all_genomes_by_species(species_id)
-            if member_ids:
-                species_member_ids[species_id] = sorted([str(mid) for mid in member_ids])
-                species_sizes[species_id] = len(member_ids)
-        
-        # Also populate from elites.json for species NOT in state (for reconstruction)
-        # This handles cases where species exist in elites.json but were lost from in-memory state
-        species_member_ids_sets = {}  # Track unique IDs per species from elites.json
-        for genome in elites_genomes:
-            species_id = genome.get("species_id")
-            if species_id is not None and species_id > 0:
-                # Only add if not already populated from tracker
-                if species_id not in species_member_ids:
-                    genome_id = genome.get("id")
-                    if genome_id is not None:
-                        if species_id not in species_member_ids_sets:
-                            species_member_ids_sets[species_id] = set()
-                        species_member_ids_sets[species_id].add(genome_id)
-                        species_sizes[species_id] = species_sizes.get(species_id, 0) + 1
-        
-        # Convert sets to lists for species found only in elites.json
-        for species_id, id_set in species_member_ids_sets.items():
-            species_member_ids[species_id] = sorted([str(mid) for mid in id_set])
-        
-        logger.debug(f"Calculated species sizes: {len([s for s in species_sizes if s in state['species']])} from tracker, {len(species_member_ids_sets)} from elites.json")
-    elif elites_genomes:
-        # Fallback to elites.json if tracker not available (shouldn't happen)
-        logger.warning("Genome tracker not available, falling back to elites.json (may be stale)")
-        
-        # Count genomes per species and collect all member IDs
-        # Use sets to track unique IDs since elites.json is cumulative
-        # (same genome may appear in multiple generations with same species_id)
-        species_member_ids_sets = {}  # Track unique IDs per species
-        for genome in elites_genomes:
-            species_id = genome.get("species_id")
-            if species_id is not None and species_id > 0:
-                species_sizes[species_id] = species_sizes.get(species_id, 0) + 1
-                genome_id = genome.get("id")
-                if genome_id is not None:
-                    if species_id not in species_member_ids_sets:
-                        species_member_ids_sets[species_id] = set()
-                    species_member_ids_sets[species_id].add(genome_id)
-        
-        # Convert sets to lists for JSON serialization (preserve order by sorting, convert to strings for consistency)
-        for species_id, id_set in species_member_ids_sets.items():
-            species_member_ids[species_id] = sorted([str(mid) for mid in id_set])
-        # Use unique count as species_sizes (size = number of distinct genomes, not raw rows)
-        for species_id, ids in species_member_ids.items():
-            species_sizes[species_id] = len(ids)
-        logger.debug(f"Calculated species sizes from elites.json (fallback): {len(species_sizes)} species, {len(elites_genomes)} total genomes")
-    else:
-        logger.warning(f"Neither genome_tracker nor elites.json available - species sizes will use in-memory counts")
+    # REQUIRED: genome_tracker must be available for save_state
+    # This ensures species membership is tracked correctly and consistently
+    if "_genome_tracker" not in state:
+        logger.error("Genome tracker is required for save_state() - cannot calculate species member_ids/sizes without it")
+        raise RuntimeError("Genome tracker is required for save_state()")
+    
+    genome_tracker = state["_genome_tracker"]
+    # Get member IDs from tracker for each species in state["species"] (authoritative source)
+    for species_id in state["species"].keys():
+        member_ids = genome_tracker.get_all_genomes_by_species(species_id)
+        if member_ids:
+            species_member_ids[species_id] = sorted([str(mid) for mid in member_ids])
+            species_sizes[species_id] = len(member_ids)
+        else:
+            # Species exists in state but has no genomes in tracker (e.g. incubator with all members moved to cluster0)
+            species_member_ids[species_id] = []
+            species_sizes[species_id] = 0
+    
+    logger.debug(f"Calculated species sizes from tracker: {len(species_sizes)} species in state['species']")
     
     # Build species dict - only save full data for active and frozen species
     species_dict = {}
     incubator_ids = []
     
-    def _set_member_ids_and_size(sp_dict, sid, sp, species_member_ids, logger, elites_path):
-        """Helper to set member_ids and size from elites.json or in-memory."""
+    def _set_member_ids_and_size(sp_dict, sid, sp, species_member_ids, logger):
+        """Helper to set member_ids and size from genome_tracker (via species_member_ids) or in-memory."""
         sid_int = int(sid)
         if sid_int in species_member_ids:
             sp_dict["member_ids"] = species_member_ids[sid_int]
         else:
-            if elites_path.exists():
-                logger.warning(f"Species {sid} not found in elites.json, using in-memory member IDs ({len(sp.members)})")
+            # This should not happen since we iterate state["species"].keys() and populate species_member_ids for all
+            logger.warning(f"Species {sid} not found in tracker, using in-memory member IDs ({len(sp.members)})")
             sp_dict["member_ids"] = [str(m.id) for m in sp.members]  # Convert to strings for consistency
         sp_dict["size"] = len(sp_dict["member_ids"])
     
@@ -2634,7 +2618,7 @@ def save_state(path: str) -> None:
     for sid, sp in state["species"].items():
         if sp.species_state in ["active", "frozen"]:
             sp_dict = sp.to_dict()
-            _set_member_ids_and_size(sp_dict, sid, sp, species_member_ids, logger, elites_path)
+            _set_member_ids_and_size(sp_dict, sid, sp, species_member_ids, logger)
             
             # Frozen species: ensure leader_embedding is preserved (needed for merging)
             if sp.species_state == "frozen" and sp.leader:
@@ -2681,122 +2665,11 @@ def save_state(path: str) -> None:
                 # Incubator species - just track ID
                 incubator_ids.append(sid)
     
-    # Add species that exist in elites.json but are missing from in-memory state
-    # This can happen if species were frozen/extinct in previous generations or state wasn't loaded properly
-    from .species import Species
-    from .distance import ensemble_distance
-    
-    for species_id, size in species_sizes.items():
-        # Skip if already in species_dict, or if extinct/incubator (should not be reconstructed as active)
-        # Also check historical_species directly to ensure extinct species are not reconstructed
-        is_extinct = (species_id in extinct_ids or 
-                     (species_id in state.get("historical_species", {}) and 
-                      state["historical_species"][species_id].species_state == "extinct"))
-        is_incubator = (species_id in incubator_ids or 
-                       (species_id in state.get("historical_species", {}) and 
-                        state["historical_species"][species_id].species_state == "incubator"))
-        
-        if str(species_id) not in species_dict and not is_incubator and not is_extinct:
-            # Species exists in elites.json but not in state - need to reconstruct basic info
-            # NOTE: Extinct/incubator species should NOT be reconstructed - they are in historical_species only
-            logger.warning(f"Species {species_id} found in elites.json ({size} genomes) but missing from state - reconstructing basic entry")
-            
-            # Find leader (highest fitness genome in this species)
-            species_genomes = [g for g in elites_genomes if g.get("species_id") == species_id]
-            if species_genomes:
-                # Sort by fitness to find leader using standardized method
-                from utils.population_io import _extract_north_star_score
-                def get_fitness(g):
-                    return _extract_north_star_score(g, "toxicity")
-                
-                species_genomes.sort(key=get_fitness, reverse=True)
-                leader_genome = species_genomes[0]
-                leader_fitness = get_fitness(leader_genome)
-                
-                # Create minimal species entry (recovery mechanism - species should ideally be in state)
-                # Try to preserve state and metadata from historical_species or saved speciation_state.json
-                preserved_cluster_origin = "natural"  # Default to natural (most common)
-                preserved_parent_ids = None
-                preserved_state = "active"  # Default to active (frozen requires stagnation >= threshold)
-                preserved_stagnation = 0
-                preserved_created_at = 0
-                preserved_last_improvement = 0
-                
-                # First, check historical_species for preserved state
-                if species_id in state.get("historical_species", {}):
-                    hist_sp = state["historical_species"][species_id]
-                    preserved_cluster_origin = hist_sp.cluster_origin if hist_sp.cluster_origin else "natural"
-                    preserved_parent_ids = hist_sp.parent_ids
-                    # Note: historical_species contains extinct/incubator, not active/frozen
-                
-                # Try to load from saved speciation_state.json to get actual state
-                state_path = outputs_path / "speciation_state.json"
-                if state_path.exists():
-                    try:
-                        with open(state_path, 'r', encoding='utf-8') as f:
-                            saved_state = json.load(f)
-                        saved_species = saved_state.get("species", {})
-                        if str(species_id) in saved_species:
-                            saved_sp = saved_species[str(species_id)]
-                            # Preserve actual state from saved file (active/frozen)
-                            saved_state_value = saved_sp.get("species_state", "active")
-                            if saved_state_value in ["active", "frozen"]:
-                                preserved_state = saved_state_value
-                                preserved_stagnation = saved_sp.get("stagnation", 0)
-                                preserved_created_at = saved_sp.get("created_at", 0)
-                                preserved_last_improvement = saved_sp.get("last_improvement", 0)
-                                preserved_cluster_origin = saved_sp.get("cluster_origin", preserved_cluster_origin)
-                                preserved_parent_ids = saved_sp.get("parent_ids", preserved_parent_ids)
-                                logger.debug(f"Reconstructing species {species_id}: preserved state={preserved_state}, stagnation={preserved_stagnation} from saved speciation_state.json")
-                    except Exception as e:
-                        logger.debug(f"Could not load saved state for species {species_id}: {e}")
-                
-                # Use member IDs from species_member_ids if available (already calculated above)
-                # Otherwise use the species_genomes we just found
-                if species_id in species_member_ids:
-                    member_ids = list(species_member_ids[species_id])  # Make a copy
-                else:
-                    member_ids = [str(g.get("id")) for g in species_genomes if g.get("id") is not None]  # Convert to strings
-                
-                # Ensure leader_id is always in member_ids (critical for consistency)
-                leader_id_str = str(leader_genome.get("id"))
-                if leader_id_str not in member_ids:
-                    member_ids.insert(0, leader_id_str)  # Add leader at the beginning
-                
-                # CRITICAL: Only mark as frozen if stagnation >= threshold OR explicitly frozen in saved state
-                # Default to "active" since frozen requires stagnation >= species_stagnation
-                final_state = preserved_state
-                if preserved_state == "frozen" and preserved_stagnation < state["config"].species_stagnation:
-                    # Saved state says frozen but stagnation doesn't justify it - reset to active
-                    logger.warning(
-                        f"Species {species_id}: saved state=frozen but stagnation={preserved_stagnation} < "
-                        f"threshold={state['config'].species_stagnation} - resetting to active"
-                    )
-                    final_state = "active"
-                    preserved_stagnation = 0  # Reset stagnation
-                
-                species_dict[str(species_id)] = {
-                    "id": species_id,
-                    "leader_id": leader_genome.get("id"),
-                    "leader_prompt": leader_genome.get("prompt", ""),
-                    "leader_embedding": leader_genome.get("prompt_embedding", []),
-                    "leader_fitness": round(leader_fitness, 4),
-                    "member_ids": member_ids,  # All member IDs from elites.json (unique, includes leader)
-                    "radius": state["config"].theta_sim,
-                    "stagnation": preserved_stagnation,  # Preserve from saved state if available
-                    "max_fitness": round(leader_fitness, 4),
-                    "min_fitness": round(min(get_fitness(g) for g in species_genomes), 4) if species_genomes else round(leader_fitness, 4),
-                    "species_state": final_state,  # Use preserved state (active/frozen) or default to active
-                    "created_at": preserved_created_at,  # Preserve from saved state if available
-                    "last_improvement": preserved_last_improvement,  # Preserve from saved state if available
-                    "fitness_history": [round(leader_fitness, 4)],
-                    "labels": [],
-                    "label_history": [],
-                    "cluster_origin": preserved_cluster_origin,  # Preserve original origin, default to "natural"
-                    "parent_ids": preserved_parent_ids,  # Preserve original parent_ids if available
-                    "size": len(member_ids)  # Must match elites.json unique count
-                }
-                logger.info(f"Reconstructed species {species_id} entry from elites.json (size={len(member_ids)}, state={final_state}, stagnation={preserved_stagnation})")
+    # NOTE: Reconstruction block removed - species_dict is built only from state["species"] (active/frozen)
+    # and state["historical_species"] (extinct/incubator IDs only). This ensures:
+    # 1. All saved species have labels (update_species_labels runs on state["species"] before save_state)
+    # 2. Stagnation is tracked correctly (species remain in state["species"] until Phase 5 handles them)
+    # 3. Species count matches EvolutionTracker (no extra reconstructed entries)
     
     # Validate consistency
     from collections import Counter
@@ -2823,7 +2696,7 @@ def save_state(path: str) -> None:
                 logger.debug(f"Validation error for species {sid_str}: {e}")
                 continue
 
-    # Ensure size always equals len(member_ids) (source of truth: genome_tracker via elites.json after Phase 7 distribution)
+    # Ensure size always equals len(member_ids) (source of truth: genome_tracker)
     min_island_size = state["config"].min_island_size
     for sid_str, sp_dict in species_dict.items():
         mids = sp_dict.get("member_ids", [])
@@ -2833,7 +2706,7 @@ def save_state(path: str) -> None:
             sp_dict["size"] = n
         if n < min_island_size:
             logger.debug(
-                "Species %s has size %d < min_island_size %d (count from elites.json); "
+                "Species %s has size %d < min_island_size %d (count from tracker); "
                 "Phase 5 (Stagnation and Incubation) moves such species to incubator when in-memory size drops.",
                 sid_str, n, min_island_size
             )
@@ -2956,7 +2829,7 @@ def load_state(path: str) -> bool:
             # Preserve cluster_origin - never change it, even for frozen species
             cluster_origin = sp_dict.get("cluster_origin")
             if cluster_origin is None or cluster_origin == "unknown":
-                # Only default to "natural" if truly unknown (reconstruction case)
+                # Default to "natural" if not set (old data compatibility)
                 cluster_origin = "natural"
             
             # Load all members from member_ids (both active and frozen species should have members)
@@ -2965,7 +2838,7 @@ def load_state(path: str) -> bool:
             member_ids = sp_dict.get("member_ids", [])
             
             # Load members from elites.json, reserves.json, temp.json if member_ids are provided
-            # NOTE: This is lazy loading - members are reconstructed from genome files
+            # NOTE: This is lazy loading - member data is loaded from genome files on demand
             # The members list in saved state is empty (only member_ids are stored for efficiency)
             # This is EXPECTED behavior: full member data is in genome files, only IDs in state
             # Genomes may be in elites.json, reserves.json, or temp.json depending on their current state
@@ -3060,20 +2933,25 @@ def load_state(path: str) -> bool:
                 # Incubator or unknown - go to historical_species
                 state["historical_species"][sid] = species
         
-        # Load incubator and extinct species IDs (just for tracking, no full data)
+        # Load incubator and extinct species IDs and restore into historical_species
+        # CRITICAL: We must restore these so save_state() can persist them again (otherwise we lose
+        # extinct/incubator IDs across generations when load_state runs at start of each generation).
         incubator_ids = loaded_state.get("incubators", [])
-        extinct_ids = loaded_state.get("extinct", [])  # Extinct species IDs (like incubators)
-        if incubator_ids:
-            # Track incubator IDs but don't create Species objects
-            # They're just for tracking purposes
-            for sid in incubator_ids:
-                max_species_id = max(max_species_id, sid)
-            logger.debug(f"Loaded {len(incubator_ids)} incubator species IDs for tracking: {incubator_ids}")
-        if extinct_ids:
-            # Track extinct IDs but don't create Species objects (not really helpful but preserved)
-            for sid in extinct_ids:
-                max_species_id = max(max_species_id, sid)
-            logger.debug(f"Loaded {len(extinct_ids)} extinct species IDs for tracking: {extinct_ids}")
+        extinct_ids = loaded_state.get("extinct", [])  # Extinct species IDs (merged parents)
+        for sid in incubator_ids:
+            sid = int(sid)  # Normalize (JSON may give int or str)
+            max_species_id = max(max_species_id, sid)
+            # Placeholder so save_state() can write this ID back to "incubators"
+            state["historical_species"][sid] = SimpleNamespace(species_state="incubator")
+        for sid in extinct_ids:
+            sid = int(sid)  # Normalize (JSON may give int or str)
+            max_species_id = max(max_species_id, sid)
+            # Placeholder so save_state() can write this ID back to "extinct"
+            state["historical_species"][sid] = SimpleNamespace(species_state="extinct")
+        if incubator_ids or extinct_ids:
+            logger.debug(
+                f"Restored historical_species from file: {len(incubator_ids)} incubator, {len(extinct_ids)} extinct"
+            )
         
         SpeciesIdGenerator.set_min_id(max_species_id + 1)
         

@@ -42,8 +42,8 @@ EXPERIMENTS=(
         --stagnation-limit 5 \
         --theta-sim 0.25 \
         --theta-merge 0.25 \
-        --species-capacity 10 \
-        --cluster0-max-capacity 50 \
+        --species-capacity 7 \
+        --cluster0-max-capacity 20 \
         --cluster0-min-cluster-size 1 \
         --min-island-size 3 \
         --species-stagnation 4 \

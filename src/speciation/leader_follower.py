@@ -816,68 +816,12 @@ def leader_follower_clustering(
     with open(temp_path_obj, 'w', encoding='utf-8') as f:
         json.dump(genomes, f, indent=2, ensure_ascii=False)
     
-    # For Generation N: Update reserves.json for outliers that formed species
-    if not is_generation_0 and cluster0_potential_leaders:
-        outputs_path = get_outputs_path()
-        reserves_path = outputs_path / "reserves.json"
-        if reserves_path.exists():
-            try:
-                with open(reserves_path, 'r', encoding='utf-8') as f:
-                    reserves_genomes = json.load(f)
-                
-                # Update species_id for outliers that formed species (and their followers)
-                updated_count = 0
-                for pl_species_id, _, _, pl_ind, followers in cluster0_potential_leaders.values():
-                    if pl_species_id is not None:  # This outlier formed a species
-                        # Update leader
-                        for genome in reserves_genomes:
-                            if genome.get("id") == pl_ind.id:
-                                genome["species_id"] = pl_species_id
-                                updated_count += 1
-                                logger.debug(f"Updated outlier {pl_ind.id} in reserves.json: species_id={pl_species_id}")
-                                break
-                        # Update followers (they should also be in reserves.json or temp.json)
-                        for follower in followers:
-                            for genome in reserves_genomes:
-                                if genome.get("id") == follower.id:
-                                    genome["species_id"] = pl_species_id
-                                    updated_count += 1
-                                    logger.debug(f"Updated follower {follower.id} in reserves.json: species_id={pl_species_id}")
-                                    break
-                
-                if updated_count > 0:
-                    # Save updated reserves.json
-                    with open(reserves_path, 'w', encoding='utf-8') as f:
-                        json.dump(reserves_genomes, f, indent=2, ensure_ascii=False)
-                    logger.info(f"Updated {updated_count} outliers/followers in reserves.json that formed species")
-            except Exception as e:
-                logger.warning(f"Failed to update reserves.json for outliers: {e}")
+    # NOTE: reserves.json is NOT updated here - Phase 7 (redistribution) handles all file distribution
+    # from genome_tracker. This ensures single source of truth (tracker) for species membership.
+    # Outliers that formed species are already tracked in genome_tracker via update_species_id calls above.
     
-    # Update speciation_state.json with new species structure (only if immediate updates weren't done)
-    # Note: If genome_tracker and events_tracker are provided, files are updated immediately after each assignment/leader update
-    # This end-of-function save is a fallback for cases where immediate updates weren't done
-    if genome_tracker is None or events_tracker is None:
-        # Fallback: Save at end if immediate updates weren't configured
-        state_dict = {
-            "species": {str(sid): sp.to_dict() for sid, sp in species.items()},
-            "generation": current_generation
-        }
-        
-        # If speciation_state.json exists, preserve cluster0 and other fields (but NOT config)
-        if speciation_state_path_obj.exists():
-            try:
-                with open(speciation_state_path_obj, 'r', encoding='utf-8') as f:
-                    existing_state = json.load(f)
-                # Preserve cluster0, global_best_id, metrics (config is not saved - it's passed as project args)
-                state_dict["cluster0"] = existing_state.get("cluster0", {})
-                state_dict["global_best_id"] = existing_state.get("global_best_id")
-                state_dict["metrics"] = existing_state.get("metrics", {})
-            except Exception:
-                pass  # If can't read, just save new structure
-        
-        # Save updated speciation_state.json
-        with open(speciation_state_path_obj, 'w', encoding='utf-8') as f:
-            json.dump(state_dict, f, indent=2, ensure_ascii=False)
+    # NOTE: speciation_state.json is NOT updated here - Phase 8 (save_state) handles the final save.
+    # Immediate updates to genome_tracker and events_tracker are done above when trackers are provided.
     
     logger.info(f"Leader-Follower clustering: {len(valid_population)} individuals -> {len(species)} species")
     logger.debug(f"Species with new members: {sorted(species_with_new_members)}")

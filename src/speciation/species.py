@@ -324,8 +324,8 @@ class Species:
         
         IMPORTANT: Members Storage:
         - Only member_ids (list of genome IDs) are saved, not full Individual objects
-        - This is a storage optimization - full member data is in elites.json
-        - Members are reconstructed lazily from elites.json when load_state() is called
+        - This is a storage optimization - full member data is in genome files
+        - Member data is loaded lazily from genome files when load_state() is called
         - The members list in memory may be empty even if size > 0 - this is EXPECTED
         """
         return {
