@@ -115,6 +115,60 @@ def _validate_tracker_consistency(state: Dict[str, Any], phase_name: str) -> Non
             state["logger"].warning(f"  - {error}")
 
 
+def _validate_species_accounting(
+    state: Dict[str, Any],
+    phase_name: str,
+    incubator_ids: Optional[List[int]] = None,
+    extinct_ids: Optional[List[int]] = None,
+) -> None:
+    """
+    Check that every species_id > 0 in the genome tracker is accounted for:
+    either alive (in state["species"]), incubator, or extinct.
+    Log a warning if any species has genomes in the tracker but is not in any of these.
+    """
+    if "_genome_tracker" not in state:
+        return
+    logger = state["logger"]
+    stats = state["_genome_tracker"].get_stats()
+    by_sid = stats.get("by_species_id", {})
+    # Species IDs that have at least one genome in the tracker (exclude 0 and -1)
+    tracker_species_ids = {int(sid) for sid in by_sid.keys() if int(sid) > 0}
+    if not tracker_species_ids:
+        return
+    alive = {int(sid) for sid in state["species"].keys()}
+    if incubator_ids is not None and extinct_ids is not None:
+        incubator_set = set(int(sid) for sid in incubator_ids)
+        extinct_set = set(int(sid) for sid in extinct_ids)
+    else:
+        incubator_set = set()
+        extinct_set = set()
+        for sid, sp in state.get("historical_species", {}).items():
+            sid_int = int(sid)
+            state_str = getattr(sp, "species_state", None)
+            if state_str == "incubator":
+                incubator_set.add(sid_int)
+            elif state_str == "extinct":
+                extinct_set.add(sid_int)
+    accounted = alive | incubator_set | extinct_set
+    orphan = tracker_species_ids - accounted
+    if orphan:
+        logger.warning(
+            "Species accounting (%s): %d species have genomes in tracker but are not alive, incubator, or extinct: %s. "
+            "Alive=%s, incubators=%d, extinct=%d.",
+            phase_name,
+            len(orphan),
+            sorted(orphan),
+            sorted(alive),
+            len(incubator_set),
+            len(extinct_set),
+        )
+    else:
+        logger.debug(
+            "Species accounting (%s): all %d tracker species accounted (alive=%d, incubator=%d, extinct=%d)",
+            phase_name, len(tracker_species_ids), len(alive), len(incubator_set), len(extinct_set),
+        )
+
+
 def _load_json_file(file_path: Path, logger, default=None):
     """Load JSON file with error handling. Returns default if file doesn't exist or fails.
     Uses population_io for elites.json when possible."""
@@ -1877,28 +1931,61 @@ def process_generation(current_generation: int,
                 sid, sp.stagnation, was_selected, max_fitness_increased
             )
     
+    # Log stagnation summary for all species (before freeze step)
+    stagnation_threshold = state["config"].species_stagnation
+    for sid, sp in state["species"].items():
+        state["logger"].info(
+            "Stagnation: species %s state=%s stagnation=%d (threshold=%d) size=%d",
+            sid, sp.species_state, sp.stagnation, stagnation_threshold, sp.size
+        )
+    
     # 10. Freeze stagnant species (NOT extinction - they stay alive, can merge)
     # Frozen species cannot participate in parent selection (unless category 1 is empty),
     # but they are still alive and can merge if conditions are satisfied.
-    state["logger"].info("=== Phase 5: Step 10 - Freeze Stagnant Species ===")
+    state["logger"].info(
+        "=== Phase 5: Step 10 - Freeze Stagnant Species (threshold=%d) ===",
+        state["config"].species_stagnation
+    )
     
     frozen_count = 0
+    already_frozen_count = 0
+    at_threshold_count = 0
     for sid, sp in list(state["species"].items()):
-        if sp.stagnation >= state["config"].species_stagnation and sp.species_state != "frozen":
+        at_threshold = sp.stagnation >= state["config"].species_stagnation
+        if at_threshold:
+            at_threshold_count += 1
+        if sp.species_state == "frozen":
+            already_frozen_count += 1
+            state["logger"].debug(
+                "Freeze skip: species %s already frozen (stagnation=%d)",
+                sid, sp.stagnation
+            )
+            continue
+        if at_threshold:
             sp.species_state = "frozen"
             frozen_count += 1
             # CRITICAL FIX: Increment extinction_events counter when freezing a species
             # This ensures extinction_events in metrics and EvolutionTracker.json reflect actual freezes
             state["_current_gen_events"]["extinction"] += 1
             state["logger"].info(
-                f"Frozen species {sid} (stagnation={sp.stagnation} >= {state['config'].species_stagnation}) - "
-                f"excluded from parent selection, but still alive and can merge"
+                "Frozen species %s (stagnation=%d >= %d) - excluded from parent selection, still alive and can merge",
+                sid, sp.stagnation, state["config"].species_stagnation
             )
+        else:
+            state["logger"].debug(
+                "Freeze skip: species %s stagnation=%d < threshold=%d",
+                sid, sp.stagnation, state["config"].species_stagnation
+            )
+    
+    state["logger"].info(
+        "Step 10: Summary - species at stagnation>=threshold: %d; frozen this step: %d; already frozen: %d; extinction_events total: %d",
+        at_threshold_count, frozen_count, already_frozen_count, state["_current_gen_events"]["extinction"]
+    )
     
     # Update trackers after freezing
     if frozen_count > 0:
         _save_tracker_if_dirty(state)
-        state["logger"].info(f"Step 10: Frozen {frozen_count} species, extinction_events={state['_current_gen_events']['extinction']} (trackers updated)")
+        state["logger"].info(f"Step 10: Frozen {frozen_count} species (trackers updated)")
     
     # 11. Incubate small species (extinction/dissolution - move to cluster 0)
     # When species have less members than required (min_island_size), we incubate them.
@@ -2008,6 +2095,8 @@ def process_generation(current_generation: int,
     _save_tracker_if_dirty(state)
     # Validate tracker consistency after Phase 5
     _validate_tracker_consistency(state, "Phase 5")
+    # Check that every species_id > 0 in tracker is alive, incubator, or extinct
+    _validate_species_accounting(state, "Phase 5")
     
     # ========================================================================
     # PHASE 6: CLUSTER 0 CAPACITY ENFORCEMENT (species_id = 0)
@@ -2670,6 +2759,13 @@ def save_state(path: str) -> None:
     # 1. All saved species have labels (update_species_labels runs on state["species"] before save_state)
     # 2. Stagnation is tracked correctly (species remain in state["species"] until Phase 5 handles them)
     # 3. Species count matches EvolutionTracker (no extra reconstructed entries)
+    
+    # Validate that every species_id > 0 in genome_tracker is alive, incubator, or extinct
+    _validate_species_accounting(
+        state, "save_state",
+        incubator_ids=incubator_ids,
+        extinct_ids=extinct_ids,
+    )
     
     # Validate consistency
     from collections import Counter
