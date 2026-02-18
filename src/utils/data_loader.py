@@ -367,7 +367,7 @@ def save_prompt_csv_stratified(categorical_questions_df, harmfulqa_questions_df,
         categorical_questions_df: DataFrame with questions from CategoricalHarmfulQA
         harmfulqa_questions_df: DataFrame with questions from HarmfulQA
         n_per_dataset: Number of questions to sample from each dataset (default: 250)
-        random_state: Random seed for reproducibility (default: 42)
+        random_state: Random seed for reproducibility (default: 48)
         filename: Output filename (default: "data/prompt.csv")
     
     Returns:

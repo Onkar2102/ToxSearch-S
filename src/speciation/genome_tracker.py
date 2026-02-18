@@ -91,8 +91,8 @@ class GenomeTracker:
         Returns:
             Tuple of (success: bool, reassignment_info: Optional[Tuple[genome_id, old_sid, new_sid]])
             - success: True if updated successfully, False otherwise
-            - reassignment_info: If genome was reassigned from archive (-1) to active (>0), returns (genome_id, old_sid, new_sid), else None.
-              In the current design, archive genomes are not moved back; this return value supports possible future use or external updates.
+            - reassignment_info: If genome was reassigned from archive (-1) to active species (>0), returns (genome_id, old_sid, new_sid), else None.
+              In the current pipeline, archive genomes are not moved back to active species; reassignment_info is set when such an update is applied (e.g. by an external caller or future feature).
         """
         # Convert to string to ensure type consistency (accepts both str and int)
         genome_id = str(genome_id)
@@ -245,16 +245,17 @@ class GenomeTracker:
             return self.genomes[genome_id]["species_id"]
         return None
     
-    def get_all_genomes_by_species(self, species_id: int) -> List[str]:
+    def get_all_genomes_by_species(self, species_id: Union[int, str]) -> List[str]:
         """
         Get all genome IDs for a species.
         
         Args:
-            species_id: Species ID to query
+            species_id: Species ID to query (int or str; normalized to int for comparison)
             
         Returns:
             List of genome IDs belonging to this species
         """
+        species_id = int(species_id)
         return [
             genome_id for genome_id, data in self.genomes.items()
             if data["species_id"] == species_id

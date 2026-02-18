@@ -30,33 +30,34 @@ _cache_lock = threading.Lock()
 _thread_pool = None
 
 def _get_thread_pool():
-    """Get or create thread pool for async operations"""
+    """Get or create the shared ThreadPoolExecutor for parallel moderation requests.
+    Returns:
+        ThreadPoolExecutor with max_workers=8.
+    """
     global _thread_pool
     if _thread_pool is None:
         _thread_pool = ThreadPoolExecutor(max_workers=8)
     return _thread_pool
 
-def _cleanup_thread_pool():
-    """Clean up thread pool to prevent resource leaks"""
-    global _thread_pool
-    if _thread_pool is not None:
-        _thread_pool.shutdown(wait=True)
-        _thread_pool = None
-
-
 def _get_text_hash(text: str, api_name: str = "") -> str:
-    """Generate a hash for text and API to use as cache key"""
+    """Generate MD5 hash of (api_name, text) for use as moderation cache key.
+    Returns:
+        str: Hex digest of the hash.
+    """
     cache_key = f"{api_name}:{text}"
     return hashlib.md5(cache_key.encode('utf-8')).hexdigest()
 
 def _get_cached_result(text: str, api_name: str = "") -> Optional[Dict]:
-    """Get cached moderation result if available for specific API"""
+    """Return cached moderation result for (text, api_name) if present.
+    Returns:
+        Cached result dict or None.
+    """
     text_hash = _get_text_hash(text, api_name)
     with _cache_lock:
         return _moderation_cache.get(text_hash)
 
 def _cache_result(text: str, result: Dict, api_name: str = ""):
-    """Cache moderation result for specific API"""
+    """Store moderation result in cache for (text, api_name). May trigger cache cleanup if over limit."""
     text_hash = _get_text_hash(text, api_name)
     with _cache_lock:
         _moderation_cache[text_hash] = result
@@ -64,7 +65,7 @@ def _cache_result(text: str, result: Dict, api_name: str = ""):
             _cleanup_cache_if_needed()
 
 def _cleanup_cache_if_needed():
-    """Remove oldest entries if cache exceeds limit"""
+    """Remove oldest ~20% of cache entries when size exceeds _MAX_CACHE_SIZE."""
     global _moderation_cache
     if len(_moderation_cache) > _MAX_CACHE_SIZE:
         items_to_remove = list(_moderation_cache.keys())[:len(_moderation_cache)//5]
@@ -290,7 +291,14 @@ class HybridModerationEvaluator:
         return normalized_scores
     
     def _evaluate_text_hybrid(self, text: str, genome_id: str, moderation_methods: List[str] = None) -> Dict[str, Any]:
-        """Evaluate text using both available APIs"""
+        """Evaluate text using the requested moderation APIs (e.g. Google Perspective).
+        Args:
+            text: Text to evaluate for toxicity/safety.
+            genome_id: Genome identifier for logging.
+            moderation_methods: List of method names to use (e.g. ["google"]). Defaults to ["google"].
+        Returns:
+            Dict with per-API results (e.g. results["google"]) and combined scores; or error dict if all fail.
+        """
         import time
         start_time = time.time()
         

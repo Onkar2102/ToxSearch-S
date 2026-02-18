@@ -27,7 +27,7 @@ class _GenericLLMBackTranslationOperator(VariationOperator):
 
     EN_TO_TARGET_PROMPT = """You are a professional {target_language} translator. Translate the following question from English to {target_language}.
 
-CRITICAL REQUIREMENTS:
+Requirements:
 1. Output EXACTLY one XML tag pair: <trans>...</trans>
 2. The content inside tags must be the translated question
 3. Preserve the complete meaning and intent of the original question
@@ -46,7 +46,7 @@ Return ONLY the translation in this format: <trans>TRANSLATED_QUESTION_HERE</tra
 
     TARGET_TO_EN_PROMPT = """You are a professional English translator. Translate the following question from {source_language} to English.
 
-CRITICAL REQUIREMENTS:
+Requirements:
 1. Output EXACTLY one XML tag pair: <trans>...</trans>
 2. The content inside tags must be the translated question
 3. Preserve the complete meaning and intent of the original question
@@ -72,8 +72,8 @@ Return ONLY the translation in this format: <trans>TRANSLATED_QUESTION_HERE</tra
             self.generator = generator
             self.logger.info(f"{self.name}: Using provided LLM generator")
         else:
-            from .evolution_engine import get_generator
-            self.generator = get_generator()
+            from .evolution_engine import get_prompt_generator
+            self.generator = get_prompt_generator()
             self.logger.debug(f"{self.name}: LLM generator initialized successfully")
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:

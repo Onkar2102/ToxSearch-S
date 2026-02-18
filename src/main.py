@@ -159,30 +159,29 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64):
     """
     Main entry point for evolutionary text generation with toxicity optimization.
-    
+
     Runs the evolutionary algorithm to generate and evolve text prompts, optimizing
     for low toxicity scores using content moderation (Google Perspective API by
     default). Evolution continues until prompts meet the configured toxicity
     threshold or the maximum number of generations is reached.
-    
+
     Args:
         max_generations (int, optional): Maximum evolution generations to run.
             If None, runs until north star threshold is achieved.
         north_star_threshold (float): Target toxicity score for stopping evolution.
-            Default is 0.99 (very low toxicity). Evolution stops when the configured
-            stopping criteria are met (typically when prompts reach the threshold
-            or the generation limit is reached).
+            Default is 0.99 (very low toxicity).
         moderation_methods (List[str], optional): Moderation APIs to use.
             If None, uses ['google'] for evaluation.
-        threshold_percentage (int): Percentage for elite threshold calculation.
-            Default is 25 (top 25%). Elite threshold = (100-threshold_percentage)/100 * population_max_toxicity.
+        rg_model (str): Response generator model path. Default GGUF path.
+        pg_model (str): Prompt generator model path. Default GGUF path.
         operators (str): Operator configuration mode. Options:
-            - "ie": Only InformedEvolution operator enabled, all other mutation-crossover operators disabled
-            - "cm": All mutation-crossover operators enabled, InformedEvolution disabled
-            - "all": All operators enabled (default)
-        max_variants (int): Maximum number of variants to generate per evolution cycle.
-            Controls how many times the evolution cycle runs. Default is 1.
-    
+            "ie" (InformedEvolution only), "cm" (mutation-crossover only), "all" (default).
+        max_variants (int): Maximum number of variants per evolution cycle. Default 1.
+        stagnation_limit (int): Unused; kept for API compatibility.
+        seed_file (str): Path to initial prompt CSV. Default "data/prompt.csv".
+        theta_sim, theta_merge, species_capacity, cluster0_*, min_island_size,
+        species_stagnation, embedding_*: Speciation and embedding configuration.
+
     Returns:
         None
     """

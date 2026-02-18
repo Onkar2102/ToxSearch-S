@@ -100,8 +100,7 @@ class EvolutionEngine:
         """
         Update next_id based on ALL genome files (elites.json, reserves.json, archive.json).
         
-        This ensures next_id is always higher than any existing genome ID across
-        alive and dead populations, preventing duplicate IDs.
+        So next_id stays higher than any existing genome ID and we avoid duplicate IDs.
         """
         from utils.population_io import get_max_genome_id_from_all_files
         
@@ -117,53 +116,6 @@ class EvolutionEngine:
         # Set next_id to max_id + 1 (or 1 if no genomes exist)
         self.next_id = max_id + 1 if max_id > 0 else 1
         self.logger.debug(f"Updated next_id to {self.next_id} (max_id found: {max_id})")
-
-
-    def _count_variants_from_temp(self) -> Dict[str, int]:
-        """Count variants in temp.json by type (mutation/crossover)."""
-        try:
-            temp_path = Path(self.outputs_path) / "temp.json"
-            if not temp_path.exists():
-                return {"mutation_variants": 0, "crossover_variants": 0, "variants_created": 0}
-            
-            with open(temp_path, 'r', encoding='utf-8') as f:
-                temp_variants = json.load(f)
-
-            mutation_count = sum(1 for v in temp_variants if v and v.get("variant_type") == "mutation")
-            crossover_count = sum(1 for v in temp_variants if v and v.get("variant_type") == "crossover")
-            total_count = mutation_count + crossover_count
-            
-            self.logger.debug(f"Counted variants from temp.json: {mutation_count} mutation, {crossover_count} crossover, {total_count} total")
-
-            return {
-                "mutation_variants": mutation_count,
-                "crossover_variants": crossover_count,
-                "variants_created": total_count
-            }
-
-        except Exception as e:
-            self.logger.error(f"Failed to count variants from temp.json: {e}")
-            return {"mutation_variants": 0, "crossover_variants": 0, "variants_created": 0}
-
-    def _analyze_generation_data(self, parents: List[Dict], variant_counts: Dict[str, int]) -> Dict[str, Any]:
-        """Analyze and create generation data for tracking and analytics."""
-        generation_data = {
-            "generation_number": self.current_cycle,
-            "parents": [],
-            "variants_created": variant_counts["variants_created"],
-            "mutation_variants": variant_counts["mutation_variants"],
-            "crossover_variants": variant_counts["crossover_variants"]
-        }
-
-        for parent in parents:
-            generation_data["parents"].append({
-                "id": parent["id"],
-                "north_star_score": round(_extract_north_star_score(parent, "toxicity"), 4),
-                "generation": parent["generation"],
-                "type": "parent"
-            })
-
-        return generation_data
 
     def _calculate_parent_score(self, parents: List[Dict], variant_type: str, operator: Any = None) -> float:
         """
@@ -761,107 +713,6 @@ class EvolutionEngine:
             self.logger.warning("Invalid operator mode '%s', defaulting to 'all' for crossover (%d operators)", self.operators, len(filtered_operators))
         
         return filtered_operators
-
-    def _calculate_expected_variant_count(self, num_parents: int) -> int:  # DEPRECATED: Not used anymore
-        """
-        Calculate expected variant count based on number of parents.
-        
-        Formula: V = (N_mutation × |parents| × max_variants) + (N_crossover × C(|parents|,2) × max_variants)
-        
-        Where:
-        - N_mutation = number of mutation operators (10 in "all" mode)
-        - N_crossover = number of crossover operators (2)
-        - C(|parents|,2) = number of parent pairs = |parents| × (|parents| - 1) / 2
-        
-        Expected counts:
-        - 2 parents: V = (10 × 2 × 1) + (2 × 1 × 1) = 22 variants
-        - 3 parents: V = (10 × 3 × 1) + (2 × 3 × 1) = 36 variants
-        
-        Args:
-            num_parents: Number of parents selected
-            
-        Returns:
-            Expected total variant count
-        """
-        mutation_ops = len(self._get_single_parent_operators())
-        crossover_ops = len(self._get_multi_parent_operators())
-        
-        # Calculate number of parent pairs: C(n,2) = n × (n-1) / 2
-        parent_pairs = (num_parents * (num_parents - 1)) // 2 if num_parents >= 2 else 0
-        
-        expected_count = (mutation_ops * num_parents * self.max_variants) + \
-                        (crossover_ops * parent_pairs * self.max_variants)
-        
-        self.logger.debug(f"Expected variant count: {mutation_ops} mutation ops × {num_parents} parents × {self.max_variants} + "
-                         f"{crossover_ops} crossover ops × {parent_pairs} pairs × {self.max_variants} = {expected_count}")
-        
-        return expected_count
-
-    def _store_expected_variant_count(self, expected_count: int, evolution_tracker: Dict[str, Any] = None) -> None:  # DEPRECATED: Not used anymore
-        """
-        Store expected variant count in EvolutionTracker.json for operator effectiveness calculation.
-        
-        Args:
-            expected_count: Expected variant count for current generation
-            evolution_tracker: Evolution tracker dictionary (optional, will load if not provided)
-        """
-        try:
-            from utils import get_system_utils
-            _, _, _, get_outputs_path, _, _ = get_system_utils()
-            
-            evolution_tracker_path = get_outputs_path() / "EvolutionTracker.json"
-            if not evolution_tracker_path.exists():
-                self.logger.warning("EvolutionTracker.json not found, cannot store expected variant count")
-                return
-            
-            # Load EvolutionTracker
-            if evolution_tracker is None:
-                with open(evolution_tracker_path, 'r', encoding='utf-8') as f:
-                    evolution_tracker = json.load(f)
-            
-            current_generation = self.current_cycle
-            if current_generation is None:
-                self.logger.warning("Current generation is None, cannot store expected variant count")
-                return
-            
-            # Find or create generation entry
-            generations = evolution_tracker.get("generations", [])
-            gen_entry = None
-            for gen in generations:
-                if gen.get("generation_number") == current_generation:
-                    gen_entry = gen
-                    break
-            
-            if gen_entry is None:
-                # Create new generation entry
-                gen_entry = {
-                    "generation_number": current_generation,
-                    "expected_variant_count": expected_count
-                }
-                generations.append(gen_entry)
-                evolution_tracker["generations"] = generations
-            else:
-                # Update existing entry
-                gen_entry["expected_variant_count"] = expected_count
-            
-            # Save updated EvolutionTracker
-            with open(evolution_tracker_path, 'w', encoding='utf-8') as f:
-                json.dump(evolution_tracker, f, indent=2, ensure_ascii=False)
-            
-            self.logger.debug(f"Stored expected variant count {expected_count} for generation {current_generation}")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to store expected variant count: {e}", exc_info=True)
-
-    def get_last_generation_data(self) -> Dict[str, Any]:
-        """Get the generation data from the last run for tracking purposes."""
-        return getattr(self, '_last_generation_data', {
-            "generation_number": self.current_cycle,
-            "parents": [],
-            "variants_created": 0,
-            "mutation_variants": 0,
-            "crossover_variants": 0
-        })
 
     def _deduplicate_temp_json(self) -> int:
         """

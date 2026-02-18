@@ -136,7 +136,7 @@ def extract_species_labels(
     for sid in species_ids:
         species = species_dict[sid]
         # For frozen species or species with few members, load prompts from elites.json
-        # This ensures we have all member prompts for accurate labeling
+        # So we have all member prompts for accurate labeling
         prompts = []
         if species.species_state == "frozen" or len(species.members) < 3:
             # Load from elites.json for frozen species or small species

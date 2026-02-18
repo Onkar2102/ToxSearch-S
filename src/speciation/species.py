@@ -166,13 +166,13 @@ class Species:
     - Fitness tracking for stagnation detection
     - Origin tracking (how the species was created: merge/split/natural)
     
-    Species evolve independently, can merge with similar species, can go frozen (extinct).
+    Species evolve independently, can merge with similar species, and can become frozen (excluded from parent selection but still alive).
     
     Note: Species IDs start from 1. ID 0 is reserved for Cluster 0 (reserves).
     
     Species States:
     - "active": Normal operating state, participates in evolution
-    - "frozen": Species frozen due to stagnation (species_stagnation exceeded), excluded from parent selection (but still alive)
+    - "frozen": Species frozen due to stagnation (species_stagnation exceeded), excluded from parent selection (but still alive; can be reactivated if assigned a new leader)
     - "incubator": Species moved to cluster 0 (reserves), awaiting potential new species formation
     - "extinct": Species that merged with another (parent species become extinct, merged species is new)
     
@@ -287,13 +287,14 @@ class Species:
         """
         Record current best fitness and update fitness history.
         
-        Stagnation (improvement is defined solely by max_fitness_increased, not fitness_history):
+        Stagnation rule (improvement is defined solely by max_fitness_increased, not fitness_history):
         - If max_fitness_increased is True -> stagnation = 0 (reset).
         - Else, if was_selected_as_parent is True -> stagnation += 1.
-        - Else (not selected) -> stagnation unchanged.
+        - Else (not selected, e.g. frozen or simply not chosen) -> stagnation unchanged.
         
-        NOTE: This is called for ALL species, including frozen species. For frozen species,
-        stagnation continues to increment if they were selected as parents.
+        This is called for ALL species. Frozen species are excluded from parent selection,
+        so they are never selected as parents and their stagnation remains unchanged until
+        they merge (then the merged species gets fresh stagnation) or are reactivated.
         
         Args:
             generation: Current generation number

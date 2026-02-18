@@ -17,6 +17,7 @@ Where:
 - w_genotype = 0.7, w_phenotype = 0.3
 """
 
+import csv
 import json
 import numpy as np
 from pathlib import Path
@@ -28,6 +29,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from speciation.distance import ensemble_distance
 from speciation.phenotype_distance import extract_phenotype_vector
+
+
+def load_prompts_from_csv(csv_path: Path) -> List[dict]:
+    """Load prompts from initial_prompts.csv and return as minimal genome dicts."""
+    genomes = []
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader):
+            prompt = row.get("prompt", "").strip()
+            if prompt:
+                genomes.append({"id": i + 1, "prompt": prompt})
+    return genomes
 
 
 def load_genomes(execution_dir: Path, include_reserves: bool = True) -> List[dict]:
@@ -85,13 +98,13 @@ def extract_embedding_and_phenotype(genome: dict, compute_if_missing: bool = Tru
     return embedding, phenotype
 
 
-def filter_valid_genomes(genomes: List[dict], compute_embeddings: bool = True) -> List[dict]:
-    """Filter genomes that have both embedding and phenotype."""
+def filter_valid_genomes(genomes: List[dict], compute_embeddings: bool = True, require_phenotype: bool = False) -> List[dict]:
+    """Filter genomes that have embedding (and optionally phenotype). Phenotype can be None for prompts-only input."""
     valid = []
     print("  Computing embeddings for genomes if missing...")
     for i, genome in enumerate(genomes):
         embedding, phenotype = extract_embedding_and_phenotype(genome, compute_if_missing=compute_embeddings)
-        if embedding is not None and phenotype is not None:
+        if embedding is not None and (phenotype is not None or not require_phenotype):
             # Verify embedding is normalized (or normalize it)
             norm = np.linalg.norm(embedding)
             if not np.isclose(norm, 1.0, atol=1e-5):
@@ -474,8 +487,11 @@ def main():
     parser = argparse.ArgumentParser(description="Verify ensemble distance metric properties")
     parser.add_argument("--min-genomes", type=int, default=100,
                        help="Minimum number of genomes to test with (default: 100)")
+    parser.add_argument("--prompts-csv", type=str,
+                       default=str(Path(__file__).parent / "initial_prompts.csv"),
+                       help="Path to initial_prompts.csv (default: experiments/initial_prompts.csv)")
     parser.add_argument("--execution-dir", type=str, default=None,
-                       help="Specific execution directory to use (default: use most recent)")
+                       help="Specific execution directory to use (overrides --prompts-csv)")
     parser.add_argument("--use-multiple", action="store_true",
                        help="Use multiple execution directories to reach min_genomes")
     parser.add_argument("--num-samples", type=int, default=None,
@@ -501,8 +517,16 @@ def main():
         return
     
     try:
-        # Load genomes
-        if args.execution_dir:
+        # Load genomes: prefer prompts CSV if available and not overridden by execution-dir
+        prompts_csv_path = Path(args.prompts_csv)
+        loaded_from_csv = False
+        if args.execution_dir is None and prompts_csv_path.exists():
+            # Use initial_prompts.csv
+            print(f"\nUsing prompts from: {prompts_csv_path}")
+            genomes = load_prompts_from_csv(prompts_csv_path)
+            print(f"  Loaded {len(genomes)} prompts")
+            loaded_from_csv = True
+        elif args.execution_dir:
             # Use specific directory
             execution_dir = base_dir / args.execution_dir
             if not execution_dir.exists():
@@ -527,9 +551,11 @@ def main():
                 genomes = load_genomes(execution_dir, include_reserves=True)
         
         # Filter valid genomes (compute embeddings if missing)
-        print("\nFiltering valid genomes (with embeddings and phenotypes)...")
-        valid_genomes = filter_valid_genomes(genomes, compute_embeddings=True)
-        print(f"Found {len(valid_genomes)} genomes with both embeddings and phenotypes")
+        # When loaded from CSV (prompts only), phenotype is not required; when from execution dir, require both
+        require_phenotype = not loaded_from_csv
+        print("\nFiltering valid genomes (with embeddings" + (", phenotypes" if require_phenotype else "") + ")...")
+        valid_genomes = filter_valid_genomes(genomes, compute_embeddings=True, require_phenotype=require_phenotype)
+        print(f"Found {len(valid_genomes)} genomes with embeddings" + (" and phenotypes" if require_phenotype else " (genotype-only)") + "")
         
         if len(valid_genomes) < args.min_genomes:
             print(f"\nWARNING: Only found {len(valid_genomes)} valid genomes (target: {args.min_genomes})")

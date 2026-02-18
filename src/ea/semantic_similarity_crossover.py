@@ -63,11 +63,7 @@ class SemanticSimilarityCrossover(VariationOperator):
 
         Args:
             operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': List of enriched parent genome dictionaries containing:
-                    - 'prompt': Original prompt text for crossover
-                    - 'generated_text': Generated output from the prompt (optional)
-                    - 'scores': Moderation scores dictionary
-                    - 'north_star_score': Primary optimization metric score
+                - 'parent_data': List of parent dicts; each needs at least 'prompt' (original prompt text for crossover)
                 - 'max_variants': Maximum number of variants to generate
 
         Returns:

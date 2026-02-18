@@ -152,13 +152,19 @@ def leader_follower_clustering(
     """
     Leader-Follower clustering algorithm that reads and writes files directly.
     
+    Frozen species can be reactivated: when a species loses its leader and a new leader is
+    assigned from its members, it remains in the same state (e.g. frozen); if later that
+    species receives a new leader assignment during clustering, it continues to participate
+    in merge/assignment logic. Reactivation to "active" (unfreeze) is not done here; freezing
+    is managed in Phase 5 (run_speciation).
+    
     This function uses DEFERRED SPECIES ID ASSIGNMENT (adaptive to min_island_size):
     - Species IDs are only assigned when a leader gains enough followers to reach min_island_size
     - Individuals that don't fit existing species become "potential leaders"
     - Potential leaders become actual species only when they have (min_island_size - 1) followers
     - Potential leaders without enough followers stay in cluster 0 (reserves)
     
-    This ensures:
+    So we get:
     - No wasted species IDs
     - No species smaller than min_island_size
     - Species inherently have minimum size of min_island_size
@@ -414,7 +420,7 @@ def leader_follower_clustering(
             # Assign to existing species if within threshold
             # IMPORTANT: If multiple leaders are within theta_sim, we assign to the CLOSEST one
             # (nearest_leader_id is determined by min_dist from ensemble_distances_batch above)
-            # This ensures deterministic and principled assignment when genomes could fit multiple species
+            # So assignment is deterministic when a genome could fit multiple species
             if nearest_leader_id is not None and min_dist < theta_sim:
                 sp = species[nearest_leader_id]
                 sp.add_member(ind)
@@ -476,8 +482,8 @@ def leader_follower_clustering(
                             leader = max(all_members, key=lambda x: x.fitness)
                             
                             # After choosing the new leader, verify all members are within the leader's radius
-                            # This ensures species are created only with members within the radius threshold,
-                            # preventing members from being removed immediately in radius cleanup phase.
+                            # So species are only created with members within the radius threshold;
+                            # we don't remove them in the radius cleanup phase.
                             # This matches the logic in check_speciation() for consistency.
                             valid_members = [leader]  # Leader always included
                             for member in all_members:
@@ -817,7 +823,7 @@ def leader_follower_clustering(
         json.dump(genomes, f, indent=2, ensure_ascii=False)
     
     # NOTE: reserves.json is NOT updated here - Phase 7 (redistribution) handles all file distribution
-    # from genome_tracker. This ensures single source of truth (tracker) for species membership.
+    # from genome_tracker. So the tracker stays the single source of truth for species membership.
     # Outliers that formed species are already tracked in genome_tracker via update_species_id calls above.
     
     # NOTE: speciation_state.json is NOT updated here - Phase 8 (save_state) handles the final save.

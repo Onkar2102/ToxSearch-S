@@ -124,7 +124,9 @@ parent_selection_tracker_path = None
 
 
 def check_threshold_and_update_tracker(population, north_star_metric, log_file=None, threshold=0.99):
-    """Check threshold achievement and update evolution tracker (global version)"""
+    """Check whether the population has reached the north-star threshold and update EvolutionTracker.json.
+    Global version: uses the full population (elites + reserves) and tracker scope 'global', as opposed to
+    per-species or per-run thresholds."""
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("RunEvolution", log_file)
     try:
@@ -476,7 +478,9 @@ def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_st
         }
 
 def run_evolution(north_star_metric, log_file=None, threshold=0.99, current_cycle=None, max_variants=1, max_num_parents=4, operators="all"):
-    """Run one evolution generation with comprehensive logging and steady state support"""
+    """Run one evolution generation with comprehensive logging.
+    Steady-state support: population is loaded from reserves.json or elites.json each time; each call runs a single
+    generation and can be invoked repeatedly (e.g. by an external scheduler) without an in-process loop."""
     outputs_path = get_outputs_path()
     # Check for population files - use reserves.json (cluster 0) or elites.json
     reserves_path = outputs_path / "reserves.json"

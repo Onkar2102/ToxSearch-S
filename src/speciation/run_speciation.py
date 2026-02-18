@@ -9,7 +9,7 @@ Species Key Type Convention:
     - JSON files: keys are str (JSON limitation - keys are always strings)
     - At load_state: keys are normalized to int when loading from JSON
     - At save_state: keys are converted to str when writing to JSON
-    - CRITICAL: When performing lookups or set operations, always normalize
+    - NOTE: When performing lookups or set operations, always normalize
       species IDs to int to avoid type mismatch bugs (e.g., 1 != "1" in Python)
 """
 
@@ -129,7 +129,7 @@ def _validate_species_accounting(
     if "_genome_tracker" not in state:
         return
     logger = state["logger"]
-    stats = state["_genome_tracker"].get_stats()
+    stats = state["_genome_tracker"].get_distribution_stats()
     by_sid = stats.get("by_species_id", {})
     # Species IDs that have at least one genome in the tracker (exclude 0 and -1)
     tracker_species_ids = {int(sid) for sid in by_sid.keys() if int(sid) > 0}
@@ -426,11 +426,10 @@ def _load_genomes_by_ids(genome_ids: List[str], outputs_path: Path, logger) -> L
 
 def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generation: int = 0) -> Dict[str, int]:
     """
-    Phase 7: Redistribution of Genomes
+    Phase 8: Redistribution of Genomes (executed as the 7th step in process_generation(), before metrics).
     
-    Function name is phase8_redistribute_genomes() but called as Phase 7 within process_generation().
     Uses genome tracker as source of truth for distribution.
-    Called within process_generation() as Phase 7, before Phase 8 (metrics).
+    The name "phase8" reflects the logical phase number; within process_generation() this step runs as the 7th phase before the final metrics phase.
     
     Steps:
     1. Update species_id in elites.json based on genome_tracker.json (one-by-one validation)
@@ -752,8 +751,8 @@ def process_generation(current_generation: int,
     # 3. Tracker files are lightweight and fast to read/write
     #
     # Phase 7 is the ONLY phase that updates species_id in file genomes (temp.json, elites.json,
-    # reserves.json) and distributes them to correct files. This ensures files are synchronized
-    # with genome_tracker (authoritative source) after all speciation operations are complete.
+    # reserves.json) and distributes them to correct files. So files stay in sync with
+    # genome_tracker (authoritative source) after all speciation operations are complete.
     #
     # Enforcement rules by phase:
     # - Phase 1: Radius enforcement only, NO capacity enforcement
@@ -874,9 +873,9 @@ def process_generation(current_generation: int,
         # Used in Phase 5 for record_fitness(max_fitness_increased). Species created this gen are not in
         # _prev_max_fitness -> treated as max_fitness_increased=True.
         #
-        # CRITICAL FIX: Compute true max fitness from tracker + loaded genomes, not just in-memory sp.members
-        # In-memory members may be incomplete after load_state() (lazy loading), which causes sp.max_fitness
-        # to be artificially low. This would make max_fitness_increased always True and prevent stagnation.
+        # NOTE: Compute true max fitness from tracker + loaded genomes, not just in-memory sp.members.
+        # In-memory members can be incomplete after load_state (lazy load), so max_fitness would be wrong
+        # and stagnation would never increment.
         outputs_path_prev_max = get_outputs_path()
         state["_prev_max_fitness"] = {}
         
@@ -1228,7 +1227,7 @@ def process_generation(current_generation: int,
     # Load all species leaders from speciation_state.json and perform iterative merging
     # NOTE: record_fitness() is called ONCE per generation in Phase 5 (Freeze & Incubator)
     # to avoid double-incrementing stagnation. We skip it here to prevent calling it twice.
-    # This ensures stagnation only increments once per generation, preventing premature freezing.
+    # So stagnation only increments once per generation and we avoid premature freezing.
     
     outputs_path = get_outputs_path()
     speciation_state_path = outputs_path / "speciation_state.json"
@@ -1516,8 +1515,8 @@ def process_generation(current_generation: int,
     # NOTE: Radius enforcement is done in Phase 1 (after variant processing) and Phase 3 (after merging)
     # Phase 4 only enforces capacity limits for species_id > 0
     
-    # CRITICAL FIX: Process ALL species_id > 0 from tracker, not just those in state["species"]
-    # Some species may be removed from state["species"] during Phase 3 (radius cleanup) but still have
+    # NOTE: Process ALL species_id > 0 from tracker, not just those in state["species"].
+    # Some species can be removed from state["species"] in Phase 3 (radius cleanup) but still have
     # genomes in the tracker that need capacity enforcement.
     all_phase4_species_ids = set(state["species"].keys())  # Default to in-memory species
     
@@ -1530,7 +1529,7 @@ def process_generation(current_generation: int,
                                if int(sid) > 0 and count > 0}
         
         # Combine with species in state["species"]
-        # CRITICAL: Normalize keys to int (state["species"] keys are int after load_state, but ensure consistency)
+        # NOTE: Normalize keys to int (state["species"] keys are int after load_state, but ensure consistency)
         in_memory_species_ids = {int(sid) for sid in state["species"].keys()}
         all_phase4_species_ids = tracker_species_ids | in_memory_species_ids
         
@@ -1542,7 +1541,7 @@ def process_generation(current_generation: int,
             )
     
     # 8. Capacity enforcement for ALL species (species_id > 0)
-    # CRITICAL: Capacity enforcement considers ALL genomes from genome_tracker (all generations), not just in-memory members
+    # NOTE: Capacity enforcement considers ALL genomes from genome_tracker (all generations), not just in-memory members
     # NOTE: genome_tracker.json is the authoritative source - we use it to get IDs, then fetch details as needed
     # NOTE: Does NOT update elites.json/reserves.json (only trackers are updated)
     outputs_path = get_outputs_path()
@@ -1550,7 +1549,7 @@ def process_generation(current_generation: int,
     # Process all species IDs (from both state["species"] and tracker)
     for sid in sorted(all_phase4_species_ids):
         # Check if this species is in state["species"] (has in-memory representation)
-        # CRITICAL: Try both int and str keys for backward compatibility
+        # NOTE: Try both int and str keys for backward compatibility
         sp = state["species"].get(sid) or state["species"].get(str(sid))
         
         # Log if processing tracker-only species (not in state["species"])
@@ -1842,7 +1841,7 @@ def process_generation(current_generation: int,
                     state["logger"].info(f"Species {sid} has no other members, marking as incubator (will be processed in Phase 5 Step 18)")
     
     # Save tracker after Phase 4 (critical state changes)
-    # CRITICAL: Save tracker immediately after capacity enforcement to ensure updates are persisted
+    # NOTE: Save tracker immediately after capacity enforcement so updates are persisted
     # NOTE: Only trackers are updated (genome_tracker.json, events_tracker.json, speciation_state.json)
     # NOTE: Species_id is NOT updated in elites.json/reserves.json (file distribution happens in Phase 7)
     _save_tracker_if_dirty(state)
@@ -1882,8 +1881,10 @@ def process_generation(current_generation: int,
     state["logger"].info("=== Phase 5: Stagnation and Incubation ===")
     
     # 9. Record fitness for ALL species (not just those with new members)
-    # Stagnation only increments if species was selected as parent AND no improvement
-    # Load parents.json to determine which species were selected as parents
+    # Stagnation rule: if species m is selected as parent AND max_fitness of m did not increase -> increment stagnation for m.
+    # Reset stagnation to 0 when max_fitness of that species increased.
+    # We use parents.json only (2-3 genomes), not top_10.json or temp.json, so informed evolution (which uses top_10)
+    # does not affect which species are considered "selected" for stagnation.
     selected_species_ids = set()
     if current_generation > 0:  # Generation 0 has no parents
         try:
@@ -1913,22 +1914,17 @@ def process_generation(current_generation: int,
     for sid, sp in state["species"].items():
         # max_fitness = actual max over current members only (in case members were removed in radius/capacity)
         sp.max_fitness = max((m.fitness for m in sp.members), default=0.0)
-        # CRITICAL: state["species"] keys can be str (from JSON load) or int (from merge); selected_species_ids and _prev_max_fitness use int keys
         sid_int = int(sid)
         was_selected = sid_int in selected_species_ids
         # Species created this gen: sid not in _prev_max_fitness -> treat as increased
         prev_max = state.get("_prev_max_fitness", {}).get(sid_int, -1)
         max_fitness_increased = sp.max_fitness > prev_max
-        if was_selected and not max_fitness_increased:
-            state["logger"].info(
-                "Stagnation: species %s would increment (was_selected, max_fitness not increased: %.4f vs prev %.4f)",
-                sid, sp.max_fitness, prev_max
-            )
+        prev_stagnation = sp.stagnation
         sp.record_fitness(current_generation, was_selected_as_parent=was_selected, max_fitness_increased=max_fitness_increased)
-        if sp.stagnation > 0:
-            state["logger"].debug(
-                "Stagnation updated: species %s stagnation=%d (was_selected=%s, max_fitness_increased=%s)",
-                sid, sp.stagnation, was_selected, max_fitness_increased
+        if sp.stagnation != prev_stagnation:
+            state["logger"].info(
+                "Stagnation changed: species %s %d -> %d (was_selected=%s, max_fitness_increased=%s)",
+                sid, prev_stagnation, sp.stagnation, was_selected, max_fitness_increased
             )
     
     # Log stagnation summary for all species (before freeze step)
@@ -1939,8 +1935,10 @@ def process_generation(current_generation: int,
             sid, sp.species_state, sp.stagnation, stagnation_threshold, sp.size
         )
     
-    # 10. Freeze stagnant species (NOT extinction - they stay alive, can merge)
-    # Frozen species cannot participate in parent selection (unless category 1 is empty),
+    # 10. Freeze stagnant species (species stay alive and can merge; "extinction" counter is for metrics only)
+    # The extinction_events counter is incremented when freezing so that metrics/EvolutionTracker
+    # reflect all species state changes; the species itself is not removed and can still merge.
+    # Frozen species cannot participate in parent selection (unless no active species exist),
     # but they are still alive and can merge if conditions are satisfied.
     state["logger"].info(
         "=== Phase 5: Step 10 - Freeze Stagnant Species (threshold=%d) ===",
@@ -1964,8 +1962,7 @@ def process_generation(current_generation: int,
         if at_threshold:
             sp.species_state = "frozen"
             frozen_count += 1
-            # CRITICAL FIX: Increment extinction_events counter when freezing a species
-            # This ensures extinction_events in metrics and EvolutionTracker.json reflect actual freezes
+                    # Increment extinction_events so metrics/EvolutionTracker reflect this state change (species remains alive)
             state["_current_gen_events"]["extinction"] += 1
             state["logger"].info(
                 "Frozen species %s (stagnation=%d >= %d) - excluded from parent selection, still alive and can merge",
@@ -2035,6 +2032,7 @@ def process_generation(current_generation: int,
             
             # Update tracker: find ALL genomes with this species_id (tracker is source of truth)
             if "_genome_tracker" in state:
+                sid = int(sid)
                 genomes_to_update = [gid for gid, gdata in state["_genome_tracker"].genomes.items() 
                                     if gdata.get("species_id") == sid]
                 # Add in-memory members as backup
@@ -2225,7 +2223,7 @@ def process_generation(current_generation: int,
     _update_speciation_state_cluster0_size_after_distribution(outputs_path)
     
     # Also update in-memory cluster0 to match reserves.json (synchronize members list)
-    # This ensures in-memory state matches the file state after Phase 7 redistribution
+    # So in-memory state matches the file state after Phase 7 redistribution
     reserves_path = outputs_path / "reserves.json"
     if reserves_path.exists() and "_genome_tracker" in state:
         try:
@@ -2669,7 +2667,7 @@ def save_state(path: str) -> None:
             elites_genomes = []
     
     # REQUIRED: genome_tracker must be available for save_state
-    # This ensures species membership is tracked correctly and consistently
+    # So species membership is tracked correctly and consistently
     if "_genome_tracker" not in state:
         logger.error("Genome tracker is required for save_state() - cannot calculate species member_ids/sizes without it")
         raise RuntimeError("Genome tracker is required for save_state()")
@@ -2737,7 +2735,7 @@ def save_state(path: str) -> None:
         if str(sid) not in species_dict:  # Avoid duplicates
             if sp.species_state == "extinct":
                 # Extinct species - just track ID (like incubators, not really helpful but preserved for reference)
-                # CRITICAL: Verify extinct species truly have no active members in genome_tracker (authoritative source)
+                # NOTE: Verify extinct species have no active members in genome_tracker (authoritative source)
                 # Note: elites.json may still show old species_id until Phase 7 redistribution, but tracker is updated immediately
                 if "_genome_tracker" in state:
                     active_member_count = len(state["_genome_tracker"].get_all_genomes_by_species(sid))
@@ -2755,7 +2753,7 @@ def save_state(path: str) -> None:
                 incubator_ids.append(sid)
     
     # NOTE: Reconstruction block removed - species_dict is built only from state["species"] (active/frozen)
-    # and state["historical_species"] (extinct/incubator IDs only). This ensures:
+    # and state["historical_species"] (extinct/incubator IDs only). So:
     # 1. All saved species have labels (update_species_labels runs on state["species"] before save_state)
     # 2. Stagnation is tracked correctly (species remain in state["species"] until Phase 5 handles them)
     # 3. Species count matches EvolutionTracker (no extra reconstructed entries)
@@ -2900,14 +2898,15 @@ def load_state(path: str) -> bool:
             if saved_config.species_stagnation != current_config.species_stagnation:
                 logger.info(f"Config difference: saved species_stagnation={saved_config.species_stagnation}, using current={current_config.species_stagnation} (command-line argument takes precedence)")
         
-        # Restore species - separate active from historical
+        # Restore species - separate active from historical.
+        # Normalize species keys to int (JSON has string keys) so in-memory state is consistent.
         state["species"] = {}
         state["historical_species"] = {}
         max_species_id = 0
         
         # Load active and frozen species (full data)
         for sid_str, sp_dict in loaded_state.get("species", {}).items():
-            sid = int(sid_str)
+            sid = int(sid_str)  # Keep int keys for consistency with merge/new-species paths
             max_species_id = max(max_species_id, sid)
             
             leader_embedding = None
@@ -3030,7 +3029,7 @@ def load_state(path: str) -> bool:
                 state["historical_species"][sid] = species
         
         # Load incubator and extinct species IDs and restore into historical_species
-        # CRITICAL: We must restore these so save_state() can persist them again (otherwise we lose
+        # NOTE: Restore these so save_state() can persist them again (otherwise we lose
         # extinct/incubator IDs across generations when load_state runs at start of each generation).
         incubator_ids = loaded_state.get("incubators", [])
         extinct_ids = loaded_state.get("extinct", [])  # Extinct species IDs (merged parents)
@@ -3134,6 +3133,7 @@ def run_speciation(
         Dict with speciation and distribution results
     """
     logger = get_logger("RunSpeciation", log_file)
+    # Pass logger to _init_state so all speciation phase messages (stagnation, Phase 5, etc.) go to the run log
     logger.info("Starting speciation: generation=%d", current_generation)
 
     # Ensure global state is clean for each invocation (avoids cross-run contamination)
@@ -3166,8 +3166,8 @@ def run_speciation(
                 with open(reserves_path, 'r', encoding='utf-8') as f:
                     reserves_genomes = json.load(f)
                 actual_reserves_size = len(reserves_genomes)
-            except Exception:
-                pass  # Use cluster0.size as fallback
+            except Exception as e:
+                state["logger"].debug("Reserves size fallback: could not read reserves.json (%s), using cluster0.size=%s", e, state["cluster0"].size)
         
         # Calculate species count from files (speciation_state.json) - more accurate than in-memory
         active_count = len([sp for sp in state["species"].values() if sp.species_state == "active"])  # Default to in-memory (fallback)
@@ -3354,8 +3354,8 @@ def run_speciation(
                 with open(reserves_path, 'r', encoding='utf-8') as f:
                     reserves_genomes = json.load(f)
                 actual_reserves_size = len(reserves_genomes)
-            except Exception:
-                pass  # Use cluster0.size as fallback
+            except Exception as e:
+                state["logger"].debug("Reserves size fallback: could not read reserves.json (%s), using cluster0.size=%s", e, state["cluster0"].size)
         
         log_generation_summary(current_generation, state["species"], actual_reserves_size,
                                state["_current_gen_events"], state["logger"], elites_path=elites_path)
@@ -3441,12 +3441,15 @@ def run_speciation(
             result["cluster_quality"] = None
             logger.debug("No metrics available, using default diversity values (0.0)")
         
-        # Distribution stats are available from genome_tracker
+        # Distribution stats from genome_tracker (by_species_id keys are stringified ints: "0", "1", "-1", ...)
         if "_genome_tracker" in state:
             stats = state["_genome_tracker"].get_distribution_stats()
+            by_sid = stats.get("by_species_id", {})
+            elites_count = sum(int(v) for k, v in by_sid.items() if k.isdigit() and int(k) > 0)
+            reserves_count = int(by_sid.get("0", 0))
             result.update({
-                "elites_moved": stats["by_species_id"].get(">0", 0),  # Approximate - actual count from elites.json
-                "reserves_moved": stats["by_species_id"].get("0", 0)  # Approximate - actual count from reserves.json
+                "elites_moved": elites_count,
+                "reserves_moved": reserves_count
             })
         
         logger.info(

@@ -274,7 +274,7 @@ def calculate_table4_metrics(
             calculated_total = total_variants + rejections + duplicates
             
             # Include operator even if calculated_total is 0 (for completeness, though metrics will be NaN/0)
-            # This ensures all operators appear in the metrics, even if they had no activity
+            # So all operators appear in the metrics even when they had no activity
             if calculated_total == 0 and total_variants == 0 and rejections == 0 and duplicates == 0:
                 # Skip operators with no activity at all (not in stats and no variants)
                 continue

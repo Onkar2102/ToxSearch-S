@@ -447,7 +447,7 @@ class ParentSelector:
     def _save_parents_to_file(self, parents: List[Dict], outputs_path: str = None) -> None:
         """
         Save selected parents to parents.json file for operators to fetch.
-        Only saves essential fields: id, prompt, and toxicity score.
+        Saves essential fields only: id, prompt, toxicity score, and species_id.
 
         Args:
             parents: List of selected parent genomes
@@ -479,8 +479,8 @@ class ParentSelector:
 
     def _save_top_10_by_toxicity(self, elites_path: str = None, reserves_path: str = None, output_path: str = None) -> None:
         """
-        Save the top 10 genomes from elites.json and reserves.json combined by their toxicity score to top_10.json.
-        Only saves essential fields: id, prompt, and toxicity scores.
+        Save the top 10 genomes from elites.json and reserves.json combined by toxicity score to top_10.json.
+        Saves essential fields only: id, prompt, and toxicity (north-star score).
 
         Args:
             elites_path: Path to elites.json file

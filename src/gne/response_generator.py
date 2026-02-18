@@ -81,9 +81,13 @@ class ResponseGenerator:
 
     def generate_response(self, prompt: str, **kwargs) -> tuple[str, float]:
         """Generate a response to a prompt using chat completions interface.
-        
+
+        Args:
+            prompt: Raw prompt text to send to the model.
+            **kwargs: Optional arguments passed through to model_interface.chat_completion (e.g. max_tokens, temperature).
+
         Returns:
-            tuple: (response_text, duration_in_seconds)
+            tuple: (response_text, duration_in_seconds). response_text is empty string on failure.
         """
         start_time = time.time()
         

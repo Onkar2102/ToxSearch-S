@@ -45,8 +45,8 @@ def get_max_genome_id_from_all_files(outputs_path: Optional[Union[str, Path]] = 
     """
     Find the maximum genome ID across all genome files (elites.json, reserves.json, archive.json).
     
-    This ensures that new genomes always get unique IDs that don't conflict with existing
-    genomes in alive or dead populations.
+    So new genomes get unique IDs that don't conflict with existing genomes in alive
+    or dead populations.
     
     Args:
         outputs_path: Path to outputs directory. If None, uses get_outputs_path()
@@ -303,7 +303,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
     
     Note: Active population = elites.json + reserves.json (archive.json is NOT part of population).
     """
-    
+    _log = get_logger("population_io")
     base_path = Path(base_dir).resolve()
     # Use reserves.json as default population file
     # Note: We only maintain elites (in species or reserves). Active population = elites + reserves.
@@ -323,7 +323,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
                 tracker = json.load(f)
             
             # Calculate total_generations from the actual generations array
-            # This ensures it's always up-to-date with the actual generation count
+            # So it's always up-to-date with the actual generation count
             if "generations" in tracker and tracker["generations"]:
                 # Get the maximum generation number from the generations array
                 max_gen_num = max(gen.get("generation_number", 0) for gen in tracker["generations"])
@@ -335,8 +335,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
             return info
                 
         except Exception as e:
-            # Fall back to file scanning if tracker read fails
-            pass
+            _log.debug("get_population_files_info: EvolutionTracker read failed (%s), falling back to file scanning", e)
     
     # Count genomes in reserves.json (fallback if EvolutionTracker not available)
     if population_file.exists():
@@ -352,8 +351,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
                     info["generation_counts"][gen_num] = info["generation_counts"].get(gen_num, 0) + 1
             
         except Exception as e:
-            # Silently fail if we can't read the file
-            pass
+            _log.debug("get_population_files_info: could not read reserves.json (%s)", e)
     
     # Count genomes in elites.json
     if elites_file.exists():
@@ -369,8 +367,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
                     info["generation_counts"][gen_num] = info["generation_counts"].get(gen_num, 0) + 1
             
         except Exception as e:
-            # Silently fail if we can't read the file
-            pass
+            _log.debug("get_population_files_info: could not read elites.json (%s)", e)
     
     # Calculate total genomes and generations
     
@@ -2147,7 +2144,7 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
     """
     Create a standard generation entry template with ALL required fields.
     
-    This ensures all generation entries have consistent fields across all updates.
+    So all generation entries have consistent fields across updates.
     
     Args:
         generation_number: Generation number

@@ -22,14 +22,8 @@ def get_run_moderation_on_population():
     from gne.evaluator import run_moderation_on_population
     return run_moderation_on_population
 
-def get_hybrid_moderation_cleanup():
-    """Lazy import of _cleanup_thread_pool to avoid circular imports"""
-    from gne.evaluator import _cleanup_thread_pool
-    return _cleanup_thread_pool
-
 __all__ = [
     "get_ResponseGenerator",
     "get_PromptGenerator",
     "get_run_moderation_on_population",
-    "get_hybrid_moderation_cleanup",
 ]

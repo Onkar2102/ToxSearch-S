@@ -29,17 +29,16 @@ def process_extinctions(
     """
     Process species freezing and move small species to cluster 0.
     
-    Freezing Logic:
+    Freezing (stagnation-based): species remains alive but is excluded from parent selection.
     - A species becomes frozen when it was selected as parent for species_stagnation generations
       and didn't improve its highest fitness in any of those generations.
     - The stagnation counter increments only when species is selected as parent AND no improvement.
-    - When stagnation >= species_stagnation, the species is frozen (EXTINCTION - tracked separately).
+    - When stagnation >= species_stagnation, the species is frozen (tracked as an "extinction" event for metrics only; the species is not removed and can still merge).
     
-    Actions:
-    1. Freeze species with stagnation >= species_stagnation (EXTINCTION - tracked separately)
-    2. Move species with count < min_size to cluster 0 (NOT extinction - tracked separately)
-       - Species moved to cluster 0 get state="incubator" and are preserved in speciation_state.json
-       - The species ID is considered deceased (new species from cluster 0 get new IDs)
+    Dissolution (size-based): species with count < min_size are moved to cluster 0 (reserves).
+    - Species moved to cluster 0 get state="incubator" and are preserved in speciation_state.json.
+    - The species ID is effectively retired (new species from cluster 0 get new IDs).
+    - This is separate from freezing; both are tracked for metrics.
     
     No repopulation is needed - clustering will handle new species formation.
     
@@ -64,7 +63,7 @@ def process_extinctions(
     moved_to_cluster0_events = []  # Species moved to cluster 0 (size-based, NOT extinction)
     incubator_species = {}  # Species to be marked as incubator (keep in speciation_state.json)
     
-    # Step 1: Freeze species with stagnation >= species_stagnation (EXTINCTION)
+    # Step 1: Freeze species with stagnation >= species_stagnation (tracked as extinction event; species stays alive)
     frozen_ids = []
     for sid, sp in species.items():
         if sp.stagnation >= species_stagnation and sp.species_state != "frozen":
@@ -77,7 +76,7 @@ def process_extinctions(
                 "stagnation": sp.stagnation,
                 "max_fitness": sp.max_fitness
             })
-            logger.info(f"Frozen species {sid} (stagnation={sp.stagnation} >= {species_stagnation}) - EXTINCTION")
+            logger.info(f"Frozen species {sid} (stagnation={sp.stagnation} >= {species_stagnation}) - excluded from parent selection")
     
     # Step 2: Move small species to cluster 0 (NOT extinction, just reorganization)
     # Species get state="incubator" and are kept in speciation_state.json for reference

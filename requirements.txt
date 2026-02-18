@@ -202,7 +202,7 @@ spacy-loggers==1.0.5
 srsly==2.5.1
 sse-starlette==3.0.2
 stack-data==0.6.3
-starlette==0.51.0
+starlette==0.48.0
 starlette-context==0.3.6
 sympy==1.14.0
 tensorboard==2.18.0

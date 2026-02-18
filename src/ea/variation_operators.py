@@ -3,7 +3,7 @@ Abstract base class defining the interface for all variation operators in the ev
 """
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Any, Dict, List
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,17 @@ class VariationOperator(ABC):
         logger.debug(f"Initialized operator: {self.name} (type={self.operator_type})")
 
     @abstractmethod
-    def apply(self, text: str) -> List[str]:
+    def apply(self, operator_input: Dict[str, Any]) -> List[str]:
+        """
+        Apply the operator to produce one or more text variants.
+
+        Args:
+            operator_input: Dict containing at least 'prompt' (parent text) and operator-specific fields
+                (e.g. species_id, toxicity). May include full genome fields when provided by the engine.
+
+        Returns:
+            List of variant strings (prompts). May be empty if the operator produces no valid variant.
+        """
         pass
 
     def __str__(self):

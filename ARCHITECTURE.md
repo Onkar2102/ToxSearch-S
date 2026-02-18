@@ -414,6 +414,5 @@ else:
 
 ## References
 
-- [README.md](README.md) — Installation and usage guide
+- [README.md](README.md) — Installation, setup, and hyperparameters
 - [FIELD_DEFINITIONS.txt](FIELD_DEFINITIONS.txt) — Output file field definitions
-- [PROCESS_FLOW.md](PROCESS_FLOW.md) — Detailed process flow documentation

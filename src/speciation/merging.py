@@ -103,7 +103,7 @@ def merge_islands(
         state = _get_state()
         genome_tracker = state.get("_genome_tracker")
         if genome_tracker:
-            # CRITICAL: Update ALL genomes from tracker that belong to parent species, not just in-memory members
+            # NOTE: Update ALL genomes from tracker that belong to parent species, not just in-memory members
             # In-memory members might not include all genomes (e.g., from previous generations, archived genomes)
             # Get all genome IDs from tracker for both parent species
             parent1_genome_ids = genome_tracker.get_all_genomes_by_species(sp1.id)
