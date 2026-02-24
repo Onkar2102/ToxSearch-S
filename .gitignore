@@ -200,3 +200,6 @@ data/
 experiments/*.json
 .spvenv/
 
+exaqc-main/
+
+
