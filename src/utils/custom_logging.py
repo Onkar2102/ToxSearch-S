@@ -20,8 +20,7 @@ def get_run_id():
     log_index_file = "logs/log_index.json"
     today = datetime.datetime.now().strftime("%Y%m%d")
 
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
+    os.makedirs("logs", exist_ok=True)
 
     if os.path.exists(log_index_file):
         try:

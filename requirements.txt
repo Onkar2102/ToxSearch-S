@@ -247,3 +247,4 @@ wordfreq==3.1.1
 wrapt==1.17.2
 xxhash==3.6.0
 yarl==1.20.0
+mpi4py

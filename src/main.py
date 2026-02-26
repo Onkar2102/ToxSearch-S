@@ -997,9 +997,20 @@ if __name__ == "__main__":
                        help="Maximum number of variants to generate per evolution cycle. Controls how many times the evolution cycle runs.")
     parser.add_argument("--seed-file", type=str, default="data/prompt.csv",
                        help="Path to CSV file with seed prompts (must have 'questions' column). Default: data/prompt.csv")
+    parser.add_argument("--parallel", action="store_true",
+                       help="Run in MPI master-worker mode (use with mpiexec)")
     args = parser.parse_args()
     
     import sys
+
+    if args.parallel:
+        from parallel.master_worker import run as run_parallel
+        get_logger, get_log_filename, _, _ = get_custom_logging()
+        log_file = get_log_filename()
+        logger = get_logger("master_worker", log_file)
+        run_parallel(logger)
+        sys.exit(0)
+
     try:
         main(max_generations=args.generations, 
              north_star_threshold=args.threshold, moderation_methods=args.moderation_methods,
