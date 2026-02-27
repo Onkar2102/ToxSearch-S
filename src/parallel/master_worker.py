@@ -59,7 +59,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
                         run_speciation_fn=None):
     """Drain up to K genomes from buffers (round-robin), dedup, write temp, run speciation.
 
-    Returns (accepted_count, discarded_count, new_next_genome_id, speciation_result).
+    Returns (accepted_count, discarded_count, new_next_genome_id, speciation_result, accepted_genomes).
     """
     existing_prompts = _load_existing_prompts(outputs_path, logger)
     temp_prompts = set()
@@ -129,7 +129,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
         _stub_speciation(outputs_path, temp_path, logger)
         speciation_result = {"success": True, "stub": True}
 
-    return len(accepted), discarded, next_genome_id, speciation_result
+    return len(accepted), discarded, next_genome_id, speciation_result, accepted
 
 
 def _stub_speciation(outputs_path, temp_path, logger):
@@ -205,9 +205,27 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
     return parents, top_10
 
 
+def _collect_operator_stats(accepted_genomes):
+    """Aggregate operator statistics from accepted genomes."""
+    stats = {}
+    for g in accepted_genomes:
+        op_name = g.get("operator", "unknown")
+        vtype = g.get("variant_type", "mutation")
+        if op_name not in stats:
+            stats[op_name] = {"count": 0, "mutation": 0, "crossover": 0}
+        stats[op_name]["count"] += 1
+        if vtype == "crossover":
+            stats[op_name]["crossover"] += 1
+        else:
+            stats[op_name]["mutation"] += 1
+    return stats
+
+
 def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrated,
-                    total_discarded, speciation_result, logger):
-    """Update EvolutionTracker with generation counters after speciation."""
+                    total_discarded, speciation_result, logger,
+                    north_star_metric="toxicity", log_file=None,
+                    accepted_genomes=None):
+    """Update EvolutionTracker with full generation statistics after speciation."""
     tracker_path = outputs_path / "EvolutionTracker.json"
     if not tracker_path.exists():
         tracker = {
@@ -219,29 +237,125 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             "selection_mode": "default",
             "generations": [],
         }
-    else:
+        with open(tracker_path, "w", encoding="utf-8") as f:
+            json.dump(tracker, f, indent=2, ensure_ascii=False)
+
+    try:
+        from utils.population_io import (
+            calculate_generation_statistics,
+            update_evolution_tracker_with_statistics,
+        )
+
+        gen_stats = calculate_generation_statistics(
+            outputs_path=str(outputs_path),
+            north_star_metric=north_star_metric,
+            current_generation=generation_id,
+            logger=logger,
+            log_file=log_file,
+        )
+
+        gen_stats["total_evaluated"] = total_evaluated
+        gen_stats["total_integrated"] = total_integrated
+        gen_stats["total_discarded"] = total_discarded
+
+        for key in ("species_count", "active_species_count", "frozen_species_count",
+                     "reserves_size", "speciation_events", "merge_events",
+                     "extinction_events", "archived_count", "elites_moved",
+                     "reserves_moved", "genomes_updated", "inter_species_diversity",
+                     "intra_species_diversity", "cluster_quality"):
+            if key in speciation_result:
+                gen_stats[key] = speciation_result[key]
+
+        operator_statistics = None
+        if accepted_genomes:
+            operator_statistics = _collect_operator_stats(accepted_genomes)
+            mutation_count = sum(1 for g in accepted_genomes if g.get("variant_type") != "crossover")
+            crossover_count = sum(1 for g in accepted_genomes if g.get("variant_type") == "crossover")
+            gen_stats["variants_created"] = len(accepted_genomes)
+            gen_stats["mutation_variants"] = mutation_count
+            gen_stats["crossover_variants"] = crossover_count
+
+        update_evolution_tracker_with_statistics(
+            evolution_tracker_path=str(tracker_path),
+            current_generation=generation_id,
+            statistics=gen_stats,
+            operator_statistics=operator_statistics,
+            logger=logger,
+            log_file=log_file,
+        )
+
+        logger.info("Tracker updated: gen=%d  evaluated=%d  integrated=%d  discarded=%d  "
+                     "elites=%d  reserves=%d  avg_fitness=%.4f",
+                     generation_id, total_evaluated, total_integrated, total_discarded,
+                     gen_stats.get("elites_count", 0), gen_stats.get("reserves_count", 0),
+                     gen_stats.get("avg_fitness_generation", 0.0001))
+
+    except Exception as e:
+        logger.error("Full tracker update failed, falling back to minimal: %s", e, exc_info=True)
+        with open(tracker_path, "r", encoding="utf-8") as f:
+            tracker = json.load(f)
+        gen_entry = {
+            "generation_number": generation_id,
+            "total_evaluated": total_evaluated,
+            "total_integrated": total_integrated,
+            "total_discarded": total_discarded,
+            "species_count": speciation_result.get("species_count", 0),
+            "reserves_size": speciation_result.get("reserves_size", 0),
+            "elites_moved": speciation_result.get("elites_moved", 0),
+            "reserves_moved": speciation_result.get("reserves_moved", 0),
+        }
+        tracker["total_generations"] = generation_id + 1
+        tracker.setdefault("generations", []).append(gen_entry)
+        with open(tracker_path, "w", encoding="utf-8") as f:
+            json.dump(tracker, f, indent=2, ensure_ascii=False)
+        logger.info("Tracker updated (minimal): gen=%d  evaluated=%d  integrated=%d  discarded=%d",
+                     generation_id, total_evaluated, total_integrated, total_discarded)
+
+
+def _run_live_analysis(outputs_path, logger):
+    """Generate live visualizations after speciation (best-effort)."""
+    try:
+        from utils.live_analysis import run_live_analysis
+        results = run_live_analysis(outputs_path=str(outputs_path), logger=logger)
+        if results:
+            ok = sum(1 for v in results.values() if v is not None)
+            logger.info("Live analysis: generated %d/%d visualizations", ok, len(results))
+    except Exception as e:
+        logger.warning("Live analysis failed (non-fatal): %s", e)
+
+
+def _run_final_statistics(outputs_path, north_star_metric, start_time, generations_completed,
+                          log_file, logger):
+    """Generate final statistics and plots at the end of a parallel run."""
+    try:
+        execution_time = time.time() - start_time
+
+        tracker_path = outputs_path / "EvolutionTracker.json"
+        if not tracker_path.exists():
+            logger.warning("No EvolutionTracker.json found; skipping final statistics.")
+            return
+
         with open(tracker_path, "r", encoding="utf-8") as f:
             tracker = json.load(f)
 
-    gen_entry = {
-        "generation_number": generation_id,
-        "total_evaluated": total_evaluated,
-        "total_integrated": total_integrated,
-        "total_discarded": total_discarded,
-        "species_count": speciation_result.get("species_count", 0),
-        "reserves_size": speciation_result.get("reserves_size", 0),
-        "elites_moved": speciation_result.get("elites_moved", 0),
-        "reserves_moved": speciation_result.get("reserves_moved", 0),
-    }
+        tracker["status"] = "complete"
+        with open(tracker_path, "w", encoding="utf-8") as f:
+            json.dump(tracker, f, indent=2, ensure_ascii=False)
 
-    tracker["total_generations"] = generation_id + 1
-    tracker.setdefault("generations", []).append(gen_entry)
-
-    with open(tracker_path, "w", encoding="utf-8") as f:
-        json.dump(tracker, f, indent=2, ensure_ascii=False)
-
-    logger.info("Tracker updated: gen=%d  evaluated=%d  integrated=%d  discarded=%d",
-                generation_id, total_evaluated, total_integrated, total_discarded)
+        from ea.run_evolution import create_final_statistics_with_tracker
+        evolution_tracker = tracker.get("generations", [])
+        final_stats = create_final_statistics_with_tracker(
+            evolution_tracker=evolution_tracker,
+            north_star_metric=north_star_metric,
+            execution_time=execution_time,
+            generations_completed=generations_completed,
+            logger=logger,
+            log_file=log_file,
+        )
+        logger.info("Final statistics: %s", {k: v for k, v in final_stats.items()
+                     if k in ("total_generations", "execution_time", "best_fitness")})
+    except Exception as e:
+        logger.warning("Final statistics generation failed (non-fatal): %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -255,6 +369,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     """Master process (rank 0). Dispatch loop with per-worker buffers."""
     from utils.population_io import get_max_genome_id_from_all_files
 
+    start_time = time.time()
     n_workers = size - 1
     logger.info("Master started. Workers: %d  K: %d  outputs: %s", n_workers, K, outputs_path)
 
@@ -380,16 +495,21 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             _total_buffered(), K)
 
                 batch_size = min(_total_buffered(), K)
-                accepted, discarded, next_genome_id, spec_result = _merge_and_speciate(
-                    buffers, batch_size, outputs_path, generation_id, next_genome_id,
-                    north_star_metric, speciation_config, log_file, logger,
-                    run_speciation_fn=run_speciation_fn,
-                )
+                accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
+                    _merge_and_speciate(
+                        buffers, batch_size, outputs_path, generation_id, next_genome_id,
+                        north_star_metric, speciation_config, log_file, logger,
+                        run_speciation_fn=run_speciation_fn,
+                    )
                 total_integrated += accepted
                 total_discarded += discarded
 
                 _update_tracker(outputs_path, generation_id, total_evaluated,
-                                total_integrated, total_discarded, spec_result, logger)
+                                total_integrated, total_discarded, spec_result, logger,
+                                north_star_metric=north_star_metric, log_file=log_file,
+                                accepted_genomes=accepted_genomes)
+
+                _run_live_analysis(outputs_path, logger)
 
                 gen0_complete = True
                 generation_id += 1
@@ -400,15 +520,21 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
     if _total_buffered() > 0:
         logger.info("Draining remaining %d buffered genomes.", _total_buffered())
-        accepted, discarded, next_genome_id, spec_result = _merge_and_speciate(
-            buffers, _total_buffered(), outputs_path, generation_id, next_genome_id,
-            north_star_metric, speciation_config, log_file, logger,
-            run_speciation_fn=run_speciation_fn,
-        )
+        accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
+            _merge_and_speciate(
+                buffers, _total_buffered(), outputs_path, generation_id, next_genome_id,
+                north_star_metric, speciation_config, log_file, logger,
+                run_speciation_fn=run_speciation_fn,
+            )
         total_integrated += accepted
         total_discarded += discarded
         _update_tracker(outputs_path, generation_id, total_evaluated,
-                        total_integrated, total_discarded, spec_result, logger)
+                        total_integrated, total_discarded, spec_result, logger,
+                        north_star_metric=north_star_metric, log_file=log_file,
+                        accepted_genomes=accepted_genomes)
+        _run_live_analysis(outputs_path, logger)
+
+    _run_final_statistics(outputs_path, north_star_metric, start_time, generation_id, log_file, logger)
 
     logger.info("Master done. generations=%d  evaluated=%d  integrated=%d  discarded=%d",
                 generation_id, total_evaluated, total_integrated, total_discarded)

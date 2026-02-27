@@ -66,7 +66,7 @@ SEQUENTIAL_EXPERIMENTS=(
 # Uses PYTHONPATH=src so imports and config paths resolve from project root.
 # Adjust -n to change number of processes (1 master + (n-1) workers).
 PARALLEL_EXPERIMENTS=(
-    "mpiexec -n 2 env PYTHONPATH=src $PYTHON src/main.py \
+    "mpiexec -n 3 env PYTHONPATH=src $PYTHON src/main.py \
         --parallel \
         --batch-size 20 \
         --generations 10 \
