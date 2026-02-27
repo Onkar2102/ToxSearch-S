@@ -1,41 +1,46 @@
 #!/bin/bash
 # Multiple Experiment Runner
-# 
-# This script runs multiple experiment executions sequentially.
-# Each experiment gets its own output directory: data/outputs/YYYYMMDD_HHMM/
+#
+# Runs experiments from the project root. Supports:
+#   - Sequential mode: single process (no MPI)
+#   - Parallel mode: MPI master + workers (mpiexec)
 #
 # Usage:
-#   1. Add your experiments to the EXPERIMENTS array below
-#   2. Each experiment is a single string with the full command
-#   3. Run: bash run_experiments_local.sh
+#   1. Add experiments to SEQUENTIAL_EXPERIMENTS and/or PARALLEL_EXPERIMENTS
+#   2. Run: bash run_experiments_local.sh
 #
-# Features:
-#   - Runs experiments one at a time (sequential execution)
-#   - 5-second delay between experiments
-#   - Shows progress (Experiment X/Total)
-#   - Continues even if one experiment fails
-#   - Each experiment creates its own timestamped output directory
-#
-# Tips:
-#   - Use comments to label experiments (e.g., "# Experiment 1: Default params")
-#   - Vary parameters systematically (theta-sim, theta-merge, generations, etc.)
-#   - Each experiment must be a single quoted string (use \ for line continuation)
-#   - Make sure all model paths and file paths are correct
+# For parallel runs:
+#   - Requires MPI (e.g. openmpi/mpiexec). Install: brew install open-mpi
+#   - PERSPECTIVE_API_KEY is read from .env if present, or set it in the script/env
+#   - Logs: one file per rank (e.g. ..._master.log, ..._worker1.log)
 
 set -Eeuo pipefail
 
-# Activate your local virtual environment
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Activate virtual environment if present
 if [ -d "venv" ]; then
     source venv/bin/activate
 elif [ -d ".venv" ]; then
     source .venv/bin/activate
 fi
 
-# Define your experiments here (one per line)
-# Each experiment runs sequentially with a 5-second delay between them
-# Add as many experiments as you want - they will all run automatically
-EXPERIMENTS=(
-    "python src/main.py \
+# Load .env for API keys (used by parallel runs)
+# Temporarily relax nounset (-u) because .env may contain $vars in strings
+if [ -f ".env" ]; then
+    set +u
+    set -a
+    source .env
+    set +a
+    set -u
+fi
+
+PYTHON="${PYTHON:-python3}"
+
+# ---- Sequential experiments (single process, no MPI) ----
+SEQUENTIAL_EXPERIMENTS=(
+    "$PYTHON src/main.py \
         --generations 50 \
         --threshold 0.99 \
         --moderation-methods google \
@@ -57,32 +62,74 @@ EXPERIMENTS=(
         --seed-file data/prompt.csv"
 )
 
-echo "Starting ${#EXPERIMENTS[@]} experiments..."
-echo ""
+# ---- Parallel experiments (MPI: 1 master + N workers) ----
+# Uses PYTHONPATH=src so imports and config paths resolve from project root.
+# Adjust -n to change number of processes (1 master + (n-1) workers).
+PARALLEL_EXPERIMENTS=(
+    "mpiexec -n 2 env PYTHONPATH=src $PYTHON src/main.py \
+        --parallel \
+        --batch-size 20 \
+        --generations 10 \
+        --moderation-methods google \
+        --theta-sim 0.25 \
+        --theta-merge 0.25 \
+        --species-capacity 7 \
+        --cluster0-max-capacity 20 \
+        --cluster0-min-cluster-size 1 \
+        --min-island-size 3 \
+        --species-stagnation 4 \
+        --embedding-model all-MiniLM-L6-v2 \
+        --embedding-dim 384 \
+        --embedding-batch-size 64 \
+        --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
+        --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
+        --operators all \
+        --seed-file data/prompt.csv"
+)
 
-for i in "${!EXPERIMENTS[@]}"; do
-    NUM=$((i+1))
-    TOTAL=${#EXPERIMENTS[@]}
-    
-    echo "=========================================="
-    echo "Experiment $NUM/$TOTAL"
-    echo "=========================================="
-    echo "Command: ${EXPERIMENTS[$i]}"
-    echo ""
-    
-    bash -lc "${EXPERIMENTS[$i]}"
-    
-    if [ $? -eq 0 ]; then
-        echo "Experiment $NUM completed successfully"
-    else
-        echo "Experiment $NUM failed"
-    fi
-    
-    echo ""
-    echo "Waiting 5 seconds..."
-    sleep 5
-    echo ""
-done
+run_sequential() {
+    local total="${#SEQUENTIAL_EXPERIMENTS[@]}"
+    [ "$total" -eq 0 ] && return 0
+    echo "Running $total sequential experiment(s)..."
+    for i in "${!SEQUENTIAL_EXPERIMENTS[@]}"; do
+        local num=$((i + 1))
+        echo "=========================================="
+        echo "Sequential experiment $num/$total"
+        echo "=========================================="
+        echo "Command: ${SEQUENTIAL_EXPERIMENTS[$i]}"
+        echo ""
+        bash -lc "${SEQUENTIAL_EXPERIMENTS[$i]}" || echo "Experiment $num failed"
+        echo ""
+        [ "$num" -lt "$total" ] && { echo "Waiting 5 seconds..."; sleep 5; echo ""; }
+    done
+}
+
+run_parallel() {
+    local total="${#PARALLEL_EXPERIMENTS[@]}"
+    [ "$total" -eq 0 ] && return 0
+    echo "Running $total parallel (MPI) experiment(s)..."
+    for i in "${!PARALLEL_EXPERIMENTS[@]}"; do
+        local num=$((i + 1))
+        echo "=========================================="
+        echo "Parallel experiment $num/$total"
+        echo "=========================================="
+        echo "Command: ${PARALLEL_EXPERIMENTS[$i]}"
+        echo ""
+        bash -lc "${PARALLEL_EXPERIMENTS[$i]}" || echo "Experiment $num failed"
+        echo ""
+        [ "$num" -lt "$total" ] && { echo "Waiting 5 seconds..."; sleep 5; echo ""; }
+    done
+}
+
+# Toggle which experiment types to run (0 = skip, 1 = run)
+RUN_SEQUENTIAL="${RUN_SEQUENTIAL:-0}"
+RUN_PARALLEL="${RUN_PARALLEL:-1}"
+
+if [ "$RUN_SEQUENTIAL" = "1" ]; then
+    run_sequential
+fi
+if [ "$RUN_PARALLEL" = "1" ]; then
+    run_parallel
+fi
 
 echo "All experiments completed!"
-

@@ -997,6 +997,8 @@ if __name__ == "__main__":
                        help="Maximum number of variants to generate per evolution cycle. Controls how many times the evolution cycle runs.")
     parser.add_argument("--seed-file", type=str, default="data/prompt.csv",
                        help="Path to CSV file with seed prompts (must have 'questions' column). Default: data/prompt.csv")
+    parser.add_argument("--batch-size", type=int, default=100,
+                       help="Number of genomes per generation batch (K) for parallel mode. Default: 100")
     parser.add_argument("--parallel", action="store_true",
                        help="Run in MPI master-worker mode (use with mpiexec)")
     args = parser.parse_args()
@@ -1005,10 +1007,38 @@ if __name__ == "__main__":
 
     if args.parallel:
         from parallel.master_worker import run as run_parallel
+        from speciation.run_speciation import run_speciation
+        from speciation.config import SpeciationConfig
+
         get_logger, get_log_filename, _, _ = get_custom_logging()
         log_file = get_log_filename()
         logger = get_logger("master_worker", log_file)
-        run_parallel(logger)
+
+        speciation_config = SpeciationConfig(
+            theta_sim=args.theta_sim,
+            theta_merge=args.theta_merge,
+            species_capacity=args.species_capacity,
+            cluster0_max_capacity=args.cluster0_max_capacity,
+            cluster0_min_cluster_size=args.cluster0_min_cluster_size,
+            min_island_size=args.min_island_size,
+            species_stagnation=args.species_stagnation,
+            embedding_model=args.embedding_model,
+            embedding_dim=args.embedding_dim,
+            embedding_batch_size=args.embedding_batch_size,
+        )
+
+        run_parallel(
+            logger,
+            K=args.batch_size,
+            seed_file=args.seed_file,
+            operators_mode=args.operators,
+            moderation_methods=args.moderation_methods,
+            max_generations=args.generations,
+            north_star_metric="toxicity",
+            speciation_config=speciation_config,
+            log_file=log_file,
+            run_speciation_fn=run_speciation,
+        )
         sys.exit(0)
 
     try:

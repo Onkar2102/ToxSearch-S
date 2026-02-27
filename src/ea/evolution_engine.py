@@ -769,3 +769,119 @@ class EvolutionEngine:
             self.logger.error(f"Failed to deduplicate temp.json: {e}")
             return 0
 
+
+# ---------------------------------------------------------------------------
+# Standalone single-genome variant generation (for parallel worker)
+# ---------------------------------------------------------------------------
+
+def generate_single_variant(parents, prompt_generator, north_star_metric="toxicity",
+                            operators_mode="all", top_10=None, log_file=None,
+                            outputs_path=None):
+    """Create variant(s) from parents using a randomly chosen operator.
+
+    This is a lightweight, file-free alternative to EvolutionEngine for use in
+    MPI workers.  No genome *id* is assigned (the master does that at merge).
+
+    Args:
+        parents: List of 2-3 parent genome dicts (must have 'prompt', 'toxicity'
+                 or 'moderation_result').
+        prompt_generator: PromptGenerator (LLM) instance for operators.
+        north_star_metric: Fitness metric name.
+        operators_mode: "all", "cm", or "ie".
+        top_10: Optional list of top-10 genome dicts for InformedEvolution.
+        log_file: Optional log file path.
+        outputs_path: Optional outputs directory (needed for top_10.json path if
+                      top_10 list is not supplied directly).
+
+    Returns:
+        List[Dict]: genome dicts with 'prompt', 'operator', 'variant_type',
+                    'parents', 'status'='pending_generation'.  Empty list on
+                    failure.
+    """
+    get_logger, _, _, _ = get_custom_logging()
+    logger = get_logger("generate_single_variant", log_file)
+
+    if not parents:
+        logger.warning("No parents provided")
+        return []
+
+    try:
+        mutation_ops = []
+        crossover_ops = []
+
+        if operators_mode in ("cm", "all"):
+            mutation_ops.extend([
+                LLM_POSAwareSynonymReplacement(north_star_metric, log_file=log_file, num_POS_tags=1, generator=prompt_generator),
+                POSAwareAntonymReplacement(north_star_metric, log_file=log_file, num_POS_tags=1, generator=prompt_generator),
+                MLMOperator(north_star_metric, log_file=log_file, generator=prompt_generator),
+                LLMBasedParaphrasingOperator(north_star_metric, log_file=log_file, generator=prompt_generator),
+                StylisticMutator(log_file=log_file, generator=prompt_generator),
+                LLMBackTranslationHIOperator(log_file=log_file, generator=prompt_generator),
+                NegationOperator(north_star_metric, log_file=log_file, generator=prompt_generator),
+                TypographicalErrorsOperator(north_star_metric, log_file=log_file, num_error_types=3, generator=prompt_generator),
+                ConceptAdditionOperator(north_star_metric, log_file=log_file, num_concept_types=1, generator=prompt_generator),
+            ])
+            if len(parents) >= 2:
+                crossover_ops.extend([
+                    SemanticSimilarityCrossover(log_file=log_file),
+                    SemanticFusionCrossover(north_star_metric=north_star_metric, log_file=log_file, generator=prompt_generator),
+                ])
+
+        if operators_mode in ("ie", "all"):
+            top_10_path = str(Path(outputs_path) / "top_10.json") if outputs_path else None
+            mutation_ops.append(
+                InformedEvolutionOperator(north_star_metric, log_file=log_file,
+                                         generator=prompt_generator,
+                                         top_10_path=top_10_path))
+
+        candidates = mutation_ops + crossover_ops
+        if not candidates:
+            logger.warning("No operators available for mode '%s'", operators_mode)
+            return []
+
+        op = random.choice(candidates)
+        is_crossover = op in crossover_ops
+
+        if is_crossover:
+            operator_input = {"parent_data": list(parents[:2])}
+            variant_type = "crossover"
+        else:
+            parent = random.choice(parents)
+            operator_input = {"parent_data": parent}
+            variant_type = "mutation"
+
+        prompts = op.apply(operator_input)
+        if not prompts:
+            logger.warning("Operator %s returned no prompts", op.name)
+            return []
+
+        parents_info = []
+        for p in parents:
+            parents_info.append({
+                "id": p.get("id"),
+                "score": round(_extract_north_star_score(p, north_star_metric), 4),
+            })
+
+        results = []
+        for prompt_text in prompts:
+            if not prompt_text or not prompt_text.strip():
+                continue
+            results.append({
+                "prompt": prompt_text.strip(),
+                "operator": op.name,
+                "variant_type": variant_type,
+                "parents": parents_info,
+                "status": "pending_generation",
+                "creation_info": {
+                    "type": variant_type,
+                    "operator": op.name,
+                },
+            })
+
+        logger.info("generate_single_variant: operator=%s  produced=%d prompts", op.name, len(results))
+        return results
+
+    except Exception as e:
+        logger.error("generate_single_variant failed: %s", e, exc_info=True)
+        return []
+

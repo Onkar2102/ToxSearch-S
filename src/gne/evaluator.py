@@ -85,7 +85,8 @@ class HybridModerationEvaluator:
         model_cfg: Model configuration loaded from YAML file
     """
     
-    def __init__(self, log_file: Optional[str] = None, config_path: str = None):
+    def __init__(self, log_file: Optional[str] = None, config_path: str = None,
+                 api_keys: Optional[List[str]] = None):
         """
         Initialize the hybrid moderation evaluator.
         
@@ -93,6 +94,9 @@ class HybridModerationEvaluator:
             log_file (str, optional): Path to log file for debugging.
             config_path (str, optional): Path to model configuration YAML file.
                 If None, uses default config/RGConfig.yaml.
+            api_keys (list[str], optional): List of Perspective API keys.
+                If None, loads from PERSPECTIVE_API_KEYS (comma-separated) or
+                falls back to single PERSPECTIVE_API_KEY env var.
         """
         get_logger, _, _, _ = get_custom_logging()
         self.logger = get_logger("HybridModerationEvaluator", log_file)
@@ -109,24 +113,21 @@ class HybridModerationEvaluator:
         self.model_cfg = config.get(model_key, {})
         self.logger.info("Model config loaded")
 
-        self.google_available = bool(os.getenv("PERSPECTIVE_API_KEY"))
-        
+        self._api_keys = self._resolve_api_keys(api_keys)
+        self.google_available = len(self._api_keys) > 0
+
         if not self.google_available:
             error_msg = (
-                "PERSPECTIVE_API_KEY environment variable is not set.\n"
-                "Please set up your Google Perspective API key:\n"
-                "1. Get your API key from: https://developers.perspectiveapi.com/\n"
-                "2. Create a .env file in the project root\n"
-                "3. Add: PERSPECTIVE_API_KEY=your_actual_api_key_here\n"
-                "4. Or set the environment variable: export PERSPECTIVE_API_KEY=your_actual_api_key_here\n"
-                "See .env.example for reference."
+                "No Perspective API key found.\n"
+                "Provide api_keys, set PERSPECTIVE_API_KEYS (comma-separated),\n"
+                "or set PERSPECTIVE_API_KEY as an environment variable."
             )
             self.logger.error(error_msg)
             raise ValueError(error_msg)
-        
-        self.logger.info("API Availability - Google: %s", 
-                        "OK" if self.google_available else "ERROR")
-        
+
+        self._active_key_index = 0
+        self.logger.info("API Availability - Google: OK  (%d key(s))", len(self._api_keys))
+
         self.evaluation_count = 0
         self.total_evaluation_time = 0.0
         self.successful_evaluations = 0
@@ -135,20 +136,64 @@ class HybridModerationEvaluator:
         self._initialize_clients()
         
         self.logger.debug("Google Perspective Moderation Evaluator initialized successfully")
+
+    @staticmethod
+    def _resolve_api_keys(api_keys: Optional[List[str]] = None) -> List[str]:
+        """Build the ordered list of Perspective API keys from explicit arg or env."""
+        if api_keys:
+            return [k.strip() for k in api_keys if k and k.strip()]
+
+        multi = os.getenv("PERSPECTIVE_API_KEYS", "").strip()
+        if multi:
+            return [k.strip() for k in multi.split(",") if k.strip()]
+
+        idx = 0
+        indexed: List[str] = []
+        while True:
+            val = os.getenv(f"PERSPECTIVE_API_KEY_{idx}", "").strip()
+            if not val:
+                break
+            indexed.append(val)
+            idx += 1
+        if indexed:
+            return indexed
+
+        single = os.getenv("PERSPECTIVE_API_KEY", "").strip()
+        if single:
+            if "," in single:
+                return [k.strip() for k in single.split(",") if k.strip()]
+            return [single]
+
+        return []
+
+    def select_key(self, index: int) -> None:
+        """Switch the active Perspective API key by index.
+
+        Rebuilds the google_client only when the index actually changes.
+        """
+        if not self._api_keys:
+            return
+        clamped = index % len(self._api_keys)
+        if clamped == self._active_key_index:
+            return
+        self._active_key_index = clamped
+        self._initialize_clients()
+        self.logger.debug("Switched to API key index %d", clamped)
     
     def _initialize_clients(self):
-        """Initialize API clients for available services"""
+        """Initialize API clients using the currently active key."""
         try:
             if self.google_available:
                 from googleapiclient import discovery
-                api_key = os.getenv("PERSPECTIVE_API_KEY")
+                api_key = self._api_keys[self._active_key_index]
                 self.google_client = discovery.build(
                     "commentanalyzer",
                     "v1alpha1",
                     developerKey=api_key,
                     discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1"
                 )
-                self.logger.info("Google Perspective API client initialized")
+                self.logger.info("Google Perspective API client initialized (key index %d)",
+                                 self._active_key_index)
                 
         except Exception as e:
             self.logger.error("Failed to initialize API clients: %s", e)
@@ -566,3 +611,33 @@ def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None,
         
     except Exception as e:
         logger.error("Hybrid moderation evaluation failed: %s", e, exc_info=True)
+
+
+def evaluate_single_genome(evaluator, genome, moderation_methods=None):
+    """Evaluate a single genome dict in-memory via HybridModerationEvaluator.
+
+    Updates *genome* in-place (moderation_result, evaluation_duration, status)
+    and returns it.
+    """
+    generated_text = genome.get("generated_output", "")
+    genome_id = genome.get("local_variant_id", genome.get("id", "unknown"))
+
+    if not generated_text:
+        genome["status"] = "error"
+        genome["error"] = "No generated output"
+        return genome
+
+    evaluation_result = evaluator._evaluate_text_hybrid(
+        generated_text, genome_id, moderation_methods=moderation_methods)
+
+    if "google" in evaluation_result:
+        genome["moderation_result"] = evaluation_result
+        if hasattr(evaluator, "_last_evaluation_time"):
+            genome["evaluation_duration"] = round(
+                evaluator._last_evaluation_time.get("duration", 0.0), 4)
+        genome["status"] = "complete"
+    else:
+        genome["status"] = "error"
+        genome["error"] = evaluation_result.get("error", "Unknown error")
+
+    return genome

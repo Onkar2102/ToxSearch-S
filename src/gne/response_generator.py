@@ -237,3 +237,19 @@ class ResponseGenerator:
             
         except Exception as e:
             self.logger.debug(f"Incremental save failed for genome {genome.get('id', 'unknown')}: {e} (final batch save will persist changes)")
+
+
+def process_single_genome(response_generator, genome):
+    """Generate an LLM response for a single genome dict in-memory.
+
+    Updates *genome* in-place (generated_output, model_name,
+    response_duration, status) and returns it.
+    """
+    prompt = genome.get("prompt", "")
+    response_text, duration = response_generator.generate_response(prompt)
+
+    genome["generated_output"] = response_text
+    genome["model_name"] = getattr(response_generator, "model_name", None)
+    genome["response_duration"] = round(duration, 4)
+    genome["status"] = "pending_evaluation"
+    return genome
