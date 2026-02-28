@@ -12,7 +12,7 @@ from typing import List
 
 
 # Refusal patterns (from analysis of toxsearch_250genoutput)
-# Using \S*t to handle both can't (curly apostrophe) and can't (straight apostrophe)
+# Using \S*t to match both straight and curly apostrophe variants (e.g., can't / can’t)
 REFUSAL_PATTERNS: List[str] = [
     # Accommodate patterns
     r"can\S*t\s+accommodate",

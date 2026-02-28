@@ -10,6 +10,7 @@ with elites preservation and multi-API moderation scoring.
 
 import json
 import random
+import time
 from typing import List, Dict, Any, Optional
 from utils import get_custom_logging
 from utils.population_io import _extract_north_star_score
@@ -389,7 +390,7 @@ class EvolutionEngine:
         single_parent_operators = self._get_single_parent_operators()
         multi_parent_operators = self._get_multi_parent_operators()
 
-        # Note: expected_variant_count removed - not used for metric calculations, only validation
+        # expected_variant_count was removed; metrics use operator statistics totals.
         # Metrics use calculated_total from operator statistics instead
 
         if len(parents) >= 2:
@@ -408,7 +409,7 @@ class EvolutionEngine:
 
             for parent_pair in combinations(parents, 2):  # All pairs of parents
                 try:
-                    # Call crossover operator max_variant times since it outputs one variant
+                    # Call crossover operator `max_variants` times since each call returns at most one variant
                     variants_to_save = []
                     for _ in range(self.max_variants):
                         operator_input = {
@@ -524,7 +525,7 @@ class EvolutionEngine:
     
     def clean_parents_file(self) -> None:
         """Read parents.json and top_10.json, update EvolutionTracker, then empty top_10.json.
-        Do NOT clear parents.json: run_speciation (Phase 4) needs it to determine which species
+        Do not clear parents.json: run_speciation (Phase 5) needs it to determine which species
         were selected as parents for stagnation logic. parents.json is overwritten by the next
         generation's parent selection."""
         try: 
@@ -850,9 +851,12 @@ def generate_single_variant(parents, prompt_generator, north_star_metric="toxici
             operator_input = {"parent_data": parent}
             variant_type = "mutation"
 
+        logger.debug("generate_single_variant: selected operator=%s  type=%s", op.name, variant_type)
+        op_start = time.time()
         prompts = op.apply(operator_input)
+        op_elapsed = time.time() - op_start
         if not prompts:
-            logger.warning("Operator %s returned no prompts", op.name)
+            logger.warning("Operator %s returned no prompts (%.2fs)", op.name, op_elapsed)
             return []
 
         parents_info = []
@@ -878,7 +882,8 @@ def generate_single_variant(parents, prompt_generator, north_star_metric="toxici
                 },
             })
 
-        logger.info("generate_single_variant: operator=%s  produced=%d prompts", op.name, len(results))
+        logger.info("generate_single_variant: operator=%s  produced=%d prompts  elapsed=%.2fs",
+                     op.name, len(results), op_elapsed)
         return results
 
     except Exception as e:

@@ -318,12 +318,12 @@ def validate_flow2_speciation(
                 logger.debug(f"Species {sid}: {len(set(member_ids) - elites_member_ids)} member_ids not yet in elites.json (will be distributed in Phase 7)")
             
             # Check 3: Size consistency
-            # Use member_ids from state (authoritative) rather than elites.json count
-            # since distribution hasn't happened yet
-            expected_size = len(member_ids)  # Use member_ids from state (authoritative)
-            actual_size = sp_dict.get("size", 0)
-            if expected_size != actual_size:
-                errors.append(f"Species {sid}: size mismatch - expected {expected_size} (from member_ids), got {actual_size} (from state.size)")
+            # Species.to_dict() stores member_ids but not size (computed property).
+            # Derive expected size from member_ids; only flag if an explicit "size"
+            # field exists and disagrees with len(member_ids).
+            expected_size = len(member_ids)
+            if "size" in sp_dict and sp_dict["size"] != expected_size:
+                errors.append(f"Species {sid}: size mismatch - expected {expected_size} (from member_ids), got {sp_dict['size']} (from state.size)")
             
             # Check 4: Cluster origin should be "natural" for newly formed species
             cluster_origin = sp_dict.get("cluster_origin")

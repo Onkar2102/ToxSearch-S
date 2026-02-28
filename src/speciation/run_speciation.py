@@ -14,6 +14,7 @@ Species Key Type Convention:
 """
 
 import json
+import time as _time
 from types import SimpleNamespace
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
@@ -696,6 +697,7 @@ def process_generation(current_generation: int,
     state = _get_state()
     
     
+    _process_gen_start = _time.time()
     state["logger"].info(f"=== Speciation Generation {current_generation} ===")
     state["_current_gen_events"] = {"speciation": 0, "merge": 0, "extinction": 0, "moved_to_cluster0": 0}
     state["_archived_count"] = 0
@@ -867,6 +869,7 @@ def process_generation(current_generation: int,
             except Exception as e:
                 state["logger"].warning(f"Failed to register temp.json genomes in tracker: {e}", exc_info=True)
     else:
+        _phase1_start = _time.time()
         state["logger"].info("=== Phase 1: Existing Species Processing ===")
 
         # Snapshot max_fitness before Phase 1 (leader_follower_clustering and later steps can update it).
@@ -1045,6 +1048,7 @@ def process_generation(current_generation: int,
         _save_tracker_if_dirty(state)
         # Validate tracker consistency after Phase 1
         _validate_tracker_consistency(state, "Phase 1")
+        state["logger"].info("Phase 1 completed in %.2fs", _time.time() - _phase1_start)
     
     # ========================================================================
     # PHASE 2: CLUSTER 0 SPECIATION (ISOLATED)
@@ -1055,6 +1059,7 @@ def process_generation(current_generation: int,
     # - NO radius enforcement or capacity enforcement in Phase 2
     # - Only trackers are updated, not file genomes
     
+    _phase2_start = _time.time()
     state["logger"].info("=== Phase 2: Cluster 0 Speciation (Isolated) ===")
     
     # 4. Load cluster 0 from genome_tracker.json (all genomes with species_id=0)
@@ -1213,6 +1218,8 @@ def process_generation(current_generation: int,
         else:
             state["logger"].debug(f"Flow 2 validation passed for {len(newly_formed_species_ids)} newly formed species")
     
+    state["logger"].info("Phase 2 completed in %.2fs", _time.time() - _phase2_start)
+    
     # ========================================================================
     # PHASE 3: MERGING + RADIUS ENFORCEMENT
     # ========================================================================
@@ -1221,6 +1228,7 @@ def process_generation(current_generation: int,
     # - Radius enforcement after all merging is complete
     # - Only trackers are updated, not file genomes
     
+    _phase3_start = _time.time()
     state["logger"].info("=== Phase 3: Merging + Radius Enforcement ===")
     
     # 6. Merging of all species (existing + newly formed)
@@ -1501,6 +1509,7 @@ def process_generation(current_generation: int,
     _save_tracker_if_dirty(state)
     # Validate tracker consistency after Phase 3
     _validate_tracker_consistency(state, "Phase 3")
+    state["logger"].info("Phase 3 completed in %.2fs", _time.time() - _phase3_start)
     
     # ========================================================================
     # PHASE 4: CAPACITY ENFORCEMENT (species_id > 0)
@@ -1510,6 +1519,7 @@ def process_generation(current_generation: int,
     # - Does NOT update elites.json/reserves.json (only trackers)
     # - After Phase 4, all species have correct members (within radius, within capacity)
     
+    _phase4_start = _time.time()
     state["logger"].info("=== Phase 4: Capacity Enforcement (species_id > 0) ===")
     
     # NOTE: Radius enforcement is done in Phase 1 (after variant processing) and Phase 3 (after merging)
@@ -1869,6 +1879,8 @@ def process_generation(current_generation: int,
                 ])
                 state["logger"].error(f"  Total archived genomes in tracker: {archived_count}")
     
+    state["logger"].info("Phase 4 completed in %.2fs", _time.time() - _phase4_start)
+    
     # ========================================================================
     # PHASE 5: STAGNATION AND INCUBATION
     # ========================================================================
@@ -1878,6 +1890,7 @@ def process_generation(current_generation: int,
     # - Incubate small species (extinction/dissolution - move to cluster 0)
     # - Only trackers are updated, not file genomes
     
+    _phase5_start = _time.time()
     state["logger"].info("=== Phase 5: Stagnation and Incubation ===")
     
     # 9. Record fitness for ALL species (not just those with new members)
@@ -2095,6 +2108,7 @@ def process_generation(current_generation: int,
     _validate_tracker_consistency(state, "Phase 5")
     # Check that every species_id > 0 in tracker is alive, incubator, or extinct
     _validate_species_accounting(state, "Phase 5")
+    state["logger"].info("Phase 5 completed in %.2fs", _time.time() - _phase5_start)
     
     # ========================================================================
     # PHASE 6: CLUSTER 0 CAPACITY ENFORCEMENT (species_id = 0)
@@ -2103,6 +2117,7 @@ def process_generation(current_generation: int,
     # - Uses genome_tracker as authoritative source
     # - Does NOT update reserves.json (only trackers)
     
+    _phase6_start = _time.time()
     state["logger"].info("=== Phase 6: Cluster 0 Capacity Enforcement (species_id = 0) ===")
     
     # 12. Enforce cluster 0 capacity
@@ -2199,6 +2214,7 @@ def process_generation(current_generation: int,
     _save_tracker_if_dirty(state)
     # Validate tracker consistency after Phase 6
     _validate_tracker_consistency(state, "Phase 6")
+    state["logger"].info("Phase 6 completed in %.2fs", _time.time() - _phase6_start)
     
     # ========================================================================
     # PHASE 7: REDISTRIBUTION OF GENOMES
@@ -2209,6 +2225,7 @@ def process_generation(current_generation: int,
     # - This is the ONLY phase that updates species_id in file genomes
     # - Files are synchronized with genome_tracker (authoritative source)
     
+    _phase7_start = _time.time()
     state["logger"].info("=== Phase 7: Redistribution of Genomes ===")
     # Distribute genomes to files based on genome_tracker (authoritative source of truth)
     # This must happen before Phase 8 (metrics) so files exist for metrics calculation
@@ -2306,6 +2323,8 @@ def process_generation(current_generation: int,
                     f"Phase 7: Synced species {sid} members from tracker: {len(sp.members)} (was {len(current_member_ids)})"
                 )
     
+    state["logger"].info("Phase 7 completed in %.2fs", _time.time() - _phase7_start)
+    
     # ========================================================================
     # PHASE 8: METRICS & STATISTICS
     # ========================================================================
@@ -2314,6 +2333,7 @@ def process_generation(current_generation: int,
     # - Calculate and record metrics from distributed files
     # - Save all state files (speciation_state.json, events_tracker.json, genome_tracker.json)
     
+    _phase8_start = _time.time()
     state["logger"].info("=== Phase 8: Metrics & Statistics ===")
     # NOTE: This is Phase 8 within process_generation().
     # Phase 7 (redistribution) already completed, so files exist for metrics calculation.
@@ -2373,6 +2393,10 @@ def process_generation(current_generation: int,
     if "_genome_tracker" in state:
         state["_genome_tracker"].save()
     
+    state["logger"].info("Phase 8 completed in %.2fs", _time.time() - _phase8_start)
+    
+    process_gen_elapsed = _time.time() - _process_gen_start
+    state["logger"].info("Speciation generation %d complete in %.2fs", current_generation, process_gen_elapsed)
     return state["species"], state["cluster0"]
 
 

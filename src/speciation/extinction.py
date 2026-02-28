@@ -59,11 +59,11 @@ def process_extinctions(
     if logger is None:
         logger = get_logger("Extinction")
     
-    extinction_events = []  # Only frozen species (stagnation-based)
-    moved_to_cluster0_events = []  # Species moved to cluster 0 (size-based, NOT extinction)
-    incubator_species = {}  # Species to be marked as incubator (keep in speciation_state.json)
+    extinction_events = []  # Frozen species (stagnation-based)
+    moved_to_cluster0_events = []  # Species moved to cluster 0 (size-based, tracked separately)
+    incubator_species = {}  # Species marked as incubator for downstream persistence
     
-    # Step 1: Freeze species with stagnation >= species_stagnation (tracked as extinction event; species stays alive)
+    # Step 1: Freeze species with stagnation >= species_stagnation
     frozen_ids = []
     for sid, sp in species.items():
         if sp.stagnation >= species_stagnation and sp.species_state != "frozen":
@@ -78,29 +78,22 @@ def process_extinctions(
             })
             logger.info(f"Frozen species {sid} (stagnation={sp.stagnation} >= {species_stagnation}) - excluded from parent selection")
     
-    # Step 2: Move small species to cluster 0 (NOT extinction, just reorganization)
-    # Species get state="incubator" and are kept in speciation_state.json for reference
-    # Use in-memory size (sp.size), NOT elites.json size (which is cumulative across generations)
-    # elites.json accumulates genomes from ALL generations (cumulative), so it's not accurate for current state
-    # We want to move species to incubator based on CURRENT size (after radius cleanup, capacity enforcement)
-    # In-memory size reflects the current generation's actual state
+    # Step 2: Move small species to cluster 0 and mark them as incubator.
+    # Use in-memory size (`sp.size`) because file snapshots can be cumulative across generations.
     small_species_ids = []
     for sid, sp in species.items():
-        # Check both active and frozen species for size < min_size
-        # Also check species already marked as incubator (may have been marked by _ensure_unique_leader or duplicate fix)
-        # Frozen species can also shrink below min_size and should be moved to incubator
+        # Process active/frozen species below min_size, plus pre-marked incubator species.
         if sp.species_state not in ["active", "frozen", "incubator"]:
             continue
-        # Use in-memory size (current generation state), not elites.json (cumulative across all generations)
+        # Use current in-memory size
         current_size = sp.size
-        # If already incubator, process it (may have been marked but not cleaned up yet)
-        # If active/frozen and size < min_size, mark for incubator
+        # Include species already marked incubator for cleanup, or newly small species.
         if sp.species_state == "incubator" or current_size < min_size:
             if sp.species_state != "incubator":
                 small_species_ids.append(sid)
                 logger.debug(f"Species {sid}: current size={current_size} (in-memory), min_size={min_size}, state={sp.species_state} -> will move to incubator")
             else:
-                # Already marked as incubator but not yet processed - add to list for cleanup
+                # Already marked incubator but not yet processed
                 small_species_ids.append(sid)
                 logger.debug(f"Species {sid}: already marked as incubator but not yet processed, will complete cleanup")
     
@@ -113,19 +106,19 @@ def process_extinctions(
             logger.debug(f"Cluster 0 at capacity ({cluster0.max_capacity}), cannot move species {sid}")
             continue
         
-        sp = species[sid]  # Don't pop yet - we'll keep it with incubator state
+        sp = species[sid]  # Keep in map until incubator bookkeeping is complete
         
         # Store original size before clearing members
         original_size = sp.size
         
-        # Move all members to cluster 0 (including leader if it exists)
+        # Move all members to cluster 0
         moved_count = 0
         moved_member_ids = []
         member_ids_set = {m.id for m in sp.members}
         
-        # Also move leader if it exists and not already in members list
+        # Move leader separately when it is not already in members list
         if sp.leader and sp.leader.id not in member_ids_set:
-            # Leader is not in members list, add it separately
+            # Leader is distinct from members list
             if cluster0.size < cluster0.max_capacity:
                 cluster0.add(sp.leader, current_generation)
                 moved_member_ids.append(sp.leader.id)
@@ -138,7 +131,7 @@ def process_extinctions(
             moved_member_ids.append(member.id)
             moved_count += 1
         
-        # Update genome tracker: mark moved members (including leader) as species_id=0 (reserves)
+        # Update genome tracker for moved members (species_id=0 in reserves)
         try:
             from .run_speciation import _get_state
             state = _get_state()
@@ -151,7 +144,7 @@ def process_extinctions(
         except Exception as e:
             logger.debug(f"Could not update genome tracker during extinction: {e}")
         
-        # Mark species as incubator (species ID is deceased, but kept for reference)
+        # Mark species as incubator and clear active member list
         sp.species_state = "incubator"
         sp.members = []  # Clear members (they're now in cluster 0)
         incubator_species[sid] = sp
@@ -161,13 +154,13 @@ def process_extinctions(
             "species_id": sid,
             "action": "moved_to_cluster0",
             "new_state": "incubator",
-            "size": original_size,  # Use original size before clearing members
+            "size": original_size,
             "moved_count": moved_count,
-            "moved_member_ids": moved_member_ids  # Track IDs for file patching
+            "moved_member_ids": moved_member_ids
         })
-        logger.info(f"Moved species {sid} ({moved_count} members) to cluster 0 - state=incubator (NOT extinction)")
+        logger.info(f"Moved species {sid} ({moved_count} members) to cluster 0 - state=incubator")
     
-    # Remove incubator species from active species dict (they're preserved in historical_species)
+    # Remove incubator species from active set; caller persists them as needed.
     for sid in incubator_species:
         species.pop(sid, None)
     

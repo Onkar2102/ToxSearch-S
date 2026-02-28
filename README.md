@@ -73,7 +73,18 @@ ToxSearch-S supports distributed execution via MPI, using a master-worker archit
 ### Prerequisites
 
 - An MPI runtime: [OpenMPI](https://www.open-mpi.org/) or [MPICH](https://www.mpich.org/)
-- `mpi4py` Python package (`pip install mpi4py`)
+- `mpi4py` Python package (see below)
+
+### Installing mpi4py (especially on clusters)
+
+- **Local / generic:** `pip install mpi4py` (builds against whatever MPI is in `PATH`, or uses a stub).
+- **Cluster (Spack + Slurm):** So that `mpi4py` uses the cluster’s MPI (and works with `srun`), install it **after** activating the Spack env that provides Open MPI, then your venv:
+  ```bash
+  spack env activate default-nlp-x86_64-25111801   # or your Spack env name
+  source .spvenv/bin/activate                        # or your venv path
+  pip install mpi4py
+  ```
+  This builds `mpi4py` against the Spack Open MPI. If your Spack Open MPI is built without `mpiexec`/`mpirun` (e.g. `~legacylaunchers`), use **srun** to launch (see `rc_script.sh` and “Running on HPC Clusters” below).
 
 ### Basic Usage
 

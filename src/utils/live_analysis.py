@@ -51,22 +51,25 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
             return None
         
         gen_nums = [g.get("generation_number", 0) for g in generations]
-        max_scores = [g.get("max_score_variants", 0.0) for g in generations]
+        # best_fitness = per-gen max over elites+reserves; fall back to max_score_variants
+        best_fitness_scores = [
+            g.get("best_fitness", g.get("max_score_variants", 0.0)) for g in generations
+        ]
         avg_scores = [g.get("avg_fitness_generation", 0.0) for g in generations]
-        min_scores = [g.get("min_score_variants", 0.0) for g in generations]
+        avg_elites = [g.get("avg_fitness_elites", 0.0) for g in generations]
         
-        # Calculate cumulative max score (running maximum across all generations)
-        cumulative_max_scores = []
+        # Calculate cumulative best fitness (running maximum across all generations)
+        cumulative_best = []
         current_max = 0.0
-        for score in max_scores:
+        for score in best_fitness_scores:
             current_max = max(current_max, score)
-            cumulative_max_scores.append(current_max)
+            cumulative_best.append(current_max)
         
         plt.figure(figsize=(10, 6))
-        plt.plot(gen_nums, max_scores, 'o-', label='Max Score', linewidth=2, markersize=6)
-        plt.plot(gen_nums, avg_scores, 's-', label='Avg Fitness', linewidth=2, markersize=6)
-        plt.plot(gen_nums, min_scores, '^-', label='Min Score', linewidth=2, markersize=6)
-        plt.plot(gen_nums, cumulative_max_scores, '--', label='Cumulative Max Score', linewidth=2, color='red', alpha=0.7)
+        plt.plot(gen_nums, best_fitness_scores, 'o-', label='Best Fitness (elites+reserves)', linewidth=2, markersize=6)
+        plt.plot(gen_nums, avg_scores, 's-', label='Avg Fitness (population)', linewidth=2, markersize=6)
+        plt.plot(gen_nums, avg_elites, '^-', label='Avg Fitness (elites)', linewidth=2, markersize=6)
+        plt.plot(gen_nums, cumulative_best, '--', label='Cumulative Best', linewidth=2, color='red', alpha=0.7)
         
         plt.xlabel('Generation', fontsize=12)
         plt.ylabel('Fitness Score', fontsize=12)
@@ -171,34 +174,36 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
             return None
         
         # Aggregate operator statistics across all generations
-        operator_stats = defaultdict(lambda: {"duplicates_removed": 0, "question_mark_rejections": 0})
+        operator_stats = defaultdict(lambda: {"count": 0, "mutation": 0, "crossover": 0})
         
         for g in generations:
             op_stats = g.get("operator_statistics") or {}
             if isinstance(op_stats, dict):
                 for op_name, stats in op_stats.items():
                     if isinstance(stats, dict):
-                        operator_stats[op_name]["duplicates_removed"] += stats.get("duplicates_removed", 0)
-                        operator_stats[op_name]["question_mark_rejections"] += stats.get("question_mark_rejections", 0)
+                        operator_stats[op_name]["count"] += stats.get("count", 0)
+                        operator_stats[op_name]["mutation"] += stats.get("mutation", 0)
+                        operator_stats[op_name]["crossover"] += stats.get("crossover", 0)
         
         if not operator_stats:
             _logger.warning("No operator statistics found")
             return None
         
-        operators = list(operator_stats.keys())
-        duplicates = [operator_stats[op]["duplicates_removed"] for op in operators]
-        rejections = [operator_stats[op]["question_mark_rejections"] for op in operators]
+        # Sort by total count descending
+        operators = sorted(operator_stats.keys(), key=lambda o: operator_stats[o]["count"], reverse=True)
+        mutations = [operator_stats[op]["mutation"] for op in operators]
+        crossovers = [operator_stats[op]["crossover"] for op in operators]
         
         x = np.arange(len(operators))
         width = 0.35
         
         fig, ax = plt.subplots(figsize=(12, 6))
-        bars1 = ax.bar(x - width/2, duplicates, width, label='Duplicates Removed', color='#e41a1c')
-        bars2 = ax.bar(x + width/2, rejections, width, label='Question Mark Rejections', color='#377eb8')
+        ax.bar(x - width/2, mutations, width, label='Mutation', color='#377eb8')
+        ax.bar(x + width/2, crossovers, width, label='Crossover', color='#e41a1c')
         
         ax.set_xlabel('Operator', fontsize=12)
         ax.set_ylabel('Count', fontsize=12)
-        ax.set_title('Operator Statistics (Cumulative)', fontsize=14, fontweight='bold')
+        ax.set_title('Operator Usage (Cumulative)', fontsize=14, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(operators, rotation=45, ha='right')
         ax.legend(fontsize=10)

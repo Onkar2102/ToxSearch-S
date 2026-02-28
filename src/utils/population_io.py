@@ -301,7 +301,7 @@ def clean_population(population: List[Dict[str, Any]], *, logger=None, log_file:
 def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
     """Get information about population files including elites.json and reserves.json
     
-    Note: Active population = elites.json + reserves.json (archive.json is NOT part of population).
+    Note: Active population = elites.json + reserves.json (archive.json is excluded).
     """
     _log = get_logger("population_io")
     base_path = Path(base_dir).resolve()
@@ -435,7 +435,7 @@ def update_population_index_single_file(base_dir: str, total_genomes: int, *, lo
 
 def load_population_generation(generation: int, base_dir: str = "outputs", 
                               *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Load genomes for a specific generation from the single non_elites.json file"""
+    """Load genomes for a specific generation from the active single-file population."""
     
     _logger = logger or get_logger("population_io", log_file)
     
@@ -447,7 +447,7 @@ def load_population_generation(generation: int, base_dir: str = "outputs",
             # Filter by generation
             generation_genomes = [g for g in all_genomes if g and g.get("generation") == generation]
             
-            _logger.info("Loaded generation %d: %d genomes from non_elites.json", generation, len(generation_genomes))
+            _logger.info("Loaded generation %d: %d genomes from active population file", generation, len(generation_genomes))
             return generation_genomes
             
         except Exception as e:
@@ -457,7 +457,7 @@ def load_population_generation(generation: int, base_dir: str = "outputs",
 
 def load_population_range(start_gen: int, end_gen: int, base_dir: str = "outputs",
                          *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
-    """Load multiple generations from the single non_elites.json file"""
+    """Load multiple generations from the active single-file population."""
     
     _logger = logger or get_logger("population_io", log_file)
     
@@ -467,7 +467,7 @@ def load_population_range(start_gen: int, end_gen: int, base_dir: str = "outputs
             
             range_genomes = [g for g in all_genomes if g and start_gen <= g.get("generation", 0) <= end_gen]
             
-            _logger.info("Loaded generations %d-%d: %d genomes from non_elites.json", start_gen, end_gen, len(range_genomes))
+            _logger.info("Loaded generations %d-%d: %d genomes from active population file", start_gen, end_gen, len(range_genomes))
             return range_genomes
             
         except Exception as e:
@@ -477,7 +477,7 @@ def load_population_range(start_gen: int, end_gen: int, base_dir: str = "outputs
 
 def load_population_lazy(base_dir: str = "outputs", max_gens: Optional[int] = None,
                         *, logger=None, log_file: Optional[str] = None):
-    """Generator that yields genomes from the single non_elites.json file"""
+    """Generator that yields genomes from the active single-file population."""
     
     _logger = logger or get_logger("population_io", log_file)
     
@@ -489,7 +489,7 @@ def load_population_lazy(base_dir: str = "outputs", max_gens: Optional[int] = No
         if max_gens is not None:
             all_genomes = [g for g in all_genomes if g and g.get("generation", 0) < max_gens]
         
-        _logger.info("Lazy loading %d genomes from non_elites.json", len(all_genomes))
+        _logger.info("Lazy loading %d genomes from active population file", len(all_genomes))
         
         for genome in all_genomes:
             yield genome
@@ -501,7 +501,7 @@ def load_population_lazy(base_dir: str = "outputs", max_gens: Optional[int] = No
 
 def save_population_generation(genomes: List[Dict[str, Any]], generation: int, 
                               base_dir: str = "outputs", *, logger=None, log_file: Optional[str] = None):
-    """Save genomes to the single non_elites.json file (updates the single file)"""
+    """Save genomes to the active single-file population (generation overwrite semantics)."""
     
     _logger = logger or get_logger("population_io", log_file)
     
@@ -515,7 +515,7 @@ def save_population_generation(genomes: List[Dict[str, Any]], generation: int,
             
             save_population(filtered_population, base_dir, logger=_logger, log_file=log_file)
             
-            _logger.info("Updated non_elites.json with generation %d: %d genomes", generation, len(genomes))
+            _logger.info("Updated active population file with generation %d: %d genomes", generation, len(genomes))
             
         except Exception as e:
             _logger.error("Failed to save generation %d: %s", generation, e, exc_info=True)
@@ -523,7 +523,7 @@ def save_population_generation(genomes: List[Dict[str, Any]], generation: int,
 
 
 def get_latest_generation(base_dir: str = "outputs") -> int:
-    """Get the highest generation number available from the single non_elites.json file"""
+    """Get the highest generation number available from the active single-file population."""
     info = get_population_files_info(base_dir)
     return info["total_generations"] - 1 if info["total_generations"] > 0 else 0
 
@@ -1176,17 +1176,17 @@ def consolidate_generations_to_single_file(base_dir: str = "outputs",
                                          output_file: str = "non_elites.json",
                                          *, logger=None, log_file: Optional[str] = None) -> bool:
     """
-    Consolidate all split generation files back into a single non_elites.json file.
+    Consolidate split generation files into a single population file.
     
-    This function merges all gen*.json files into a single non_elites.json file,
-    effectively reverting from the split file architecture back to the monolithic approach.
+    This function merges all gen*.json files into one output JSON file,
+    effectively reverting from split files to a monolithic layout.
     
     Parameters
     ----------
     base_dir : str
         Base directory containing generation files
     output_file : str
-        Name of the output non_elites.json file
+        Name of the output consolidated population file
     logger : logging.Logger | None
         Existing logger to reuse; if *None* a new one is created
     log_file : str | None
@@ -1218,7 +1218,7 @@ def consolidate_generations_to_single_file(base_dir: str = "outputs",
             all_genomes = load_population(str(base_path), logger=_logger, log_file=log_file)
             
             if not all_genomes:
-                _logger.error("No genomes loaded from non_elites.json")
+                _logger.error("No genomes loaded from consolidated population source")
                 return False
             
             all_genomes = clean_population(all_genomes, logger=_logger, log_file=log_file)
@@ -1251,7 +1251,7 @@ def consolidate_generations_to_single_file(base_dir: str = "outputs",
                 return True
                 
             except Exception as e:
-                _logger.error(f"Failed to save consolidated non_elites.json: {e}")
+                _logger.error(f"Failed to save consolidated population file: {e}")
                 return False
                 
         except Exception as e:
@@ -1262,10 +1262,10 @@ def consolidate_generations_to_single_file(base_dir: str = "outputs",
 def migrate_from_split_to_single(base_dir: str = "outputs", 
                                 *, logger=None, log_file: Optional[str] = None) -> bool:
     """
-    Complete migration from split file architecture back to single non_elites.json.
+    Complete migration from split-file architecture back to a single population file.
     
     This function:
-    1. Consolidates all generation files into non_elites.json
+    1. Consolidates all generation files into a single output file
     2. Updates the population loading logic to use the single file
     3. Provides a clean migration path
     
@@ -1455,7 +1455,7 @@ def get_population_stats_steady_state(population_file_path: str = FileConstants.
     """
     Get population statistics for steady state mode.
     
-    Note: Active population = elites.json + reserves.json (archive.json is NOT part of population).
+    Note: Active population = elites.json + reserves.json (archive.json is excluded).
     
     Parameters
     ----------
@@ -1527,7 +1527,7 @@ def calculate_average_fitness(
     - elites.json: Elites assigned to species (species_id > 0)
     - reserves.json: Elite outliers that don't fit existing species (species_id == 0)
     - temp.json: New variants before speciation (included only if include_temp=True)
-    - archive.json: Archived/removed genomes (NOT part of population, never included)
+    - archive.json: Archived/removed genomes (excluded from active population)
     
     Args:
         outputs_path: Path to outputs directory
@@ -1974,7 +1974,8 @@ def calculate_generation_statistics(
         Dictionary with all calculated statistics
     """
     _logger = logger or get_logger("GenerationStatistics", log_file)
-    
+    _logger.info("Calculating generation statistics for gen %d", current_generation)
+
     outputs_dir = Path(outputs_path)
     stats = {
         "generation_number": current_generation,
@@ -2110,8 +2111,12 @@ def calculate_generation_statistics(
                 _logger.warning(f"Gen {current_generation}: No fitness scores found but total_population={stats.get('total_population')} - setting population_max_toxicity to 0.0001")
             stats["population_max_toxicity"] = 0.0001
         
-        # avg_fitness is not computed here; it is supplied by main from
+        # avg_fitness: in non-parallel mode, supplied by main from
         # calculate_average_fitness(include_temp=True) before speciation.
+        # In parallel mode, no separate call is made. If still at default (0.0001),
+        # fall through to avg_fitness_generation as a reasonable approximation.
+        if stats["avg_fitness"] <= 0.0001 and stats["avg_fitness_generation"] > 0.0001:
+            stats["avg_fitness"] = stats["avg_fitness_generation"]
         
         # For generation 0, initial_population_size is the count before distribution
         if current_generation == 0:
@@ -2125,6 +2130,12 @@ def calculate_generation_statistics(
         )
         stats.update(budget_metrics)
         
+        _logger.info(
+            "Gen %d stats: elites=%d reserves=%d total=%d avg_fit_gen=%.4f max_tox=%.4f",
+            current_generation, stats["elites_count"], stats["reserves_count"],
+            stats["total_population"], stats["avg_fitness_generation"],
+            stats.get("population_max_toxicity", 0.0001)
+        )
         _logger.debug(
             "Gen %d stats: elites=%d (avg=%.4f), reserves=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f, llm_calls=%d, api_calls=%d",
             current_generation, stats["elites_count"], stats["avg_fitness_elites"],
@@ -2268,11 +2279,15 @@ def update_evolution_tracker_with_statistics(
         existing_speciation = gen_entry.get("speciation")
         # avg_fitness: mean(old elites + old reserves + all new variants) before speciation
         # (from main). Differs from avg_fitness_generation when genomes are archived this gen.
+        if statistics.get("best_genome_id") is not None:
+            gen_entry["genome_id"] = statistics["best_genome_id"]
+
         gen_entry.update({
             "elites_count": statistics.get("elites_count", 0),
             "reserves_count": statistics.get("reserves_count", 0),
             "archived_count": statistics.get("archived_count", 0),
             "total_population": statistics.get("total_population", 0),
+            "best_fitness": round(statistics.get("population_max_toxicity", gen_entry.get("best_fitness", 0.0001)), 4),
             "max_score_variants": round(statistics.get("max_score_variants", gen_entry.get("max_score_variants", 0.0001)), 4),
             "min_score_variants": round(statistics.get("min_score_variants", gen_entry.get("min_score_variants", 0.0001)), 4),
             "avg_fitness_variants": round(statistics.get("avg_fitness_variants", gen_entry.get("avg_fitness_variants", 0.0001)), 4),
@@ -2347,16 +2362,45 @@ def update_evolution_tracker_with_statistics(
             )
             _logger.debug(f"Updated cumulative population_max_toxicity to {tracker['population_max_toxicity']:.4f}")
         
-        # Also update genome_id and variant counts if provided
-        if statistics.get("best_genome_id"):
-            gen_entry["genome_id"] = statistics.get("best_genome_id")
-        
         if statistics.get("variants_created") is not None:
             gen_entry["variants_created"] = statistics.get("variants_created", 0)
         if statistics.get("mutation_variants") is not None:
             gen_entry["mutation_variants"] = statistics.get("mutation_variants", 0)
         if statistics.get("crossover_variants") is not None:
             gen_entry["crossover_variants"] = statistics.get("crossover_variants", 0)
+        
+        # Populate parents and top_10 from their JSON files if not already populated
+        outputs_dir = os.path.dirname(tracker_path)
+        if not gen_entry.get("parents"):
+            parents_path = os.path.join(outputs_dir, "parents.json")
+            try:
+                if os.path.exists(parents_path):
+                    with open(parents_path, 'r', encoding='utf-8') as pf:
+                        parents_data = json.load(pf)
+                    if parents_data:
+                        gen_entry["parents"] = [
+                            {"id": p.get("id"), "prompt": p.get("prompt", "")[:100], "toxicity": p.get("toxicity", 0)}
+                            for p in parents_data
+                        ] if isinstance(parents_data, list) else []
+                        _logger.debug("Loaded %d parents from %s for gen %d",
+                                      len(gen_entry["parents"]), parents_path, current_generation)
+            except Exception:
+                pass
+        if not gen_entry.get("top_10"):
+            top10_path = os.path.join(outputs_dir, "top_10.json")
+            try:
+                if os.path.exists(top10_path):
+                    with open(top10_path, 'r', encoding='utf-8') as tf:
+                        top10_data = json.load(tf)
+                    if top10_data:
+                        gen_entry["top_10"] = [
+                            {"id": t.get("id"), "prompt": t.get("prompt", "")[:100], "toxicity": t.get("toxicity", 0)}
+                            for t in top10_data
+                        ] if isinstance(top10_data, list) else []
+                        _logger.debug("Loaded %d top_10 from %s for gen %d",
+                                      len(gen_entry["top_10"]), top10_path, current_generation)
+            except Exception:
+                pass
         
         # Add operator statistics if provided
         if operator_statistics:
@@ -2365,15 +2409,24 @@ def update_evolution_tracker_with_statistics(
         # Sort generations by number
         tracker["generations"] = sorted(generations, key=lambda x: x.get("generation_number", 0))
         
+        # Keep total_generations in sync with the actual generations array
+        if tracker["generations"]:
+            tracker["total_generations"] = max(
+                g.get("generation_number", 0) for g in tracker["generations"]
+            ) + 1
+        
         # Save updated tracker (use indent=2 to match other JSON files)
         with open(tracker_path, 'w', encoding='utf-8') as f:
             json.dump(tracker, f, indent=2, ensure_ascii=False)
         
+        best_fit = statistics.get("population_max_toxicity", gen_entry.get("best_fitness", 0.0001))
         _logger.info(
-            "Updated EvolutionTracker gen %d: elites=%d, reserves=%d, archived=%d, avg_fitness=%.4f",
+            "Updated EvolutionTracker gen %d: elites=%d, reserves=%d, archived=%d, "
+            "avg_fitness=%.4f, best_fitness=%.4f, parents=%d, top_10=%d",
             current_generation, statistics.get("elites_count", 0),
             statistics.get("reserves_count", 0), statistics.get("archived_count", 0),
-            statistics.get("avg_fitness_generation", 0.0001)
+            statistics.get("avg_fitness_generation", 0.0001), best_fit,
+            len(gen_entry.get("parents", [])), len(gen_entry.get("top_10", []))
         )
         
         return True

@@ -1013,6 +1013,7 @@ if __name__ == "__main__":
         get_logger, get_log_filename, _, _ = get_custom_logging()
         log_file = get_log_filename()
         logger = get_logger("master_worker", log_file)
+        logger.info("Starting in parallel (MPI) mode. Rank-specific logs will be written for master and workers.")
 
         speciation_config = SpeciationConfig(
             theta_sim=args.theta_sim,

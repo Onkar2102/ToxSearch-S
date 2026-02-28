@@ -360,11 +360,10 @@ def calculate_cluster_quality_metrics(
                     if genome_id is not None:
                         genomes_with_embeddings[genome_id] = genome
         
-        # Then, backfill prompt_embedding from temp.json for genomes we already have.
-        # Do NOT overwrite the whole genome: temp is pre-distribution and lacks species_id
-        # (and other fields set at distribution). Overwriting would wipe species_id and
-        # cause those genomes to be excluded (species_id > 0), yielding num_clusters=1
-        # when multiple species exist.
+        # Then backfill prompt_embedding from temp.json for genomes already loaded.
+        # Do not overwrite full genome entries: temp is pre-distribution and may lack
+        # species_id (and other fields set during distribution). Overwriting can drop
+        # species assignments and undercount clusters.
         if temp_path and Path(temp_path).exists():
             try:
                 with open(temp_path, 'r', encoding='utf-8') as f:

@@ -36,7 +36,7 @@ def _reset_temp_json(logger):
 def _deduplicate_variants_in_temp(logger, operator_stats=None):
     """
     Deduplicate variants in temp.json by comparing against existing genomes in all files.
-    This function ONLY performs deduplication and does NOT distribute genomes.
+    This function only performs deduplication; distribution is handled by speciation.
 
     Args:
         logger: Logger instance
@@ -49,7 +49,7 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
         outputs_path = get_outputs_path()
         temp_path = outputs_path / "temp.json"
         elites_path = outputs_path / "elites.json"
-        reserves_path = outputs_path / "reserves.json"  # Formerly non_elites.json
+        reserves_path = outputs_path / "reserves.json"  # Renamed from non_elites.json in legacy format
 
         if not temp_path.exists():
             logger.warning("temp.json not found for deduplication")
@@ -114,8 +114,7 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
         raise
 
 
-# Distribution logic has been moved to speciation module
-# Use SpeciationModule.distribute_genomes() instead
+# Distribution is handled by the speciation pipeline (`run_speciation`), not this module.
 
 
 population_path = None
@@ -393,7 +392,7 @@ def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_st
         all_scores = []
         best_scores = []
         for gen_entry in evolution_tracker.get("generations", []):
-            score = gen_entry.get("max_score_variants", 0.0001)
+            score = gen_entry.get("best_fitness", gen_entry.get("max_score_variants", 0.0001))
             all_scores.append(score)
             if gen_entry.get("generation_number") == total_generations - 1:
                 best_scores.append(score)

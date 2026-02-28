@@ -74,9 +74,10 @@ cd /home/os9660/ToxSearch-S || exit 1
 export PYTHONPATH=/home/os9660/ToxSearch-S/src
 python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|cluster0" || exit 1
 
-# 8) Single MPI launch with mpiexec (from Spack env). -n 3 = 1 master + 2 workers (matches --ntasks=3).
+# 8) MPI launch with srun (Spack openmpi has no mpiexec/mpirun; use srun per cluster).
+# Job has --ntasks=3 so srun runs 3 processes. If MPI hangs, try: srun --mpi=pmi2 ...
 # python -u for unbuffered output.
-mpiexec -n 3 python -u src/main.py \
+srun python -u src/main.py \
     --parallel \
     --batch-size 100 \
     --generations 250 \

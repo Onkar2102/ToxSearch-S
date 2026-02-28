@@ -63,8 +63,10 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
     """
     merge_start = time.time()
     buffer_snapshot = {r: len(b) for r, b in buffers.items() if b}
-    logger.debug("Merge start: draining up to K=%d from buffers (round-robin). "
-                 "Buffer snapshot per worker: %s", K, buffer_snapshot)
+    total_buffered = sum(buffer_snapshot.values())
+    logger.info("Merge starting: gen=%d  K=%d  total_buffered=%d  per_worker=%s",
+                generation_id, K, total_buffered, buffer_snapshot)
+    logger.debug("Merge drain: round-robin from buffers.")
 
     existing_prompts = _load_existing_prompts(outputs_path, logger)
     logger.debug("Loaded %d existing prompts for dedup (elites+reserves+archive)",
@@ -161,7 +163,8 @@ def _stub_speciation(outputs_path, temp_path, logger):
     try:
         with open(temp_path, "r", encoding="utf-8") as f:
             genomes = json.load(f)
-    except Exception:
+    except Exception as e:
+        logger.warning("_stub_speciation: failed to read temp.json: %s", e)
         genomes = []
 
     for g in genomes:
@@ -173,7 +176,8 @@ def _stub_speciation(outputs_path, temp_path, logger):
         try:
             with open(reserves_path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
-        except Exception:
+        except Exception as e:
+            logger.warning("_stub_speciation: failed to read reserves.json: %s", e)
             existing = []
 
     existing.extend(genomes)
@@ -256,6 +260,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                  len(accepted_genomes) if accepted_genomes else 0)
     tracker_path = outputs_path / "EvolutionTracker.json"
     if not tracker_path.exists():
+        logger.info("Creating new EvolutionTracker.json")
         tracker = {
             "status": "not_complete",
             "total_generations": 0,
@@ -303,6 +308,40 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["mutation_variants"] = mutation_count
             gen_stats["crossover_variants"] = crossover_count
 
+            # Compute variant fitness stats from accepted_genomes directly
+            # (temp.json is already cleared by speciation when calculate_generation_statistics runs)
+            from utils.population_io import _extract_north_star_score
+            variant_scores = [
+                _extract_north_star_score(g, north_star_metric)
+                for g in accepted_genomes
+            ]
+            valid_scores = [s for s in variant_scores if s > 0.0001]
+            if valid_scores:
+                gen_stats["max_score_variants"] = round(max(valid_scores), 4)
+                gen_stats["min_score_variants"] = round(min(valid_scores), 4)
+                gen_stats["avg_fitness_variants"] = round(sum(valid_scores) / len(valid_scores), 4)
+
+            # Find best genome ID from the current generation's variants
+            best_score = 0
+            best_id = None
+            for g in accepted_genomes:
+                s = _extract_north_star_score(g, north_star_metric)
+                if s > best_score:
+                    best_score = s
+                    best_id = g.get("id")
+            if best_id is not None:
+                gen_stats["best_genome_id"] = best_id
+
+        # Read previous population_max_toxicity BEFORE update overwrites it
+        prev_max = 0.0
+        try:
+            if tracker_path.exists():
+                with open(tracker_path, "r", encoding="utf-8") as f:
+                    prev_tracker = json.load(f)
+                prev_max = prev_tracker.get("population_max_toxicity", 0.0)
+        except Exception:
+            pass
+
         update_evolution_tracker_with_statistics(
             evolution_tracker_path=str(tracker_path),
             current_generation=generation_id,
@@ -312,14 +351,33 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             log_file=log_file,
         )
 
+        # Update adaptive selection logic (generations_since_improvement, avg_fitness_history, slope)
+        try:
+            from utils.population_io import update_adaptive_selection_logic
+            current_max = gen_stats.get("population_max_toxicity", 0.0001)
+            update_adaptive_selection_logic(
+                outputs_path=str(outputs_path),
+                current_max_toxicity=current_max,
+                previous_max_toxicity=prev_max,
+                stagnation_limit=10,
+                north_star_metric=north_star_metric,
+                current_gen_avg_fitness=gen_stats.get("avg_fitness_generation"),
+                logger=logger,
+                log_file=log_file,
+            )
+        except Exception as e:
+            logger.warning("Adaptive selection update failed (non-fatal): %s", e)
+
         logger.info("Tracker updated: gen=%d  evaluated=%d  integrated=%d  discarded=%d  "
-                     "elites=%d  reserves=%d  avg_fitness=%.4f",
+                     "elites=%d  reserves=%d  avg_fitness=%.4f  best_fitness=%.4f",
                      generation_id, total_evaluated, total_integrated, total_discarded,
                      gen_stats.get("elites_count", 0), gen_stats.get("reserves_count", 0),
-                     gen_stats.get("avg_fitness_generation", 0.0001))
+                     gen_stats.get("avg_fitness_generation", 0.0001),
+                     gen_stats.get("population_max_toxicity", 0.0001))
 
     except Exception as e:
         logger.error("Full tracker update failed, falling back to minimal: %s", e, exc_info=True)
+        logger.info("Using minimal tracker update (full update failed)")
         with open(tracker_path, "r", encoding="utf-8") as f:
             tracker = json.load(f)
         gen_entry = {
@@ -408,15 +466,20 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
     outputs_path = Path(outputs_path)
     outputs_path.mkdir(parents=True, exist_ok=True)
+    created = []
     for fname in ("temp.json", "elites.json", "reserves.json", "archive.json"):
         fpath = outputs_path / fname
         if not fpath.exists():
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump([], f)
+            created.append(fname)
+    if created:
+        logger.info("Initialized output files: %s", ", ".join(created))
 
     buffers = defaultdict(list)
     generation_id = 0
     next_genome_id = get_max_genome_id_from_all_files(str(outputs_path)) + 1
+    logger.info("Starting next_genome_id=%d (from max ID in elites/reserves/archive + 1)", next_genome_id)
     total_evaluated = 0
     total_integrated = 0
     total_discarded = 0
@@ -485,10 +548,14 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 if num_keys:
                     payload["perspective_key_index"] = (source - 1) % num_keys
                 send_payload(comm, source, GEN0_BATCH, payload, logger=logger)
-                logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  "
+                n_prompts_batch = payload["prompt_end"] - payload["prompt_start"]
+                if n_prompts_batch <= 0:
+                    logger.warning("Sent empty GEN0_BATCH to worker %d  [%d:%d]  (no prompts)",
+                                  source, payload["prompt_start"], payload["prompt_end"])
+                logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  (%d prompts)  "
                             "remaining_gen0_assignments=%d",
                             source, payload["prompt_start"], payload["prompt_end"],
-                            len(gen0_assignments))
+                            n_prompts_batch, len(gen0_assignments))
 
             elif shutdown:
                 send_payload(comm, source, PARENTS, None, logger=logger)
@@ -589,7 +656,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
                 if max_generations is not None and generation_id >= max_generations:
                     shutdown = True
-                    logger.info("Max generations reached (%d/%d). Shutdown flag set.",
+                    logger.info("SHUTDOWN REASON: max generations reached (%d/%d).",
                                 generation_id, max_generations)
 
     logger.info("All workers finished requesting. recv_count=%d", recv_count)
@@ -619,12 +686,23 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
     _run_final_statistics(outputs_path, north_star_metric, start_time, generation_id, log_file, logger)
 
+    # Read final best_fitness from tracker for the summary
+    final_best = 0.0
+    try:
+        tracker_path = outputs_path / "EvolutionTracker.json"
+        if tracker_path.exists():
+            with open(tracker_path, "r", encoding="utf-8") as f:
+                tracker = json.load(f)
+            final_best = tracker.get("population_max_toxicity", 0.0)
+    except Exception:
+        pass
+
     total_elapsed = time.time() - start_time
     logger.info("="*60)
     logger.info("Master done. generations=%d  evaluated=%d  integrated=%d  "
-                "discarded=%d  total_time=%.1fs",
+                "discarded=%d  best_fitness=%.4f  total_time=%.1fs",
                 generation_id, total_evaluated, total_integrated,
-                total_discarded, total_elapsed)
+                total_discarded, final_best, total_elapsed)
     logger.info("="*60)
 
 
@@ -729,6 +807,10 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
             if key_idx is not None and hasattr(evaluator, "select_key"):
                 evaluator.select_key(key_idx)
+                logger.info("Worker %d: using Perspective API key index %d", rank, key_idx)
+
+            if n_prompts <= 0:
+                logger.warning("Worker %d: received empty GEN0 batch (prompts[%d:%d])", rank, prompt_start, prompt_end)
 
             prompts = _load_seed_prompts(seed_file, prompt_start, prompt_end, logger)
             logger.info("Gen0 batch: loaded %d prompts from seed file, processing...", len(prompts))
@@ -785,6 +867,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
             if key_idx is not None and hasattr(evaluator, "select_key"):
                 evaluator.select_key(key_idx)
+                logger.info("Worker %d: using Perspective API key index %d", rank, key_idx)
 
             logger.info("Evolution cycle %d: generating variants from %d parents...",
                          cycle, len(parents))
@@ -944,6 +1027,7 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         "perspective_api_keys": perspective_api_keys,
     }
 
+    logger.info("MPI rank %d of %d starting", rank, size)
     if rank == 0:
         master_main(comm, size, K, outputs_path, north_star_metric,
                     speciation_config, rank_log_file or log_file, logger,

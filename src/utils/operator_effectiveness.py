@@ -21,7 +21,7 @@ get_logger, _, _, _ = get_custom_logging()
 _, _, _, get_outputs_path, _, _ = get_system_utils()
 
 
-# Note: get_expected_variant_count() removed - expected_variant_count is not used for metric calculations
+# get_expected_variant_count() was removed; expected_variant_count is not used for metric calculations.
 # Metrics use calculated_total from operator statistics instead
 
 def calculate_table4_metrics(
@@ -145,13 +145,12 @@ def calculate_table4_metrics(
                                             'total_variants', 'elite_count', 'non_elite_count', 'rejections', 'duplicates'])
             return empty_df
         
-        # If no variants but we have operator_statistics, we should still process operators
-        # (all variants may have been rejected/duplicated)
+        # If no variants are available for this generation, return None.
+        # (This includes cases where all attempts were rejected or deduplicated.)
         if not all_variants:
             # Check if we have operator_statistics to process
             if operator_statistics and len(operator_statistics) > 0:
-                _logger.info(f"No successful variants for generation {current_generation}, but found operator_statistics. Processing operators with rejections/duplicates only.")
-                # Continue processing - do NOT return None here
+                _logger.info(f"No successful variants for generation {current_generation}, operator statistics are present but variant-level metrics cannot be computed.")
             else:
                 _logger.warning(f"No variants and no operator_statistics found for generation {current_generation}")
             return None

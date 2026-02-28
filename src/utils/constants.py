@@ -29,7 +29,7 @@ class FileConstants:
     Note: Active population = elites.json + reserves.json
     - elites.json: Genomes with species_id > 0 (assigned to species)
     - reserves.json: Cluster 0 outliers (genomes that don't fit existing species)
-    - archive.json: Archived/removed genomes (NOT part of active population)
+    - archive.json: Archived/removed genomes (excluded from active population)
     """
     DEFAULT_ELITES_FILE = "data/outputs/elites.json"
     DEFAULT_RESERVES_FILE = "data/outputs/reserves.json"

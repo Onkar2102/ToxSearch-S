@@ -60,11 +60,11 @@ def merge_islands(
             combined.append(m)
             seen.add(m.id)
     
-    # Sort ALL members by fitness score (descending order)
+    # Sort combined members by descending fitness
     combined.sort(key=lambda x: x.fitness, reverse=True)
     
-    # Select genome with highest fitness score as leader
-    # This leader will NOT be changed until a new genome with higher fitness score is added to the species
+    # Select highest-fitness genome as leader
+    # Leader updates later only if a fitter genome appears
     if not combined:
         # Fallback: use highest fitness leader from either species (both should exist)
         if not sp1.leader or not sp2.leader:
@@ -74,11 +74,10 @@ def merge_islands(
     else:
         new_leader = combined[0]  # Highest fitness (first after sorting)
     
-    # Note: Leader selection happens BEFORE radius enforcement (Phase 3 Step 7)
-    # Note: Leader will only change if a new genome with higher fitness is added (handled in Phase 1/Phase 3)
-    # Note: Capacity enforcement happens in Phase 4 (does NOT change leader for merged species)
+    # Leader selection happens before post-merge pruning.
+    # Later radius/capacity checks may remove members, but do not re-elect the leader.
     
-    # Create merged species with ALL members (NO radius/capacity filtering)
+    # Create merged species with all members (no radius/capacity filtering here)
     merged = Species(
         id=generate_species_id(),  # New ID for clarity
         leader=new_leader,
@@ -103,18 +102,17 @@ def merge_islands(
         state = _get_state()
         genome_tracker = state.get("_genome_tracker")
         if genome_tracker:
-            # NOTE: Update ALL genomes from tracker that belong to parent species, not just in-memory members
-            # In-memory members might not include all genomes (e.g., from previous generations, archived genomes)
-            # Get all genome IDs from tracker for both parent species
+            # Update all tracker genomes assigned to parent species, not only in-memory members.
+            # In-memory members can be a subset (for example, when tracker has older entries).
             parent1_genome_ids = genome_tracker.get_all_genomes_by_species(sp1.id)
             parent2_genome_ids = genome_tracker.get_all_genomes_by_species(sp2.id)
             all_parent_genome_ids = set(parent1_genome_ids) | set(parent2_genome_ids)
             
-            # Also include in-memory members (in case they're not in tracker yet)
+            # Include in-memory members too in case tracker has not seen them yet
             in_memory_ids = {str(m.id) for m in combined}
             all_genome_ids_to_update = all_parent_genome_ids | in_memory_ids
             
-            # Prepare batch update: ALL genomes from both parents -> new merged species_id
+            # Batch update: parent genomes -> merged species_id
             updates = {str(gid): merged.id for gid in all_genome_ids_to_update}
             
             if len(all_parent_genome_ids) > len(in_memory_ids):
@@ -132,7 +130,7 @@ def merge_islands(
                     f"({len(all_parent_genome_ids) - len(in_memory_ids)} additional from tracker beyond in-memory members)"
                 )
             
-            # Log reassignment events (if any): in current design archive genomes are not moved back; this supports possible future use
+            # Log archive-to-active reassignments if they occur (primarily defensive/future-proofing).
             reassigned_from_archive = result.get("reassigned_from_archive", [])
             if reassigned_from_archive:
                 events_tracker = state.get("_events_tracker")
@@ -153,8 +151,8 @@ def merge_islands(
     except Exception as e:
         logger.debug(f"Could not update genome tracker during merge: {e}")
     
-    logger.info(f"Merged species {sp1.id} + {sp2.id} -> {merged.id} ({merged.size} members, no filtering applied - will be enforced in Phase 4)")
-    return merged, []  # Return empty outliers list (no filtering during merge)
+    logger.info(f"Merged species {sp1.id} + {sp2.id} -> {merged.id} ({merged.size} members, no filtering applied - enforced later)")
+    return merged, []  # Empty outliers list: merge step does not filter members
 
 
 def process_merges(
@@ -213,14 +211,11 @@ def process_merges(
     all_outliers = []  # Collect all outliers from merges
     extinct_parents = {}  # Track parent species that became extinct via merging
     
-    # Combine active and frozen species for merge candidate search
-    # Frozen species can merge with active or other frozen species
-    # Both active and frozen species are "alive" - only difference is parent selection preference
-    # Note: Frozen species are now in the active species dict (not historical_species)
-    # Filter out species without leaders or with incubator state (should not merge)
+    # Build merge candidates from active/frozen species.
+    # Frozen species are still eligible to merge; incubator species are excluded.
     all_species_for_merging = {}
     for sid, sp in species.items():
-        # Only include species that have a leader and are not incubator
+        # Include only species with a valid leader and non-incubator state
         if sp.leader is not None and sp.species_state != "incubator":
             all_species_for_merging[sid] = sp
         elif sp.species_state == "incubator":
@@ -257,7 +252,7 @@ def process_merges(
             break
         
         id1, id2, state1, state2 = merge_pairs[0]
-        # Get species from appropriate dict (active or historical)
+        # Resolve species objects from current merge candidate set
         sp1 = all_species_for_merging.get(id1)
         sp2 = all_species_for_merging.get(id2)
         
