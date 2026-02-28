@@ -17,7 +17,7 @@ A quality-diversity evolutionary framework for LLM red-teaming with semantic spe
 ```bash
 # Clone repository
 git clone <repository-url>
-cd eost-cam-llm
+cd ToxSearch-S
 
 # Create virtual environment
 python -m venv venv
@@ -52,7 +52,7 @@ models/
 bash run_experiments_local.sh
 ```
 
-Edit the `EXPERIMENTS` array in the script to configure your runs.
+Edit `PARALLEL_EXPERIMENTS` (MPI) and/or `SEQUENTIAL_EXPERIMENTS` in the script to configure your runs.
 
 ### Option 2: Run directly
 
@@ -78,7 +78,7 @@ ToxSearch-S supports distributed execution via MPI, using a master-worker archit
 ### Basic Usage
 
 ```bash
-mpiexec -n 5 python src/main.py --parallel --batch-size 100 --seed-file data/prompt.csv
+PYTHONPATH=src mpiexec -n 5 python src/main.py --parallel --batch-size 100 --seed-file data/prompt.csv
 ```
 
 This launches 1 master + 4 workers. The `--batch-size` flag sets `K`, the number of genomes collected before triggering speciation.
@@ -86,7 +86,7 @@ This launches 1 master + 4 workers. The `--batch-size` flag sets `K`, the number
 ### Full Example
 
 ```bash
-mpiexec -n 9 python src/main.py \
+PYTHONPATH=src mpiexec -n 9 python src/main.py \
     --parallel \
     --batch-size 200 \
     --generations 50 \
@@ -101,7 +101,11 @@ mpiexec -n 9 python src/main.py \
 
 ### How It Works
 
-The master (rank 0, CPU) manages the population files, runs speciation, and coordinates parent selection. Workers (rank 1..N, GPU) request work, evolve new prompts from selected parents, generate LLM responses, evaluate them via moderation APIs, and return evaluated genomes to the master. Generation 0 distributes seed prompts across workers for initial evaluation.
+- Rank 0 is the **single-threaded master**: receives worker messages, keeps per-worker in-memory buffers, runs merge/dedup/speciation, updates population files, and writes tracker/statistics.
+- Ranks 1..N are **workers**: request work, evolve prompts from parents, generate responses, evaluate with moderation APIs, and send evaluated genomes back immediately.
+- **Generation 0** uses index ranges (`prompt_start`, `prompt_end`) so workers read seed prompts locally.
+- `temp.json` is **transient**: it is filled only during merge/speciation and cleared by speciation; evaluated genomes wait in in-memory buffers first.
+- A generation increments when speciation runs. In parallel mode, this is driven by `K` (`--batch-size`): once `K` evaluated genomes are buffered, master runs speciation.
 
 ### Multiple API Keys
 
@@ -112,6 +116,17 @@ export PERSPECTIVE_API_KEYS="key1,key2,key3,key4"
 ```
 
 The master assigns keys round-robin to workers. Alternatively, use indexed variables: `PERSPECTIVE_API_KEY_0`, `PERSPECTIVE_API_KEY_1`, etc.
+
+If you currently store multiple keys in `PERSPECTIVE_API_KEY` as comma-separated values, that is also supported.
+
+### Logs
+
+Parallel runs write one log file per rank:
+
+- `..._master.log` for rank 0
+- `..._worker1.log`, `..._worker2.log`, ... for worker ranks
+
+This avoids interleaved concurrent writes to one file and makes debugging per-rank behavior much easier.
 
 ### Running MPI Tests
 
@@ -128,6 +143,55 @@ mpiexec -n 3 python tests/test_phase4_mpi.py
 mpiexec -n 3 python tests/test_phase5_mpi.py
 mpiexec -n 3 python tests/test_phase67_mpi.py
 ```
+
+### Running on HPC Clusters
+
+You do **not** need to add code to detect GPUs or CUDA. The codebase already does that:
+
+- **Device selection** is handled in `src/utils/device_utils.py` (DeviceManager). It chooses MPS (Apple), then CUDA (NVIDIA), then CPU. PyTorch and the embedding model use this. The LLM (llama.cpp) uses the same device via `config/RGConfig.yaml` (`device_config.cuda` / `gpu_layers`).
+- **CUDA**: When `torch.cuda.is_available()` is true, the app uses CUDA. Each process uses “device 0” from its own point of view. On HPC, you make that “device 0” be the correct GPU by controlling what each process sees (see below).
+
+**Recommended approach on HPC: one GPU per worker via the scheduler**
+
+- Reserve **one GPU per MPI rank** (or one per worker; master can share a node with a worker or run on CPU-only).
+- Let the **job scheduler** set `CUDA_VISIBLE_DEVICES` (or equivalent) so that each rank sees exactly one GPU. Then our code’s “use cuda device 0” is correct for every worker; no code changes are required.
+- Run from the **project root** and set `PYTHONPATH=src` so config and imports resolve.
+
+**Example (SLURM): one GPU per task, N tasks on one node**
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=toxsearch
+#SBATCH --nodes=1
+#SBATCH --ntasks=5
+#SBATCH --gpus-per-task=1
+#SBATCH --cpus-per-task=8
+
+cd /path/to/ToxSearch-S
+source venv/bin/activate
+export PYTHONPATH=src
+
+# Optional: pass API key into the job
+export PERSPECTIVE_API_KEY="your_key"
+
+# Run 1 master + 4 workers; each task gets one GPU from the scheduler
+srun --gpus-per-task=1 python src/main.py --parallel --batch-size 100 \
+  --generations 50 --seed-file data/prompt.csv \
+  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
+  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf
+```
+
+If your cluster uses `mpiexec` instead of `srun` for launching MPI, request the same number of GPUs and run:
+
+```bash
+mpiexec -n 5 python src/main.py --parallel --batch-size 100 ...
+```
+
+Ensure the MPI launcher or scheduler is configured so that different ranks get different GPUs (many clusters do this when you request `--gpus-per-task=1` and multiple tasks).
+
+**Optional: force CPU for master (rank 0)**
+
+If the master should not use a GPU (e.g. to leave all GPUs for workers), set `CUDA_VISIBLE_DEVICES` only for worker ranks. That usually requires a small wrapper or launcher that sets the env per rank; the application code does not need to be changed for standard “one GPU per worker” setups.
 
 ---
 

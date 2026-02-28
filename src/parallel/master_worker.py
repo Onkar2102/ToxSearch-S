@@ -61,12 +61,21 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
 
     Returns (accepted_count, discarded_count, new_next_genome_id, speciation_result, accepted_genomes).
     """
+    merge_start = time.time()
+    buffer_snapshot = {r: len(b) for r, b in buffers.items() if b}
+    logger.debug("Merge start: draining up to K=%d from buffers (round-robin). "
+                 "Buffer snapshot per worker: %s", K, buffer_snapshot)
+
     existing_prompts = _load_existing_prompts(outputs_path, logger)
+    logger.debug("Loaded %d existing prompts for dedup (elites+reserves+archive)",
+                 len(existing_prompts))
     temp_prompts = set()
 
     sorted_ranks = sorted(buffers.keys())
     accepted = []
     discarded = 0
+    error_count = 0
+    dedup_count = 0
     idx = 0
 
     while len(accepted) < K and any(buffers[r] for r in sorted_ranks):
@@ -80,6 +89,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
 
         if genome.get("status") == "error":
             discarded += 1
+            error_count += 1
             logger.debug("Skipping error genome from worker %d: %s",
                          rank, genome.get("error", "unknown"))
             continue
@@ -88,6 +98,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
 
         if prompt in existing_prompts or prompt in temp_prompts:
             discarded += 1
+            dedup_count += 1
             logger.debug("Dedup discard: prompt already exists (worker %d)", rank)
             continue
 
@@ -97,15 +108,22 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
         temp_prompts.add(prompt)
         accepted.append(genome)
 
-    logger.info("Merge: %d accepted, %d discarded (dedup), generation=%d",
-                len(accepted), discarded, generation_id)
+    merge_elapsed = time.time() - merge_start
+    logger.info("Merge done (%.2fs): %d accepted, %d discarded (%d dedup, %d errors), "
+                "generation=%d, next_genome_id=%d",
+                merge_elapsed, len(accepted), discarded, dedup_count, error_count,
+                generation_id, next_genome_id)
 
     temp_path = outputs_path / "temp.json"
     with open(temp_path, "w", encoding="utf-8") as f:
         json.dump(accepted, f, indent=2, ensure_ascii=False)
+    logger.debug("Wrote %d genomes to temp.json", len(accepted))
 
+    speciation_start = time.time()
     speciation_result = {}
     if run_speciation_fn is not None:
+        logger.info("Speciation starting for generation %d (%d genomes in temp)...",
+                     generation_id, len(accepted))
         try:
             speciation_result = run_speciation_fn(
                 temp_path=str(temp_path),
@@ -114,20 +132,26 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
                 log_file=log_file,
                 north_star_metric=north_star_metric,
             )
+            speciation_elapsed = time.time() - speciation_start
             if speciation_result.get("success"):
-                logger.info("Speciation gen %d: %d species, %d reserves, %d elites moved",
-                            generation_id,
+                logger.info("Speciation gen %d done (%.2fs): %d species, %d reserves, "
+                            "%d elites moved",
+                            generation_id, speciation_elapsed,
                             speciation_result.get("species_count", 0),
                             speciation_result.get("reserves_size", 0),
                             speciation_result.get("elites_moved", 0))
             else:
-                logger.warning("Speciation gen %d completed with warnings: %s",
-                               generation_id, speciation_result.get("error", "unknown"))
+                logger.warning("Speciation gen %d completed with warnings (%.2fs): %s",
+                               generation_id, speciation_elapsed,
+                               speciation_result.get("error", "unknown"))
         except Exception as e:
-            logger.error("Speciation gen %d failed: %s", generation_id, e, exc_info=True)
+            speciation_elapsed = time.time() - speciation_start
+            logger.error("Speciation gen %d failed (%.2fs): %s",
+                         generation_id, speciation_elapsed, e, exc_info=True)
     else:
         _stub_speciation(outputs_path, temp_path, logger)
         speciation_result = {"success": True, "stub": True}
+        logger.debug("Stub speciation completed for generation %d", generation_id)
 
     return len(accepted), discarded, next_genome_id, speciation_result, accepted
 
@@ -226,6 +250,10 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                     north_star_metric="toxicity", log_file=None,
                     accepted_genomes=None):
     """Update EvolutionTracker with full generation statistics after speciation."""
+    logger.debug("Updating EvolutionTracker (full): gen=%d  evaluated=%d  "
+                 "integrated=%d  discarded=%d  accepted_genomes=%d",
+                 generation_id, total_evaluated, total_integrated, total_discarded,
+                 len(accepted_genomes) if accepted_genomes else 0)
     tracker_path = outputs_path / "EvolutionTracker.json"
     if not tracker_path.exists():
         tracker = {
@@ -329,6 +357,8 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
     """Generate final statistics and plots at the end of a parallel run."""
     try:
         execution_time = time.time() - start_time
+        logger.info("Generating final statistics: execution_time=%.1fs  "
+                     "generations_completed=%d", execution_time, generations_completed)
 
         tracker_path = outputs_path / "EvolutionTracker.json"
         if not tracker_path.exists():
@@ -341,11 +371,11 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
         tracker["status"] = "complete"
         with open(tracker_path, "w", encoding="utf-8") as f:
             json.dump(tracker, f, indent=2, ensure_ascii=False)
+        logger.debug("Marked EvolutionTracker status='complete'")
 
         from ea.run_evolution import create_final_statistics_with_tracker
-        evolution_tracker = tracker.get("generations", [])
         final_stats = create_final_statistics_with_tracker(
-            evolution_tracker=evolution_tracker,
+            evolution_tracker=tracker,
             north_star_metric=north_star_metric,
             execution_time=execution_time,
             generations_completed=generations_completed,
@@ -421,8 +451,24 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     def _total_buffered():
         return sum(len(b) for b in buffers.values())
 
+    def _buffer_state_str():
+        per_worker = {r: len(b) for r, b in buffers.items() if b}
+        return f"total={_total_buffered()} per_worker={per_worker}"
+
+    recv_count = 0
+    logger.info("="*60)
+    logger.info("Dispatch loop started. Waiting for messages from %d worker(s). "
+                "K=%d  max_generations=%s", n_workers, K, max_generations)
+    logger.info("="*60)
+
     while finished_workers < n_workers:
         data, tag_id, source = recv_payload(comm, logger=logger)
+        recv_count += 1
+
+        tag_name = {PARENTS_REQUEST: "PARENTS_REQUEST", EVALUATED_VARIANT: "EVALUATED_VARIANT",
+                    PARENTS: "PARENTS", GEN0_BATCH: "GEN0_BATCH"}.get(tag_id, f"UNKNOWN({tag_id})")
+        logger.debug("recv #%d: source=worker%d  tag=%s  gen0_complete=%s  shutdown=%s",
+                      recv_count, source, tag_name, gen0_complete, shutdown)
 
         # ---- PARENTS_REQUEST ----
         if tag_id == PARENTS_REQUEST:
@@ -439,18 +485,25 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 if num_keys:
                     payload["perspective_key_index"] = (source - 1) % num_keys
                 send_payload(comm, source, GEN0_BATCH, payload, logger=logger)
-                logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]",
-                            source, payload["prompt_start"], payload["prompt_end"])
+                logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  "
+                            "remaining_gen0_assignments=%d",
+                            source, payload["prompt_start"], payload["prompt_end"],
+                            len(gen0_assignments))
 
             elif shutdown:
                 send_payload(comm, source, PARENTS, None, logger=logger)
                 finished_workers += 1
-                logger.info("Sent shutdown to worker %d  (%d/%d done)", source, finished_workers, n_workers)
+                logger.info("Shutdown sent to worker %d  (%d/%d workers finished)",
+                            source, finished_workers, n_workers)
 
             else:
                 try:
+                    logger.debug("Running parent selection for worker %d (generation=%d)...",
+                                 source, generation_id)
+                    parent_sel_start = time.time()
                     parents, top_10 = _select_parents(
                         outputs_path, north_star_metric, generation_id, logger)
+                    parent_sel_elapsed = time.time() - parent_sel_start
                     num_keys = len((config_dict or {}).get("perspective_api_keys", []))
                     payload = {
                         "request_id": req_id,
@@ -460,8 +513,9 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     if num_keys:
                         payload["perspective_key_index"] = (source - 1) % num_keys
                     send_payload(comm, source, PARENTS, payload, logger=logger)
-                    logger.info("Sent PARENTS to worker %d  (%d parents, %d top_10)",
-                                source, len(parents), len(top_10))
+                    logger.info("Sent PARENTS to worker %d  (%d parents, %d top_10)  "
+                                "selection_time=%.2fs",
+                                source, len(parents), len(top_10), parent_sel_elapsed)
                 except Exception as e:
                     logger.error("Parent selection failed for worker %d: %s", source, e, exc_info=True)
                     send_payload(comm, source, PARENTS, None, logger=logger)
@@ -471,13 +525,21 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         elif tag_id == EVALUATED_VARIANT:
             req_id = data.get("request_id")
             local_id = data.get("local_variant_id")
-            logger.info("EVALUATED_VARIANT from worker %d  request_id=%s  local_variant_id=%s  prompt=%.40s",
-                        source, req_id, local_id, str(data.get("prompt", ""))[:40])
+            status = data.get("status", "unknown")
+            logger.info("EVALUATED_VARIANT from worker %d  request_id=%s  "
+                        "local_variant_id=%s  status=%s  prompt=%.40s",
+                        source, req_id, local_id, status,
+                        str(data.get("prompt", ""))[:40])
 
             buffers[source].append(data)
             total_evaluated += 1
             if not gen0_complete:
                 gen0_returned += 1
+
+            if total_evaluated % 5 == 0 or _total_buffered() >= K:
+                logger.info("Buffer state: %s  total_evaluated=%d  gen0_returned=%d/%d",
+                            _buffer_state_str(), total_evaluated,
+                            gen0_returned, gen0_expected)
 
             should_speciate = False
             if _total_buffered() >= K:
@@ -486,13 +548,15 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                   and gen0_returned >= gen0_expected
                   and _total_buffered() > 0):
                 logger.info("Gen0 complete with partial batch: %d/%d returned, "
-                            "%d buffered (< K=%d). Running speciation.",
+                            "%d buffered (< K=%d). Triggering speciation.",
                             gen0_returned, gen0_expected, _total_buffered(), K)
                 should_speciate = True
 
             if should_speciate:
-                logger.info("Running merge+speciation: %d buffered, K=%d.",
-                            _total_buffered(), K)
+                cycle_start = time.time()
+                logger.info("-"*50)
+                logger.info("Merge+speciation triggered: %d buffered, K=%d, "
+                            "generation=%d", _total_buffered(), K, generation_id)
 
                 batch_size = min(_total_buffered(), K)
                 accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
@@ -511,15 +575,30 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
                 _run_live_analysis(outputs_path, logger)
 
+                cycle_elapsed = time.time() - cycle_start
+                logger.info("Post-speciation summary: generation_id=%d  "
+                            "total_evaluated=%d  total_integrated=%d  "
+                            "total_discarded=%d  cycle_time=%.2fs",
+                            generation_id, total_evaluated, total_integrated,
+                            total_discarded, cycle_elapsed)
+                logger.info("Remaining buffer after speciation: %s", _buffer_state_str())
+                logger.info("-"*50)
+
                 gen0_complete = True
                 generation_id += 1
 
                 if max_generations is not None and generation_id >= max_generations:
                     shutdown = True
-                    logger.info("Max generations reached (%d). Shutdown flag set.", max_generations)
+                    logger.info("Max generations reached (%d/%d). Shutdown flag set.",
+                                generation_id, max_generations)
+
+    logger.info("All workers finished requesting. recv_count=%d", recv_count)
 
     if _total_buffered() > 0:
-        logger.info("Draining remaining %d buffered genomes.", _total_buffered())
+        logger.info("="*50)
+        logger.info("Drain phase: %d genomes remaining in buffers. %s",
+                     _total_buffered(), _buffer_state_str())
+        drain_start = time.time()
         accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
             _merge_and_speciate(
                 buffers, _total_buffered(), outputs_path, generation_id, next_genome_id,
@@ -533,11 +612,20 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         north_star_metric=north_star_metric, log_file=log_file,
                         accepted_genomes=accepted_genomes)
         _run_live_analysis(outputs_path, logger)
+        drain_elapsed = time.time() - drain_start
+        logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d",
+                     drain_elapsed, accepted, discarded)
+        logger.info("="*50)
 
     _run_final_statistics(outputs_path, north_star_metric, start_time, generation_id, log_file, logger)
 
-    logger.info("Master done. generations=%d  evaluated=%d  integrated=%d  discarded=%d",
-                generation_id, total_evaluated, total_integrated, total_discarded)
+    total_elapsed = time.time() - start_time
+    logger.info("="*60)
+    logger.info("Master done. generations=%d  evaluated=%d  integrated=%d  "
+                "discarded=%d  total_time=%.1fs",
+                generation_id, total_evaluated, total_integrated,
+                total_discarded, total_elapsed)
+    logger.info("="*60)
 
 
 # ---------------------------------------------------------------------------
@@ -610,31 +698,45 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
     seq = 0
     cycle = 0
+    total_errors = 0
+    worker_start_time = time.time()
+
+    logger.info("="*50)
+    logger.info("Worker %d ready. Entering request loop.", rank)
+    logger.info("="*50)
 
     while True:
         req_id = f"{rank}_{cycle}"
         send_payload(comm, 0, PARENTS_REQUEST, {"request_id": req_id}, logger=logger)
-        logger.info("Sent PARENTS_REQUEST  request_id=%s", req_id)
+        logger.info("Sent PARENTS_REQUEST  request_id=%s  (cycle=%d, total_sent=%d)",
+                     req_id, cycle, seq)
 
         data, tag_id, _ = recv_payload(comm, source=0, logger=logger)
 
         if tag_id == PARENTS and data is None:
-            logger.info("Received shutdown (None). Exiting.")
+            logger.info("Received shutdown (None) from master. Exiting request loop.")
             break
 
         # ---- GEN0_BATCH (evaluation-only) ----
         if tag_id == GEN0_BATCH:
             prompt_start = data.get("prompt_start", 0)
             prompt_end = data.get("prompt_end", 0)
+            n_prompts = prompt_end - prompt_start
             key_idx = data.get("perspective_key_index")
-            logger.info("GEN0_BATCH  request_id=%s  prompts[%d:%d]  key_idx=%s",
-                        data.get("request_id"), prompt_start, prompt_end, key_idx)
+            logger.info("GEN0_BATCH received: request_id=%s  prompts[%d:%d] (%d prompts)  "
+                        "key_idx=%s",
+                        data.get("request_id"), prompt_start, prompt_end, n_prompts, key_idx)
 
             if key_idx is not None and hasattr(evaluator, "select_key"):
                 evaluator.select_key(key_idx)
 
             prompts = _load_seed_prompts(seed_file, prompt_start, prompt_end, logger)
-            for p in prompts:
+            logger.info("Gen0 batch: loaded %d prompts from seed file, processing...", len(prompts))
+            gen0_batch_start = time.time()
+            gen0_ok = 0
+            gen0_err = 0
+
+            for i, p in enumerate(prompts):
                 local_variant_id = f"{rank}_{seq}"
                 genome = {
                     "request_id": req_id,
@@ -643,31 +745,50 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     "status": "pending_generation",
                 }
                 try:
+                    logger.debug("Gen0 variant %d/%d: generating response for prompt=%.40s",
+                                 i + 1, len(prompts), p[:40])
                     process_single_genome(response_generator, genome)
+                    logger.debug("Gen0 variant %d/%d: evaluating...", i + 1, len(prompts))
                     evaluate_single_genome(evaluator, genome,
                                            moderation_methods=moderation_methods)
                     apply_refusal_penalty_single(genome, north_star_metric)
+                    gen0_ok += 1
                 except Exception as exc:
                     logger.error("Pipeline error (gen0) local_variant_id=%s: %s",
                                  local_variant_id, exc, exc_info=True)
                     genome["status"] = "error"
                     genome["error"] = str(exc)
+                    gen0_err += 1
+                    total_errors += 1
                 send_payload(comm, 0, EVALUATED_VARIANT, genome, logger=logger)
                 logger.debug("Sent EVALUATED_VARIANT (gen0)  local_variant_id=%s  status=%s",
                              local_variant_id, genome.get("status"))
                 seq += 1
+
+                if (i + 1) % 5 == 0:
+                    logger.info("Gen0 progress: %d/%d prompts processed (%d ok, %d errors)",
+                                 i + 1, len(prompts), gen0_ok, gen0_err)
+
+            gen0_batch_elapsed = time.time() - gen0_batch_start
+            logger.info("Gen0 batch complete: sent %d variants (%d ok, %d errors) "
+                        "for request_id=%s in %.2fs",
+                        len(prompts), gen0_ok, gen0_err, req_id, gen0_batch_elapsed)
 
         # ---- PARENTS (evolve + respond + evaluate) ----
         elif tag_id == PARENTS:
             parents = data.get("parents", [])
             top_10 = data.get("top_10", [])
             key_idx = data.get("perspective_key_index")
-            logger.info("PARENTS  request_id=%s  parents=%d  top_10=%d  key_idx=%s",
-                        data.get("request_id"), len(parents), len(top_10), key_idx)
+            logger.info("PARENTS received: request_id=%s  parents=%d  top_10=%d  "
+                        "key_idx=%s  (cycle=%d)",
+                        data.get("request_id"), len(parents), len(top_10), key_idx, cycle)
 
             if key_idx is not None and hasattr(evaluator, "select_key"):
                 evaluator.select_key(key_idx)
 
+            logger.info("Evolution cycle %d: generating variants from %d parents...",
+                         cycle, len(parents))
+            evolve_start = time.time()
             variants = generate_single_variant(
                 parents, prompt_generator,
                 north_star_metric=north_star_metric,
@@ -676,28 +797,51 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                 log_file=log_file,
                 outputs_path=outputs_path,
             )
-            for variant in variants:
+            evolve_elapsed = time.time() - evolve_start
+            logger.info("Generated %d variant(s) in %.2fs. Processing pipeline...",
+                         len(variants), evolve_elapsed)
+
+            cycle_ok = 0
+            cycle_err = 0
+            for i, variant in enumerate(variants):
                 local_variant_id = f"{rank}_{seq}"
                 variant["request_id"] = req_id
                 variant["local_variant_id"] = local_variant_id
                 try:
+                    logger.debug("Variant %d/%d: generating response for prompt=%.40s",
+                                 i + 1, len(variants),
+                                 str(variant.get("prompt", ""))[:40])
                     process_single_genome(response_generator, variant)
+                    logger.debug("Variant %d/%d: evaluating...", i + 1, len(variants))
                     evaluate_single_genome(evaluator, variant,
                                            moderation_methods=moderation_methods)
                     apply_refusal_penalty_single(variant, north_star_metric)
+                    cycle_ok += 1
                 except Exception as exc:
                     logger.error("Pipeline error local_variant_id=%s: %s",
                                  local_variant_id, exc, exc_info=True)
                     variant["status"] = "error"
                     variant["error"] = str(exc)
+                    cycle_err += 1
+                    total_errors += 1
                 send_payload(comm, 0, EVALUATED_VARIANT, variant, logger=logger)
                 logger.debug("Sent EVALUATED_VARIANT  local_variant_id=%s  status=%s",
                              local_variant_id, variant.get("status"))
                 seq += 1
 
+            cycle_elapsed = time.time() - evolve_start
+            logger.info("Evolution cycle %d complete: sent %d variants (%d ok, %d errors) "
+                        "in %.2fs  (total_sent=%d)",
+                        cycle, len(variants), cycle_ok, cycle_err, cycle_elapsed, seq)
+
         cycle += 1
 
-    logger.info("Worker %d done. Sent %d variants over %d cycles.", rank, seq, cycle)
+    worker_elapsed = time.time() - worker_start_time
+    logger.info("="*50)
+    logger.info("Worker %d done. total_variants_sent=%d  cycles=%d  "
+                "total_errors=%d  uptime=%.1fs",
+                rank, seq, cycle, total_errors, worker_elapsed)
+    logger.info("="*50)
 
 
 # ---------------------------------------------------------------------------
@@ -755,6 +899,10 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
 
     if size < 2:
         raise RuntimeError("Need at least 2 MPI ranks (1 master + 1 worker)")
+
+    # Assign device by rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
+    from utils.device_utils import device_manager
+    device_manager.set_mpi_device(rank, size)
 
     rank_log_file = _rank_log_file(log_file, rank)
     if rank_log_file is not None:

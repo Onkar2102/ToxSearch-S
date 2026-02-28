@@ -14,6 +14,7 @@ This document describes the architecture of the Speciated ToxSearch framework, a
 6. [Parent Selection System](#6-parent-selection-system)
 7. [Key Metrics](#7-key-metrics)
 8. [Configuration Parameters](#8-configuration-parameters)
+9. [MPI Parallel Runtime](#9-mpi-parallel-runtime)
 
 ---
 
@@ -81,6 +82,9 @@ src/
 │   ├── evaluator.py           # Moderation API integration
 │   └── model_interface.py     # Model loading/management
 │
+├── parallel/
+│   └── master_worker.py       # MPI master-worker runtime (rank 0 master, ranks 1..N workers)
+│
 ├── speciation/                # Speciation Framework
 │   ├── run_speciation.py      # 8-phase speciation process
 │   ├── config.py              # SpeciationConfig dataclass
@@ -111,7 +115,7 @@ src/
 
 **Purpose**: Variant creation and ID management
 
-- `next_id()`: Generates globally unique genome IDs
+- `next_id()`: Generates globally unique genome IDs in sequential mode
 - `create_child()`: Creates variants using operators with parent tracking
 
 ### 3.2 Parent Selector
@@ -409,6 +413,53 @@ else:
 | `w_phenotype` | 0.3 | Weight for toxicity difference |
 
 **Constraint**: `w_genotype + w_phenotype = 1.0`
+
+---
+
+## 9. MPI Parallel Runtime
+
+### 9.1 Process Roles
+
+- **Master (rank 0)**: Owns shared persistent state (`temp.json`, `elites.json`, `reserves.json`, `archive.json`, `EvolutionTracker.json`), performs dedup + merge + speciation, parent selection, tracker/statistics updates.
+- **Workers (rank 1..N)**: Request work, generate/evaluate variants, send evaluated genomes back. Workers do not mutate shared population files.
+
+### 9.2 Message Protocol
+
+- `PARENTS_REQUEST (10)`: Worker -> Master asks for work (`request_id` included).
+- `PARENTS (11)`: Master -> Worker sends parents + top_10 and key index, or `None` for shutdown.
+- `EVALUATED_VARIANT (12)`: Worker -> Master sends one evaluated genome immediately after evaluation (`request_id`, `local_variant_id`).
+- `GEN0_BATCH (13)`: Master -> Worker sends seed prompt index range (`prompt_start`, `prompt_end`) for generation 0 bootstrap.
+
+### 9.3 Generation Semantics in Parallel
+
+- `K = --batch-size`.
+- Master keeps evaluated genomes in **per-worker in-memory buffers**.
+- When buffered genomes reach `K`, master drains up to `K`, deduplicates by exact prompt match, writes `temp.json`, and runs speciation.
+- `generation_id` increments per speciation run.
+- In generation 0, if all assigned seed prompts are returned and buffered count is `< K`, master still performs partial speciation with available genomes.
+
+### 9.4 `temp.json` in Parallel
+
+- `temp.json` is **transient** in parallel mode.
+- It is populated during merge/speciation and then cleared by speciation redistribution.
+- Seeing `temp.json` as `[]` between speciation runs is expected.
+
+### 9.5 Tracker, Metrics, and Figures
+
+- After each parallel speciation, master computes generation statistics from population files and updates `EvolutionTracker.json`.
+- Tracker stores per-generation population/speciation metrics (fitness, counts, diversity/cluster quality when available).
+- Operator statistics are aggregated from accepted evaluated genomes (`operator`, `variant_type`).
+- Master maintains cumulative counters (`total_evaluated`, `total_integrated`, `total_discarded`) in runtime state and logs them each generation.
+- Live analysis/visualizations and final statistics generation run in parallel mode as best-effort post-processing steps.
+
+### 9.6 Logging
+
+- Parallel runtime writes per-rank logs (`*_master.log`, `*_workerN.log`) to avoid mixed concurrent output in one file.
+
+### 9.7 Device and GPU usage (HPC)
+
+- **No rank-based GPU selection in code.** Device choice is centralized in `utils/device_utils.py` (DeviceManager): it picks MPS (macOS), then CUDA if available, then CPU. The LLM (llama.cpp) and embeddings (sentence-transformers) use that device; CUDA is always used as “device 0” from the process’s view.
+- **On HPC clusters**, assign one GPU per worker via the job scheduler (e.g. SLURM `--gpus-per-task=1`). The scheduler sets `CUDA_VISIBLE_DEVICES` (or equivalent) so each process sees exactly one GPU; the application then correctly uses that GPU without any code changes. See README “Running on HPC Clusters” for an example job script.
 
 ---
 

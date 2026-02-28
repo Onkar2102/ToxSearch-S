@@ -19,11 +19,15 @@ class DeviceManager:
     
     Provides device detection, configuration, and fallback mechanisms
     for all components in the project.
+    When running under MPI, use set_mpi_device(rank, size) so rank 0 uses CPU
+    and workers use one GPU each (rank 1 -> cuda:0, rank 2 -> cuda:1, ...).
     """
     
     _instance = None
     _device_cache = None
     _config_cache = None
+    _mpi_rank = None
+    _mpi_size = None
     
     def __new__(cls):
         if cls._instance is None:
@@ -35,6 +39,32 @@ class DeviceManager:
             self.logger = get_logger("DeviceManager")
             self.initialized = True
             self._load_config()
+    
+    def set_mpi_device(self, rank: int, size: int) -> None:
+        """
+        Set device by MPI rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
+        Call this at MPI entry (e.g. in master_worker.run()) before any model load.
+        """
+        self._mpi_rank = rank
+        self._mpi_size = size
+        self._device_cache = None
+        if rank == 0:
+            self._device_cache = "cpu"
+            self.logger.info("MPI rank 0 (master): using CPU")
+        else:
+            worker_id = rank - 1
+            try:
+                if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
+                    self._device_cache = f"cuda:{worker_id}"
+                    self.logger.info("MPI rank %d (worker): using cuda:%d", rank, worker_id)
+                else:
+                    self._device_cache = "cpu"
+                    self.logger.warning(
+                        "MPI rank %d: requested cuda:%d but only %d GPU(s) visible; using CPU",
+                        rank, worker_id, torch.cuda.device_count() if torch.cuda.is_available() else 0)
+            except Exception as e:
+                self.logger.warning("MPI rank %d: GPU check failed (%s), using CPU", rank, e)
+                self._device_cache = "cpu"
     
     def _load_config(self):
         """Load device configuration from RGConfig.yaml"""
@@ -50,17 +80,25 @@ class DeviceManager:
     def get_optimal_device(self) -> str:
         """
         Get the best available device with comprehensive error handling.
-        
-        Priority order:
-        1. MPS (Apple Silicon)
-        2. CUDA (NVIDIA GPUs)
-        3. CPU (fallback)
+        If set_mpi_device() was called, returns device for this MPI rank
+        (rank 0 = cpu, rank 1 = cuda:0, rank 2 = cuda:1, ...).
+        Otherwise priority order: MPS -> CUDA -> CPU.
         
         Returns:
-            str: Device name ('mps', 'cuda', or 'cpu')
+            str: Device name ('mps', 'cuda', 'cuda:0', 'cuda:1', or 'cpu')
         """
         if self._device_cache is not None:
             return self._device_cache
+        if self._mpi_rank is not None:
+            if self._mpi_rank == 0:
+                return "cpu"
+            worker_id = self._mpi_rank - 1
+            try:
+                if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
+                    return f"cuda:{worker_id}"
+            except Exception:
+                pass
+            return "cpu"
         
         preferred_device = self._config_cache.get("preferred_device")
         if preferred_device and self._is_device_available(preferred_device):
@@ -274,7 +312,7 @@ class DeviceManager:
         return kwargs
     
     def clear_cache(self):
-        """Clear device cache to force re-detection."""
+        """Clear device cache to force re-detection. Does not clear MPI rank."""
         self._device_cache = None
         self.logger.info("Device cache cleared")
 

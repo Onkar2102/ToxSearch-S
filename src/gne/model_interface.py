@@ -160,16 +160,17 @@ class LlamaCppChatInterface(ModelInterface):
                 "use_mlock": device_config.get("use_mlock", False),
             }
             
-            if device_config.get("device") == "mps":
+            device_name = device_config.get("device", "cpu")
+            if device_name == "mps":
                 llama_params.update({
                     "n_gpu_layers": device_config.get("gpu_layers", 20),
                     "main_gpu": 0,
                     "tensor_split": None,
                 })
-            elif device_config.get("device") == "cuda":
+            elif device_name == "cuda" or (isinstance(device_name, str) and device_name.startswith("cuda:")):
                 llama_params.update({
                     "n_gpu_layers": device_config.get("gpu_layers", -1),
-                    "main_gpu": 0,
+                    "main_gpu": device_config.get("main_gpu", 0),
                     "tensor_split": device_config.get("tensor_split", None),
                 })
             else:
@@ -216,8 +217,14 @@ class LlamaCppChatInterface(ModelInterface):
                 "low_vram": False,
                 "f16_kv": True,
             })
-        elif device == "cuda":
+        elif device == "cuda" or (isinstance(device, str) and device.startswith("cuda:")):
             cuda_config = config.get("cuda", {})
+            main_gpu = 0
+            if isinstance(device, str) and device.startswith("cuda:"):
+                try:
+                    main_gpu = int(device.split(":", 1)[1])
+                except (IndexError, ValueError):
+                    main_gpu = 0
             device_config.update({
                 "gpu_layers": cuda_config.get("gpu_layers", -1),
                 "use_mmap": True,
@@ -225,6 +232,7 @@ class LlamaCppChatInterface(ModelInterface):
                 "low_vram": cuda_config.get("low_vram", False),
                 "f16_kv": True,
                 "tensor_split": cuda_config.get("tensor_split", None),
+                "main_gpu": main_gpu,
             })
         else:
             cpu_config = config.get("cpu", {})
