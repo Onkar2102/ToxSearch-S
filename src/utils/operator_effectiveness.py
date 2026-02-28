@@ -261,6 +261,7 @@ def calculate_table4_metrics(
             total_variants = len(operator_variants)
             
             # Get rejections and duplicates from operator statistics
+            # Supports count-only format (op_stat is int) or legacy dict with question_mark_rejections/duplicates_removed
             rejections = 0
             duplicates = 0
             if operator in operator_stats:
@@ -268,6 +269,7 @@ def calculate_table4_metrics(
                 if isinstance(op_stat, dict):
                     rejections = op_stat.get("question_mark_rejections", 0)
                     duplicates = op_stat.get("duplicates_removed", 0)
+                # else: count-only format (e.g. parallel master); no rejections/duplicates tracked
             
             # calculated_total = all attempts by this operator
             calculated_total = total_variants + rejections + duplicates

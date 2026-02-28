@@ -173,40 +173,36 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
         if not generations:
             return None
         
-        # Aggregate operator statistics across all generations
-        operator_stats = defaultdict(lambda: {"count": 0, "mutation": 0, "crossover": 0})
+        # Aggregate operator statistics across all generations.
+        # Supports both count-only format {op: count} and legacy {op: {count, mutation, crossover}}.
+        operator_counts = defaultdict(int)
         
         for g in generations:
             op_stats = g.get("operator_statistics") or {}
             if isinstance(op_stats, dict):
                 for op_name, stats in op_stats.items():
                     if isinstance(stats, dict):
-                        operator_stats[op_name]["count"] += stats.get("count", 0)
-                        operator_stats[op_name]["mutation"] += stats.get("mutation", 0)
-                        operator_stats[op_name]["crossover"] += stats.get("crossover", 0)
+                        operator_counts[op_name] += stats.get("count", 0)
+                    else:
+                        operator_counts[op_name] += int(stats) if isinstance(stats, (int, float)) else 0
         
-        if not operator_stats:
+        if not operator_counts:
             _logger.warning("No operator statistics found")
             return None
         
-        # Sort by total count descending
-        operators = sorted(operator_stats.keys(), key=lambda o: operator_stats[o]["count"], reverse=True)
-        mutations = [operator_stats[op]["mutation"] for op in operators]
-        crossovers = [operator_stats[op]["crossover"] for op in operators]
+        # Sort by count descending; single bar per operator
+        operators = sorted(operator_counts.keys(), key=lambda o: operator_counts[o], reverse=True)
+        counts = [operator_counts[op] for op in operators]
         
         x = np.arange(len(operators))
-        width = 0.35
-        
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(x - width/2, mutations, width, label='Mutation', color='#377eb8')
-        ax.bar(x + width/2, crossovers, width, label='Crossover', color='#e41a1c')
+        ax.bar(x, counts, width=0.6, color='#377eb8', label='Count')
         
         ax.set_xlabel('Operator', fontsize=12)
         ax.set_ylabel('Count', fontsize=12)
         ax.set_title('Operator Usage (Cumulative)', fontsize=14, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(operators, rotation=45, ha='right')
-        ax.legend(fontsize=10)
         ax.grid(True, alpha=0.3, axis='y')
         
         plt.tight_layout()

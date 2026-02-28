@@ -202,4 +202,7 @@ experiments/*.json
 
 exaqc-main/
 
+genetic-distance-projection-main/
+
 *.txt
+

@@ -1,24 +1,27 @@
-# Speciated ToxSearch — System Architecture
+# ToxSearch-S — Method and System Architecture
 
-This document describes the architecture of the Speciated ToxSearch framework, a quality-diversity evolutionary system for LLM red-teaming with leader-follower semantic speciation.
+This document describes the design and implementation of Speciated ToxSearch: a **quality-diversity evolutionary algorithm** for automated red-teaming of large language models (LLMs). The method combines a steady-state (μ + λ) evolution with **semantic speciation** (leader-follower clustering in embedding space) to maintain diverse prompt niches while optimizing for a toxicity-based fitness. The following sections specify the algorithm, population structure, speciation phases, and parallel runtime so that experiments can be reproduced and extended.
 
 ---
 
 ## Table of Contents
 
 1. [System Overview](#1-system-overview)
-2. [Module Layout](#2-module-layout)
-3. [Core Components](#3-core-components)
-4. [Evolution Flow](#4-evolution-flow)
-5. [Speciation Framework](#5-speciation-framework)
-6. [Parent Selection System](#6-parent-selection-system)
-7. [Key Metrics](#7-key-metrics)
-8. [Configuration Parameters](#8-configuration-parameters)
-9. [MPI Parallel Runtime](#9-mpi-parallel-runtime)
+2. [Reproducibility and Experimental Setup](#2-reproducibility-and-experimental-setup)
+3. [Module Layout](#3-module-layout)
+4. [Core Components](#4-core-components)
+5. [Evolution Flow](#5-evolution-flow)
+6. [Speciation Framework](#6-speciation-framework)
+7. [Parent Selection System](#7-parent-selection-system)
+8. [Key Metrics](#8-key-metrics)
+9. [Configuration Parameters](#9-configuration-parameters)
+10. [MPI Parallel Runtime](#10-mpi-parallel-runtime)
 
 ---
 
 ## 1. System Overview
+
+The system implements a single-objective evolutionary search over prompt space, with fitness defined as the toxicity of the LLM’s response to that prompt (as scored by an external moderation API). To avoid premature convergence and to encourage exploration of distinct failure modes, the population is partitioned into *species* via semantic (embedding-based) clustering; selection and variation are applied within and across these niches. The following subsections specify the algorithm type, fitness function, population structure, and distance measure used for speciation.
 
 ### 1.1 Algorithm Type
 
@@ -61,7 +64,33 @@ d_ensemble = 0.7 × d_genotype + 0.3 × d_phenotype
 
 ---
 
-## 2. Module Layout
+## 2. Reproducibility and Experimental Setup
+
+To reproduce or compare results, the following should be fixed or recorded.
+
+**Software environment**
+- Python version (e.g. 3.8+); dependencies as in `requirements.txt` with versions where applicable.
+- For parallel runs: MPI implementation and version (e.g. Open MPI, MPICH) and `mpi4py` built against that MPI.
+- Embedding model: sentence-transformers identifier (e.g. `all-MiniLM-L6-v2`) and embedding dimension (e.g. 384).
+- LLM: exact GGUF model path and quantization (e.g. Q4_K_M); response and prompt generators may use the same or different checkpoints.
+
+**Randomness**
+- A fixed random seed is not currently set at process start; for full reproducibility, the codebase or launcher should set `random.seed` and `numpy.random.seed` (and any other RNGs) to a documented value before the first generation.
+
+**Input data**
+- Seed prompts: CSV with a `questions` column; each row is one initial prompt. Document the file path and row count.
+- Moderation: Google Perspective API (or equivalent); document the metric name (e.g. `toxicity`) and that multiple keys are used only to distribute rate limits, not to change the metric.
+
+**Output artifacts**
+- Output directory contains: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, `events_tracker.json`, and optionally `parents.json`, `top_10.json`. Figures under `figures/` are derived from the tracker and population files.
+- For parallel runs: one log file per MPI rank (`*_master.log`, `*_worker1.log`, …). See README for interpretation of worker log messages.
+
+**Run configuration**
+- Record all command-line arguments (or equivalent config): `--generations`, `--threshold`, `--batch-size` (K), `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, model paths, and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler).
+
+---
+
+## 3. Module Layout
 
 ```
 src/
@@ -109,16 +138,16 @@ src/
 
 ---
 
-## 3. Core Components
+## 4. Core Components
 
-### 3.1 Evolution Engine
+### 4.1 Evolution Engine
 
 **Purpose**: Variant creation and ID management
 
 - `next_id()`: Generates globally unique genome IDs in sequential mode
 - `create_child()`: Creates variants using operators with parent tracking
 
-### 3.2 Parent Selector
+### 4.2 Parent Selector
 
 **Purpose**: Adaptive parent selection based on population fitness trends
 
@@ -131,7 +160,7 @@ src/
 - **EXPLOIT**: 3 parents from top species (local search)
 - **EXPLORE**: 1 parent each from 3 different species (diversity)
 
-### 3.3 Speciation Engine
+### 4.3 Speciation Engine
 
 **Purpose**: 8-phase speciation process for each generation
 
@@ -144,7 +173,7 @@ src/
 7. **Final Redistribution**: Update species_id from tracker for elites, reserves, temp; redistribute to files; archive append-only
 8. **Metrics & Stats**: Calculate diversity and cluster quality
 
-### 3.4 Genome Tracker
+### 4.4 Genome Tracker
 
 **Purpose**: Authoritative source of truth for species_id assignments
 
@@ -155,9 +184,9 @@ src/
 
 ---
 
-## 4. Evolution Flow
+## 5. Evolution Flow
 
-### 4.1 Generation 0 (Initialization)
+### 5.1 Generation 0 (Initialization)
 
 ```
 1. System Setup
@@ -179,7 +208,7 @@ src/
    └── Update EvolutionTracker.json, speciation_state.json
 ```
 
-### 4.2 Generation N (Evolution Loop)
+### 5.2 Generation N (Evolution Loop)
 
 ```
 PHASE 1: Variant Generation
@@ -205,7 +234,7 @@ PHASE 5: Post-Processing
 └── Generation statistics
 ```
 
-### 4.3 Termination Conditions
+### 5.3 Termination Conditions
 
 - Maximum generations reached
 - Threshold achieved (population_max_toxicity ≥ threshold)
@@ -214,9 +243,9 @@ PHASE 5: Post-Processing
 
 ---
 
-## 5. Speciation Framework
+## 6. Speciation Framework
 
-### 5.1 Phase 1: Existing Species Processing
+### 6.1 Phase 1: Existing Species Processing
 
 Assign new variants to existing species or cluster 0 using leader-follower clustering.
 
@@ -230,7 +259,7 @@ For each variant v:
     assign v to cluster 0 (reserves)
 ```
 
-### 5.2 Phase 2: Cluster 0 Speciation
+### 6.2 Phase 2: Cluster 0 Speciation
 
 Form new species when cluster 0 contains cohesive clusters.
 
@@ -243,7 +272,7 @@ When |cluster_0| ≥ cluster0_min_cluster_size:
       move g to S
 ```
 
-### 5.3 Phase 3: Merging
+### 6.3 Phase 3: Merging
 
 Combine similar species to reduce redundancy.
 
@@ -256,7 +285,7 @@ For all species pairs (S_i, S_j):
     Mark S_i, S_j as extinct
 ```
 
-### 5.4 Phase 4: Capacity Enforcement
+### 6.4 Phase 4: Capacity Enforcement
 
 Radius enforcement is done in Phase 1 and Phase 3; Phase 4 only enforces species capacity.
 
@@ -267,7 +296,7 @@ For each species S (species_id > 0):
     Archive excess members (lowest fitness)
 ```
 
-### 5.5 Phase 5: Freeze & Incubator
+### 6.5 Phase 5: Freeze & Incubator
 
 ```
 For each species S:
@@ -283,7 +312,7 @@ For each species S:
     S.state = "incubator"
 ```
 
-### 5.6 Phase 6: Cluster 0 Capacity Enforcement
+### 6.6 Phase 6: Cluster 0 Capacity Enforcement
 
 ```
 if |cluster_0| > cluster0_max_capacity:
@@ -291,7 +320,7 @@ if |cluster_0| > cluster0_max_capacity:
   Archive excess (lowest fitness)
 ```
 
-### 5.7 Phase 7: Final Redistribution
+### 6.7 Phase 7: Final Redistribution
 
 Update species_id from genome_tracker for genomes in elites, reserves, and temp only. Redistribute those to the correct files by species_id. Archive is not read for redistribution; genomes in archive are not updated or moved back.
 
@@ -307,7 +336,7 @@ Redistribute:
 
 Archive.json is append-only; genomes already in archive stay there.
 
-### 5.8 Phase 8: Metrics & Stats
+### 6.8 Phase 8: Metrics & Stats
 
 Calculate and record:
 - Inter-species diversity (mean distance between leaders)
@@ -316,16 +345,16 @@ Calculate and record:
 
 ---
 
-## 6. Parent Selection System
+## 7. Parent Selection System
 
-### 6.1 Category System
+### 7.1 Category System
 
 | Category | Contents | Usage |
 |----------|----------|-------|
 | Category 1 | Active species ∪ reserves | Primary selection pool |
 | Category 2 | Frozen species | Fallback only |
 
-### 6.2 Selection Modes
+### 7.2 Selection Modes
 
 | Mode | Trigger | Parents | Strategy |
 |------|---------|---------|----------|
@@ -333,7 +362,7 @@ Calculate and record:
 | EXPLOIT | slope_of_avg_fitness ≤ 0 | 3 from top species | Local search |
 | EXPLORE | generations_since_improvement ≥ stagnation_limit | 1 from each of 3 species | Diversity |
 
-### 6.3 Mode Determination
+### 7.3 Mode Determination
 
 ```python
 if generations_since_improvement >= stagnation_limit:
@@ -346,9 +375,9 @@ else:
 
 ---
 
-## 7. Key Metrics
+## 8. Key Metrics
 
-### 7.1 Fitness Metrics
+### 8.1 Fitness Metrics
 
 | Metric | Definition | Timing |
 |--------|------------|--------|
@@ -357,7 +386,7 @@ else:
 | `max_score_variants` | max(temp.json fitness) | Before speciation |
 | `population_max_toxicity` | Cumulative max across all generations | After each generation |
 
-### 7.2 Adaptive Selection Metrics
+### 8.2 Adaptive Selection Metrics
 
 | Metric | Definition |
 |--------|------------|
@@ -365,7 +394,7 @@ else:
 | `slope_of_avg_fitness` | Linear regression slope over recent avg_fitness_history |
 | `avg_fitness_history` | Sliding window of recent avg_fitness values |
 
-### 7.3 Diversity Metrics
+### 8.3 Diversity Metrics
 
 | Metric | Description |
 |--------|-------------|
@@ -373,7 +402,7 @@ else:
 | `intra_species_diversity` | Mean pairwise distance within species |
 | `separation_ratio` | inter / intra (higher = better separation) |
 
-### 7.4 Cluster Quality Metrics
+### 8.4 Cluster Quality Metrics
 
 | Metric | Range | Interpretation |
 |--------|-------|----------------|
@@ -383,9 +412,9 @@ else:
 
 ---
 
-## 8. Configuration Parameters
+## 9. Configuration Parameters
 
-### 8.1 Speciation Parameters
+### 9.1 Speciation Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -397,7 +426,7 @@ else:
 | `min_island_size` | 2 | Minimum species size before dissolution |
 | `species_stagnation` | 20 | Generations without improvement before freezing |
 
-### 8.2 Embedding Parameters
+### 9.2 Embedding Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -405,7 +434,7 @@ else:
 | `embedding_dim` | 384 | Embedding dimensionality |
 | `embedding_batch_size` | 64 | Batch size for computation |
 
-### 8.3 Ensemble Distance Weights
+### 9.3 Ensemble Distance Weights
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -416,21 +445,40 @@ else:
 
 ---
 
-## 9. MPI Parallel Runtime
+## 10. MPI Parallel Runtime
 
-### 9.1 Process Roles
+### 10.1 Process Roles
 
 - **Master (rank 0)**: Owns shared persistent state (`temp.json`, `elites.json`, `reserves.json`, `archive.json`, `EvolutionTracker.json`), performs dedup + merge + speciation, parent selection, tracker/statistics updates.
 - **Workers (rank 1..N)**: Request work, generate/evaluate variants, send evaluated genomes back. Workers do not mutate shared population files.
 
-### 9.2 Message Protocol
+### 10.2 Data flow: per-variant streaming
+
+Workers **do not** wait for all variants in a batch to be evaluated before sending. For each variant, the worker:
+
+1. Receives **parents** and **top_10** from the master (message `PARENTS`).
+2. Calls **generate_single_variant** (one operator application; typically returns 1 variant per cycle with `max_variants=1`).
+3. For **each** variant in the returned list:
+   - Generates LLM response (**process_single_genome**),
+   - Evaluates with the moderation API (**evaluate_single_genome**),
+   - Applies refusal penalty,
+   - **Immediately** sends that single genome to the master as **EVALUATED_VARIANT**.
+4. Then requests work again (sends **PARENTS_REQUEST** and blocks on **recv**).
+
+The master runs a **single dispatch loop**: it blocks on **recv** from any worker. When it receives **EVALUATED_VARIANT**, it appends that genome to a **per-worker buffer** (`buffers[source]`) and increments `total_evaluated`. When the **total** number of genomes across all buffers reaches **K** (`--batch-size`), the master runs merge (drain up to K from buffers, round-robin), dedup, writes `temp.json`, runs speciation, updates the tracker, and increments the generation. So evaluated genomes from different workers are **interleaved** in the order they arrive; merge drains round-robin from worker buffers so no worker is starved.
+
+**Generation 0** is similar: the master sends each worker a **GEN0_BATCH** (a slice of seed prompt indices). The worker loads those prompts, and for **each** prompt generates a response, evaluates it, and **immediately** sends one **EVALUATED_VARIANT** back. The master buffers them; when either buffered count ≥ K or all Gen0 assignments are done and all expected Gen0 genomes have been returned, the master runs speciation (possibly with a partial batch if &lt; K returned).
+
+**After shutdown** (e.g. max generations), the master may still have genomes left in buffers. It runs a **drain phase**: merge+speciation on the remaining buffered genomes, then final statistics.
+
+### 10.3 Message Protocol
 
 - `PARENTS_REQUEST (10)`: Worker -> Master asks for work (`request_id` included).
 - `PARENTS (11)`: Master -> Worker sends parents + top_10 and key index, or `None` for shutdown.
 - `EVALUATED_VARIANT (12)`: Worker -> Master sends one evaluated genome immediately after evaluation (`request_id`, `local_variant_id`).
 - `GEN0_BATCH (13)`: Master -> Worker sends seed prompt index range (`prompt_start`, `prompt_end`) for generation 0 bootstrap.
 
-### 9.3 Generation Semantics in Parallel
+### 10.4 Generation Semantics in Parallel
 
 - `K = --batch-size`.
 - Master keeps evaluated genomes in **per-worker in-memory buffers**.
@@ -438,13 +486,13 @@ else:
 - `generation_id` increments per speciation run.
 - In generation 0, if all assigned seed prompts are returned and buffered count is `< K`, master still performs partial speciation with available genomes.
 
-### 9.4 `temp.json` in Parallel
+### 10.5 `temp.json` in Parallel
 
 - `temp.json` is **transient** in parallel mode.
 - It is populated during merge/speciation and then cleared by speciation redistribution.
 - Seeing `temp.json` as `[]` between speciation runs is expected.
 
-### 9.5 Tracker, Metrics, and Figures
+### 10.6 Tracker, Metrics, and Figures
 
 - After each parallel speciation, master computes generation statistics from population files and updates `EvolutionTracker.json`.
 - Tracker stores per-generation population/speciation metrics (fitness, counts, diversity/cluster quality when available).
@@ -452,11 +500,13 @@ else:
 - Master maintains cumulative counters (`total_evaluated`, `total_integrated`, `total_discarded`) in runtime state and logs them each generation.
 - Live analysis/visualizations and final statistics generation run in parallel mode as best-effort post-processing steps.
 
-### 9.6 Logging
+### 10.7 Logging
 
-- Parallel runtime writes per-rank logs (`*_master.log`, `*_workerN.log`) to avoid mixed concurrent output in one file.
+- Parallel runtime writes per-rank logs (`*_master.log`, `*_workerN.log`) to avoid mixed concurrent output in one file. For a detailed interpretation of worker log messages (e.g. request cycles, Gen0 batches, evolution cycles, API key assignment), see the "Worker log messages" section in [README.md](README.md#worker-log-messages-what-they-mean).
 
-### 9.7 Device and GPU usage (HPC)
+**Logging and streaming:** The implementation logs the streaming behaviour correctly. On the **master**, every **EVALUATED_VARIANT** received is logged at INFO (worker, request_id, local_variant_id, status, prompt snippet); buffer state is logged periodically (every 5 variants or when total buffered ≥ K) and at merge/speciation. On the **worker**, each **EVALUATED_VARIANT** send is logged at DEBUG to avoid log flood; INFO logs cover PARENTS received, number of variants generated, and evolution-cycle summary (variants sent, ok/errors, time, total_sent). So the flow (request work → receive parents → generate variants → evaluate and send each variant immediately) is observable in the logs.
+
+### 10.8 Device and GPU usage (HPC)
 
 - **No rank-based GPU selection in code.** Device choice is centralized in `utils/device_utils.py` (DeviceManager): it picks MPS (macOS), then CUDA if available, then CPU. The LLM (llama.cpp) and embeddings (sentence-transformers) use that device; CUDA is always used as “device 0” from the process’s view.
 - **On HPC clusters**, assign one GPU per worker via the job scheduler (e.g. SLURM `--gpus-per-task=1`). The scheduler sets `CUDA_VISIBLE_DEVICES` (or equivalent) so each process sees exactly one GPU; the application then correctly uses that GPU without any code changes. See README “Running on HPC Clusters” for an example job script.
@@ -465,5 +515,5 @@ else:
 
 ## References
 
-- [README.md](README.md) — Installation, setup, and hyperparameters
+- [README.md](README.md) — Installation, setup, hyperparameters, reproducibility, and worker log interpretation
 - [FIELD_DEFINITIONS.txt](FIELD_DEFINITIONS.txt) — Output file field definitions

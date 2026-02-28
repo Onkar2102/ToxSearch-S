@@ -2369,6 +2369,12 @@ def update_evolution_tracker_with_statistics(
         if statistics.get("crossover_variants") is not None:
             gen_entry["crossover_variants"] = statistics.get("crossover_variants", 0)
         
+        # Parents and top_10: use from statistics if provided (e.g. parallel master), else load from files
+        if statistics.get("parents") is not None:
+            gen_entry["parents"] = statistics["parents"]
+        if statistics.get("top_10") is not None:
+            gen_entry["top_10"] = statistics["top_10"]
+        
         # Populate parents and top_10 from their JSON files if not already populated
         outputs_dir = os.path.dirname(tracker_path)
         if not gen_entry.get("parents"):

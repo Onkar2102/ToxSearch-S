@@ -234,18 +234,11 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
 
 
 def _collect_operator_stats(accepted_genomes):
-    """Aggregate operator statistics from accepted genomes."""
+    """Aggregate operator usage counts from accepted genomes. Returns {operator_name: count}."""
     stats = {}
     for g in accepted_genomes:
         op_name = g.get("operator", "unknown")
-        vtype = g.get("variant_type", "mutation")
-        if op_name not in stats:
-            stats[op_name] = {"count": 0, "mutation": 0, "crossover": 0}
-        stats[op_name]["count"] += 1
-        if vtype == "crossover":
-            stats[op_name]["crossover"] += 1
-        else:
-            stats[op_name]["mutation"] += 1
+        stats[op_name] = stats.get(op_name, 0) + 1
     return stats
 
 
@@ -286,6 +279,27 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             logger=logger,
             log_file=log_file,
         )
+
+        # Load parents and top_10 used for this generation (written when PARENTS were sent)
+        # Read from file only; do not run selection again (that would overwrite with next gen's data)
+        def _slim(g):
+            return {"id": g.get("id"), "prompt": (g.get("prompt") or "")[:100], "toxicity": g.get("toxicity", 0)}
+        parents_list, top10_list = [], []
+        try:
+            parents_path = outputs_path / "parents.json"
+            if parents_path.exists():
+                with open(parents_path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                parents_list = [_slim(p) for p in raw] if isinstance(raw, list) else []
+            top10_path = outputs_path / "top_10.json"
+            if top10_path.exists():
+                with open(top10_path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                top10_list = [_slim(t) for t in raw] if isinstance(raw, list) else []
+        except Exception as e:
+            logger.debug("Could not load parents/top_10 for tracker: %s", e)
+        gen_stats["parents"] = parents_list
+        gen_stats["top_10"] = top10_list
 
         gen_stats["total_evaluated"] = total_evaluated
         gen_stats["total_integrated"] = total_integrated
@@ -427,9 +441,11 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
             tracker = json.load(f)
 
         tracker["status"] = "complete"
+        tracker["execution_time_seconds"] = round(execution_time, 2)
+        tracker["generations_completed"] = generations_completed
         with open(tracker_path, "w", encoding="utf-8") as f:
             json.dump(tracker, f, indent=2, ensure_ascii=False)
-        logger.debug("Marked EvolutionTracker status='complete'")
+        logger.debug("Marked EvolutionTracker status='complete', execution_time_seconds=%.2f", execution_time)
 
         from ea.run_evolution import create_final_statistics_with_tracker
         final_stats = create_final_statistics_with_tracker(
@@ -463,6 +479,12 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
     comm.bcast(config_dict, root=0)
     logger.info("Broadcast config to workers: %s", list((config_dict or {}).keys()))
+    num_perspective_keys = len((config_dict or {}).get("perspective_api_keys", []))
+    if num_perspective_keys:
+        logger.info("Perspective API: %d key(s) loaded; worker rank R uses key index (R-1) %% %d",
+                    num_perspective_keys, num_perspective_keys)
+    else:
+        logger.warning("No Perspective API keys in config; workers will not receive key_index")
 
     outputs_path = Path(outputs_path)
     outputs_path.mkdir(parents=True, exist_ok=True)

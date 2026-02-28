@@ -1,6 +1,6 @@
-# Speciated ToxSearch
+# ToxSearch-S
 
-A quality-diversity evolutionary framework for LLM red-teaming with semantic speciation. Evolves prompts to elicit toxic responses from target models while maintaining diverse semantic niches.
+ToxSearch-S is a **research framework** for automated red-teaming of large language models (LLMs) using a **quality-diversity evolutionary algorithm** with **semantic speciation**. The goal is to discover prompts that elicit harmful or toxic model responses while maintaining a diverse set of failure modes (semantic niches) rather than converging to a single attack type. The method combines steady-state (μ + λ) evolution with leader-follower clustering in embedding space: the population is partitioned into species by semantic similarity, and selection and variation operate within and across these niches. Fitness is defined as the toxicity of the LLM’s response to a prompt, as scored by an external moderation API (e.g. Google Perspective API). This repository provides the implementation, configuration, and documentation needed to reproduce and extend the experiments.
 
 ---
 
@@ -139,6 +139,38 @@ Parallel runs write one log file per rank:
 
 This avoids interleaved concurrent writes to one file and makes debugging per-rank behavior much easier.
 
+#### Worker log messages (what they mean)
+
+Worker logs follow the same structure for every rank; the only difference is the worker index. In order of appearance:
+
+| Message | When | Meaning |
+|--------|------|--------|
+| `MPI rank N of M starting` | Once at startup | This process is worker N in a world of M ranks. |
+| `Worker N received config: [...]` | After master broadcasts | Worker received run configuration (keys: north_star_metric, seed_file, outputs_path, etc.). |
+| `Worker N: ResponseGenerator initialised` | If not injected | LLM (response generator) loaded for this worker. |
+| `Worker N: PromptGenerator initialised` | If not injected | Prompt-generation model loaded. |
+| `Worker N: HybridModerationEvaluator initialised` | If not injected | Moderation (e.g. Perspective API) evaluator ready. |
+| `Worker N ready. Entering request loop.` | Before first request | Worker is idle and will now repeatedly request work from the master. |
+| `Sent PARENTS_REQUEST request_id=... (cycle=C, total_sent=S)` | Every cycle | Worker asked master for work; `cycle` = request count, `total_sent` = total variants sent so far. |
+| **Generation 0 (bootstrap)** | | |
+| `GEN0_BATCH received: request_id=... prompts[S:E] (N prompts) key_idx=...` | When master sends seed batch | Worker received a slice of the seed file: prompts from index S to E (N prompts). `key_idx` is the Perspective API key index (if multiple keys). |
+| `Worker N: using Perspective API key index K` | If master assigned a key | This batch will use the K-th API key for moderation. |
+| `Worker N: received empty GEN0 batch ...` | If N=0 | **Warning:** This worker was assigned no seed prompts (e.g. more workers than prompts). |
+| `Gen0 batch: loaded N prompts from seed file, processing...` | After loading CSV slice | Worker loaded N prompts and will generate + evaluate each. |
+| `Gen0 progress: X/Y prompts processed (ok, errors)` | Every 5 prompts (DEBUG/INFO) | Progress within the current Gen0 batch. |
+| `Gen0 batch complete: sent N variants (ok, errors) for request_id=... in X.XXs` | End of Gen0 batch | Gen0 batch finished; N variants sent, wall-clock time. |
+| **Evolution cycles (generation ≥ 1)** | | |
+| `Received shutdown (None) from master. Exiting request loop.` | When master signals stop | Master sent shutdown; worker exits the request loop. |
+| `PARENTS received: request_id=... parents=P top_10=T key_idx=... (cycle=C)` | When master sends parents | Worker received P parents and T top-10 exemplars for this evolution cycle. |
+| `Worker N: using Perspective API key index K` | If key assigned for this batch | This evolution batch uses the K-th API key. |
+| `Evolution cycle C: generating variants from P parents...` | Before variant generation | Starting variant generation for cycle C with P parents. |
+| `Generated N variant(s) in X.XXs. Processing pipeline...` | After operator, before LLM/eval | Variation operator produced N prompts; worker will now generate responses and evaluate. |
+| `Evolution cycle C complete: sent N variants (ok, errors) in X.XXs (total_sent=S)` | End of cycle | Cycle C done: N variants sent this cycle, cumulative total_sent=S. |
+| **Shutdown** | | |
+| `Worker N done. total_variants_sent=S cycles=C total_errors=E uptime=X.Xs` | On exit | Summary: S variants sent over C cycles, E errors, total uptime. |
+
+At **DEBUG** level you also see per-variant lines (e.g. which prompt is being generated or evaluated). **ERROR** lines indicate pipeline failures (e.g. LLM or API errors) for a specific variant; the worker continues and reports that variant as failed.
+
 ### Running MPI Tests
 
 ```bash
@@ -203,6 +235,37 @@ Ensure the MPI launcher or scheduler is configured so that different ranks get d
 **Optional: force CPU for master (rank 0)**
 
 If the master should not use a GPU (e.g. to leave all GPUs for workers), set `CUDA_VISIBLE_DEVICES` only for worker ranks. That usually requires a small wrapper or launcher that sets the env per rank; the application code does not need to be changed for standard “one GPU per worker” setups.
+
+---
+
+## Reproducibility
+
+To reproduce or compare experimental results, the following should be fixed or recorded.
+
+**Environment**
+- Python version and dependency versions (see `requirements.txt`). For parallel runs, note the MPI implementation and that `mpi4py` must be built against it (see “Installing mpi4py” under Parallel Mode).
+- Embedding model and dimension (e.g. `all-MiniLM-L6-v2`, 384). LLM: exact GGUF path and quantization.
+
+**Randomness**
+- For full reproducibility, set a fixed random seed (e.g. `random.seed`, `numpy.random.seed`) before the run; the codebase does not set a global seed by default.
+
+**Inputs**
+- Seed prompts: path to the CSV and that it has a `questions` column; document row count.
+- Moderation: metric name (e.g. `toxicity`) and API (e.g. Google Perspective). Multiple API keys only distribute rate limits; they do not change the metric.
+
+**Run configuration**
+- Record all command-line arguments (or config): `--generations`, `--threshold`, `--batch-size`, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--seed-file`, model paths. For parallel runs, record the number of MPI ranks and GPU assignment (e.g. one GPU per worker).
+
+**Outputs**
+- Each run writes to an output directory (e.g. under `data/outputs/`) containing: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, and optionally figures in `figures/`. Parallel runs also produce one log file per rank. See [ARCHITECTURE.md](ARCHITECTURE.md) for a full list of artifacts and their role in the method.
+
+**Example minimal reproducible run (sequential)**
+```bash
+export PYTHONPATH=src
+python src/main.py --generations 10 --threshold 0.99 --seed-file data/prompt.csv \
+  --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+```
+Document the seed file, model path, and any non-default flags.
 
 ---
 
