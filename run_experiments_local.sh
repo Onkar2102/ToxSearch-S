@@ -104,32 +104,32 @@ run_sequential() {
     done
 }
 
-run_parallel() {
-    local total="${#PARALLEL_EXPERIMENTS[@]}"
-    [ "$total" -eq 0 ] && return 0
-    echo "Running $total parallel (MPI) experiment(s)..."
-    for i in "${!PARALLEL_EXPERIMENTS[@]}"; do
-        local num=$((i + 1))
-        echo "=========================================="
-        echo "Parallel experiment $num/$total"
-        echo "=========================================="
-        echo "Command: ${PARALLEL_EXPERIMENTS[$i]}"
-        echo ""
-        bash -lc "${PARALLEL_EXPERIMENTS[$i]}" || echo "Experiment $num failed"
-        echo ""
-        [ "$num" -lt "$total" ] && { echo "Waiting 5 seconds..."; sleep 5; echo ""; }
-    done
-}
+# run_parallel() {
+#     local total="${#PARALLEL_EXPERIMENTS[@]}"
+#     [ "$total" -eq 0 ] && return 0
+#     echo "Running $total parallel (MPI) experiment(s)..."
+#     for i in "${!PARALLEL_EXPERIMENTS[@]}"; do
+#         local num=$((i + 1))
+#         echo "=========================================="
+#         echo "Parallel experiment $num/$total"
+#         echo "=========================================="
+#         echo "Command: ${PARALLEL_EXPERIMENTS[$i]}"
+#         echo ""
+#         bash -lc "${PARALLEL_EXPERIMENTS[$i]}" || echo "Experiment $num failed"
+#         echo ""
+#         [ "$num" -lt "$total" ] && { echo "Waiting 5 seconds..."; sleep 5; echo ""; }
+#     done
+# }
 
-# Toggle which experiment types to run (0 = skip, 1 = run)
-RUN_SEQUENTIAL="${RUN_SEQUENTIAL:-0}"
-RUN_PARALLEL="${RUN_PARALLEL:-1}"
+# Toggle which experiment types to run (0 = skip, 1 = run). Default: run sequential.
+RUN_SEQUENTIAL="${RUN_SEQUENTIAL:-1}"
+# RUN_PARALLEL="${RUN_PARALLEL:-1}"
 
 if [ "$RUN_SEQUENTIAL" = "1" ]; then
     run_sequential
 fi
-if [ "$RUN_PARALLEL" = "1" ]; then
-    run_parallel
-fi
+# if [ "${RUN_PARALLEL:-0}" = "1" ]; then
+#     run_parallel
+# fi
 
 echo "All experiments completed!"

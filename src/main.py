@@ -954,6 +954,14 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
     logger.info("Total execution time: %.2f seconds", total_time)
     logger.info("Total generations: %d", generation_count)
 
+    # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
+    try:
+        from utils.live_analysis import generate_gdp_projection_plot
+        gdp_path = generate_gdp_projection_plot(outputs_path=str(get_outputs_path()), logger=logger)
+        if gdp_path:
+            logger.info("Final GDP diagram: %s", gdp_path)
+    except Exception as e:
+        logger.warning("GDP diagram at end of run failed (non-fatal): %s", e)
 
 
 if __name__ == "__main__":

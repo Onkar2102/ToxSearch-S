@@ -245,8 +245,10 @@ def _collect_operator_stats(accepted_genomes):
 def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrated,
                     total_discarded, speciation_result, logger,
                     north_star_metric="toxicity", log_file=None,
-                    accepted_genomes=None):
-    """Update EvolutionTracker with full generation statistics after speciation."""
+                    accepted_genomes=None, sent_parents_top10=None):
+    """Update EvolutionTracker with full generation statistics after speciation.
+    sent_parents_top10: optional dict {"parents": [...], "top_10": [...]} captured when PARENTS were sent for this generation.
+    """
     logger.debug("Updating EvolutionTracker (full): gen=%d  evaluated=%d  "
                  "integrated=%d  discarded=%d  accepted_genomes=%d",
                  generation_id, total_evaluated, total_integrated, total_discarded,
@@ -280,26 +282,29 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             log_file=log_file,
         )
 
-        # Load parents and top_10 used for this generation (written when PARENTS were sent)
-        # Read from file only; do not run selection again (that would overwrite with next gen's data)
-        def _slim(g):
-            return {"id": g.get("id"), "prompt": (g.get("prompt") or "")[:100], "toxicity": g.get("toxicity", 0)}
-        parents_list, top10_list = [], []
-        try:
-            parents_path = outputs_path / "parents.json"
-            if parents_path.exists():
-                with open(parents_path, "r", encoding="utf-8") as f:
-                    raw = json.load(f)
-                parents_list = [_slim(p) for p in raw] if isinstance(raw, list) else []
-            top10_path = outputs_path / "top_10.json"
-            if top10_path.exists():
-                with open(top10_path, "r", encoding="utf-8") as f:
-                    raw = json.load(f)
-                top10_list = [_slim(t) for t in raw] if isinstance(raw, list) else []
-        except Exception as e:
-            logger.debug("Could not load parents/top_10 for tracker: %s", e)
-        gen_stats["parents"] = parents_list
-        gen_stats["top_10"] = top10_list
+        # Parents and top_10: use in-memory copy from when we sent PARENTS (preferred), else read from file
+        if sent_parents_top10 is not None:
+            gen_stats["parents"] = sent_parents_top10.get("parents", [])
+            gen_stats["top_10"] = sent_parents_top10.get("top_10", [])
+        else:
+            def _slim(g):
+                return {"id": g.get("id"), "prompt": (g.get("prompt") or "")[:100], "toxicity": g.get("toxicity", 0)}
+            parents_list, top10_list = [], []
+            try:
+                parents_path = outputs_path / "parents.json"
+                if parents_path.exists():
+                    with open(parents_path, "r", encoding="utf-8") as f:
+                        raw = json.load(f)
+                    parents_list = [_slim(p) for p in raw] if isinstance(raw, list) else []
+                top10_path = outputs_path / "top_10.json"
+                if top10_path.exists():
+                    with open(top10_path, "r", encoding="utf-8") as f:
+                        raw = json.load(f)
+                    top10_list = [_slim(t) for t in raw] if isinstance(raw, list) else []
+            except Exception as e:
+                logger.debug("Could not load parents/top_10 for tracker: %s", e)
+            gen_stats["parents"] = parents_list
+            gen_stats["top_10"] = top10_list
 
         gen_stats["total_evaluated"] = total_evaluated
         gen_stats["total_integrated"] = total_integrated
@@ -541,6 +546,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         return f"total={_total_buffered()} per_worker={per_worker}"
 
     recv_count = 0
+    # Store parents/top_10 when we send PARENTS so we can write them into EvolutionTracker for this generation
+    sent_parents_top10_by_gen = {}
     logger.info("="*60)
     logger.info("Dispatch loop started. Waiting for messages from %d worker(s). "
                 "K=%d  max_generations=%s", n_workers, K, max_generations)
@@ -593,6 +600,13 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     parents, top_10 = _select_parents(
                         outputs_path, north_star_metric, generation_id, logger)
                     parent_sel_elapsed = time.time() - parent_sel_start
+                    # Store for EvolutionTracker so this generation's entry gets correct parents/top_10
+                    def _slim(g):
+                        return {"id": g.get("id"), "prompt": (g.get("prompt") or "")[:100], "toxicity": g.get("toxicity", 0)}
+                    sent_parents_top10_by_gen[generation_id] = {
+                        "parents": [_slim(p) for p in parents] if parents else [],
+                        "top_10": [_slim(t) for t in top_10] if top_10 else [],
+                    }
                     num_keys = len((config_dict or {}).get("perspective_api_keys", []))
                     payload = {
                         "request_id": req_id,
@@ -660,7 +674,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 _update_tracker(outputs_path, generation_id, total_evaluated,
                                 total_integrated, total_discarded, spec_result, logger,
                                 north_star_metric=north_star_metric, log_file=log_file,
-                                accepted_genomes=accepted_genomes)
+                                accepted_genomes=accepted_genomes,
+                                sent_parents_top10=sent_parents_top10_by_gen.get(generation_id))
 
                 _run_live_analysis(outputs_path, logger)
 
@@ -699,7 +714,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         _update_tracker(outputs_path, generation_id, total_evaluated,
                         total_integrated, total_discarded, spec_result, logger,
                         north_star_metric=north_star_metric, log_file=log_file,
-                        accepted_genomes=accepted_genomes)
+                        accepted_genomes=accepted_genomes,
+                        sent_parents_top10=sent_parents_top10_by_gen.get(generation_id))
         _run_live_analysis(outputs_path, logger)
         drain_elapsed = time.time() - drain_start
         logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d",
@@ -707,6 +723,15 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         logger.info("="*50)
 
     _run_final_statistics(outputs_path, north_star_metric, start_time, generation_id, log_file, logger)
+
+    # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
+    try:
+        from utils.live_analysis import generate_gdp_projection_plot
+        gdp_path = generate_gdp_projection_plot(outputs_path=str(outputs_path), logger=logger)
+        if gdp_path:
+            logger.info("Final GDP diagram: %s", gdp_path)
+    except Exception as e:
+        logger.warning("GDP diagram at end of run failed (non-fatal): %s", e)
 
     # Read final best_fitness from tracker for the summary
     final_best = 0.0

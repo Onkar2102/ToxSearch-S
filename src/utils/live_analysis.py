@@ -276,6 +276,102 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         return None
 
 
+def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
+    """
+    Generate Genetic Distance Projection (GDP) figures from generation 0 through final.
+    Loads elites.json, reserves.json, and archive.json (full run). Runs MDS-GDP (cosine)
+    and NN-GDP (Euclidean, requires torch); saves gdp_projection.json and gdp_projection_nn.json,
+    plus 2D and 3D-by-generation figures for both methods.
+    Returns path to the MDS 2D figure or None if GDP unavailable or generation fails.
+    """
+    _logger = logger or get_logger("LiveAnalysis")
+    if outputs_path is None:
+        outputs_path = str(get_outputs_path())
+    base = Path(outputs_path)
+    elites_path = base / "elites.json"
+    reserves_path = base / "reserves.json"
+    figures_dir = base / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    plot_path = figures_dir / "genetic_distance_projection.png"
+    try:
+        from utils.gdp_projection import (
+            run_gdp_projection,
+            run_gdp_projection_nn,
+            generate_gdp_figure,
+            generate_gdp_3d_toxicity_figure,
+            DEFAULT_VIEW_ANGLES,
+            is_gdp_available,
+            get_gdp_import_error,
+        )
+        if not is_gdp_available():
+            err = get_gdp_import_error()
+            _logger.warning(
+                "GDP package not available; skipping genetic_distance_projection.png. Import error: %s",
+                err or "unknown",
+            )
+            return None
+        # MDS-GDP (cosine distance)
+        _, reduced = run_gdp_projection(
+            elites_path=elites_path,
+            reserves_path=reserves_path,
+            output_dir=base,
+            archive_path=base / "archive.json",
+            reduced_size=2,
+            save_json=True,
+        )
+        if reduced is None:
+            _logger.debug("No genomes with embeddings for GDP projection; skipping plot")
+            return None
+        result_path = None
+        if generate_gdp_figure(reduced, str(plot_path), color_by="alive"):
+            _logger.info("Generated GDP projection plot: %s", plot_path)
+            result_path = str(plot_path)
+        plot_3d_gen_path = figures_dir / "genetic_distance_projection_3d_toxicity_by_generation.png"
+        if generate_gdp_3d_toxicity_figure(
+            reduced,
+            str(plot_3d_gen_path),
+            color_by="species_archive",
+            publication_style=True,
+            view_angles=DEFAULT_VIEW_ANGLES,
+        ):
+            _logger.info("Generated GDP 3D (species + archive, publication style): %s", plot_3d_gen_path)
+        # Same 3D-by-generation diagram but elites+reserves only (no archive)
+        _, reduced_no_arch = run_gdp_projection(
+            elites_path=elites_path,
+            reserves_path=reserves_path,
+            output_dir=base,
+            archive_path=None,
+            reduced_size=2,
+            save_json=False,
+        )
+        if reduced_no_arch is not None:
+            plot_3d_gen_no_arch_path = figures_dir / "genetic_distance_projection_3d_toxicity_by_generation_no_archive.png"
+            if generate_gdp_3d_toxicity_figure(reduced_no_arch, str(plot_3d_gen_no_arch_path), color_by="generation"):
+                _logger.info("Generated GDP 3D (elites+reserves only, color=generation): %s", plot_3d_gen_no_arch_path)
+        # NN-GDP (Euclidean distance in embedding space; requires torch)
+        try:
+            _, reduced_nn = run_gdp_projection_nn(
+                elites_path=elites_path,
+                reserves_path=reserves_path,
+                output_dir=base,
+                archive_path=base / "archive.json",
+                save_json=True,
+            )
+            if reduced_nn is not None:
+                plot_nn_path = figures_dir / "genetic_distance_projection_nn.png"
+                if generate_gdp_figure(reduced_nn, str(plot_nn_path), color_by="alive"):
+                    _logger.info("Generated GDP NN 2D plot: %s", plot_nn_path)
+                plot_3d_nn_path = figures_dir / "genetic_distance_projection_3d_toxicity_by_generation_nn.png"
+                if generate_gdp_3d_toxicity_figure(reduced_nn, str(plot_3d_nn_path), color_by="generation"):
+                    _logger.info("Generated GDP NN 3D (color=generation): %s", plot_3d_nn_path)
+        except Exception as nn_e:
+            _logger.debug("NN-GDP skipped (non-fatal): %s", nn_e)
+        return result_path
+    except Exception as e:
+        _logger.warning("Failed to generate GDP projection plot (non-fatal): %s", e)
+    return None
+
+
 def run_live_analysis(outputs_path: Optional[str] = None, logger=None) -> Dict[str, Optional[str]]:
     """
     Run live analysis and generate all visualizations.
@@ -295,7 +391,8 @@ def run_live_analysis(outputs_path: Optional[str] = None, logger=None) -> Dict[s
         "fitness_evolution": generate_fitness_evolution_plot(outputs_path, _logger),
         "speciation_evolution": generate_speciation_plot(outputs_path, _logger),
         "operator_statistics": generate_operator_statistics_plot(outputs_path, _logger),
-        "population_composition": generate_population_composition_plot(outputs_path, _logger)
+        "population_composition": generate_population_composition_plot(outputs_path, _logger),
+        "gdp_projection": generate_gdp_projection_plot(outputs_path, _logger),
     }
     
     successful = sum(1 for v in results.values() if v is not None)
@@ -310,5 +407,6 @@ __all__ = [
     "generate_speciation_plot",
     "generate_operator_statistics_plot",
     "generate_population_composition_plot",
-    "load_evolution_tracker"
+    "generate_gdp_projection_plot",
+    "load_evolution_tracker",
 ]

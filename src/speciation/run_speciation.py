@@ -326,10 +326,7 @@ def _archive_individuals(individuals: List[Individual], generation: int, reason:
                 else:
                     # For other reasons (extinction, etc.), preserve existing or default to elite
                     entry["initial_state"] = entry.get("initial_state", "elite")
-            # Remove embeddings before archiving (save space, not needed for archived genomes)
-            if "prompt_embedding" in entry:
-                del entry["prompt_embedding"]
-            
+            # Keep prompt_embedding in archive for GDP historic+current visualization
             archive.append(entry)
         
         # Save updated archive
@@ -536,8 +533,7 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
             new_file = "reserves"
         elif species_id == -1:
             new_file = "archive"
-            if "prompt_embedding" in genome:
-                del genome["prompt_embedding"]
+            # Keep prompt_embedding for GDP historic+current visualization
         else:
             logger.warning(f"Genome {gid} has invalid species_id: {species_id}, skipping")
             continue
@@ -560,8 +556,7 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
                     genome_tracker.update_species_id(gid, -1, current_generation, f"archive_reason_{genome.get('archive_reason')}")
                 elif not genome_tracker.exists(gid):
                     genome_tracker.register(gid, -1, current_generation)
-                if "prompt_embedding" in genome:
-                    del genome["prompt_embedding"]
+                # Keep prompt_embedding in archive for GDP historic+current visualization
                 genome["species_id"] = -1
                 if gid not in {str(g.get("id")) for g in archive_to_save if g.get("id")}:
                     archive_to_save.append(genome)

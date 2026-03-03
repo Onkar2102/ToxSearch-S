@@ -20,7 +20,8 @@ from .species import Individual, Species, generate_species_id, SpeciesIdGenerato
 
 # Embeddings
 from .embeddings import (
-    EmbeddingModel, compute_and_save_embeddings, remove_embeddings_from_temp, get_embedding_model
+    EmbeddingModel, compute_and_save_embeddings, remove_embeddings_from_temp, get_embedding_model,
+    backfill_embeddings_for_genomes,
 )
 
 # Distance functions
@@ -80,6 +81,7 @@ __all__ = [
     
     # Embeddings
     "EmbeddingModel", "compute_and_save_embeddings", "remove_embeddings_from_temp", "get_embedding_model",
+    "backfill_embeddings_for_genomes",
     
     # Distance
     "semantic_distance", "semantic_distances_batch",
