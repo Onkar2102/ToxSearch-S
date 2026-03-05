@@ -42,7 +42,7 @@ class DeviceManager:
     
     def set_mpi_device(self, rank: int, size: int) -> None:
         """
-        Set device by MPI rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
+        Set device by MPI rank: rank 0 = CPU (master), workers = CUDA, or MPS on Mac if no CUDA, else CPU.
         Call this at MPI entry (e.g. in master_worker.run()) before any model load.
         """
         self._mpi_rank = rank
@@ -58,10 +58,17 @@ class DeviceManager:
                     self._device_cache = f"cuda:{worker_id}"
                     self.logger.info("MPI rank %d (worker): using cuda:%d", rank, worker_id)
                 else:
-                    self._device_cache = "cpu"
-                    self.logger.warning(
-                        "MPI rank %d: requested cuda:%d but only %d GPU(s) visible; using CPU",
-                        rank, worker_id, torch.cuda.device_count() if torch.cuda.is_available() else 0)
+                    # No CUDA (e.g. Mac): try MPS for workers so Apple Silicon GPU is used
+                    import platform
+                    has_mps = hasattr(torch.backends, "mps") and torch.backends.mps.is_built() and torch.backends.mps.is_available()
+                    if platform.system() == "Darwin" and has_mps:
+                        self._device_cache = "mps"
+                        self.logger.info("MPI rank %d (worker): using MPS (Apple Silicon)", rank)
+                    else:
+                        self._device_cache = "cpu"
+                        self.logger.warning(
+                            "MPI rank %d: no CUDA/MPS; using CPU",
+                            rank)
             except Exception as e:
                 self.logger.warning("MPI rank %d: GPU check failed (%s), using CPU", rank, e)
                 self._device_cache = "cpu"
@@ -96,6 +103,9 @@ class DeviceManager:
             try:
                 if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
                     return f"cuda:{worker_id}"
+                import platform
+                if platform.system() == "Darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_built() and torch.backends.mps.is_available():
+                    return "mps"
             except Exception:
                 pass
             return "cpu"

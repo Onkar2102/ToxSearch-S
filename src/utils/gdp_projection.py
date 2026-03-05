@@ -5,7 +5,8 @@ Genetic Distance Projection (GDP) integration for ToxSearch-S.
 Maps elites/reserves (+ optional archive) to GDP's GenomeData format.
 - MDS-GDP: cosine-MDS reduction (cosine distance in embedding space).
 - NN-GDP: neural-network reduction (Euclidean distance in embedding space; requires torch).
-Generates 2D/3D figures for both. Does not modify core evolution or speciation.
+- UMAP-GDP: UMAP reduction (cosine metric in embedding space; requires umap-learn).
+Generates 2D/3D figures for MDS, NN, and UMAP. Does not modify core evolution or speciation.
 """
 
 import json
@@ -40,6 +41,13 @@ from sklearn.metrics.pairwise import cosine_distances
 
 from .population_io import _extract_north_star_score
 
+_UMAP_AVAILABLE = False
+try:
+    import umap
+    _UMAP_AVAILABLE = True
+except ImportError:
+    umap = None
+
 
 def _reduce_using_cosine_mds(genes_matrix: np.ndarray, reduced_size: int = 2, random_state: int = 42) -> np.ndarray:
     """
@@ -59,6 +67,34 @@ def _reduce_using_cosine_mds(genes_matrix: np.ndarray, reduced_size: int = 2, ra
             normalized_stress="auto",
         )
         return mds.fit_transform(distances).astype(np.float32)
+
+
+def _reduce_using_umap(
+    genes_matrix: np.ndarray,
+    reduced_size: int = 2,
+    random_state: int = 42,
+    n_neighbors: int = 15,
+    min_dist: float = 0.1,
+) -> np.ndarray:
+    """
+    Reduce embedding matrix to 2D using UMAP with cosine metric.
+    Signature matches GDP's dim_reduction_function: (genes_matrix) -> (n, reduced_size).
+    """
+    n = genes_matrix.shape[0]
+    if n < 2 or not _UMAP_AVAILABLE:
+        return np.zeros((n, reduced_size), dtype=np.float32)
+    k = min(n_neighbors, max(2, n - 1))
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning)
+        reducer = umap.UMAP(
+            n_components=reduced_size,
+            metric="cosine",
+            random_state=random_state,
+            n_neighbors=k,
+            min_dist=min_dist,
+        )
+        out = reducer.fit_transform(genes_matrix)
+    return out.astype(np.float32)
 
 
 def _load_genomes_from_json(path: Path) -> List[Dict[str, Any]]:
@@ -258,6 +294,56 @@ def run_gdp_projection_nn(
     return payload, reduced
 
 
+def run_gdp_projection_umap(
+    elites_path: Path,
+    reserves_path: Path,
+    output_dir: Path,
+    archive_path: Optional[Path] = None,
+    reduced_size: int = 2,
+    save_json: bool = True,
+    random_state: int = 42,
+    n_neighbors: int = 15,
+    min_dist: float = 0.1,
+) -> Tuple[Optional[Dict], Optional[Any]]:
+    """
+    Run GDP projection using UMAP (cosine metric in embedding space).
+    Same data as MDS. Requires umap-learn. Returns (payload for gdp_projection_umap.json, ReducedGenomeData or None).
+    """
+    genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
+        elites_path, reserves_path, archive_path=archive_path
+    )
+    if not genomes:
+        return None, None
+    if not _GDP_AVAILABLE or genome_data is None or not _UMAP_AVAILABLE:
+        return None, None
+
+    def _umap_fn(genes_matrix: np.ndarray) -> np.ndarray:
+        return _reduce_using_umap(
+            genes_matrix,
+            reduced_size=reduced_size,
+            random_state=random_state,
+            n_neighbors=n_neighbors,
+            min_dist=min_dist,
+        )
+
+    reduced = ReducedGenomeData.perform_reduction(source=genome_data, dim_reduction_function=_umap_fn)
+    positions_2d = [reduced.reduced_positions[gid].tolist() for gid in genome_ids]
+    payload = {
+        "genome_ids": genome_ids,
+        "positions_2d": positions_2d,
+        "method": "umap",
+    }
+
+    if save_json:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        out_path = output_dir / "gdp_projection_umap.json"
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+
+    return payload, reduced
+
+
 def load_gdp_projection(projection_path: Path) -> Optional[Dict[str, Any]]:
     """
     Load cached gdp_projection.json for use in experiments (e.g. rq1, rq2).
@@ -283,6 +369,23 @@ def load_gdp_projection_nn(projection_path: Path) -> Optional[Dict[str, Any]]:
     path = Path(projection_path)
     if path.is_dir():
         path = path / "gdp_projection_nn.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def load_gdp_projection_umap(projection_path: Path) -> Optional[Dict[str, Any]]:
+    """
+    Load cached gdp_projection_umap.json (UMAP-GDP output).
+    Returns dict with genome_ids, positions_2d, method "umap", or None if missing/invalid.
+    """
+    path = Path(projection_path)
+    if path.is_dir():
+        path = path / "gdp_projection_umap.json"
     if not path.exists():
         return None
     try:
@@ -326,10 +429,14 @@ def generate_gdp_figure(
         return False
 
 
-# Default MDS-GDP 3D viewing angles: two views for clarity (front-right and opposite side).
+# Default MDS-GDP 3D viewing angles: same scene from 3 viewpoints, 120° apart in azimuth
+# (matches GDP repo pattern: fixed elevation, vary azimuth for orbital views; see
+# genetic-distance-projection-main/gdp/_visualization_/visualize_genomes3D.py).
+ELEV_DEFAULT = 15.0  # elevation (deg) above xy-plane, as in GDP visualize_genomes3D
 DEFAULT_VIEW_ANGLES: List[Tuple[float, float]] = [
-    (25.0, 45.0),   # elev, azim: classic 3D front-right
-    (25.0, 225.0),  # opposite side (180° in azimuth)
+    (ELEV_DEFAULT, 30.0),    # elev, azim: first view
+    (ELEV_DEFAULT, 150.0),  # 120° rotation
+    (ELEV_DEFAULT, 270.0),  # 240° rotation
 ]
 
 
@@ -393,7 +500,7 @@ def generate_gdp_3d_toxicity_figure(
             alive_colors = [cmap(species_to_idx.get(s, 0) / denom) for s in species_ids[alive]] if np.any(alive) else []
             mask_arch = ~alive
 
-            angles = view_angles if view_angles else [(25.0, 45.0)]
+            angles = view_angles if view_angles else [(ELEV_DEFAULT, 0.0)]
             n_views = len(angles)
             fig, axes = plt.subplots(
                 1, n_views,
@@ -403,7 +510,6 @@ def generate_gdp_3d_toxicity_figure(
             )
             if n_views == 1:
                 axes = [axes]
-            sm = None
             for ax, (elev, azim) in zip(axes, angles):
                 ax.set_facecolor("white")
                 if np.any(mask_arch):
@@ -420,15 +526,6 @@ def generate_gdp_3d_toxicity_figure(
                 ax.set_ylabel("MDS 2")
                 ax.set_zlabel("Toxicity (fitness)")
                 ax.view_init(elev=elev, azim=azim)
-                if np.any(alive):
-                    sm = plt.cm.ScalarMappable(
-                        cmap=cmap,
-                        norm=plt.Normalize(vmin=0, vmax=max(len(uniq_species) - 1, 1)),
-                    )
-                    sm.set_array([])
-            if sm is not None:
-                cbar = fig.colorbar(sm, ax=axes, shrink=0.4, pad=0.08)
-                cbar.set_label("Species ID", fontsize=11)
             plt.tight_layout()
             plt.savefig(save_fpath, dpi=300, bbox_inches="tight", facecolor="white")
             plt.close()
@@ -474,6 +571,344 @@ def generate_gdp_3d_toxicity_figure(
             facecolor="white" if use_pub_style else None,
         )
         plt.close()
+        return True
+    except Exception:
+        return False
+
+
+def generate_gdp_3d_generation_axis_toxicity_color(
+    reduced_genome_data: Any,
+    save_fpath: str,
+    view_angles: Optional[List[Tuple[float, float]]] = None,) -> bool:
+    """
+    Save a 3D figure: X = MDS1, Y = MDS2, Z = generation (time); color = toxicity (fitness).
+    Uses same multi-view layout as the species_archive figure when view_angles is provided.
+    """
+    if reduced_genome_data is None:
+        return False
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+
+        positions = reduced_genome_data.reduced_positions
+        population_info = reduced_genome_data._population_info
+        if not positions or not population_info:
+            return False
+
+        ids = list(positions.keys())
+        xy = np.array([positions[i] for i in ids])
+        x = xy[:, 0]
+        y = xy[:, 1]
+        z_gen = np.array([int(population_info.get(i, {}).get("generation", 0)) for i in ids])
+        toxicity = np.array([float(population_info.get(i, {}).get("fitness", 0.0)) for i in ids])
+
+        plt.rcParams.update({
+            "font.family": "serif",
+            "font.serif": ["Times New Roman", "DejaVu Serif", "serif"],
+            "font.size": 11,
+            "axes.titlesize": 14,
+            "axes.labelsize": 12,
+            "xtick.labelsize": 10,
+            "ytick.labelsize": 10,
+        })
+
+        angles = view_angles if view_angles else [(ELEV_DEFAULT, 0.0)]
+        n_views = len(angles)
+        fig, axes = plt.subplots(
+            1, n_views,
+            subplot_kw={"projection": "3d"},
+            figsize=(7 * n_views, 6),
+            facecolor="white",
+        )
+        if n_views == 1:
+            axes = [axes]
+
+        norm = plt.Normalize(vmin=toxicity.min(), vmax=max(toxicity.max(), 0.001))
+        sm = plt.cm.ScalarMappable(norm=norm, cmap=plt.cm.viridis)
+        colors = sm.to_rgba(toxicity)
+
+        for ax, (elev, azim) in zip(axes, angles):
+            ax.set_facecolor("white")
+            ax.scatter(x, y, z_gen, c=colors, s=20, alpha=0.85, depthshade=True)
+            ax.set_xlabel("MDS 1")
+            ax.set_ylabel("MDS 2")
+            ax.set_zlabel("Generation (time)")
+            ax.view_init(elev=elev, azim=azim)
+
+        fig.colorbar(sm, ax=axes, shrink=0.5, aspect=25, label="Toxicity (fitness)")
+        plt.suptitle("Genetic distance (MDS) + Generation (Z), color = Toxicity", fontsize=14)
+        plt.tight_layout()
+        plt.savefig(save_fpath, dpi=300, bbox_inches="tight", facecolor="white")
+        plt.close()
+        return True
+    except Exception:
+        return False
+
+
+# ============================================================================
+# PLOTLY INTERACTIVE 3D VISUALIZATION (NEW)
+# ============================================================================
+
+def generate_gdp_3d_plotly_toxicity_figure(
+    reduced_genome_data: Any,
+    genomes: List[Dict[str, Any]],
+    save_fpath: str,
+    color_by: str = "species_id",
+    use_pub_style: bool = False,
+) -> bool:
+    """
+    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2, Z=Toxicity.
+    
+    Args:
+        reduced_genome_data: ReducedGenomeData object with reduced_positions and population_info
+        genomes: List of genome dicts (with 'id', 'toxicity', 'species_id', 'generation', etc.)
+        save_fpath: Path to save the interactive HTML file
+        color_by: "species_id", "alive", "generation", or "toxicity"
+        use_pub_style: If True, use publication styling
+    
+    Returns:
+        True on success, False otherwise
+    """
+    try:
+        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots
+    except ImportError:
+        return False
+    
+    try:
+        if reduced_genome_data is None:
+            return False
+        
+        positions_2d = reduced_genome_data.reduced_positions
+        population_info = getattr(reduced_genome_data, "_population_info", None) or getattr(reduced_genome_data, "population_info", {})
+        
+        ids = list(positions_2d.keys())
+        if not ids:
+            return False
+        
+        x = np.array([positions_2d[i][0] for i in ids])
+        y = np.array([positions_2d[i][1] for i in ids])
+        
+        # Get Z values (toxicity)
+        z = np.array([population_info.get(i, {}).get("fitness", 0.5) for i in ids])
+        
+        # Determine colors based on color_by
+        if color_by == "alive":
+            source = [population_info.get(i, {}).get("alive", "archived") for i in ids]
+            color_map = {"alive": "green", "archived": "red"}
+            colors = [color_map.get(s, "gray") for s in source]
+            color_label = "Alive vs Archived"
+        elif color_by == "species_id":
+            species_ids = [population_info.get(i, {}).get("species_id", 0) for i in ids]
+            colors = species_ids
+            color_label = "Species ID"
+        elif color_by == "generation":
+            gens = [int(population_info.get(i, {}).get("generation", 0)) for i in ids]
+            colors = gens
+            color_label = "Generation"
+        else:  # toxicity
+            colors = z
+            color_label = "Toxicity (Z-axis)"
+        
+        # Create interactive scatter plot
+        fig = go.Figure(data=[
+            go.Scatter3d(
+                x=x, y=y, z=z,
+                mode='markers',
+                marker=dict(
+                    size=4,
+                    color=colors,
+                    colorscale='Viridis' if color_by != "alive" else None,
+                    colorbar=dict(title=color_label) if color_by != "alive" else None,
+                    opacity=0.8,
+                    line=dict(width=0) if color_by != "alive" else None
+                ),
+                text=[f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>Gen: {population_info.get(i, {}).get('generation', 0)}<br>Species: {population_info.get(i, {}).get('species_id', 0)}" for i in ids],
+                hoverinfo='text',
+            )
+        ])
+        
+        # Update layout with better styling
+        fig.update_layout(
+            title=f"Genetic Distance Projection (MDS) + Toxicity [color = {color_by}]",
+            scene=dict(
+                xaxis=dict(title='MDS 1'),
+                yaxis=dict(title='MDS 2'),
+                zaxis=dict(title='Toxicity (fitness)'),
+                bgcolor='rgba(240, 240, 240, 0.5)' if use_pub_style else 'white',
+                camera=dict(
+                    eye=dict(x=1.5, y=1.5, z=1.3)
+                )
+            ),
+            hovermode='closest',
+            height=800 if use_pub_style else 700,
+            width=1000 if use_pub_style else 900,
+            template='plotly' if use_pub_style else 'plotly_white',
+            font=dict(family="Arial, sans-serif", size=11),
+        )
+        
+        fig.write_html(save_fpath)
+        return True
+    except Exception:
+        return False
+
+
+def generate_gdp_3d_plotly_generation_axis_toxicity_color(
+    reduced_genome_data: Any,
+    genomes: List[Dict[str, Any]],
+    save_fpath: str,
+    use_pub_style: bool = False,
+    analytical: bool = True,
+) -> bool:
+    """
+    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2; Z = Generation or Toxicity; Color = Species, Toxicity, or Generation.
+    Optional: marker shape by genome group (all same vs alive/archived). No camera presets or extra view options.
+    """
+    try:
+        import plotly.graph_objects as go
+    except ImportError:
+        return False
+
+    try:
+        if reduced_genome_data is None:
+            return False
+
+        positions_2d = reduced_genome_data.reduced_positions
+        population_info = getattr(reduced_genome_data, "_population_info", None) or getattr(reduced_genome_data, "population_info", {})
+
+        ids = list(positions_2d.keys())
+        if not ids:
+            return False
+
+        x = np.array([positions_2d[i][0] for i in ids])
+        y = np.array([positions_2d[i][1] for i in ids])
+        z_gen = np.array([int(population_info.get(i, {}).get("generation", 0)) for i in ids])
+        toxicity = np.array([float(population_info.get(i, {}).get("fitness", 0.0)) for i in ids])
+        species_ids = np.array([population_info.get(i, {}).get("species_id", 0) for i in ids])
+        alive = np.array([population_info.get(i, {}).get("alive", "archived") == "alive" for i in ids])
+        hover_text = [
+            f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>Gen: {population_info.get(i, {}).get('generation', 0)}<br>Species: {population_info.get(i, {}).get('species_id', 0)}"
+            for i in ids
+        ]
+
+        if not analytical:
+            fig = go.Figure(data=[
+                go.Scatter3d(
+                    x=x, y=y, z=z_gen,
+                    mode='markers',
+                    marker=dict(size=4, color=toxicity, colorscale='Viridis', colorbar=dict(title='Toxicity'), opacity=0.8),
+                    text=hover_text, hoverinfo='text',
+                )
+            ])
+            fig.update_layout(
+                title="Genetic Distance (MDS) + Generation (Z-axis) [color = Toxicity]",
+                scene=dict(
+                    xaxis=dict(title='MDS 1'), yaxis=dict(title='MDS 2'), zaxis=dict(title='Generation'),
+                    bgcolor='rgba(240, 240, 240, 0.5)' if use_pub_style else 'white',
+                    camera=dict(eye=dict(x=1.5, y=1.5, z=1.3)),
+                ),
+                hovermode='closest', height=700, width=900,
+                template='plotly_white', font=dict(family="Arial, sans-serif", size=11),
+            )
+            fig.write_html(save_fpath)
+            return True
+
+        # --- Discrete species colours (each species one colour); optional archive = one colour ---
+        try:
+            import plotly.colors as pcol
+            _qualitative = getattr(pcol.qualitative, "Plotly", None) or getattr(pcol.qualitative, "Set1", ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"])
+        except Exception:
+            _qualitative = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+        unique_species = sorted(set(species_ids))
+        n_species = len(unique_species)
+        palette = (_qualitative * (n_species // len(_qualitative) + 1))[:n_species]
+        species_to_color = dict(zip(unique_species, palette))
+        species_colors = np.array([species_to_color[s] for s in species_ids])
+        archive_grey = "#888888"
+        species_archive_colors = np.array([species_to_color[s] if alive[i] else archive_grey for i, s in enumerate(species_ids)])
+
+        # --- Z, Color (Species | Species+Archive grey | Toxicity | Generation), Shape ---
+        # Traces: 8 configs × 3 (all, alive, archived) = 24. Default marker size=4, opacity=0.8.
+        def scatter3(z_vals, color_vals, colorscale, cbar_title, mask=None, showscale=True, is_categorical=False):
+            if mask is not None:
+                xm, ym, zm = x[mask], y[mask], z_vals[mask]
+                cm = color_vals[mask] if hasattr(color_vals, '__getitem__') else np.array(color_vals)[mask]
+                ht = [hover_text[i] for i in range(len(ids)) if mask[i]]
+            else:
+                xm, ym, zm, cm, ht = x, y, z_vals, color_vals, hover_text
+            if is_categorical:
+                return go.Scatter3d(x=xm, y=ym, z=zm, mode='markers',
+                    marker=dict(size=4, color=cm, opacity=0.8, showscale=False),
+                    text=ht, hoverinfo='text', name=cbar_title)
+            return go.Scatter3d(x=xm, y=ym, z=zm, mode='markers',
+                marker=dict(size=4, color=cm, colorscale=colorscale, colorbar=dict(title=cbar_title), opacity=0.8, showscale=showscale),
+                text=ht, hoverinfo='text', name=cbar_title)
+
+        traces = []
+        configs = [
+            (z_gen, species_colors, None, 'Species', True),
+            (z_gen, species_archive_colors, None, 'Species (archive grey)', True),
+            (z_gen, toxicity, 'Viridis', 'Toxicity', False),
+            (z_gen, z_gen, 'Plasma', 'Generation', False),
+            (toxicity, species_colors, None, 'Species', True),
+            (toxicity, species_archive_colors, None, 'Species (archive grey)', True),
+            (toxicity, toxicity, 'Viridis', 'Toxicity', False),
+            (toxicity, z_gen, 'Plasma', 'Generation', False),
+        ]
+        for z_vals, color_vals, cs, ctitle, cat in configs:
+            traces.append(scatter3(z_vals, color_vals, cs or 'Turbo', ctitle, None, True, cat))
+        for z_vals, color_vals, cs, ctitle, cat in configs:
+            traces.append(scatter3(z_vals, color_vals, cs or 'Turbo', 'Alive', alive, True, cat))
+        for z_vals, color_vals, cs, ctitle, cat in configs:
+            traces.append(scatter3(z_vals, color_vals, cs or 'Turbo', 'Archived', ~alive, False, cat))
+        n_traces = len(traces)
+        for i in range(n_traces):
+            traces[i].visible = (i == 0)
+        fig = go.Figure(data=traces)
+
+        # View dropdown: Z × Color × Shape (2 × 4 × 2 = 16)
+        color_labels = ["Species", "Species (archive grey)", "Toxicity", "Generation"]
+        combined = []
+        for zi, zl in enumerate(["Z: Generation", "Z: Toxicity"]):
+            for ci in range(4):
+                k = zi * 4 + ci
+                ztitle = "Generation (time)" if zi == 0 else "Toxicity (fitness)"
+                vis_all = [False] * n_traces
+                vis_all[k] = True
+                combined.append(dict(label=f"{zl} / {color_labels[ci]} / All", method="update", args=[{"visible": vis_all}, {"scene.zaxis.title": ztitle}]))
+                vis_split = [False] * n_traces
+                vis_split[k + 8] = True
+                vis_split[k + 16] = True
+                combined.append(dict(label=f"{zl} / {color_labels[ci]} / Alive vs Archived", method="update", args=[{"visible": vis_split}, {"scene.zaxis.title": ztitle}]))
+        # Size and opacity dropdowns (restyle all traces)
+        size_buttons = [
+            dict(label="Size: Small", method="restyle", args=[{"marker.size": 2}]),
+            dict(label="Size: Medium", method="restyle", args=[{"marker.size": 4}]),
+            dict(label="Size: Large", method="restyle", args=[{"marker.size": 6}]),
+            dict(label="Size: X-Large", method="restyle", args=[{"marker.size": 8}]),
+        ]
+        opacity_buttons = [
+            dict(label="Opacity: 30%", method="restyle", args=[{"marker.opacity": 0.3}]),
+            dict(label="Opacity: 50%", method="restyle", args=[{"marker.opacity": 0.5}]),
+            dict(label="Opacity: 80%", method="restyle", args=[{"marker.opacity": 0.8}]),
+            dict(label="Opacity: 100%", method="restyle", args=[{"marker.opacity": 1.0}]),
+        ]
+        fig.update_layout(
+            title="Genetic distance (MDS): Z, colour, shape · Size & opacity below",
+            updatemenus=[
+                dict(buttons=combined, direction="down", showactive=True, x=0.02, xanchor="left", y=1.06, yanchor="top", font=dict(size=11)),
+                dict(buttons=size_buttons, direction="down", showactive=True, x=0.02, xanchor="left", y=0.98, yanchor="top", font=dict(size=11)),
+                dict(buttons=opacity_buttons, direction="down", showactive=True, x=0.02, xanchor="left", y=0.90, yanchor="top", font=dict(size=11)),
+            ],
+            scene=dict(
+                xaxis=dict(title='MDS 1'), yaxis=dict(title='MDS 2'), zaxis=dict(title='Generation (time)'),
+                bgcolor='white', camera=dict(eye=dict(x=1.5, y=1.5, z=1.3)),
+            ),
+            hovermode='closest', height=720, width=900,
+            template='plotly_white', font=dict(family="Arial, sans-serif", size=11),
+        )
+        fig.write_html(save_fpath)
         return True
     except Exception:
         return False
