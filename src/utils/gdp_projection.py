@@ -681,7 +681,7 @@ def generate_gdp_3d_plotly_toxicity_figure(
             return False
         
         positions_2d = reduced_genome_data.reduced_positions
-        population_info = getattr(reduced_genome_data, "_population_info", None) or getattr(reduced_genome_data, "population_info", {})
+        population_info = reduced_genome_data.population_info
         
         ids = list(positions_2d.keys())
         if not ids:
@@ -759,155 +759,78 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
     genomes: List[Dict[str, Any]],
     save_fpath: str,
     use_pub_style: bool = False,
-    analytical: bool = True,
 ) -> bool:
     """
-    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2; Z = Generation or Toxicity; Color = Species, Toxicity, or Generation.
-    Optional: marker shape by genome group (all same vs alive/archived). No camera presets or extra view options.
+    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2, Z=Generation; Color=Toxicity.
+    
+    Args:
+        reduced_genome_data: ReducedGenomeData object with reduced_positions and population_info
+        genomes: List of genome dicts
+        save_fpath: Path to save the interactive HTML file
+        use_pub_style: If True, use publication styling
+    
+    Returns:
+        True on success, False otherwise
     """
     try:
         import plotly.graph_objects as go
     except ImportError:
         return False
-
+    
     try:
         if reduced_genome_data is None:
             return False
-
+        
         positions_2d = reduced_genome_data.reduced_positions
-        population_info = getattr(reduced_genome_data, "_population_info", None) or getattr(reduced_genome_data, "population_info", {})
-
+        population_info = reduced_genome_data.population_info
+        
         ids = list(positions_2d.keys())
         if not ids:
             return False
-
+        
         x = np.array([positions_2d[i][0] for i in ids])
         y = np.array([positions_2d[i][1] for i in ids])
+        
+        # Z = Generation, Color = Toxicity
         z_gen = np.array([int(population_info.get(i, {}).get("generation", 0)) for i in ids])
-        toxicity = np.array([float(population_info.get(i, {}).get("fitness", 0.0)) for i in ids])
-        species_ids = np.array([population_info.get(i, {}).get("species_id", 0) for i in ids])
-        alive = np.array([population_info.get(i, {}).get("alive", "archived") == "alive" for i in ids])
-        hover_text = [
-            f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>Gen: {population_info.get(i, {}).get('generation', 0)}<br>Species: {population_info.get(i, {}).get('species_id', 0)}"
-            for i in ids
-        ]
-
-        if not analytical:
-            fig = go.Figure(data=[
-                go.Scatter3d(
-                    x=x, y=y, z=z_gen,
-                    mode='markers',
-                    marker=dict(size=4, color=toxicity, colorscale='Viridis', colorbar=dict(title='Toxicity'), opacity=0.8),
-                    text=hover_text, hoverinfo='text',
-                )
-            ])
-            fig.update_layout(
-                title="Genetic Distance (MDS) + Generation (Z-axis) [color = Toxicity]",
-                scene=dict(
-                    xaxis=dict(title='MDS 1'), yaxis=dict(title='MDS 2'), zaxis=dict(title='Generation'),
-                    bgcolor='rgba(240, 240, 240, 0.5)' if use_pub_style else 'white',
-                    camera=dict(eye=dict(x=1.5, y=1.5, z=1.3)),
+        colors = np.array([population_info.get(i, {}).get("fitness", 0.5) for i in ids])
+        
+        # Create interactive scatter plot
+        fig = go.Figure(data=[
+            go.Scatter3d(
+                x=x, y=y, z=z_gen,
+                mode='markers',
+                marker=dict(
+                    size=4,
+                    color=colors,
+                    colorscale='Viridis',
+                    colorbar=dict(title='Toxicity'),
+                    opacity=0.8,
                 ),
-                hovermode='closest', height=700, width=900,
-                template='plotly_white', font=dict(family="Arial, sans-serif", size=11),
+                text=[f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>Gen: {population_info.get(i, {}).get('generation', 0)}<br>Species: {population_info.get(i, {}).get('species_id', 0)}" for i in ids],
+                hoverinfo='text',
             )
-            fig.write_html(save_fpath)
-            return True
-
-        # --- Discrete species colours (each species one colour); optional archive = one colour ---
-        try:
-            import plotly.colors as pcol
-            _qualitative = getattr(pcol.qualitative, "Plotly", None) or getattr(pcol.qualitative, "Set1", ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"])
-        except Exception:
-            _qualitative = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
-        unique_species = sorted(set(species_ids))
-        n_species = len(unique_species)
-        palette = (_qualitative * (n_species // len(_qualitative) + 1))[:n_species]
-        species_to_color = dict(zip(unique_species, palette))
-        species_colors = np.array([species_to_color[s] for s in species_ids])
-        archive_grey = "#888888"
-        species_archive_colors = np.array([species_to_color[s] if alive[i] else archive_grey for i, s in enumerate(species_ids)])
-
-        # --- Z, Color (Species | Species+Archive grey | Toxicity | Generation), Shape ---
-        # Traces: 8 configs × 3 (all, alive, archived) = 24. Default marker size=4, opacity=0.8.
-        def scatter3(z_vals, color_vals, colorscale, cbar_title, mask=None, showscale=True, is_categorical=False):
-            if mask is not None:
-                xm, ym, zm = x[mask], y[mask], z_vals[mask]
-                cm = color_vals[mask] if hasattr(color_vals, '__getitem__') else np.array(color_vals)[mask]
-                ht = [hover_text[i] for i in range(len(ids)) if mask[i]]
-            else:
-                xm, ym, zm, cm, ht = x, y, z_vals, color_vals, hover_text
-            if is_categorical:
-                return go.Scatter3d(x=xm, y=ym, z=zm, mode='markers',
-                    marker=dict(size=4, color=cm, opacity=0.8, showscale=False),
-                    text=ht, hoverinfo='text', name=cbar_title)
-            return go.Scatter3d(x=xm, y=ym, z=zm, mode='markers',
-                marker=dict(size=4, color=cm, colorscale=colorscale, colorbar=dict(title=cbar_title), opacity=0.8, showscale=showscale),
-                text=ht, hoverinfo='text', name=cbar_title)
-
-        traces = []
-        configs = [
-            (z_gen, species_colors, None, 'Species', True),
-            (z_gen, species_archive_colors, None, 'Species (archive grey)', True),
-            (z_gen, toxicity, 'Viridis', 'Toxicity', False),
-            (z_gen, z_gen, 'Plasma', 'Generation', False),
-            (toxicity, species_colors, None, 'Species', True),
-            (toxicity, species_archive_colors, None, 'Species (archive grey)', True),
-            (toxicity, toxicity, 'Viridis', 'Toxicity', False),
-            (toxicity, z_gen, 'Plasma', 'Generation', False),
-        ]
-        for z_vals, color_vals, cs, ctitle, cat in configs:
-            traces.append(scatter3(z_vals, color_vals, cs or 'Turbo', ctitle, None, True, cat))
-        for z_vals, color_vals, cs, ctitle, cat in configs:
-            traces.append(scatter3(z_vals, color_vals, cs or 'Turbo', 'Alive', alive, True, cat))
-        for z_vals, color_vals, cs, ctitle, cat in configs:
-            traces.append(scatter3(z_vals, color_vals, cs or 'Turbo', 'Archived', ~alive, False, cat))
-        n_traces = len(traces)
-        for i in range(n_traces):
-            traces[i].visible = (i == 0)
-        fig = go.Figure(data=traces)
-
-        # View dropdown: Z × Color × Shape (2 × 4 × 2 = 16)
-        color_labels = ["Species", "Species (archive grey)", "Toxicity", "Generation"]
-        combined = []
-        for zi, zl in enumerate(["Z: Generation", "Z: Toxicity"]):
-            for ci in range(4):
-                k = zi * 4 + ci
-                ztitle = "Generation (time)" if zi == 0 else "Toxicity (fitness)"
-                vis_all = [False] * n_traces
-                vis_all[k] = True
-                combined.append(dict(label=f"{zl} / {color_labels[ci]} / All", method="update", args=[{"visible": vis_all}, {"scene.zaxis.title": ztitle}]))
-                vis_split = [False] * n_traces
-                vis_split[k + 8] = True
-                vis_split[k + 16] = True
-                combined.append(dict(label=f"{zl} / {color_labels[ci]} / Alive vs Archived", method="update", args=[{"visible": vis_split}, {"scene.zaxis.title": ztitle}]))
-        # Size and opacity dropdowns (restyle all traces)
-        size_buttons = [
-            dict(label="Size: Small", method="restyle", args=[{"marker.size": 2}]),
-            dict(label="Size: Medium", method="restyle", args=[{"marker.size": 4}]),
-            dict(label="Size: Large", method="restyle", args=[{"marker.size": 6}]),
-            dict(label="Size: X-Large", method="restyle", args=[{"marker.size": 8}]),
-        ]
-        opacity_buttons = [
-            dict(label="Opacity: 30%", method="restyle", args=[{"marker.opacity": 0.3}]),
-            dict(label="Opacity: 50%", method="restyle", args=[{"marker.opacity": 0.5}]),
-            dict(label="Opacity: 80%", method="restyle", args=[{"marker.opacity": 0.8}]),
-            dict(label="Opacity: 100%", method="restyle", args=[{"marker.opacity": 1.0}]),
-        ]
+        ])
+        
+        # Update layout with better styling
         fig.update_layout(
-            title="Genetic distance (MDS): Z, colour, shape · Size & opacity below",
-            updatemenus=[
-                dict(buttons=combined, direction="down", showactive=True, x=0.02, xanchor="left", y=1.06, yanchor="top", font=dict(size=11)),
-                dict(buttons=size_buttons, direction="down", showactive=True, x=0.02, xanchor="left", y=0.98, yanchor="top", font=dict(size=11)),
-                dict(buttons=opacity_buttons, direction="down", showactive=True, x=0.02, xanchor="left", y=0.90, yanchor="top", font=dict(size=11)),
-            ],
+            title="Genetic Distance Projection (MDS) + Generation (Z-axis) [color = Toxicity]",
             scene=dict(
-                xaxis=dict(title='MDS 1'), yaxis=dict(title='MDS 2'), zaxis=dict(title='Generation (time)'),
-                bgcolor='white', camera=dict(eye=dict(x=1.5, y=1.5, z=1.3)),
+                xaxis=dict(title='MDS 1'),
+                yaxis=dict(title='MDS 2'),
+                zaxis=dict(title='Generation'),
+                bgcolor='rgba(240, 240, 240, 0.5)' if use_pub_style else 'white',
+                camera=dict(
+                    eye=dict(x=1.5, y=1.5, z=1.3)
+                )
             ),
-            hovermode='closest', height=720, width=900,
-            template='plotly_white', font=dict(family="Arial, sans-serif", size=11),
+            hovermode='closest',
+            height=800 if use_pub_style else 700,
+            width=1000 if use_pub_style else 900,
+            template='plotly' if use_pub_style else 'plotly_white',
+            font=dict(family="Arial, sans-serif", size=11),
         )
+        
         fig.write_html(save_fpath)
         return True
     except Exception:
