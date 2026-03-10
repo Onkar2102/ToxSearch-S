@@ -122,10 +122,9 @@ evolution_tracker_path = None
 parent_selection_tracker_path = None
 
 
-def check_threshold_and_update_tracker(population, north_star_metric, log_file=None, threshold=0.99):
-    """Check whether the population has reached the north-star threshold and update EvolutionTracker.json.
-    Global version: uses the full population (elites + reserves) and tracker scope 'global', as opposed to
-    per-species or per-run thresholds."""
+def check_threshold_and_update_tracker(population, north_star_metric, log_file=None):
+    """Update EvolutionTracker.json with current best score from the population.
+    Uses the full population (elites + reserves) and tracker scope 'global'."""
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("RunEvolution", log_file)
     try:
@@ -164,13 +163,8 @@ def check_threshold_and_update_tracker(population, north_star_metric, log_file=N
         if completed_genomes:
             best_genome = max(completed_genomes, key=lambda g: _extract_north_star_score(g, north_star_metric))
             best_score = _extract_north_star_score(best_genome, north_star_metric)
-            best_genome_id = best_genome["id"]
-            if isinstance(best_score, (int, float)) and best_score >= threshold:
-                evolution_tracker["status"] = "not_complete"
-                logger.debug("Threshold achieved (%.4f), continuing for higher scores", best_score)
-            else:
-                evolution_tracker["status"] = "not_complete"
-                logger.debug("Best score: %.4f, threshold not reached", best_score)
+            evolution_tracker["status"] = "not_complete"
+            logger.debug("Best score: %.4f", best_score)
         else:
             evolution_tracker["status"] = "not_complete"
             logger.debug("No completed genomes found")
@@ -476,7 +470,7 @@ def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_st
             "generations_completed": generations_completed
         }
 
-def run_evolution(north_star_metric, log_file=None, threshold=0.99, current_cycle=None, max_variants=1, max_num_parents=4, operators="all"):
+def run_evolution(north_star_metric, log_file=None, current_cycle=None, max_variants=1, max_num_parents=4, operators="all"):
     """Run one evolution generation with comprehensive logging.
     Steady-state support: population is loaded from reserves.json or elites.json each time; each call runs a single
     generation and can be invoked repeatedly (e.g. by an external scheduler) without an in-process loop."""
@@ -502,12 +496,12 @@ def run_evolution(north_star_metric, log_file=None, threshold=0.99, current_cycl
         logger.error("Unexpected error loading population: %s", e, exc_info=True)
         raise
 
-    evolution_tracker = check_threshold_and_update_tracker(population, north_star_metric, log_file, threshold)
+    evolution_tracker = check_threshold_and_update_tracker(population, north_star_metric, log_file)
 
     evolution_status = get_pending_status(evolution_tracker, logger)
 
     if evolution_status == "complete":
-        logger.info("Evolution completed - threshold achieved globally")
+        logger.info("Evolution completed (tracker marked complete)")
         return
 
     try:

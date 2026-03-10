@@ -42,7 +42,6 @@ PYTHON="${PYTHON:-python3}"
 SEQUENTIAL_EXPERIMENTS=(
     "$PYTHON src/main.py \
         --generations 50 \
-        --threshold 0.99 \
         --moderation-methods google \
         --stagnation-limit 5 \
         --theta-sim 0.25 \

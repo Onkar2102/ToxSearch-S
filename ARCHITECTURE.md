@@ -86,7 +86,7 @@ To reproduce or compare results, the following should be fixed or recorded.
 - For parallel runs: one log file per MPI rank (`*_master.log`, `*_worker1.log`, …). See README for interpretation of worker log messages.
 
 **Run configuration**
-- Record all command-line arguments (or equivalent config): `--generations`, `--threshold`, `--batch-size` (K), `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, model paths, and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler).
+- Record all command-line arguments (or equivalent config): `--generations`, `--batch-size` (K), `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, model paths, and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler).
 
 ---
 

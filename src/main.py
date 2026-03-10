@@ -152,7 +152,7 @@ def update_model_configs(rg_model, pg_model, logger):
         raise
 
 
-def main(max_generations=None, north_star_threshold=0.99, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv", 
+def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv", 
          # Speciation parameters
          theta_sim=0.2, theta_merge=0.1, species_capacity=100, cluster0_max_capacity=1000, 
          cluster0_min_cluster_size=2, min_island_size=2, species_stagnation=20,
@@ -162,14 +162,11 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
 
     Runs the evolutionary algorithm to generate and evolve text prompts, optimizing
     for low toxicity scores using content moderation (Google Perspective API by
-    default). Evolution continues until prompts meet the configured toxicity
-    threshold or the maximum number of generations is reached.
+    default). Evolution runs for the specified number of generations.
 
     Args:
         max_generations (int, optional): Maximum evolution generations to run.
-            If None, runs until north star threshold is achieved.
-        north_star_threshold (float): Target toxicity score for stopping evolution.
-            Default is 0.99 (very low toxicity).
+            If None, no limit (run until interrupted).
         moderation_methods (List[str], optional): Moderation APIs to use.
             If None, uses ['google'] for evaluation.
         rg_model (str): Response generator model path. Default GGUF path.
@@ -203,8 +200,8 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
     
     start_time = time.time()
     north_star_metric = "toxicity"
-    logger.info("Starting evolutionary run: metric=%s, threshold=%.4f, max_generations=%s", 
-                north_star_metric, north_star_threshold, max_generations)
+    logger.info("Starting evolutionary run: metric=%s, max_generations=%s",
+                north_star_metric, max_generations)
 
     # Resolve RG/PG model paths (aliases → concrete GGUF files) before initialization
     try:
@@ -525,7 +522,6 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
             evolution_result = run_evolution(
                 north_star_metric=north_star_metric,
                 log_file=log_file,
-                threshold=north_star_threshold,
                 current_cycle=generation_count,
                 max_variants=max_variants,
                 operators=operators
@@ -967,10 +963,8 @@ def main(max_generations=None, north_star_threshold=0.99, moderation_methods=Non
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Evolutionary Text Generation and Safety Analysis Framework")
-    parser.add_argument("--generations", type=int, default=None, 
-                       help="Maximum number of evolution generations. If not set, runs until north star metric is achieved.")
-    parser.add_argument("--threshold", type=float, default=0.99,
-                       help="North star metric threshold for stopping evolution")
+    parser.add_argument("--generations", type=int, default=None,
+                       help="Maximum number of evolution generations.")
     parser.add_argument("--moderation-methods", nargs="+", choices=["google", "all"], default=["google"],
                        help="Moderation methods to use: google (Perspective API), all (google only)")
     parser.add_argument("--stagnation-limit", type=int, default=5,
@@ -1051,8 +1045,8 @@ if __name__ == "__main__":
         sys.exit(0)
 
     try:
-        main(max_generations=args.generations, 
-             north_star_threshold=args.threshold, moderation_methods=args.moderation_methods,
+        main(max_generations=args.generations,
+             moderation_methods=args.moderation_methods,
              rg_model=args.rg, pg_model=args.pg,
              operators=args.operators, max_variants=args.max_variants,
              stagnation_limit=args.stagnation_limit, seed_file=args.seed_file,

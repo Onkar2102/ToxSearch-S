@@ -81,7 +81,6 @@ srun python -u src/main.py \
     --parallel \
     --batch-size 100 \
     --generations 250 \
-    --threshold 0.99 \
     --moderation-methods google \
     --stagnation-limit 10 \
     --theta-sim 0.35 \

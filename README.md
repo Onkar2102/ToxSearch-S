@@ -59,7 +59,6 @@ Edit `PARALLEL_EXPERIMENTS` (MPI) and/or `SEQUENTIAL_EXPERIMENTS` in the script 
 ```bash
 python src/main.py \
     --generations 50 \
-    --threshold 0.99 \
     --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
     --seed-file data/prompt.csv
 ```
@@ -101,7 +100,6 @@ PYTHONPATH=src mpiexec -n 9 python src/main.py \
     --parallel \
     --batch-size 200 \
     --generations 50 \
-    --threshold 0.99 \
     --seed-file data/prompt.csv \
     --operators all \
     --moderation-methods google \
@@ -254,7 +252,7 @@ To reproduce or compare experimental results, the following should be fixed or r
 - Moderation: metric name (e.g. `toxicity`) and API (e.g. Google Perspective). Multiple API keys only distribute rate limits; they do not change the metric.
 
 **Run configuration**
-- Record all command-line arguments (or config): `--generations`, `--threshold`, `--batch-size`, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--seed-file`, model paths. For parallel runs, record the number of MPI ranks and GPU assignment (e.g. one GPU per worker).
+- Record all command-line arguments (or config): `--generations`, `--batch-size`, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--seed-file`, model paths. For parallel runs, record the number of MPI ranks and GPU assignment (e.g. one GPU per worker).
 
 **Outputs**
 - Each run writes to an output directory (e.g. under `data/outputs/`) containing: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, and optionally figures in `figures/`. Parallel runs also produce one log file per rank. See [ARCHITECTURE.md](ARCHITECTURE.md) for a full list of artifacts and their role in the method.
@@ -262,7 +260,7 @@ To reproduce or compare experimental results, the following should be fixed or r
 **Example minimal reproducible run (sequential)**
 ```bash
 export PYTHONPATH=src
-python src/main.py --generations 10 --threshold 0.99 --seed-file data/prompt.csv \
+python src/main.py --generations 10 --seed-file data/prompt.csv \
   --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf
 ```
 Document the seed file, model path, and any non-default flags.
@@ -275,8 +273,7 @@ Document the seed file, model path, and any non-default flags.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--generations` | None | Max evolution generations (runs until threshold if not set) |
-| `--threshold` | 0.99 | North-star toxicity threshold for stopping |
+| `--generations` | None | Max evolution generations |
 | `--stagnation-limit` | 5 | Generations without improvement before EXPLORE mode |
 | `--max-variants` | 1 | Max variants per evolution cycle |
 | `--operators` | all | Operators: `ie`, `cm`, or `all` |
