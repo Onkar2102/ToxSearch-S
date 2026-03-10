@@ -660,6 +660,10 @@ def process_generation(current_generation: int,
     
     Phase 6: Cluster 0 Capacity Enforcement (species_id = 0)
       12. Capacity enforcement for cluster 0 (species_id = 0)
+          Selection strategy controlled by config.cluster0_selection:
+          - "nsga2" (default): NSGA-II with diversity first, then toxicity.
+            Diversity = mean ensemble distance to species leaders.
+          - "toxicity_only": legacy sort by toxicity desc, keep top N.
       NOTE: Uses genome_tracker as authoritative source
       NOTE: Does NOT update reserves.json (only trackers)
     
@@ -2109,6 +2113,7 @@ def process_generation(current_generation: int,
     # PHASE 6: CLUSTER 0 CAPACITY ENFORCEMENT (species_id = 0)
     # ========================================================================
     # Capacity enforcement for cluster 0 (species_id = 0)
+    # Selection: NSGA-II (diversity first, then toxicity) or toxicity_only (legacy)
     # - Uses genome_tracker as authoritative source
     # - Does NOT update reserves.json (only trackers)
     
@@ -2136,13 +2141,65 @@ def process_generation(current_generation: int,
             outputs_path = get_outputs_path()
             cluster0_genomes = _load_genomes_by_ids(cluster0_genome_ids, outputs_path, state["logger"])
             
-            # Sort by fitness (descending) - use North Star score (toxicity)
             from utils.population_io import _extract_north_star_score
-            cluster0_genomes.sort(key=lambda g: _extract_north_star_score(g, "toxicity"), reverse=True)
-            
-            # Keep top cluster0_max_capacity, archive the rest
-            keep_genomes = cluster0_genomes[:state["config"].cluster0_max_capacity]
-            excess_genomes = cluster0_genomes[state["config"].cluster0_max_capacity:]
+
+            capacity = state["config"].cluster0_max_capacity
+
+            if state["config"].cluster0_selection == "nsga2":
+                # NSGA-II selection: diversity first, then toxicity
+                import numpy as _np
+                from .reserve_selection import select_reserves_nsga2
+                from .distance import ensemble_distances_batch as _edb
+                from .phenotype_distance import extract_phenotype_vector as _epv
+
+                # Build toxicity array
+                tox_vals = _np.array(
+                    [_extract_north_star_score(g, "toxicity") for g in cluster0_genomes],
+                    dtype=_np.float64,
+                )
+
+                # Load species leaders for diversity computation
+                leaders = _load_species_leaders_from_state(outputs_path, state["logger"])
+                if leaders:
+                    leader_embs = _np.array([emb for _, emb, _ in leaders.values()], dtype=_np.float32)
+                    leader_phenos = [pheno for _, _, pheno in leaders.values()]
+                    w_g = state["config"].w_genotype
+                    w_p = state["config"].w_phenotype
+
+                    div_vals = _np.zeros(len(cluster0_genomes), dtype=_np.float64)
+                    for idx, g in enumerate(cluster0_genomes):
+                        emb_raw = g.get("prompt_embedding")
+                        if emb_raw is None:
+                            div_vals[idx] = 0.0
+                            continue
+                        emb = _np.array(emb_raw, dtype=_np.float32)
+                        n = _np.linalg.norm(emb)
+                        if n > 1e-9:
+                            emb = emb / n
+                        try:
+                            g_pheno = _epv(g, logger=state["logger"])
+                        except Exception:
+                            g_pheno = None
+                        dists = _edb(emb, leader_embs, g_pheno, leader_phenos, w_g, w_p)
+                        div_vals[idx] = float(_np.mean(dists))
+                else:
+                    state["logger"].info("No species leaders found; diversity set to 0 for all cluster 0 genomes")
+                    div_vals = _np.zeros(len(cluster0_genomes), dtype=_np.float64)
+
+                keep_genomes, excess_genomes = select_reserves_nsga2(
+                    cluster0_genomes, tox_vals, div_vals, capacity,
+                )
+                state["logger"].info(
+                    f"Cluster 0 NSGA-II selection: kept {len(keep_genomes)}, archived {len(excess_genomes)} "
+                    f"(leaders={len(leaders) if leaders else 0})"
+                )
+            else:
+                # Legacy: sort by toxicity (desc), keep top N
+                cluster0_genomes.sort(
+                    key=lambda g: _extract_north_star_score(g, "toxicity"), reverse=True,
+                )
+                keep_genomes = cluster0_genomes[:capacity]
+                excess_genomes = cluster0_genomes[capacity:]
             
             # Update genome tracker: mark excess genomes as archived (species_id=-1)
             if excess_genomes:

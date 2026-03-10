@@ -32,8 +32,15 @@ class SpeciationConfig:
                                    Default: 2 (minimum viable species)
         
         cluster0_max_capacity: Maximum individuals in cluster 0.
-                               When exceeded, lowest-fitness individuals are removed.
+                               When exceeded, excess genomes are archived.
                                Default: 1000 individuals
+        
+        cluster0_selection: Selection strategy when cluster 0 exceeds capacity.
+                            "nsga2" — NSGA-II with diversity first, then toxicity
+                            (Pareto fronts + crowding; tie-break: diversity desc,
+                            toxicity desc). Preserves diverse outliers.
+                            "toxicity_only" — legacy: sort by toxicity desc, keep top N.
+                            Default: "nsga2"
         
         # Species Management Parameters
         species_capacity: Maximum individuals per species (keeps top by fitness).
@@ -69,6 +76,7 @@ class SpeciationConfig:
     # Cluster 0
     cluster0_min_cluster_size: int = 2
     cluster0_max_capacity: int = 1000
+    cluster0_selection: str = "nsga2"  # "nsga2" (diversity-first) or "toxicity_only" (legacy)
     
     # Species Management
     species_capacity: int = 100
@@ -98,6 +106,8 @@ class SpeciationConfig:
         
         # Validate cluster 0 parameters
         assert self.cluster0_max_capacity > 0, "cluster0_max_capacity must be positive"
+        assert self.cluster0_selection in ("nsga2", "toxicity_only"), \
+            f"cluster0_selection must be 'nsga2' or 'toxicity_only', got '{self.cluster0_selection}'"
         
         # Validate species management
         assert self.species_capacity > 0, "species_capacity must be positive"
@@ -109,6 +119,7 @@ class SpeciationConfig:
             "theta_merge": self.theta_merge,
             "cluster0_min_cluster_size": self.cluster0_min_cluster_size,
             "cluster0_max_capacity": self.cluster0_max_capacity,
+            "cluster0_selection": self.cluster0_selection,
             "species_capacity": self.species_capacity,
             "min_island_size": self.min_island_size,
             "species_stagnation": self.species_stagnation,

@@ -58,7 +58,10 @@ class Cluster0:
     3. Individuals that may form new species if enough similar ones accumulate
     
     Key features:
-    - Max capacity: Limited to cluster0_max_capacity (default 1000) individuals, ordered by fitness
+    - Max capacity: Limited to cluster0_max_capacity (default 1000) individuals.
+      When over capacity, selection is controlled by config.cluster0_selection:
+      "nsga2" (default) uses NSGA-II with diversity first, then toxicity;
+      "toxicity_only" uses legacy sort by fitness.
     - Speciation detection: When Cluster 0 individuals form cohesive clusters, they create new species
     - Leader-follower clustering: Uses leader-follower algorithm to find groups in Cluster 0
     

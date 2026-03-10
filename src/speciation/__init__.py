@@ -47,6 +47,9 @@ from .reserves import (
     Cluster0, Cluster0Individual, CLUSTER_0_ID
 )
 
+# Reserve capacity selection (NSGA-II)
+from .reserve_selection import select_reserves_nsga2
+
 
 
 # Merging
@@ -94,6 +97,7 @@ __all__ = [
     
     # Cluster 0
     "Cluster0", "Cluster0Individual", "CLUSTER_0_ID",
+    "select_reserves_nsga2",
     
     # Merging
     "process_merges",
