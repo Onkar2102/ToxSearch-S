@@ -225,7 +225,10 @@ class HybridModerationEvaluator:
                               genome_id, len(text_bytes), MAX_TEXT_BYTES)
             text = text_bytes[:MAX_TEXT_BYTES].decode('utf-8', errors='ignore')
             
+        attempt_durations = []
+        api_wait_seconds = 0.0  # Time spent in sleep() due to rate-limit/retry
         for attempt in range(max_retries + 1):
+            attempt_start = time.time()
             try:
                 analyze_request = {
                     'comment': {
@@ -264,9 +267,11 @@ class HybridModerationEvaluator:
                 }
                 
                 _cache_result(text, result, "google")
-                return result
+                attempt_durations.append(round(time.time() - attempt_start, 4))
+                return result, {"retries": attempt, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
                 
             except Exception as e:
+                attempt_durations.append(round(time.time() - attempt_start, 4))
                 is_retriable = self._is_retriable_error(e)
                 
                 if attempt < max_retries and is_retriable:
@@ -274,13 +279,14 @@ class HybridModerationEvaluator:
                     self.logger.warning("Google API evaluation failed for genome %s (attempt %d/%d): %s. Retrying in %ds...", 
                                       genome_id, attempt + 1, max_retries + 1, str(e), wait_time)
                     time.sleep(wait_time)
+                    api_wait_seconds += wait_time
                     continue
                 else:
                     self.logger.error("Google API evaluation failed for genome %s after %d attempts: %s", 
                                     genome_id, attempt + 1, e)
-                    return None
+                    return None, {"retries": attempt + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
         
-        return None
+        return None, {"retries": max_retries + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
     
     def _is_retriable_error(self, error: Exception) -> bool:
         """
@@ -358,8 +364,13 @@ class HybridModerationEvaluator:
             results = {}
             
             if "google" in moderation_methods and self.google_available:
-                google_result = self._evaluate_with_google(text, genome_id)
-                if google_result:
+                google_result, retry_info = self._evaluate_with_google(text, genome_id)
+                if not hasattr(self, '_last_evaluation_time'):
+                    self._last_evaluation_time = {}
+                self._last_evaluation_time['retries'] = retry_info.get("retries", 0)
+                self._last_evaluation_time['attempt_durations'] = retry_info.get("attempt_durations", [])
+                self._last_evaluation_time['api_wait_seconds'] = retry_info.get("api_wait_seconds", 0.0)
+                if google_result is not None:
                     results["google"] = google_result
                     self.logger.debug("Google evaluation completed for genome %s", genome_id)
             elif "google" in moderation_methods and not self.google_available:
@@ -387,6 +398,12 @@ class HybridModerationEvaluator:
             if not hasattr(self, '_last_evaluation_time'):
                 self._last_evaluation_time = {}
             self._last_evaluation_time['duration'] = evaluation_time
+            if 'retries' not in self._last_evaluation_time:
+                self._last_evaluation_time['retries'] = 0
+            if 'attempt_durations' not in self._last_evaluation_time:
+                self._last_evaluation_time['attempt_durations'] = []
+            if 'api_wait_seconds' not in self._last_evaluation_time:
+                self._last_evaluation_time['api_wait_seconds'] = 0.0
     
     def _evaluate_population_sync(self, population: List[Dict[str, Any]], 
                                  north_star_metric: str = "toxicity", 
@@ -441,6 +458,9 @@ class HybridModerationEvaluator:
                         
                         if hasattr(self, '_last_evaluation_time'):
                             genome['evaluation_duration'] = round(self._last_evaluation_time['duration'], 4)
+                            genome['evaluation_retries'] = self._last_evaluation_time.get('retries', 0)
+                            genome['evaluation_attempt_durations'] = self._last_evaluation_time.get('attempt_durations', [])
+                            genome['evaluation_api_wait_seconds'] = round(self._last_evaluation_time.get('api_wait_seconds', 0.0), 4)
                         
                         north_star_score = self._extract_north_star_score(evaluation_result, north_star_metric)
                         
@@ -635,6 +655,9 @@ def evaluate_single_genome(evaluator, genome, moderation_methods=None):
         if hasattr(evaluator, "_last_evaluation_time"):
             genome["evaluation_duration"] = round(
                 evaluator._last_evaluation_time.get("duration", 0.0), 4)
+            genome["evaluation_retries"] = evaluator._last_evaluation_time.get("retries", 0)
+            genome["evaluation_attempt_durations"] = evaluator._last_evaluation_time.get("attempt_durations", [])
+            genome["evaluation_api_wait_seconds"] = round(evaluator._last_evaluation_time.get("api_wait_seconds", 0.0), 4)
         genome["status"] = "complete"
     else:
         genome["status"] = "error"

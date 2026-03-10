@@ -245,7 +245,8 @@ def _collect_operator_stats(accepted_genomes):
 def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrated,
                     total_discarded, speciation_result, logger,
                     north_star_metric="toxicity", log_file=None,
-                    accepted_genomes=None, sent_parents_top10=None):
+                    accepted_genomes=None, sent_parents_top10=None,
+                    generation_duration_seconds=None, n_workers=None):
     """Update EvolutionTracker with full generation statistics after speciation.
     sent_parents_top10: optional dict {"parents": [...], "top_10": [...]} captured when PARENTS were sent for this generation.
     """
@@ -263,6 +264,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             "avg_fitness_history": [],
             "slope_of_avg_fitness": 0.0,
             "selection_mode": "default",
+            "run_metadata": {"num_workers": n_workers} if n_workers is not None else {},
             "generations": [],
         }
         with open(tracker_path, "w", encoding="utf-8") as f:
@@ -314,9 +316,14 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                      "reserves_size", "speciation_events", "merge_events",
                      "extinction_events", "archived_count", "elites_moved",
                      "reserves_moved", "genomes_updated", "inter_species_diversity",
-                     "intra_species_diversity", "cluster_quality"):
+                     "intra_species_diversity", "cluster_quality", "speciation_duration_seconds"):
             if key in speciation_result:
                 gen_stats[key] = speciation_result[key]
+        if generation_duration_seconds is not None:
+            gen_stats["generation_duration_seconds"] = round(generation_duration_seconds, 3)
+        if accepted_genomes:
+            total_api_wait = sum(float(g.get("evaluation_api_wait_seconds") or 0) for g in accepted_genomes)
+            gen_stats["total_evaluation_api_wait_seconds"] = round(total_api_wait, 2)
 
         operator_statistics = None
         if accepted_genomes:
@@ -368,6 +375,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             operator_statistics=operator_statistics,
             logger=logger,
             log_file=log_file,
+            run_metadata_update={"num_workers": n_workers} if n_workers is not None else None,
         )
 
         # Update adaptive selection logic (generations_since_improvement, avg_fitness_history, slope)
@@ -479,6 +487,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     from utils.population_io import get_max_genome_id_from_all_files
 
     start_time = time.time()
+    gen_start = start_time  # Wall-clock start of current generation (for generation_duration_seconds)
     n_workers = size - 1
     logger.info("Master started. Workers: %d  K: %d  outputs: %s", n_workers, K, outputs_path)
 
@@ -671,11 +680,14 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 total_integrated += accepted
                 total_discarded += discarded
 
+                gen_duration = time.time() - gen_start
                 _update_tracker(outputs_path, generation_id, total_evaluated,
                                 total_integrated, total_discarded, spec_result, logger,
                                 north_star_metric=north_star_metric, log_file=log_file,
                                 accepted_genomes=accepted_genomes,
-                                sent_parents_top10=sent_parents_top10_by_gen.get(generation_id))
+                                sent_parents_top10=sent_parents_top10_by_gen.get(generation_id),
+                                generation_duration_seconds=gen_duration, n_workers=n_workers)
+                gen_start = time.time()
 
                 _run_live_analysis(outputs_path, logger)
 
@@ -711,11 +723,13 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             )
         total_integrated += accepted
         total_discarded += discarded
+        gen_duration = time.time() - gen_start
         _update_tracker(outputs_path, generation_id, total_evaluated,
                         total_integrated, total_discarded, spec_result, logger,
                         north_star_metric=north_star_metric, log_file=log_file,
                         accepted_genomes=accepted_genomes,
-                        sent_parents_top10=sent_parents_top10_by_gen.get(generation_id))
+                        sent_parents_top10=sent_parents_top10_by_gen.get(generation_id),
+                        generation_duration_seconds=gen_duration, n_workers=n_workers)
         _run_live_analysis(outputs_path, logger)
         drain_elapsed = time.time() - drain_start
         logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d",
@@ -865,6 +879,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             gen0_ok = 0
             gen0_err = 0
 
+            gen0_processed = []
             for i, p in enumerate(prompts):
                 local_variant_id = f"{rank}_{seq}"
                 genome = {
@@ -872,6 +887,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     "local_variant_id": local_variant_id,
                     "prompt": p,
                     "status": "pending_generation",
+                    "worker_rank": rank,
                 }
                 try:
                     logger.debug("Gen0 variant %d/%d: generating response for prompt=%.40s",
@@ -889,10 +905,16 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     genome["error"] = str(exc)
                     gen0_err += 1
                     total_errors += 1
+                gen0_processed.append(genome)
+                seq += 1
+
+            gen0_batch_elapsed = time.time() - gen0_batch_start
+            gen0_batch_duration = round(gen0_batch_elapsed, 4)
+            for genome in gen0_processed:
+                genome["gen0_batch_duration"] = gen0_batch_duration
                 send_payload(comm, 0, EVALUATED_VARIANT, genome, logger=logger)
                 logger.debug("Sent EVALUATED_VARIANT (gen0)  local_variant_id=%s  status=%s",
-                             local_variant_id, genome.get("status"))
-                seq += 1
+                             genome.get("local_variant_id"), genome.get("status"))
 
                 if (i + 1) % 5 == 0:
                     logger.info("Gen0 progress: %d/%d prompts processed (%d ok, %d errors)",
@@ -905,6 +927,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
         # ---- PARENTS (evolve + respond + evaluate) ----
         elif tag_id == PARENTS:
+            cycle_start = time.time()
             parents = data.get("parents", [])
             top_10 = data.get("top_10", [])
             key_idx = data.get("perspective_key_index")
@@ -928,15 +951,19 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                 outputs_path=outputs_path,
             )
             evolve_elapsed = time.time() - evolve_start
+            batch_variant_creation_duration = round(evolve_elapsed, 4)
             logger.info("Generated %d variant(s) in %.2fs. Processing pipeline...",
                          len(variants), evolve_elapsed)
 
             cycle_ok = 0
             cycle_err = 0
+            processed_variants = []
             for i, variant in enumerate(variants):
                 local_variant_id = f"{rank}_{seq}"
                 variant["request_id"] = req_id
                 variant["local_variant_id"] = local_variant_id
+                variant["worker_rank"] = rank
+                variant["batch_variant_creation_duration"] = batch_variant_creation_duration
                 try:
                     logger.debug("Variant %d/%d: generating response for prompt=%.40s",
                                  i + 1, len(variants),
@@ -954,12 +981,17 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     variant["error"] = str(exc)
                     cycle_err += 1
                     total_errors += 1
-                send_payload(comm, 0, EVALUATED_VARIANT, variant, logger=logger)
-                logger.debug("Sent EVALUATED_VARIANT  local_variant_id=%s  status=%s",
-                             local_variant_id, variant.get("status"))
+                processed_variants.append(variant)
                 seq += 1
 
-            cycle_elapsed = time.time() - evolve_start
+            cycle_elapsed = time.time() - cycle_start
+            worker_cycle_duration = round(cycle_elapsed, 4)
+            for v in processed_variants:
+                v["worker_cycle_duration"] = worker_cycle_duration
+                send_payload(comm, 0, EVALUATED_VARIANT, v, logger=logger)
+                logger.debug("Sent EVALUATED_VARIANT  local_variant_id=%s  status=%s",
+                             v.get("local_variant_id"), v.get("status"))
+
             logger.info("Evolution cycle %d complete: sent %d variants (%d ok, %d errors) "
                         "in %.2fs  (total_sent=%d)",
                         cycle, len(variants), cycle_ok, cycle_err, cycle_elapsed, seq)

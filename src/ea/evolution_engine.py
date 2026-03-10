@@ -876,6 +876,7 @@ def generate_single_variant(parents, prompt_generator, north_star_metric="toxici
                 "variant_type": variant_type,
                 "parents": parents_info,
                 "status": "pending_generation",
+                "variant_creation_duration": round(op_elapsed, 4),
                 "creation_info": {
                     "type": variant_type,
                     "operator": op.name,

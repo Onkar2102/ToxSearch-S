@@ -848,6 +848,7 @@ def load_and_initialize_population(
                     "avg_fitness_history": [],
                     "slope_of_avg_fitness": 0.0,
                     "selection_mode": "default",
+                    "run_metadata": {"num_workers": 1},  # Single-process run; parallel runs set this when creating tracker
                     "generations": [
                         {
                             "generation_number": 0,
@@ -1640,7 +1641,8 @@ def calculate_budget_metrics(
         "llm_calls": 0,
         "api_calls": 0,
         "total_response_time": 0.0,
-        "total_evaluation_time": 0.0
+        "total_evaluation_time": 0.0,
+        "total_evaluation_api_wait_seconds": 0.0,
     }
     
     try:
@@ -1660,10 +1662,13 @@ def calculate_budget_metrics(
                 budget["api_calls"] += 1
                 if genome.get("evaluation_duration"):
                     budget["total_evaluation_time"] += float(genome.get("evaluation_duration", 0))
+            # Time spent waiting on API (rate-limit/retry sleep) for this genome
+            budget["total_evaluation_api_wait_seconds"] += float(genome.get("evaluation_api_wait_seconds", 0) or 0)
         
         # Round times to 2 decimal places
         budget["total_response_time"] = round(budget["total_response_time"], 2)
         budget["total_evaluation_time"] = round(budget["total_evaluation_time"], 2)
+        budget["total_evaluation_api_wait_seconds"] = round(budget["total_evaluation_api_wait_seconds"], 2)
         
         _logger.debug(
             f"Gen {current_generation} budget: {budget['llm_calls']} LLM calls ({budget['total_response_time']}s), "
@@ -2186,7 +2191,9 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "selection_mode": selection_mode,
         "operator_statistics": {},
         "speciation": None,  # Will be set by speciation update
-        "budget": None  # Will be set if available
+        "budget": None,  # Will be set if available
+        "generation_duration_seconds": None,  # Wall-clock duration for this generation
+        "genomes_per_second": None,  # variants_created / generation_duration_seconds (for scaling analysis)
     }
 
 
@@ -2229,7 +2236,8 @@ def update_evolution_tracker_with_statistics(
     statistics: Dict[str, Any],
     operator_statistics: Optional[Dict[str, Any]] = None,
     logger=None,
-    log_file: Optional[str] = None
+    log_file: Optional[str] = None,
+    run_metadata_update: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """
     Update EvolutionTracker.json with generation statistics.
@@ -2241,6 +2249,7 @@ def update_evolution_tracker_with_statistics(
         operator_statistics: Optional operator-level statistics
         logger: Optional logger instance
         log_file: Optional log file path
+        run_metadata_update: Optional dict to merge into tracker["run_metadata"] (e.g. {"num_workers": N})
         
     Returns:
         True if successful, False otherwise
@@ -2255,6 +2264,8 @@ def update_evolution_tracker_with_statistics(
         
         with open(tracker_path, 'r', encoding='utf-8') as f:
             tracker = json.load(f)
+        if run_metadata_update:
+            tracker.setdefault("run_metadata", {}).update(run_metadata_update)
         
         # Find or create generation entry
         generations = tracker.setdefault("generations", [])
@@ -2287,6 +2298,7 @@ def update_evolution_tracker_with_statistics(
             "reserves_count": statistics.get("reserves_count", 0),
             "archived_count": statistics.get("archived_count", 0),
             "total_population": statistics.get("total_population", 0),
+            "generation_duration_seconds": round(statistics["generation_duration_seconds"], 3) if statistics.get("generation_duration_seconds") is not None else None,
             "best_fitness": round(statistics.get("population_max_toxicity", gen_entry.get("best_fitness", 0.0001)), 4),
             "max_score_variants": round(statistics.get("max_score_variants", gen_entry.get("max_score_variants", 0.0001)), 4),
             "min_score_variants": round(statistics.get("min_score_variants", gen_entry.get("min_score_variants", 0.0001)), 4),
@@ -2302,6 +2314,8 @@ def update_evolution_tracker_with_statistics(
         # and edge cases where update_evolution_tracker_with_speciation did not run.
         if existing_speciation is not None and isinstance(existing_speciation, dict) and existing_speciation.get("species_count") is not None:
             gen_entry["speciation"] = existing_speciation
+            if statistics.get("speciation_duration_seconds") is not None:
+                gen_entry["speciation"]["speciation_duration_seconds"] = round(statistics["speciation_duration_seconds"], 3)
         elif any(statistics.get(k) is not None for k in ("species_count", "reserves_size")):
             gen_entry["speciation"] = {
                 "species_count": statistics.get("species_count", 0),
@@ -2319,6 +2333,7 @@ def update_evolution_tracker_with_statistics(
                 "intra_species_diversity": statistics.get("intra_species_diversity", existing_speciation.get("intra_species_diversity", 0.0) if existing_speciation else 0.0),
                 "total_population": statistics.get("total_population", 0),
                 "cluster_quality": statistics.get("cluster_quality", existing_speciation.get("cluster_quality") if existing_speciation else None),
+                "speciation_duration_seconds": round(statistics["speciation_duration_seconds"], 3) if statistics.get("speciation_duration_seconds") is not None else None,
             }
         
         # Add budget metrics if available
@@ -2327,7 +2342,8 @@ def update_evolution_tracker_with_statistics(
                 "llm_calls": statistics.get("llm_calls", 0),
                 "api_calls": statistics.get("api_calls", 0),
                 "total_response_time": statistics.get("total_response_time", 0.0),
-                "total_evaluation_time": statistics.get("total_evaluation_time", 0.0)
+                "total_evaluation_time": statistics.get("total_evaluation_time", 0.0),
+                "total_evaluation_api_wait_seconds": statistics.get("total_evaluation_api_wait_seconds", 0.0),
             }
             
             # Update cumulative budget at tracker level
@@ -2336,7 +2352,8 @@ def update_evolution_tracker_with_statistics(
                     "total_llm_calls": 0,
                     "total_api_calls": 0,
                     "total_response_time": 0.0,
-                    "total_evaluation_time": 0.0
+                    "total_evaluation_time": 0.0,
+                    "total_evaluation_api_wait_seconds": 0.0,
                 }
             
             tracker["cumulative_budget"]["total_llm_calls"] += statistics.get("llm_calls", 0)
@@ -2346,6 +2363,10 @@ def update_evolution_tracker_with_statistics(
             )
             tracker["cumulative_budget"]["total_evaluation_time"] = round(
                 tracker["cumulative_budget"]["total_evaluation_time"] + statistics.get("total_evaluation_time", 0.0), 2
+            )
+            tracker["cumulative_budget"]["total_evaluation_api_wait_seconds"] = round(
+                tracker["cumulative_budget"].get("total_evaluation_api_wait_seconds", 0.0)
+                + statistics.get("total_evaluation_api_wait_seconds", 0.0), 2
             )
         
         # Update population_max_toxicity at tracker level (cumulative max across all generations).
@@ -2364,6 +2385,10 @@ def update_evolution_tracker_with_statistics(
         
         if statistics.get("variants_created") is not None:
             gen_entry["variants_created"] = statistics.get("variants_created", 0)
+        gd = statistics.get("generation_duration_seconds")
+        vc = statistics.get("variants_created")
+        if gd and gd > 0 and vc is not None:
+            gen_entry["genomes_per_second"] = round(vc / gd, 4)
         if statistics.get("mutation_variants") is not None:
             gen_entry["mutation_variants"] = statistics.get("mutation_variants", 0)
         if statistics.get("crossover_variants") is not None:

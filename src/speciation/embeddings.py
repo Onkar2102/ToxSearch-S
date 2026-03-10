@@ -21,7 +21,7 @@ from utils import get_system_utils
 # This warning comes from third-party libraries (keras/tf2onnx) and cannot be fixed in our code
 warnings.filterwarnings('ignore', category=FutureWarning, message='.*np.object.*')
 
-get_logger, _, _, _ = get_custom_logging()
+get_logger, _, _, PerformanceLogger = get_custom_logging()
 _, _, _, get_outputs_path, _, _ = get_system_utils()
 
 
@@ -224,61 +224,62 @@ def compute_and_save_embeddings(
         logger.info("Embeddings already exist in temp.json, skipping computation")
         return
     
-    # Extract prompts
-    prompts = [g.get("prompt", "") for g in genomes]
-    
-    # Get embedding model
-    model = get_embedding_model(model_name=model_name)
-    
-    # Compute embeddings in batch
-    logger.info(f"Computing embeddings for {len(prompts)} prompts...")
-    
-    success_count = 0
-    failure_count = 0
-    embeddings = None
-    
-    try:
-        embeddings = model.encode(
-            prompts,
-            batch_size=batch_size,
-            show_progress=show_progress
-        )
-    except Exception as e:
-        logger.error(f"Failed to compute embeddings batch: {e}", exc_info=True)
-        raise
-    
-    # Add embeddings to genomes (convert numpy array to list for JSON)
-    for i, genome in enumerate(genomes):
+    with PerformanceLogger(logger, "Embeddings: Compute and save", path=temp_path, num_genomes=len(genomes)):
+        # Extract prompts
+        prompts = [g.get("prompt", "") for g in genomes]
+        
+        # Get embedding model
+        model = get_embedding_model(model_name=model_name)
+        
+        # Compute embeddings in batch
+        logger.info(f"Computing embeddings for {len(prompts)} prompts...")
+        
+        success_count = 0
+        failure_count = 0
+        embeddings = None
+        
         try:
-            if embeddings is not None and i < len(embeddings):
-                embedding = embeddings[i]
-                if embedding is not None and len(embedding) > 0:
-                    # Convert numpy array to list (JSON-compatible)
-                    genome["prompt_embedding"] = embedding.tolist()
-                    success_count += 1
+            embeddings = model.encode(
+                prompts,
+                batch_size=batch_size,
+                show_progress=show_progress
+            )
+        except Exception as e:
+            logger.error(f"Failed to compute embeddings batch: {e}", exc_info=True)
+            raise
+        
+        # Add embeddings to genomes (convert numpy array to list for JSON)
+        for i, genome in enumerate(genomes):
+            try:
+                if embeddings is not None and i < len(embeddings):
+                    embedding = embeddings[i]
+                    if embedding is not None and len(embedding) > 0:
+                        # Convert numpy array to list (JSON-compatible)
+                        genome["prompt_embedding"] = embedding.tolist()
+                        success_count += 1
+                    else:
+                        failure_count += 1
+                        genome_id = genome.get("id", "unknown")
+                        logger.warning(f"Embedding computation returned None/empty for genome {genome_id}")
                 else:
                     failure_count += 1
                     genome_id = genome.get("id", "unknown")
-                    logger.warning(f"Embedding computation returned None/empty for genome {genome_id}")
-            else:
+                    logger.warning(f"Embedding missing for genome {genome_id} (index {i} out of range)")
+            except Exception as e:
                 failure_count += 1
                 genome_id = genome.get("id", "unknown")
-                logger.warning(f"Embedding missing for genome {genome_id} (index {i} out of range)")
-        except Exception as e:
-            failure_count += 1
-            genome_id = genome.get("id", "unknown")
-            logger.warning(f"Failed to add embedding for genome {genome_id}: {e}")
-    
-    # Log summary
-    logger.info(f"Embedding computation: {success_count} success, {failure_count} failures")
-    if failure_count > 0:
-        logger.warning(f"Population reduced by {failure_count} genomes due to embedding failures")
-    
-    # Save updated genomes back to temp.json
-    with open(temp_path_obj, 'w', encoding='utf-8') as f:
-        json.dump(genomes, f, indent=2, ensure_ascii=False)
-    
-    logger.info(f"Successfully computed and saved embeddings for {len(genomes)} genomes")
+                logger.warning(f"Failed to add embedding for genome {genome_id}: {e}")
+        
+        # Log summary
+        logger.info(f"Embedding computation: {success_count} success, {failure_count} failures")
+        if failure_count > 0:
+            logger.warning(f"Population reduced by {failure_count} genomes due to embedding failures")
+        
+        # Save updated genomes back to temp.json
+        with open(temp_path_obj, 'w', encoding='utf-8') as f:
+            json.dump(genomes, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Successfully computed and saved embeddings for {len(genomes)} genomes")
 
 
 def backfill_embeddings_for_genomes(
