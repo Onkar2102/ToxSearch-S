@@ -19,7 +19,7 @@ class PromptGenerator:
     Prompt generator using v1/chat/completions interface for prompt generation and modification.
     """
     
-    def __init__(self, model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file: Optional[str] = None):
+    def __init__(self, model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file: Optional[str] = None, seed: Optional[int] = None):
         self.log_file = log_file
         self.logger = get_logger("PromptGenerator", self.log_file)
         self.logger.debug(f"Logger correctly initialized with log_file: {self.log_file}")
@@ -32,7 +32,8 @@ class PromptGenerator:
             if model_key not in config:
                 raise ValueError(f"Model '{model_key}' not found in configuration. Available keys: {list(config.keys())}")
             self.model_cfg = config[model_key]
-            
+            if seed is not None:
+                self.model_cfg.setdefault("generation_args", {})["seed"] = seed
             if not self.model_cfg.get("name"):
                 raise ValueError(f"Model configuration missing 'name' field for {model_key}")
                 

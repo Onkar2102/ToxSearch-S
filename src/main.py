@@ -153,7 +153,7 @@ def update_model_configs(rg_model, pg_model, logger):
 
 
 def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
-         max_total_genomes=None,
+         max_total_genomes=None, seed=None,
          # Speciation parameters
          theta_sim=0.2, theta_merge=0.1, species_capacity=100, cluster0_max_capacity=1000,
          cluster0_min_cluster_size=2, min_island_size=2, species_stagnation=20,
@@ -218,7 +218,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     # Boot model instances, outputs directory, and seed data
     try:
         with PerformanceLogger(logger, "Initialize system", seed_file=seed_file):
-            response_generator, prompt_generator = initialize_system(logger, log_file, seed_file=seed_file)
+            response_generator, prompt_generator = initialize_system(logger, log_file, seed_file=seed_file, seed=seed)
     except Exception as e:
         logger.error("System initialization failed: %s", e, exc_info=True)
         return
@@ -1050,6 +1050,8 @@ if __name__ == "__main__":
                        help="Maximum number of variants to generate per evolution cycle. Controls how many times the evolution cycle runs.")
     parser.add_argument("--seed-file", type=str, default="data/prompt.csv",
                        help="Path to CSV file with seed prompts (must have 'questions' column). Default: data/prompt.csv")
+    parser.add_argument("--seed", type=int, default=None,
+                       help="Fixed seed for LLM generation. When set, all processes (including workers) use this same seed for reproducibility.")
     parser.add_argument("--batch-size", type=int, default=100,
                        help="Number of genomes per generation batch (K) for parallel mode. Default: 100")
     parser.add_argument("--max-total-genomes", type=int, default=None,
@@ -1112,6 +1114,7 @@ if __name__ == "__main__":
                 logger,
                 K=args.batch_size,
                 seed_file=args.seed_file,
+                seed=getattr(args, "seed", None),
                 operators_mode=args.operators,
                 moderation_methods=args.moderation_methods,
                 max_generations=args.generations,
@@ -1133,6 +1136,7 @@ if __name__ == "__main__":
              operators=args.operators, max_variants=args.max_variants,
              stagnation_limit=args.stagnation_limit, seed_file=args.seed_file,
              max_total_genomes=getattr(args, "max_total_genomes", None),
+             seed=getattr(args, "seed", None),
              # Speciation parameters
              theta_sim=args.theta_sim, theta_merge=args.theta_merge,
              species_capacity=args.species_capacity, cluster0_max_capacity=args.cluster0_max_capacity,

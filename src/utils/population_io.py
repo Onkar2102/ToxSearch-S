@@ -131,7 +131,7 @@ def _extract_north_star_score(genome, metric="toxicity"):
 
 
 
-def initialize_system(logger, log_file, seed_file="data/prompt.csv"):
+def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None):
     """Initialize the system components and create gen0 if needed
     
     Args:
@@ -139,6 +139,7 @@ def initialize_system(logger, log_file, seed_file="data/prompt.csv"):
         log_file: Log file path
         seed_file: Path to CSV file with seed prompts (must have 'questions' column).
                    Default: data/prompt.csv
+        seed: Optional fixed seed for LLM generation (used by all RG/PG for reproducibility).
     """
     from utils.device_utils import device_manager
     device = device_manager.get_optimal_device()
@@ -150,11 +151,11 @@ def initialize_system(logger, log_file, seed_file="data/prompt.csv"):
     load_and_initialize_population, get_population_files_info, load_population, save_population, sort_population_json, load_genome_by_id, consolidate_generations_to_single_file, migrate_from_split_to_single, sort_population_by_elite_criteria, load_elites, save_elites, get_population_stats_steady_state = get_population_io()
     
     ResponseGenerator = get_ResponseGenerator()
-    response_generator = ResponseGenerator(model_key="response_generator", config_path="config/RGConfig.yaml", log_file=log_file)
+    response_generator = ResponseGenerator(model_key="response_generator", config_path="config/RGConfig.yaml", log_file=log_file, seed=seed)
     logger.debug("Response generator initialized")
     
     PromptGenerator = get_PromptGenerator()
-    prompt_generator = PromptGenerator(model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file=log_file)
+    prompt_generator = PromptGenerator(model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file=log_file, seed=seed)
     logger.debug("Prompt generator initialized")
     
     from ea.evolution_engine import set_global_generators

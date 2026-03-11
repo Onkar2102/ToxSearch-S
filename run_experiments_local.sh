@@ -70,6 +70,7 @@ SEQUENTIAL_EXPERIMENTS=(
         --operators all \
         --max-variants 1 \
         --seed-file data/prompt.csv \
+        --seed 42 \
         --batch-size 100 \
         --max-total-genomes 500"
 )

@@ -848,17 +848,18 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
     if response_generator is None or prompt_generator is None:
         from gne import get_ResponseGenerator, get_PromptGenerator
+        llm_seed = cfg.get("seed")
         if response_generator is None:
             RG = get_ResponseGenerator()
             response_generator = RG(model_key="response_generator",
                                     config_path="config/RGConfig.yaml",
-                                    log_file=log_file)
+                                    log_file=log_file, seed=llm_seed)
             logger.info("Worker %d: ResponseGenerator initialised", rank)
         if prompt_generator is None:
             PG = get_PromptGenerator()
             prompt_generator = PG(model_key="prompt_generator",
                                   config_path="config/PGConfig.yaml",
-                                  log_file=log_file)
+                                  log_file=log_file, seed=llm_seed)
             logger.info("Worker %d: PromptGenerator initialised", rank)
 
     from ea.evolution_engine import set_global_generators, generate_single_variant
@@ -1091,7 +1092,7 @@ def _rank_log_file(base_log_file, rank):
 def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         speciation_config=None, log_file=None, max_generations=2,
         run_speciation_fn=None,
-        operators_mode="all", seed_file="data/prompt.csv",
+        operators_mode="all", seed_file="data/prompt.csv", seed=None,
         moderation_methods=None,
         response_generator=None, prompt_generator=None, evaluator=None,
         perspective_api_keys=None):
@@ -1140,6 +1141,7 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         "north_star_metric": north_star_metric,
         "operators_mode": operators_mode,
         "seed_file": seed_file,
+        "seed": seed,
         "moderation_methods": moderation_methods,
         "log_file": log_file,
         "outputs_path": outputs_path,

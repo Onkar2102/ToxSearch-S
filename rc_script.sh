@@ -4,18 +4,14 @@
 # Runs evolution with 1 master + (ntasks-1) workers. Set --ntasks to 1 + desired
 # worker count (e.g. 5 for 4 workers). Requires MPI (srun launches ntasks processes).
 #
-# Output:
-#   - Use --output-dir to write to a fixed path (e.g. data/outputs/slurm_$SLURM_JOB_ID).
-#   - Without it, outputs go to data/outputs/<timestamp>.
+# Output directory is auto-generated (data/outputs/<timestamp>) per run.
 #
-# Profiling (cProfile):
-#   To profile the master process, add to the srun command:
-#     --profile data/outputs/slurm_${SLURM_JOB_ID}.prof
-#   Then inspect with: python -m pstats <file.prof> or snakeviz <file.prof>.
+# Profiling (cProfile): --profile is enabled; profile is saved in the run's output dir as profile_main.prof.
+#   Inspect with: python -m pstats <path> or snakeviz <path>.
 #
 # Full experiment matrix and RQs:
 #   See experiments/RQ_EXPERIMENTS.md. Vary --ntasks (e.g. 2, 5, 9 for 1/4/8 workers),
-#   --batch-size (K), --generations, and --output-dir for reproducible runs.
+#   --batch-size (K), and --generations.
 
 #SBATCH --job-name=search1
 #SBATCH --time=3-23:59:00
@@ -93,10 +89,10 @@ python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embeddin
 
 # 8) MPI launch with srun (1 master + (ntasks-1) workers).
 #    If MPI hangs, try: srun --mpi=pmi2 ...
-#    Optional: add --profile data/outputs/slurm_${SLURM_JOB_ID}.prof for cProfile (master only).
-OUTPUT_DIR="${OUTPUT_DIR:-data/outputs/slurm_${SLURM_JOB_ID}}"
+#    Profile is written to the run's output dir (data/outputs/<timestamp>/profile_main.prof).
 srun python -u src/main.py \
     --parallel \
+    --profile \
     --batch-size 100 \
     --generations 250 \
     --moderation-methods google \
@@ -116,6 +112,6 @@ srun python -u src/main.py \
     --operators all \
     --max-variants 1 \
     --seed-file data/prompt.csv \
-    --output-dir "$OUTPUT_DIR"
+    --seed 42
 
 echo "All experiments completed!"

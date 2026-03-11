@@ -487,7 +487,7 @@ class LlamaCppChatInterface(ModelInterface):
                 top_k=generation_kwargs.get("top_k", 40),
                 repeat_penalty=generation_kwargs.get("repetition_penalty", 1.1),
                 stop=["</s>", "<|endoftext|>", "User:", "System:"],
-                seed=random.randint(0, 2**31 - 1),
+                seed=generation_kwargs["seed"] if "seed" in generation_kwargs else random.randint(0, 2**31 - 1),
                 echo=False,
             )
             
