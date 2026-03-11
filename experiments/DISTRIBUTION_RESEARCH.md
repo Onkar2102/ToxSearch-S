@@ -21,8 +21,11 @@ This document describes the **code support** for research questions related to *
 ## 2. Where the Data Lives
 
 ### Run-level (one value per run)
-- **`EvolutionTracker.json` → `run_metadata.num_workers`**  
-  Number of workers for this run (1 = single-process; 2+ = MPI parallel). Use this to **group runs** when comparing scaling.
+- **`EvolutionTracker.json` → `run_metadata`**  
+  - **`num_workers`**: Number of workers (1 = single-process; 2+ = MPI). Use to group runs for scaling.
+  - **`batch_size`**: K (genomes per batch) in parallel mode.
+  - **`theta_sim`**, **`species_capacity`**: Speciation params (for parameter-sensitivity / RQ5).
+  - **`num_perspective_keys`**: Number of API keys used (for API-scarcity / RQ4).
 
 ### Per-generation (one value per generation)
 In **`EvolutionTracker.json` → `generations[]`** each entry has:
@@ -89,3 +92,7 @@ Genomes in `elites.json` / `reserves.json` / `temp.json` (before clear) can have
    → Master + N workers; `run_metadata.num_workers` = N (set when creating or updating the tracker).
 
 3. For scaling studies, run the **same** config (seed, max_generations, K, etc.) with **different** `-n` values and different output dirs, then use the tracker fields above and the plotting script to compare.
+
+4. Use **`--output-dir data/outputs/<label>`** so each run has a stable path (e.g. `data/outputs/rq1_w4_run1`) for analysis scripts and GDP.
+
+**Full experiment plan for the 5 research questions:** see **`experiments/RQ_EXPERIMENTS.md`** (experiment matrix, commands, and analysis steps).

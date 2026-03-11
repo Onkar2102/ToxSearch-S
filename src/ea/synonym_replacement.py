@@ -187,12 +187,12 @@ Return only: <synonyms>synonym_word</synonyms>"""
                 if synonym and len(synonym.split()) == 1 and synonym.isalpha():
                     return [synonym]
 
-            self.logger.error(f"{self.name}: Failed to parse synonyms from response")
+            self.logger.warning(f"{self.name}: Failed to parse synonyms from response")
             return []
 
         except Exception as e:
             self.logger.debug(f"{self.name}: Failed to parse synonyms from response: {e}")
-            self.logger.error(f"{self.name}: Failed to parse synonyms from response")
+            self.logger.warning(f"{self.name}: Failed to parse synonyms from response")
             return []
 
     def _ask_llm_for_synonyms(self, pos_tag: str, pos_words: List[POSWord], text_context: str) -> List[str]:
@@ -223,7 +223,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
             response = self.generator.model_interface.chat_completion(messages)
 
             if not response:
-                self.logger.error(f"{self.name}: Empty LLM response for {pos_tag}")
+                self.logger.warning(f"{self.name}: Empty LLM response for {pos_tag}")
                 return []
 
             synonyms_data = self._parse_synonyms_from_response(response, pos_tag)
@@ -232,7 +232,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
                 self.logger.info(f"{self.name}: Generated synonyms for {pos_tag}: {len(synonyms_data)} words")
                 return synonyms_data
             else:
-                self.logger.error(f"{self.name}: Failed to parse synonyms for {pos_tag}")
+                self.logger.warning(f"{self.name}: Failed to parse synonyms for {pos_tag}")
                 return []
 
         except Exception as e:

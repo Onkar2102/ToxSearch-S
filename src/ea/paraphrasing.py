@@ -135,7 +135,7 @@ Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
 
             extracted_paraphrase = self.generator._extract_content_from_xml_tags(paraphrased_prompt, "paraphrase")
             if not extracted_paraphrase:
-                self.logger.error(f"{self.name}: Failed to parse paraphrase from LLM response")
+                self.logger.warning(f"{self.name}: Failed to parse paraphrase from LLM response")
                 return []
             paraphrased_prompt = extracted_paraphrase
 

@@ -20,7 +20,7 @@ from utils import get_custom_logging, get_system_utils
 from utils.population_io import _extract_north_star_score
 
 get_logger, _, _, _ = get_custom_logging()
-_, _, _, get_outputs_path, _, _ = get_system_utils()
+_, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]:

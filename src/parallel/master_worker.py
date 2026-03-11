@@ -246,15 +246,29 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                     total_discarded, speciation_result, logger,
                     north_star_metric="toxicity", log_file=None,
                     accepted_genomes=None, sent_parents_top10=None,
-                    generation_duration_seconds=None, n_workers=None):
+                    generation_duration_seconds=None, n_workers=None,
+                    batch_size_K=None, speciation_config=None, config_dict=None):
     """Update EvolutionTracker with full generation statistics after speciation.
     sent_parents_top10: optional dict {"parents": [...], "top_10": [...]} captured when PARENTS were sent for this generation.
+    batch_size_K, speciation_config, config_dict: optional, for run_metadata (RQ analysis).
     """
     logger.debug("Updating EvolutionTracker (full): gen=%d  evaluated=%d  "
                  "integrated=%d  discarded=%d  accepted_genomes=%d",
                  generation_id, total_evaluated, total_integrated, total_discarded,
                  len(accepted_genomes) if accepted_genomes else 0)
     tracker_path = outputs_path / "EvolutionTracker.json"
+    run_meta = {}
+    if n_workers is not None:
+        run_meta["num_workers"] = n_workers
+    if batch_size_K is not None:
+        run_meta["batch_size"] = batch_size_K
+    if speciation_config is not None:
+        run_meta["theta_sim"] = getattr(speciation_config, "theta_sim", None)
+        run_meta["species_capacity"] = getattr(speciation_config, "species_capacity", None)
+    if config_dict is not None:
+        keys_list = config_dict.get("perspective_api_keys") or []
+        run_meta["num_perspective_keys"] = len(keys_list) if isinstance(keys_list, list) else 0
+
     if not tracker_path.exists():
         logger.info("Creating new EvolutionTracker.json")
         tracker = {
@@ -264,7 +278,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             "avg_fitness_history": [],
             "slope_of_avg_fitness": 0.0,
             "selection_mode": "default",
-            "run_metadata": {"num_workers": n_workers} if n_workers is not None else {},
+            "run_metadata": dict(run_meta),
             "generations": [],
         }
         with open(tracker_path, "w", encoding="utf-8") as f:
@@ -374,7 +388,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             operator_statistics=operator_statistics,
             logger=logger,
             log_file=log_file,
-            run_metadata_update={"num_workers": n_workers} if n_workers is not None else None,
+            run_metadata_update=run_meta if run_meta else None,
         )
 
         # Update adaptive selection logic (generations_since_improvement, avg_fitness_history, slope)
@@ -685,7 +699,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                                 north_star_metric=north_star_metric, log_file=log_file,
                                 accepted_genomes=accepted_genomes,
                                 sent_parents_top10=sent_parents_top10_by_gen.get(generation_id),
-                                generation_duration_seconds=gen_duration, n_workers=n_workers)
+                                generation_duration_seconds=gen_duration, n_workers=n_workers,
+                                batch_size_K=K, speciation_config=speciation_config, config_dict=config_dict)
                 gen_start = time.time()
 
                 _run_live_analysis(outputs_path, logger)
@@ -728,7 +743,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         north_star_metric=north_star_metric, log_file=log_file,
                         accepted_genomes=accepted_genomes,
                         sent_parents_top10=sent_parents_top10_by_gen.get(generation_id),
-                        generation_duration_seconds=gen_duration, n_workers=n_workers)
+                        generation_duration_seconds=gen_duration, n_workers=n_workers,
+                        batch_size_K=K, speciation_config=speciation_config, config_dict=config_dict)
         _run_live_analysis(outputs_path, logger)
         drain_elapsed = time.time() - drain_start
         logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d",

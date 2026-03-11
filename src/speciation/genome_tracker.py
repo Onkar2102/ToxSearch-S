@@ -97,7 +97,7 @@ class GenomeTracker:
         # Convert to string to ensure type consistency (accepts both str and int)
         genome_id = str(genome_id)
         if genome_id not in self.genomes:
-            self.logger.warning(f"Genome {genome_id} not found in tracker, registering as new")
+            self.logger.debug("Genome %s not found in tracker, registering as new (expected for new variants)", genome_id)
             success = self.register(genome_id, new_species_id, generation)
             # New registration from archive to active is also a reassignment
             reassignment_info = None
@@ -457,7 +457,7 @@ class GenomeTracker:
             True if loaded successfully, False otherwise
         """
         from utils import get_system_utils
-        _, _, _, get_outputs_path, _, _ = get_system_utils()
+        _, _, _, get_outputs_path, _, _, _ = get_system_utils()
         
         if path is None:
             outputs_path = get_outputs_path()
@@ -503,7 +503,7 @@ class GenomeTracker:
             True if saved successfully, False otherwise
         """
         from utils import get_system_utils
-        _, _, _, get_outputs_path, _, _ = get_system_utils()
+        _, _, _, get_outputs_path, _, _, _ = get_system_utils()
         
         if path is None:
             outputs_path = get_outputs_path()

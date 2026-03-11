@@ -317,11 +317,11 @@ class EvolutionEngine:
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites = json.load(f)
             if not elites:
-                self.logger.error("CRITICAL ERROR: elites.json exists but is empty - this indicates a fundamental problem")
+                self.logger.critical("elites.json exists but is empty - evolution cannot continue")
                 self.logger.error("Evolution cannot continue without elites. Stopping immediately.")
                 raise RuntimeError("Empty elites.json - evolution cannot continue. This indicates a critical system failure.")
         else:
-            self.logger.error("CRITICAL ERROR: elites.json does not exist - this indicates a fundamental problem")
+            self.logger.critical("elites.json does not exist - evolution cannot continue")
             self.logger.error("Evolution cannot continue without elites. Stopping immediately.")
             raise RuntimeError("Missing elites.json - evolution cannot continue. This indicates a critical system failure.")
 
@@ -372,7 +372,7 @@ class EvolutionEngine:
         
         # Only raise error if both files are missing or both are empty
         if not has_elites and not has_reserves:
-            self.logger.error("CRITICAL ERROR: No population files found with content (elites.json or reserves.json)")
+            self.logger.critical("No population files found with content (elites.json or reserves.json) - evolution cannot continue")
             self.logger.error("Evolution cannot continue without any genomes. Stopping immediately.")
             raise RuntimeError("No population files found - evolution cannot continue. This indicates a critical system failure.")
         

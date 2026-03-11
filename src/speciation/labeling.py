@@ -122,7 +122,7 @@ def extract_species_labels(
     
     # Load prompts from elites.json for frozen species (they may not have all members in memory)
     from utils import get_system_utils
-    _, _, _, get_outputs_path, _, _ = get_system_utils()
+    _, _, _, get_outputs_path, _, _, _ = get_system_utils()
     outputs_path = get_outputs_path()
     elites_path = outputs_path / "elites.json"
     elites_genomes = []

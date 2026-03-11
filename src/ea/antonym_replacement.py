@@ -199,12 +199,12 @@ class POSAwareAntonymReplacement(VariationOperator):
                 if antonym and len(antonym.split()) == 1 and antonym.isalpha():
                     return [antonym]
 
-            self.logger.error(f"{self.name}: Failed to parse antonyms from response")
+            self.logger.warning(f"{self.name}: Failed to parse antonyms from response")
             return []
 
         except Exception as e:
             self.logger.debug(f"{self.name}: Failed to parse antonyms from response: {e}")
-            self.logger.error(f"{self.name}: Failed to parse antonyms from response")
+            self.logger.warning(f"{self.name}: Failed to parse antonyms from response")
             return []
 
     def _ask_llm_for_antonyms(self, pos_tag: str, pos_words: List[POSWord], text_context: str) -> List[str]:
@@ -235,7 +235,7 @@ class POSAwareAntonymReplacement(VariationOperator):
             response = self.generator.model_interface.chat_completion(messages)
 
             if not response:
-                self.logger.error(f"{self.name}: Empty LLM response for {pos_tag}")
+                self.logger.warning(f"{self.name}: Empty LLM response for {pos_tag}")
                 return []
 
             antonyms_data = self._parse_antonyms_from_response(response, pos_tag)
@@ -244,7 +244,7 @@ class POSAwareAntonymReplacement(VariationOperator):
                 self.logger.info(f"{self.name}: Generated antonyms for {pos_tag}: {len(antonyms_data)} words")
                 return antonyms_data
             else:
-                self.logger.error(f"{self.name}: Failed to parse antonyms for {pos_tag}")
+                self.logger.warning(f"{self.name}: Failed to parse antonyms for {pos_tag}")
                 return []
 
         except Exception as e:

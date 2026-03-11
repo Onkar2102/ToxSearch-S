@@ -1,4 +1,21 @@
 #!/bin/bash
+# HPC Slurm job script: parallel (MPI) mode for ToxSearch-S.
+#
+# Runs evolution with 1 master + (ntasks-1) workers. Set --ntasks to 1 + desired
+# worker count (e.g. 5 for 4 workers). Requires MPI (srun launches ntasks processes).
+#
+# Output:
+#   - Use --output-dir to write to a fixed path (e.g. data/outputs/slurm_$SLURM_JOB_ID).
+#   - Without it, outputs go to data/outputs/<timestamp>.
+#
+# Profiling (cProfile):
+#   To profile the master process, add to the srun command:
+#     --profile data/outputs/slurm_${SLURM_JOB_ID}.prof
+#   Then inspect with: python -m pstats <file.prof> or snakeviz <file.prof>.
+#
+# Full experiment matrix and RQs:
+#   See experiments/RQ_EXPERIMENTS.md. Vary --ntasks (e.g. 2, 5, 9 for 1/4/8 workers),
+#   --batch-size (K), --generations, and --output-dir for reproducible runs.
 
 #SBATCH --job-name=search1
 #SBATCH --time=3-23:59:00
@@ -74,9 +91,10 @@ cd /home/os9660/ToxSearch-S || exit 1
 export PYTHONPATH=/home/os9660/ToxSearch-S/src
 python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|cluster0" || exit 1
 
-# 8) MPI launch with srun (Spack openmpi has no mpiexec/mpirun; use srun per cluster).
-# Job has --ntasks=3 so srun runs 3 processes. If MPI hangs, try: srun --mpi=pmi2 ...
-# python -u for unbuffered output.
+# 8) MPI launch with srun (1 master + (ntasks-1) workers).
+#    If MPI hangs, try: srun --mpi=pmi2 ...
+#    Optional: add --profile data/outputs/slurm_${SLURM_JOB_ID}.prof for cProfile (master only).
+OUTPUT_DIR="${OUTPUT_DIR:-data/outputs/slurm_${SLURM_JOB_ID}}"
 srun python -u src/main.py \
     --parallel \
     --batch-size 100 \
@@ -97,6 +115,7 @@ srun python -u src/main.py \
     --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
     --operators all \
     --max-variants 1 \
-    --seed-file data/prompt.csv
+    --seed-file data/prompt.csv \
+    --output-dir "$OUTPUT_DIR"
 
 echo "All experiments completed!"

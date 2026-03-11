@@ -126,7 +126,7 @@ class NegationOperator(VariationOperator):
         if negated_question and self._is_valid_question(negated_question):
             return negated_question
 
-        self.logger.error(f"{self.name}: Failed to parse negated question from LLM response")
+        self.logger.warning(f"{self.name}: Failed to parse negated question from LLM response")
         return []
 
     def _is_valid_question(self, text: str) -> bool:

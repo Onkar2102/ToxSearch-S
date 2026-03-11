@@ -133,7 +133,7 @@ class PromptGenerator:
                             self.logger.debug(f"Successfully extracted {tag_name} content (malformed XML): {content[:50]}...")
                             return content
             
-            self.logger.warning(f"Failed to extract valid {tag_name} content from response: {response[:200]}...")
+            self.logger.debug("Failed to extract valid %s content from response: %.200s...", tag_name, response)
             return ""
             
         except Exception as e:

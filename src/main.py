@@ -37,7 +37,7 @@ from ea import get_create_final_statistics_with_tracker
 import yaml
 
 from utils import get_system_utils
-get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system = get_system_utils()
+get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system, set_outputs_path = get_system_utils()
 
 
 def _is_gguf_path(value: str) -> bool:
@@ -152,9 +152,10 @@ def update_model_configs(rg_model, pg_model, logger):
         raise
 
 
-def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv", 
+def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
+         max_total_genomes=None,
          # Speciation parameters
-         theta_sim=0.2, theta_merge=0.1, species_capacity=100, cluster0_max_capacity=1000, 
+         theta_sim=0.2, theta_merge=0.1, species_capacity=100, cluster0_max_capacity=1000,
          cluster0_min_cluster_size=2, min_island_size=2, species_stagnation=20,
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64):
     """
@@ -200,8 +201,11 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     
     start_time = time.time()
     north_star_metric = "toxicity"
-    logger.info("Starting evolutionary run: metric=%s, max_generations=%s",
-                north_star_metric, max_generations)
+    # Sequential mode always terminates by total genomes (elites + reserves + archives).
+    if max_total_genomes is None:
+        raise ValueError("Sequential mode requires --max-total-genomes; termination is always by total genomes.")
+    logger.info("Starting evolutionary run: metric=%s, max_total_genomes=%s (termination criteria)",
+                north_star_metric, max_total_genomes)
 
     # Resolve RG/PG model paths (aliases → concrete GGUF files) before initialization
     try:
@@ -219,6 +223,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         logger.error("System initialization failed: %s", e, exc_info=True)
         return
 
+    # Gen 0: wall-clock start (for generation_duration_seconds in tracker)
+    gen0_start = time.time()
     # Generate initial candidates into temp.json
     try:
         with PerformanceLogger(logger, "Gen 0: Generate initial responses"):
@@ -435,15 +441,24 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
             gen0_stats["reserves_moved"] = speciation_result.get("reserves_moved", 0)
             gen0_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
+            gen0_stats["generation_duration_seconds"] = time.time() - gen0_start
+            if speciation_result.get("speciation_duration_seconds") is not None:
+                gen0_stats["speciation_duration_seconds"] = speciation_result["speciation_duration_seconds"]
             
-            # Update EvolutionTracker with all statistics
+            # Update EvolutionTracker with all statistics (include run params for RQ analysis)
             update_evolution_tracker_with_statistics(
                 evolution_tracker_path=str(evolution_tracker_path),
                 current_generation=0,
                 statistics=gen0_stats,
                 operator_statistics=None,  # No operators in generation 0
                 logger=logger,
-                log_file=log_file
+                log_file=log_file,
+                run_metadata_update=dict(
+                    theta_sim=theta_sim,
+                    species_capacity=species_capacity,
+                    cluster0_max_capacity=cluster0_max_capacity,
+                    **({"max_total_genomes": max_total_genomes} if max_total_genomes is not None else {}),
+                ),
             )
             
             # Update adaptive selection logic (AFTER statistics are calculated, consistent with Generation N)
@@ -521,6 +536,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         logger.debug("Starting fresh")
     
     # Evolution loop: generate → moderate → speciate → redistribute each generation
+    terminated_by_total_genomes = False
+    final_total_genomes = None
     while max_generations is None or generation_count < max_generations:
         generation_count += 1
         gen_start = time.time()
@@ -907,9 +924,16 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             statistics=gen_stats,
                             operator_statistics=operator_statistics,
                             logger=logger,
-                            log_file=log_file
+                            log_file=log_file,
+                            run_metadata_update={"max_total_genomes": max_total_genomes} if max_total_genomes is not None else None,
                         )
-                        
+                        # Total genomes (elites + reserves + archives) for termination and summary
+                        total_genomes = gen_stats["elites_count"] + gen_stats["reserves_count"] + gen_stats.get("archived_count", 0)
+                        final_total_genomes = total_genomes
+                        if max_total_genomes is not None and total_genomes >= max_total_genomes:
+                            logger.info("Evolution completed: Total genomes limit reached (%d >= %d).", total_genomes, max_total_genomes)
+                            terminated_by_total_genomes = True
+                            break
                         # Update adaptive selection logic (AFTER statistics are calculated and saved)
                         # Compare current generation's population_max_toxicity vs previous cumulative
                         # If current > previous cumulative, there's improvement (new best found)
@@ -940,12 +964,11 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                         # Run live analysis and generate visualizations
                         try:
                             from utils.live_analysis import run_live_analysis
-                            analysis_results = run_live_analysis(
+                            run_live_analysis(
                                 outputs_path=str(get_outputs_path()),
                                 logger=logger
                             )
-                            logger.info("Live analysis complete: generated %d visualizations", 
-                                       sum(1 for v in analysis_results.values() if v))
+                            # Live analysis completion is already logged by run_live_analysis (N/N visualizations)
                         except Exception as e:
                             logger.warning("Failed to run live analysis: %s", e)
                 except Exception as e:
@@ -962,17 +985,20 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         except Exception as e:
             logger.error("Post-evolution processing failed: %s", e, exc_info=True)
 
-    if max_generations is not None and generation_count >= max_generations:
+    if terminated_by_total_genomes:
+        pass  # Already logged when breaking
+    elif max_generations is not None and generation_count >= max_generations:
         logger.info("Evolution completed: Maximum generation limit (%d) reached.", max_generations)
     else:
         logger.info("Evolution completed: Loop exited due to other conditions.")
 
-    
     total_time = time.time() - start_time
     logger.info("=== Pipeline Completed ===")
     logger.info("COMPLETED: Pipeline (full run) in %.3f seconds", total_time)
     logger.info("Total execution time: %.2f seconds", total_time)
     logger.info("Total generations: %d", generation_count)
+    if final_total_genomes is not None:
+        logger.info("Total genomes: %d", final_total_genomes)
 
     # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
     try:
@@ -1026,11 +1052,35 @@ if __name__ == "__main__":
                        help="Path to CSV file with seed prompts (must have 'questions' column). Default: data/prompt.csv")
     parser.add_argument("--batch-size", type=int, default=100,
                        help="Number of genomes per generation batch (K) for parallel mode. Default: 100")
+    parser.add_argument("--max-total-genomes", type=int, default=None,
+                       help="Stop sequential run when total genomes (elites + reserves + archives) reaches this cap. For fair comparison with parallel (e.g. set to max_generations * K). Ignored in parallel mode.")
     parser.add_argument("--parallel", action="store_true",
                        help="Run in MPI master-worker mode (use with mpiexec)")
+    parser.add_argument("--output-dir", type=str, default=None,
+                       help="Output directory for this run (default: data/outputs/<timestamp>). Use for reproducible experiment paths (e.g. data/outputs/rq1_workers_4).")
+    parser.add_argument("--profile", nargs="?", const="profile_main.prof", default=None,
+                       metavar="OUTPUT.prof",
+                       help="Enable cProfile profiling. Output is saved in the execution output directory as profile_main.prof. "
+                            "Inspect with: python -m pstats <file> or snakeviz <file>")
     args = parser.parse_args()
-    
+
+    if getattr(args, "output_dir", None):
+        set_outputs_path(args.output_dir)
+
     import sys
+
+    prof = None
+    if args.profile is not None:
+        import cProfile
+        prof = cProfile.Profile()
+
+    def _dump_profile():
+        if prof is not None:
+            prof.disable()
+            profile_path = str(get_outputs_path() / "profile_main.prof")
+            prof.dump_stats(profile_path)
+            print(f"Profile saved to {profile_path}")
+            print(f"  Inspect with: python -m pstats {profile_path}")
 
     if args.parallel:
         from parallel.master_worker import run as run_parallel
@@ -1055,26 +1105,34 @@ if __name__ == "__main__":
             embedding_batch_size=args.embedding_batch_size,
         )
 
-        run_parallel(
-            logger,
-            K=args.batch_size,
-            seed_file=args.seed_file,
-            operators_mode=args.operators,
-            moderation_methods=args.moderation_methods,
-            max_generations=args.generations,
-            north_star_metric="toxicity",
-            speciation_config=speciation_config,
-            log_file=log_file,
-            run_speciation_fn=run_speciation,
-        )
+        try:
+            if prof is not None:
+                prof.enable()
+            run_parallel(
+                logger,
+                K=args.batch_size,
+                seed_file=args.seed_file,
+                operators_mode=args.operators,
+                moderation_methods=args.moderation_methods,
+                max_generations=args.generations,
+                north_star_metric="toxicity",
+                speciation_config=speciation_config,
+                log_file=log_file,
+                run_speciation_fn=run_speciation,
+            )
+        finally:
+            _dump_profile()
         sys.exit(0)
 
     try:
+        if prof is not None:
+            prof.enable()
         main(max_generations=args.generations,
              moderation_methods=args.moderation_methods,
              rg_model=args.rg, pg_model=args.pg,
              operators=args.operators, max_variants=args.max_variants,
              stagnation_limit=args.stagnation_limit, seed_file=args.seed_file,
+             max_total_genomes=getattr(args, "max_total_genomes", None),
              # Speciation parameters
              theta_sim=args.theta_sim, theta_merge=args.theta_merge,
              species_capacity=args.species_capacity, cluster0_max_capacity=args.cluster0_max_capacity,
@@ -1088,3 +1146,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Fatal error: {e}")
         sys.exit(1)
+    finally:
+        _dump_profile()

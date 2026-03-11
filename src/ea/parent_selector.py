@@ -23,7 +23,7 @@ from utils.population_io import load_elites, _extract_north_star_score
 from utils import get_system_utils
 
 get_logger, _, _, _ = get_custom_logging()
-_, _, _, get_outputs_path, _, _ = get_system_utils()
+_, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 # Species ID for reserves (cluster 0)
 CLUSTER_0_ID = 0
@@ -386,7 +386,7 @@ class ParentSelector:
                 self.logger.warning(f"Reserves file not found: {reserves_path}")
 
             if not elites and not reserves:
-                self.logger.error("CRITICAL ERROR: No genomes in elites.json or reserves.json")
+                self.logger.critical("No genomes in elites.json or reserves.json - evolution cannot continue")
                 raise RuntimeError("No genomes available - evolution cannot continue.")
 
             # Get all species IDs present in genomes

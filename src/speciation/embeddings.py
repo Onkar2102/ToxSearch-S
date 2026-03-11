@@ -22,7 +22,7 @@ from utils import get_system_utils
 warnings.filterwarnings('ignore', category=FutureWarning, message='.*np.object.*')
 
 get_logger, _, _, PerformanceLogger = get_custom_logging()
-_, _, _, get_outputs_path, _, _ = get_system_utils()
+_, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 class EmbeddingModel:

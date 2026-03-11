@@ -202,7 +202,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         if typo_question and self._is_valid_question_with_typos(typo_question):
             return typo_question
 
-        self.logger.error(f"{self.name}: Failed to parse typo question from LLM response")
+        self.logger.warning(f"{self.name}: Failed to parse typo question from LLM response")
         return []
 
     def _is_valid_question_with_typos(self, text: str) -> bool:

@@ -69,7 +69,7 @@ class EventsTracker:
             path: Optional path to save file. If None, uses default outputs_path / "events_tracker.json" (consolidated)
         """
         from utils import get_system_utils
-        _, _, _, get_outputs_path, _, _ = get_system_utils()
+        _, _, _, get_outputs_path, _, _, _ = get_system_utils()
         
         if path is None:
             outputs_path = get_outputs_path()

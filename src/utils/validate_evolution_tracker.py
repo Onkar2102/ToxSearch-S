@@ -523,7 +523,7 @@ def validate_evolution_tracker_comprehensive(tracker_path: Path, logger=None) ->
 if __name__ == "__main__":
     import sys
     from utils import get_system_utils
-    _, _, _, get_outputs_path, _, _ = get_system_utils()
+    _, _, _, get_outputs_path, _, _, _ = get_system_utils()
     
     if len(sys.argv) > 1:
         tracker_path = Path(sys.argv[1])

@@ -229,7 +229,7 @@ def clean_population(population: List[Dict[str, Any]], *, logger=None, log_file:
     n_removed = len(population) - len(cleaned)
     if n_removed:
         _logger.warning("Removed %d None genomes from population", n_removed)
-    _logger.info("Population cleaned: %d → %d genomes", len(population), len(cleaned))
+    _logger.debug("Population cleaned: %d → %d genomes", len(population), len(cleaned))
     return cleaned
 
 
@@ -464,18 +464,18 @@ def load_population(pop_path: str = "data/outputs/reserves.json", *, logger=None
                 base_dir = pop_path_obj.parent
             if population_file.exists():
                 if pop_path_obj.is_dir():
-                    _logger.info("Using monolithic population file (preferred)")
+                    _logger.debug("Using monolithic population file (preferred)")
                 else:
-                    _logger.info("Using specified population file: %s", pop_path)
+                    _logger.debug("Using specified population file: %s", pop_path)
                 try:
                     with open(population_file, "r", encoding="utf-8") as f:
                         population = json.load(f)
 
                     population = clean_population(population, logger=_logger, log_file=log_file)
                     if pop_path_obj.is_dir():
-                        _logger.info("Successfully loaded population with %d genomes", len(population))
+                        _logger.debug("Successfully loaded population with %d genomes", len(population))
                     else:
-                        _logger.info("Successfully loaded population with %d genomes from %s", len(population), pop_path)
+                        _logger.debug("Successfully loaded population with %d genomes from %s", len(population), pop_path)
                     return population
                 except Exception as e:
                     _logger.warning("Failed to load population file: %s, falling back to split files", e)
@@ -483,23 +483,23 @@ def load_population(pop_path: str = "data/outputs/reserves.json", *, logger=None
             info = get_population_files_info(str(base_dir))
             
             if info["generation_counts"]:
-                _logger.info("Using single file mode with generation counts")
+                _logger.debug("Using single file mode with generation counts")
                 all_genomes = load_population(str(base_dir), logger=_logger, log_file=log_file)
                 
                 all_genomes = clean_population(all_genomes, logger=_logger, log_file=log_file)
-                _logger.info("Successfully loaded population with %d genomes from split files", len(all_genomes))
+                _logger.debug("Successfully loaded population with %d genomes from split files", len(all_genomes))
                 return all_genomes
             else:
                 if not os.path.exists(pop_path):
                     _logger.error("No population files found: neither reserves.json nor split files exist")
                     raise FileNotFoundError(f"No population files found in {base_dir}")
                 else:
-                    _logger.info("Using fallback population file: %s", pop_path)
+                    _logger.debug("Using fallback population file: %s", pop_path)
                     with open(pop_path, "r", encoding="utf-8") as f:
                         population = json.load(f)
 
                     population = clean_population(population, logger=_logger, log_file=log_file)
-                    _logger.info("Successfully loaded population with %d genomes from fallback file", len(population))
+                    _logger.debug("Successfully loaded population with %d genomes from fallback file", len(population))
                     return population
 
         except Exception as e:
@@ -1307,7 +1307,7 @@ def load_elites(elites_file_path: str = "data/outputs/elites.json",
         if elites_path.exists():
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites = json.load(f)
-            _logger.info(f"Loaded {len(elites)} elites from {elites_file_path}")
+            _logger.debug("Loaded %d elites from %s", len(elites), elites_file_path)
             return elites
         else:
             _logger.info(f"Elites file not found: {elites_file_path}, returning empty list")
@@ -1731,9 +1731,9 @@ def update_adaptive_selection_logic(
             tracker["generations_since_improvement"] = 0
             _logger.info(f"✓ Improvement detected! Max toxicity increased from {previous_max_toxicity:.4f} to {current_max_toxicity:.4f}")
         else:
-            # Additional validation: if current is very close to previous, log warning
+            # Additional validation: if current is very close to previous, log at debug
             if abs(current_max_toxicity - previous_max_toxicity) < 0.001:
-                _logger.warning(f"Values are very close: current={current_max_toxicity:.6f}, previous={previous_max_toxicity:.6f}")
+                _logger.debug("Values are very close: current=%.6f, previous=%.6f", current_max_toxicity, previous_max_toxicity)
             
             old_value = tracker.get("generations_since_improvement", 0)
             tracker["generations_since_improvement"] = old_value + 1

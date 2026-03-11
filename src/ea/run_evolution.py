@@ -18,7 +18,7 @@ from pathlib import Path
 get_logger, _, _, PerformanceLogger = get_custom_logging()
 
 from utils import get_system_utils
-get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system = get_system_utils()
+get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system, _ = get_system_utils()
 
 project_root = Path(__file__).resolve().parents[2]
 

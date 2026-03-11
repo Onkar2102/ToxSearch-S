@@ -42,6 +42,7 @@ def get_system_utils():
         get_config_path,
         get_data_path,
         get_outputs_path,
+        set_outputs_path,
         _extract_north_star_score,
         initialize_system
     )
@@ -51,7 +52,8 @@ def get_system_utils():
         get_data_path,
         get_outputs_path,
         _extract_north_star_score,
-        initialize_system
+        initialize_system,
+        set_outputs_path,
     )
 
 def get_cluster_quality():

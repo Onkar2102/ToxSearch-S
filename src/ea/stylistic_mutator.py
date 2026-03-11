@@ -214,7 +214,7 @@ Return only: <modified>YOUR_STYLISTICALLY_MODIFIED_QUESTION_HERE</modified>"""
 
             extracted_modified = self.generator._extract_content_from_xml_tags(stylistic_prompt, "modified")
             if not extracted_modified:
-                self.logger.error(f"{self.name}: Failed to parse modified text from LLM response")
+                self.logger.warning(f"{self.name}: Failed to parse modified text from LLM response")
                 return []
             stylistic_prompt = extracted_modified
 
@@ -224,7 +224,7 @@ Return only: <modified>YOUR_STYLISTICALLY_MODIFIED_QUESTION_HERE</modified>"""
                 self.logger.info(f"{self.name}: Generated stylistic variant with {selected_style} style")
                 return [stylistic_prompt]
             else:
-                self.logger.error(f"{self.name}: Stylistic mutation returned same or empty text")
+                self.logger.warning(f"{self.name}: Stylistic mutation returned same or empty text")
                 return []
 
         except Exception as e:

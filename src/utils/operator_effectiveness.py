@@ -18,7 +18,7 @@ from utils import get_custom_logging, get_system_utils
 from utils.population_io import _extract_north_star_score
 
 get_logger, _, _, _ = get_custom_logging()
-_, _, _, get_outputs_path, _, _ = get_system_utils()
+_, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 # get_expected_variant_count() was removed; expected_variant_count is not used for metric calculations.

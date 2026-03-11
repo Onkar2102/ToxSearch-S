@@ -159,7 +159,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
             if response:
                 replacement = self.generator._extract_content_from_xml_tags(response, "replacement")
                 if not replacement:
-                    self.logger.error(f"{self.name}: Failed to parse replacement from LLM response for {mask_token}")
+                    self.logger.warning(f"{self.name}: Failed to parse replacement from LLM response for {mask_token}")
                     continue
 
                 if (replacement and
@@ -173,7 +173,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
                     self.logger.error(f"{self.name}: Invalid replacement for {mask_token}: '{replacement}'")
                     continue
             else:
-                self.logger.error(f"{self.name}: Empty response for {mask_token}")
+                self.logger.warning(f"{self.name}: Empty response for {mask_token}")
                 continue
 
         self._last_structured_prompt = f"One-by-one prompts for {len(mask_mapping)} masks"
@@ -254,7 +254,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
                 self.logger.info(f"{self.name}: Generated {len(variants)} variants successfully")
                 return variants
             else:
-                self.logger.error(f"{self.name}: No variants generated - LLM may have refused all requests")
+                self.logger.warning(f"{self.name}: No variants generated - LLM may have refused all requests")
                 return []
 
         except Exception as e:

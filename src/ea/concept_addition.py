@@ -197,7 +197,7 @@ class ConceptAdditionOperator(VariationOperator):
         if enhanced_question and self._is_valid_question(enhanced_question):
             return enhanced_question
 
-        self.logger.error(f"{self.name}: Failed to parse enhanced question from LLM response")
+        self.logger.warning(f"{self.name}: Failed to parse enhanced question from LLM response")
         return []
 
     def _is_valid_question(self, text: str) -> bool:

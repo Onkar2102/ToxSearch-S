@@ -104,7 +104,7 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
         if variant and self._is_valid_question(variant):
             return variant
 
-        self.logger.error(f"{self.name}: Failed to parse crossover variant from LLM response")
+        self.logger.warning(f"{self.name}: Failed to parse crossover variant from LLM response")
         return []
 
     def _is_valid_question(self, text: str) -> bool:
