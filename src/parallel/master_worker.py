@@ -242,6 +242,27 @@ def _collect_operator_stats(accepted_genomes):
     return stats
 
 
+def _aggregate_parents_from_genomes(accepted_genomes):
+    """Build parents and top_10 for EvolutionTracker from creation_info of all genomes in this generation.
+    Each genome has 'parents' (list of {id, score}). We dedupe by id (normalized to str) and return slim format
+    {id, prompt, toxicity} so tracker format is consistent. top_10 = top 10 parents by score.
+    Returns (parents_list, top_10_list).
+    """
+    by_id = {}
+    for g in (accepted_genomes or []):
+        for p in (g.get("parents") or []):
+            pid = p.get("id")
+            if pid is None:
+                continue
+            key = str(pid)  # normalize so int 4 and str "4" dedupe
+            score = p.get("score") or p.get("toxicity") or 0
+            if key not in by_id or (by_id[key].get("toxicity") or 0) < score:
+                by_id[key] = {"id": pid, "prompt": (p.get("prompt") or "")[:100], "toxicity": score}
+    parents_list = list(by_id.values())
+    top10_list = sorted(parents_list, key=lambda x: (x.get("toxicity") or 0), reverse=True)[:10]
+    return parents_list, top10_list
+
+
 def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrated,
                     total_discarded, speciation_result, logger,
                     north_star_metric="toxicity", log_file=None,
@@ -298,8 +319,13 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             log_file=log_file,
         )
 
-        # Parents and top_10: use in-memory copy from when we sent PARENTS (preferred), else read from file
-        if sent_parents_top10 is not None:
+        # Parents and top_10: aggregate from accepted_genomes (all genomes in this generation)
+        # so we reflect every worker's parents; speciation does not wait for PARENTS_REQUEST.
+        if accepted_genomes:
+            parents_list, top10_list = _aggregate_parents_from_genomes(accepted_genomes)
+            gen_stats["parents"] = parents_list
+            gen_stats["top_10"] = top10_list
+        elif sent_parents_top10 is not None:
             gen_stats["parents"] = sent_parents_top10.get("parents", [])
             gen_stats["top_10"] = sent_parents_top10.get("top_10", [])
         else:
