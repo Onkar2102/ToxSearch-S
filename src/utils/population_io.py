@@ -41,77 +41,39 @@ def get_data_path():
 # Global variable to store the outputs path for the current run
 _current_outputs_path = None
 
+def _max_genome_id_from_iter(genomes) -> int:
+    """Return max genome id from an iterable of genome dicts; 0 if none valid."""
+    out = 0
+    for g in genomes:
+        if not isinstance(g, dict):
+            continue
+        kid = g.get("id")
+        if kid is not None and isinstance(kid, (int, float)):
+            out = max(out, int(kid))
+    return out
+
+
 def get_max_genome_id_from_all_files(outputs_path: Optional[Union[str, Path]] = None) -> int:
     """
     Find the maximum genome ID across all genome files (elites.json, reserves.json, archive.json).
-    
-    So new genomes get unique IDs that don't conflict with existing genomes in alive
-    or dead populations.
-    
-    Args:
-        outputs_path: Path to outputs directory. If None, uses get_outputs_path()
-        
-    Returns:
-        Maximum genome ID found across all files, or 0 if no genomes exist
+    So new genomes get unique IDs that don't conflict with existing genomes in alive or dead populations.
     """
-    if outputs_path is None:
-        outputs_path = get_outputs_path()
-    else:
-        outputs_path = Path(outputs_path)
-    
+    outputs_path = get_outputs_path() if outputs_path is None else Path(outputs_path)
+    log = get_logger("GetMaxGenomeID")
     max_id = 0
-    
-    # Check elites.json
-    elites_path = outputs_path / "elites.json"
-    if elites_path.exists():
+    for fname in ("elites.json", "reserves.json", "archive.json"):
+        path = outputs_path / fname
+        if not path.exists():
+            continue
         try:
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                elites = json.load(f)
-            for genome in elites:
-                genome_id = genome.get("id")
-                if genome_id is not None and isinstance(genome_id, (int, float)):
-                    max_id = max(max_id, int(genome_id))
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                max_id = max(max_id, _max_genome_id_from_iter(data))
+            elif isinstance(data, dict) and data:
+                max_id = max(max_id, _max_genome_id_from_iter(data.values()))
         except Exception as e:
-            logger = get_logger("GetMaxGenomeID")
-            logger.warning(f"Failed to read elites.json for max ID: {e}")
-    
-    # Check reserves.json
-    reserves_path = outputs_path / "reserves.json"
-    if reserves_path.exists():
-        try:
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves = json.load(f)
-            for genome in reserves:
-                genome_id = genome.get("id")
-                if genome_id is not None and isinstance(genome_id, (int, float)):
-                    max_id = max(max_id, int(genome_id))
-        except Exception as e:
-            logger = get_logger("GetMaxGenomeID")
-            logger.warning(f"Failed to read reserves.json for max ID: {e}")
-    
-    # Check archive.json
-    archive_path = outputs_path / "archive.json"
-    if archive_path.exists():
-        try:
-            with open(archive_path, 'r', encoding='utf-8') as f:
-                archive = json.load(f)
-            # archive.json can be a list or empty dict
-            if isinstance(archive, list):
-                for genome in archive:
-                    genome_id = genome.get("id")
-                    if genome_id is not None and isinstance(genome_id, (int, float)):
-                        max_id = max(max_id, int(genome_id))
-            elif isinstance(archive, dict) and len(archive) > 0:
-                # Handle dict format (shouldn't happen, but handle gracefully)
-                for genome in archive.values():
-                    if isinstance(genome, dict):
-                        genome_id = genome.get("id")
-                        if genome_id is not None and isinstance(genome_id, (int, float)):
-                            max_id = max(max_id, int(genome_id))
-        except Exception as e:
-            logger = get_logger("GetMaxGenomeID")
-            logger.warning(f"Failed to read archive.json for max ID: {e}")
-    
+            log.warning("Failed to read %s for max ID: %s", fname, e)
     return max_id
 
 
@@ -142,51 +104,29 @@ def get_outputs_path():
     return outputs_dir
 
 def _extract_north_star_score(genome, metric="toxicity"):
-    """Extract the north star metric score from a genome.
-    
-    Priority order:
-    1. moderation_result.google.scores[metric] (standard format)
-    2. moderation_result.scores[metric] (legacy format)
-    3. Direct field: metric (e.g., "toxicity" for top_10.json slimmed format)
-    4. scores[metric] (nested field)
-    
-    Returns minimum 0.0001 for consistency across the project.
-    """
+    """Extract north star score from genome. Priority: moderation_result.google.scores, .scores, genome[metric], genome.scores. Returns min 0.0001."""
     if not genome:
         return 0.0001
-    
-    # Priority 1: moderation_result.google.scores[metric] (standard format)
-    if "moderation_result" in genome:
-        moderation_result = genome["moderation_result"]
-        
-        # Skip if moderation_result is None
-        if moderation_result is None:
-            pass  # Fall through to other priorities
-        elif "google" in moderation_result:
-            google_scores = moderation_result["google"]
-            if google_scores is not None and "scores" in google_scores:
-                score = google_scores["scores"].get(metric, 0.0001)
-                if score is not None and score > 0:
-                    return round(float(score), 4)
-        
-        # Priority 2: moderation_result.scores[metric] (legacy format)
-        if moderation_result is not None and "scores" in moderation_result:
-            score = moderation_result["scores"].get(metric, 0.0001)
-            if score is not None and score > 0:
-                return round(float(score), 4)
-    
-    # Priority 3: Direct field (e.g., "toxicity" for top_10.json slimmed format)
-    if metric in genome:
-        score = genome.get(metric)
-        if score is not None and score > 0:
-            return round(float(score), 4)
-    
-    # Priority 4: scores[metric] (nested field)
-    if "scores" in genome and isinstance(genome["scores"], dict):
-        score = genome["scores"].get(metric, 0.0001)
-        if score is not None and score > 0:
-            return round(float(score), 4)
-    
+
+    def _valid(s):
+        return s is not None and float(s) > 0
+
+    mr = genome.get("moderation_result")
+    if mr and isinstance(mr, dict):
+        if "google" in mr and mr["google"] and "scores" in mr["google"]:
+            s = mr["google"]["scores"].get(metric, 0.0001)
+            if _valid(s):
+                return round(float(s), 4)
+        if "scores" in mr:
+            s = mr["scores"].get(metric, 0.0001)
+            if _valid(s):
+                return round(float(s), 4)
+    if metric in genome and _valid(genome.get(metric)):
+        return round(float(genome[metric]), 4)
+    if isinstance(genome.get("scores"), dict):
+        s = genome["scores"].get(metric, 0.0001)
+        if _valid(s):
+            return round(float(s), 4)
     return 0.0001
 
 
@@ -285,16 +225,12 @@ def clean_population(population: List[Dict[str, Any]], *, logger=None, log_file:
         Cleaned population with None genomes removed.
     """
     _logger = logger or get_logger("population_io", log_file)
-    
-    original_count = len(population)
-    cleaned_population = [g for g in population if g is not None]
-    removed_count = original_count - len(cleaned_population)
-    
-    if removed_count > 0:
-        _logger.warning("Removed %d None genomes from population", removed_count)
-    
-    _logger.info("Population cleaned: %d → %d genomes", original_count, len(cleaned_population))
-    return cleaned_population
+    cleaned = [g for g in population if g is not None]
+    n_removed = len(population) - len(cleaned)
+    if n_removed:
+        _logger.warning("Removed %d None genomes from population", n_removed)
+    _logger.info("Population cleaned: %d → %d genomes", len(population), len(cleaned))
+    return cleaned
 
 
 
@@ -337,51 +273,25 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
         except Exception as e:
             _log.debug("get_population_files_info: EvolutionTracker read failed (%s), falling back to file scanning", e)
     
-    # Count genomes in reserves.json (fallback if EvolutionTracker not available)
-    if population_file.exists():
+    def count_generations(genomes):
+        for g in genomes or []:
+            if g and "generation" in g:
+                k = str(g["generation"])
+                info["generation_counts"][k] = info["generation_counts"].get(k, 0) + 1
+
+    for path in (population_file, elites_file):
+        if not path.exists():
+            continue
         try:
-            with open(population_file, 'r', encoding='utf-8') as f:
-                population = json.load(f)
-            
-            
-            # Count genomes by generation
-            for genome in population:
-                if genome and "generation" in genome:
-                    gen_num = str(genome["generation"])
-                    info["generation_counts"][gen_num] = info["generation_counts"].get(gen_num, 0) + 1
-            
+            with open(path, 'r', encoding='utf-8') as f:
+                count_generations(json.load(f))
         except Exception as e:
-            _log.debug("get_population_files_info: could not read reserves.json (%s)", e)
-    
-    # Count genomes in elites.json
-    if elites_file.exists():
-        try:
-            with open(elites_file, 'r', encoding='utf-8') as f:
-                elites = json.load(f)
-            
-            
-            # Add elite genomes to generation counts
-            for genome in elites:
-                if genome and "generation" in genome:
-                    gen_num = str(genome["generation"])
-                    info["generation_counts"][gen_num] = info["generation_counts"].get(gen_num, 0) + 1
-            
-        except Exception as e:
-            _log.debug("get_population_files_info: could not read elites.json (%s)", e)
-    
-    # Calculate total genomes and generations
-    
-    # Ensure all generations from 0 to max are represented, even if they have 0 variants
+            _log.debug("get_population_files_info: could not read %s (%s)", path.name, e)
+
     if info["generation_counts"]:
-        max_generation = max(int(k) for k in info["generation_counts"].keys())
-        # Fill in missing generations with 0 counts
-        for gen_num in range(max_generation + 1):
-            if str(gen_num) not in info["generation_counts"]:
-                info["generation_counts"][str(gen_num)] = 0
-        info["total_generations"] = max_generation + 1
-    else:
-        info["total_generations"] = 0
-    
+        max_gen = max(int(k) for k in info["generation_counts"])
+        info["generation_counts"] = {str(g): info["generation_counts"].get(str(g), 0) for g in range(max_gen + 1)}
+        info["total_generations"] = max_gen + 1
     return info
 
 
@@ -395,32 +305,23 @@ def update_population_index_single_file(base_dir: str, total_genomes: int, *, lo
         info = get_population_files_info(base_dir)
         evolution_tracker_file = Path(base_dir) / "EvolutionTracker.json"
         
+        default_tracker = {
+            "status": "not_complete",
+            "total_generations": 1,
+            "generations_since_improvement": 0,
+            "avg_fitness_history": [],
+            "slope_of_avg_fitness": 0.0,
+            "selection_mode": "default",
+            "generations": [],
+        }
         if evolution_tracker_file.exists():
             try:
                 with open(evolution_tracker_file, 'r', encoding='utf-8') as f:
                     tracker = json.load(f)
             except (json.JSONDecodeError, FileNotFoundError):
-                tracker = {
-                    "status": "not_complete",
-                    "total_generations": 1,
-                    "generations_since_improvement": 0,
-                    "avg_fitness_history": [],
-                    "slope_of_avg_fitness": 0.0,
-                    "selection_mode": "default",
-                    "generations": []
-                }
+                tracker = dict(default_tracker)
         else:
-                tracker = {
-                    "status": "not_complete",
-                    "total_generations": 1,
-                    "generations_since_improvement": 0,
-                    "avg_fitness_history": [],
-                    "slope_of_avg_fitness": 0.0,
-                    "selection_mode": "default",
-                    "generations": []
-                }
-        
-        
+            tracker = dict(default_tracker)
         tracker["total_generations"] = info["total_generations"]
         
         with open(evolution_tracker_file, 'w', encoding='utf-8') as f:

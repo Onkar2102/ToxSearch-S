@@ -39,8 +39,7 @@ def _non_dominated_sort(diversity: np.ndarray, toxicity: np.ndarray) -> List[Lis
             if not dominated:
                 front.append(i)
         fronts.append(front)
-        remaining_set = set(remaining) - set(front)
-        remaining = [r for r in remaining if r in remaining_set]
+        remaining = list(set(remaining) - set(front))
     return fronts
 
 

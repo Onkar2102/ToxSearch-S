@@ -13,6 +13,7 @@ import time
 import hashlib
 import threading
 import sys
+from itertools import islice
 from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 from utils import get_custom_logging, get_population_io
@@ -67,11 +68,13 @@ def _cache_result(text: str, result: Dict, api_name: str = ""):
 def _cleanup_cache_if_needed():
     """Remove oldest ~20% of cache entries when size exceeds _MAX_CACHE_SIZE."""
     global _moderation_cache
-    if len(_moderation_cache) > _MAX_CACHE_SIZE:
-        items_to_remove = list(_moderation_cache.keys())[:len(_moderation_cache)//5]
-        for key in items_to_remove:
-            del _moderation_cache[key]
-        logger.info(f"Cleaned moderation cache: removed {len(items_to_remove)} entries, cache size now: {len(_moderation_cache)}")
+    n = len(_moderation_cache)
+    if n <= _MAX_CACHE_SIZE:
+        return
+    to_remove = list(islice(_moderation_cache.keys(), n // 5))
+    for k in to_remove:
+        del _moderation_cache[k]
+    logger.info("Cleaned moderation cache: removed %d entries, cache size now: %d", len(to_remove), len(_moderation_cache))
 
 class HybridModerationEvaluator:
     """

@@ -312,13 +312,12 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         gen_stats["total_integrated"] = total_integrated
         gen_stats["total_discarded"] = total_discarded
 
-        for key in ("species_count", "active_species_count", "frozen_species_count",
+        _spec_keys = ("species_count", "active_species_count", "frozen_species_count",
                      "reserves_size", "speciation_events", "merge_events",
                      "extinction_events", "archived_count", "elites_moved",
                      "reserves_moved", "genomes_updated", "inter_species_diversity",
-                     "intra_species_diversity", "cluster_quality", "speciation_duration_seconds"):
-            if key in speciation_result:
-                gen_stats[key] = speciation_result[key]
+                     "intra_species_diversity", "cluster_quality", "speciation_duration_seconds")
+        gen_stats.update({k: speciation_result[k] for k in _spec_keys if k in speciation_result})
         if generation_duration_seconds is not None:
             gen_stats["generation_duration_seconds"] = round(generation_duration_seconds, 3)
         if accepted_genomes:
