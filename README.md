@@ -236,6 +236,29 @@ If the master should not use a GPU (e.g. to leave all GPUs for workers), set `CU
 
 ---
 
+## Experiment metrics (throughput and search performance)
+
+You can report two kinds of results from a run:
+
+1. **Throughput** — evaluated genomes per second (how many prompts got a response and moderation per second).
+2. **Search performance** — whether the search finds more toxic responses faster (best toxicity over wall-clock time; time to reach a given toxicity threshold).
+
+Both are computed from `EvolutionTracker.json`. Use the helper script (from project root):
+
+```bash
+PYTHONPATH=src python scripts/experiment_metrics.py [run_dir]
+```
+
+Example: `PYTHONPATH=src python scripts/experiment_metrics.py data/outputs/20260311_1742`
+
+- **run_dir** is a run directory under `data/outputs/<timestamp>`. If omitted, the latest run is used.
+- The script prints overall and per-generation throughput, final best fitness, and time to reach toxicity thresholds (e.g. 0.2, 0.3, 0.4, 0.5).
+- It writes `run_dir/experiment_metrics.json` and, if matplotlib is available, `run_dir/figures/toxicity_vs_time.png` (best fitness vs cumulative time).
+
+Data source: each generation already has `generation_duration_seconds` and either `total_evaluated` (parallel) or `budget.llm_calls` (sequential); best toxicity is in `best_fitness` / `max_score_variants`.
+
+---
+
 ## Reproducibility
 
 To reproduce or compare experimental results, the following should be fixed or recorded.

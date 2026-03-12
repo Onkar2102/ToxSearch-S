@@ -30,18 +30,12 @@ device_config:
     use_mmap: true
   preferred_device: null
 response_generator:
-  enable_cpu_fallback: true
-  enable_memory_cleanup: true
-  enable_model_caching: true
   generation_args:
     max_new_tokens: 2048
     repetition_penalty: 1.0
     temperature: 0.8
     top_k: 40
     top_p: 0.9
-  log_failing_prompts: true
-  max_memory_usage_gb: 12.0
-  model_loading_timeout: 300
   name: models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf
   prompt_template:
     messages:
@@ -49,7 +43,3 @@ response_generator:
       role: system
     - content: '{{prompt}}'
       role: user
-  provider: local
-  strategy: local
-  task_type: response-generation
-  use_simulation: false

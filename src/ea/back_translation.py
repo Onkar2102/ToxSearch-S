@@ -25,7 +25,7 @@ get_logger = logging.getLogger
 class _GenericLLMBackTranslationOperator(VariationOperator):
     """Generic back-translation operator for text mutation."""
 
-    EN_TO_TARGET_PROMPT = """You are a professional {target_language} translator. Translate the following question from English to {target_language}.
+    EN_TO_TARGET_PROMPT = """You are an expert {target_language} translator. Translate the following question from English to {target_language}.
 
 Requirements:
 1. Output EXACTLY one XML tag pair: <trans>...</trans>

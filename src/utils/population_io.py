@@ -2086,6 +2086,7 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "variants_created": 0,
         "mutation_variants": 0,
         "crossover_variants": 0,
+        "variants_integrated": None,  # Actual count of prompts added this gen (evaluated, passed dedup, sent to speciation)
         "elites_count": 0,
         "reserves_count": 0,
         "archived_count": 0,
@@ -2295,6 +2296,8 @@ def update_evolution_tracker_with_statistics(
             gen_entry["mutation_variants"] = statistics.get("mutation_variants", 0)
         if statistics.get("crossover_variants") is not None:
             gen_entry["crossover_variants"] = statistics.get("crossover_variants", 0)
+        if statistics.get("variants_integrated") is not None:
+            gen_entry["variants_integrated"] = statistics.get("variants_integrated", 0)
         
         # Parents and top_10: use from statistics if provided (e.g. parallel master), else load from files
         if statistics.get("parents") is not None:

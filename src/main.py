@@ -201,10 +201,10 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     
     start_time = time.time()
     north_star_metric = "toxicity"
-    # Sequential mode always terminates by total genomes (elites + reserves + archives).
+    # Primary termination is by total genomes (elites + reserves + archives).
     if max_total_genomes is None:
-        raise ValueError("Sequential mode requires --max-total-genomes; termination is always by total genomes.")
-    logger.info("Starting evolutionary run: metric=%s, max_total_genomes=%s (termination criteria)",
+        raise ValueError("Sequential mode requires --max-total-genomes; primary termination is by total genomes.")
+    logger.info("Starting evolutionary run: metric=%s, max_total_genomes=%s (primary termination criteria)",
                 north_star_metric, max_total_genomes)
 
     # Resolve RG/PG model paths (aliases → concrete GGUF files) before initialization
@@ -421,9 +421,15 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             # For generation 0, gen0_stats["population_max_toxicity"] is already set correctly by calculate_generation_statistics()
             gen0_stats["best_genome_id"] = None  # Can be calculated if needed
             gen0_stats["avg_fitness"] = avg_fitness_before_speciation  # Before speciation, after evaluation
-            gen0_stats["variants_created"] = 0  # No variants in generation 0
+            gen0_stats["variants_created"] = 0  # No operator-generated variants in generation 0
             gen0_stats["mutation_variants"] = 0
             gen0_stats["crossover_variants"] = 0
+            # Genomes added to population in gen 0 = seed-evaluated and placed (elites + reserves + archive)
+            gen0_stats["variants_integrated"] = (
+                gen0_stats.get("elites_count", 0)
+                + gen0_stats.get("reserves_count", 0)
+                + gen0_stats.get("archived_count", 0)
+            )
             # For generation 0, max_score_variants is the max from temp.json (initial population before speciation)
             gen0_stats["max_score_variants"] = gen0_max_score
             gen0_stats["min_score_variants"] = 0.0001  # Default for generation 0
@@ -607,7 +613,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 logger.warning("Gen %d: Failed to compute avg_fitness before speciation: %s", generation_count, e)
             
             # Calculate variant counts and statistics BEFORE speciation (temp.json gets cleared during speciation)
-            variant_counts = {"variants_created": 0, "mutation_variants": 0, "crossover_variants": 0}
+            variant_counts = {"variants_created": 0, "mutation_variants": 0, "crossover_variants": 0, "variants_integrated": 0}
             max_score_variants = 0.0001
             min_score_variants = 0.0001
             avg_fitness_variants = 0.0001
@@ -641,7 +647,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 variant_counts = {
                     "variants_created": total_generated,  # Total generated (before deduplication/rejection)
                     "mutation_variants": mutation_count,  # Remaining mutation variants
-                    "crossover_variants": crossover_count  # Remaining crossover variants
+                    "crossover_variants": crossover_count,  # Remaining crossover variants
+                    "variants_integrated": remaining_count,  # Actual count of prompts added (evaluated, passed dedup, sent to speciation)
                 }
                 
                 if remaining_variants:
@@ -770,7 +777,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                         "generation_number": generation_count,
                         "variants_created": variant_counts["variants_created"],
                         "mutation_variants": variant_counts["mutation_variants"],
-                        "crossover_variants": variant_counts["crossover_variants"]
+                        "crossover_variants": variant_counts["crossover_variants"],
+                        "variants_integrated": variant_counts.get("variants_integrated", 0),
                     }
                     
                     from utils.population_io import load_population
@@ -830,6 +838,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                         gen_stats["variants_created"] = variant_counts["variants_created"]
                         gen_stats["mutation_variants"] = variant_counts["mutation_variants"]
                         gen_stats["crossover_variants"] = variant_counts["crossover_variants"]
+                        gen_stats["variants_integrated"] = variant_counts.get("variants_integrated", 0)
                         
                         # Add speciation metrics if available (for EvolutionTracker speciation block)
                         if 'speciation_result' in locals():
@@ -1055,7 +1064,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=100,
                        help="Number of genomes per generation batch (K) for parallel mode. Default: 100")
     parser.add_argument("--max-total-genomes", type=int, default=None,
-                       help="Stop sequential run when total genomes (elites + reserves + archives) reaches this cap. For fair comparison with parallel (e.g. set to max_generations * K). Ignored in parallel mode.")
+                       help="Primary termination: stop when total genomes (elites + reserves + archives) reaches this cap. Required for both sequential and parallel. E.g. set to max_generations * K for fair comparison.")
     parser.add_argument("--parallel", action="store_true",
                        help="Run in MPI master-worker mode (use with mpiexec)")
     parser.add_argument("--output-dir", type=str, default=None,
@@ -1089,6 +1098,8 @@ if __name__ == "__main__":
         from speciation.run_speciation import run_speciation
         from speciation.config import SpeciationConfig
 
+        if getattr(args, "max_total_genomes", None) is None:
+            raise ValueError("Parallel mode requires --max-total-genomes; primary termination is by total genomes (elites + reserves + archives).")
         get_logger, get_log_filename, _, _ = get_custom_logging()
         log_file = get_log_filename()
         logger = get_logger("master_worker", log_file)
@@ -1118,6 +1129,7 @@ if __name__ == "__main__":
                 operators_mode=args.operators,
                 moderation_methods=args.moderation_methods,
                 max_generations=args.generations,
+                max_total_genomes=getattr(args, "max_total_genomes", None),
                 north_star_metric="toxicity",
                 speciation_config=speciation_config,
                 log_file=log_file,

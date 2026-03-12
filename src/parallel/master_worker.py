@@ -289,6 +289,8 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
     if config_dict is not None:
         keys_list = config_dict.get("perspective_api_keys") or []
         run_meta["num_perspective_keys"] = len(keys_list) if isinstance(keys_list, list) else 0
+        if config_dict.get("max_total_genomes") is not None:
+            run_meta["max_total_genomes"] = config_dict["max_total_genomes"]
 
     if not tracker_path.exists():
         logger.info("Creating new EvolutionTracker.json")
@@ -365,6 +367,8 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["total_evaluation_api_wait_seconds"] = round(total_api_wait, 2)
 
         operator_statistics = None
+        # accepted_genomes = post-dedup set from buffer (same as temp.json): final set actually added to population
+        gen_stats["variants_integrated"] = len(accepted_genomes) if accepted_genomes else 0
         if accepted_genomes:
             operator_statistics = _collect_operator_stats(accepted_genomes)
             mutation_count = sum(1 for g in accepted_genomes if g.get("variant_type") != "crossover")
@@ -635,9 +639,13 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             n_prompts_batch, len(gen0_assignments))
 
             elif shutdown:
+                # Worker requested more work only after finishing and reporting current task(s);
+                # we send stop now so it does not start more genomes (aligns with: let workers
+                # report currently running tasks to finish up, then send stop).
                 send_payload(comm, source, PARENTS, None, logger=logger)
                 finished_workers += 1
-                logger.info("Shutdown sent to worker %d  (%d/%d workers finished)",
+                logger.info("Shutdown sent to worker %d (worker stops immediately). (%d/%d workers finished). "
+                            "Any genomes already in buffers will be included in drain, not discarded.",
                             source, finished_workers, n_workers)
 
             else:
@@ -743,16 +751,35 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 gen0_complete = True
                 generation_id += 1
 
+                # Termination reached: master will send shutdown to workers on their next request;
+                # workers stop immediately. Genomes already in buffers are included in drain (not discarded).
                 if max_generations is not None and generation_id >= max_generations:
                     shutdown = True
                     logger.info("SHUTDOWN REASON: max generations reached (%d/%d).",
                                 generation_id, max_generations)
+                else:
+                    max_total = (config_dict or {}).get("max_total_genomes")
+                    if max_total is not None:
+                        try:
+                            with open(outputs_path / "EvolutionTracker.json", "r", encoding="utf-8") as f:
+                                tracker = json.load(f)
+                            gens = tracker.get("generations") or []
+                            last = next((g for g in reversed(gens) if g.get("generation_number") == generation_id - 1), None)
+                            if last is not None:
+                                total_genomes = last.get("elites_count", 0) + last.get("reserves_count", 0) + last.get("archived_count", 0)
+                                if total_genomes >= max_total:
+                                    shutdown = True
+                                    logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
+                                                total_genomes, max_total)
+                        except Exception as e:
+                            logger.debug("Could not check max_total_genomes: %s", e)
 
     logger.info("All workers finished requesting. recv_count=%d", recv_count)
 
+    # Include all remaining buffered genomes (do not discard). Merge + speciation, then final tracker update.
     if _total_buffered() > 0:
         logger.info("="*50)
-        logger.info("Drain phase: %d genomes remaining in buffers. %s",
+        logger.info("Drain phase: including %d genomes from buffers (not discarded). %s",
                      _total_buffered(), _buffer_state_str())
         drain_start = time.time()
         accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
@@ -773,7 +800,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         batch_size_K=K, speciation_config=speciation_config, config_dict=config_dict)
         _run_live_analysis(outputs_path, logger)
         drain_elapsed = time.time() - drain_start
-        logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d",
+        logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d (buffered genomes included in population)",
                      drain_elapsed, accepted, discarded)
         logger.info("="*50)
 
@@ -1091,18 +1118,21 @@ def _rank_log_file(base_log_file, rank):
 
 def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         speciation_config=None, log_file=None, max_generations=2,
+        max_total_genomes=None,
         run_speciation_fn=None,
         operators_mode="all", seed_file="data/prompt.csv", seed=None,
         moderation_methods=None,
         response_generator=None, prompt_generator=None, evaluator=None,
         perspective_api_keys=None):
-    """MPI entry point. Branch on rank."""
+    """MPI entry point. Branch on rank. Primary termination is by total genomes (--max-total-genomes required)."""
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
 
     if size < 2:
         raise RuntimeError("Need at least 2 MPI ranks (1 master + 1 worker)")
+    if max_total_genomes is None:
+        raise ValueError("Parallel mode requires max_total_genomes (--max-total-genomes); primary termination is by total genomes.")
 
     # Assign device by rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
     from utils.device_utils import device_manager
@@ -1147,6 +1177,7 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         "outputs_path": outputs_path,
         "K": K,
         "perspective_api_keys": perspective_api_keys,
+        "max_total_genomes": max_total_genomes,
     }
 
     logger.info("MPI rank %d of %d starting", rank, size)

@@ -54,9 +54,6 @@ class LlamaCppChatInterface(ModelInterface):
         self.logger = get_logger("LlamaCppChatInterface", log_file)
         self.model_cfg = model_cfg
         
-        self.enable_memory_cleanup = model_cfg.get("enable_memory_cleanup", True)
-        self.max_memory_usage_gb = model_cfg.get("max_memory_usage_gb", 12.0)
-        
         self.generation_count = 0
         self.total_tokens_generated = 0
         self.total_generation_time = 0.0

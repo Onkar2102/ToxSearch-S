@@ -1,34 +1,22 @@
-#!/bin/bash
-# HPC Slurm job script: parallel (MPI) mode for ToxSearch-S.
-#
-# Runs evolution with 1 master + (ntasks-1) workers. Set --ntasks to 1 + desired
-# worker count (e.g. 5 for 4 workers). Requires MPI (srun launches ntasks processes).
-#
-# Output directory is auto-generated (data/outputs/<timestamp>) per run.
-#
-# Profiling (cProfile): --profile is enabled; profile is saved in the run's output dir as profile_main.prof.
-#   Inspect with: python -m pstats <path> or snakeviz <path>.
-#
-# Full experiment matrix and RQs:
-#   See experiments/RQ_EXPERIMENTS.md. Vary --ntasks (e.g. 2, 5, 9 for 1/4/8 workers),
-#   --batch-size (K), and --generations.
+#!/bin/bash -l
 
-#SBATCH --job-name=search1
-#SBATCH --time=3-23:59:00
+#SBATCH --job-name=txshs3
+#SBATCH --time=0-00:59:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
-#SBATCH --nodes=1
+#SBATCH --nodes=2
 #SBATCH --ntasks=3
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=48g
+#SBATCH --gpus-per-task=1
+#SBATCH --cpus-per-task=2
+#SBATCH --mem-per-cpu=1g
 #SBATCH --account=evostar
-#SBATCH --partition=tier3
-#SBATCH --gres=gpu:a100:2
+#SBATCH --partition=debug
+##SBATCH --gres=gpu:a100:2
 
 set -euo pipefail
 cd /home/os9660/ToxSearch-S
 
-module purge 2>/dev/null || true
+# module purge 2>/dev/null || true
 
 # 1) Spack env (same one you use interactively)
 spack env activate default-nlp-x86_64-25111801
@@ -83,32 +71,33 @@ llm = Llama(
 print("LLAMA_GPU_SMOKETEST_OK")
 PY
 
+
 cd /home/os9660/ToxSearch-S || exit 1
 export PYTHONPATH=/home/os9660/ToxSearch-S/src
 python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|cluster0" || exit 1
 
-# 8) MPI launch with srun (1 master + (ntasks-1) workers).
-#    If MPI hangs, try: srun --mpi=pmi2 ...
+# 8) Run: use srun + --parallel for parallel (MPI); for single-process omit srun and --parallel.
 #    Profile is written to the run's output dir (data/outputs/<timestamp>/profile_main.prof).
-srun python -u src/main.py \
-    --parallel \
+#    Non-parallel (single process):
+#      python src/main.py \
+#    Parallel (MPI, use srun):
+#      srun python src/main.py --parallel \
+python src/main.py \
     --profile \
-    --batch-size 100 \
-    --generations 250 \
+    --batch-size 1000 \
+    --generations 400 \
     --moderation-methods google \
-    --stagnation-limit 10 \
+    --stagnation-limit 5 \
     --theta-sim 0.35 \
     --theta-merge 0.35 \
-    --species-capacity 150 \
+    --species-capacity 100 \
     --cluster0-max-capacity 1000 \
     --cluster0-min-cluster-size 1 \
-    --min-island-size 5 \
-    --species-stagnation 30 \
+    --min-island-size 3 \
+    --species-stagnation 20 \
     --embedding-model all-MiniLM-L6-v2 \
     --embedding-dim 384 \
     --embedding-batch-size 64 \
-    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
     --operators all \
     --max-variants 1 \
     --seed-file data/prompt.csv \

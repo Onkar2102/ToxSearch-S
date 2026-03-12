@@ -52,10 +52,6 @@ class PromptGenerator:
         except Exception as e:
             self.logger.error(f"Failed to initialize model interface: {e}")
             raise
-        
-        self.task_templates = config.get("task_templates", {})
-        self.llm_config = config.get("llm_config", {})
-        self.operator_config = config.get("operator_config", {})
 
         self.generation_count = 0
         self.total_tokens_generated = 0
