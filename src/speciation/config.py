@@ -25,6 +25,10 @@ class SpeciationConfig:
                      Must be <= theta_sim (typically < theta_sim for effective merging).
                      Default: 0.1 (stricter threshold - only very similar species merge)
         
+        min_stability_gens: Minimum age (generations) for a species to be mergeable.
+                            Both species must satisfy (current_gen - created_at) >= min_stability_gens.
+                            Default: 5 (species must exist at least 5 generations before merging)
+        
         # Cluster 0 Parameters
         cluster0_min_cluster_size: Minimum cluster size required for cluster 0 speciation.
                                    When cluster 0 individuals form a cohesive cluster of this size,
@@ -72,7 +76,8 @@ class SpeciationConfig:
     # Clustering (thresholds in [0, 1] for ensemble distance)
     theta_sim: float = 0.25  # Species radius threshold - individuals within this distance join a species
     theta_merge: float = 0.1  # Merge threshold - species with leader distance < this value can merge (must be <= theta_sim)
-    
+    min_stability_gens: int = 5  # Minimum generations a species must exist before it can be merged
+
     # Cluster 0
     cluster0_min_cluster_size: int = 2
     cluster0_max_capacity: int = 1000
@@ -99,7 +104,8 @@ class SpeciationConfig:
         assert 0 <= self.theta_merge <= 1, f"theta_merge must be in [0, 1] for ensemble distance"
         assert self.theta_merge <= self.theta_sim, \
             f"theta_merge ({self.theta_merge}) must be <= theta_sim ({self.theta_sim})"
-        
+        assert self.min_stability_gens >= 0, "min_stability_gens must be non-negative"
+
         # Validate ensemble weights
         assert abs(self.w_genotype + self.w_phenotype - 1.0) < 1e-6, \
             f"Ensemble weights must sum to 1.0, got w_genotype={self.w_genotype}, w_phenotype={self.w_phenotype}"
@@ -117,6 +123,7 @@ class SpeciationConfig:
         return {
             "theta_sim": self.theta_sim,
             "theta_merge": self.theta_merge,
+            "min_stability_gens": self.min_stability_gens,
             "cluster0_min_cluster_size": self.cluster0_min_cluster_size,
             "cluster0_max_capacity": self.cluster0_max_capacity,
             "cluster0_selection": self.cluster0_selection,

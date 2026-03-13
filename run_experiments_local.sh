@@ -51,28 +51,29 @@ export PYTHONPATH="${SCRIPT_DIR}/src"
 # Termination: always by --max-total-genomes (sequential has no generations cap).
 # Each entry is a full command; all project parameters set explicitly.
 # Profiling: add --profile to enable; profile is saved in the run's (auto-generated) output directory.
+# Aligned with rc_script.sh (minus parallel/Spack). Small max-total-genomes for quick local run.
 SEQUENTIAL_EXPERIMENTS=(
     "$PYTHON src/main.py \
         --moderation-methods google \
         --stagnation-limit 5 \
-        --theta-sim 0.25 \
-        --theta-merge 0.25 \
-        --species-capacity 7 \
-        --cluster0-max-capacity 20 \
+        --theta-sim 0.35 \
+        --theta-merge 0.35 \
+        --min-stability-gens 5 \
+        --species-capacity 100 \
+        --cluster0-max-capacity 1000 \
         --cluster0-min-cluster-size 1 \
         --min-island-size 3 \
-        --species-stagnation 4 \
+        --species-stagnation 20 \
         --embedding-model all-MiniLM-L6-v2 \
         --embedding-dim 384 \
         --embedding-batch-size 64 \
-        --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
-        --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
         --operators all \
         --max-variants 1 \
         --seed-file data/prompt.csv \
         --seed 42 \
-        --batch-size 100 \
-        --max-total-genomes 500"
+        --batch-size 25 \
+        --max-total-genomes 80 \
+        --output-dir data/outputs/local_run"
 )
 
 run_sequential() {

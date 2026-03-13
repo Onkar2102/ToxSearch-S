@@ -1285,9 +1285,10 @@ def process_generation(current_generation: int,
             
             for i, (id1, info1) in enumerate(species_list):
                 for j, (id2, info2) in enumerate(species_list[i + 1:], start=i + 1):
-                    # Check stability
-                    sp1_stable = (current_generation - info1["created_at"]) >= 1
-                    sp2_stable = (current_generation - info2["created_at"]) >= 1
+                    # Check stability (species must be at least min_stability_gens old)
+                    min_stable = state["config"].min_stability_gens
+                    sp1_stable = (current_generation - info1["created_at"]) >= min_stable
+                    sp2_stable = (current_generation - info2["created_at"]) >= min_stable
                     
                     if not (sp1_stable and sp2_stable):
                         continue

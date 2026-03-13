@@ -64,7 +64,7 @@ def extract_english_questions(ds, source_name, split_name):
                     break
             return text
         df['questions'] = df['questions'].apply(strip_all_quotes)
-        logger.info(f"Extracted {len(df)} questions from {source_name} ({split_name})")
+        logger.debug(f"Extracted {len(df)} questions from {source_name} ({split_name})")
         return df
 
     except Exception as e:
@@ -111,7 +111,7 @@ def extract_harmfulqa_questions(ds, source_name, split_name):
                         break
                 return text
             df['questions'] = df['questions'].apply(strip_all_quotes)
-            logger.info(f"Extracted {len(df)} questions from 'contexts' in {source_name} ({split_name})")
+            logger.debug(f"Extracted {len(df)} questions from 'contexts' in {source_name} ({split_name})")
             return df
         elif "question" in ds.column_names:
             return extract_english_questions(ds, source_name, split_name)
@@ -214,14 +214,11 @@ def load_harmful_datasets_separate():
     harmfulqa_questions = pd.DataFrame(columns=['questions'])
 
     try:
-        logger.info("Loading CategoricalHarmfulQA dataset...")
         try:
             categorical_ds = load_dataset("declare-lab/CategoricalHarmfulQA", split="en")
-            logger.info("CategoricalHarmfulQA: using 'en' split")
         except Exception as e_en:
             logger.warning(f"CategoricalHarmfulQA 'en' split failed: {e_en}; falling back to 'train'")
             categorical_ds = load_dataset("declare-lab/CategoricalHarmfulQA", split="train")
-            logger.info("CategoricalHarmfulQA: using 'train' split")
         categorical_questions = extract_english_questions(categorical_ds, "CategoricalHarmfulQA", "en_or_train")
         if categorical_questions.empty:
             logger.warning("CategoricalHarmfulQA produced 0 questions after extraction.")
@@ -229,14 +226,11 @@ def load_harmful_datasets_separate():
         logger.error(f"Failed to load CategoricalHarmfulQA dataset: {e}")
 
     try:
-        logger.info("Loading HarmfulQA dataset (prefer 'en' split)...")
         try:
             harmfulqa_ds = load_dataset("declare-lab/HarmfulQA", split="en")
-            logger.info("HarmfulQA: using 'en' split")
         except Exception as e_en:
             logger.warning(f"HarmfulQA 'en' split failed: {e_en}; falling back to 'train'")
             harmfulqa_ds = load_dataset("declare-lab/HarmfulQA", split="train")
-            logger.info("HarmfulQA: using 'train' split")
         harmfulqa_questions = extract_harmfulqa_questions(harmfulqa_ds, "HarmfulQA", "en_or_train")
         if harmfulqa_questions.empty:
             logger.warning("HarmfulQA produced 0 questions after extraction.")
@@ -275,15 +269,14 @@ def load_harmful_datasets_separate():
         categorical_questions['questions'] = categorical_questions['questions'].apply(strip_all_quotes)
         categorical_questions = categorical_questions.dropna(subset=['questions'])
         categorical_questions = categorical_questions.drop_duplicates(subset=['questions'])
-        logger.info(f"CategoricalHarmfulQA: {len(categorical_questions)} unique questions after cleaning")
 
     if not harmfulqa_questions.empty:
         harmfulqa_questions['questions'] = harmfulqa_questions['questions'].astype(str).str.strip()
         harmfulqa_questions['questions'] = harmfulqa_questions['questions'].apply(strip_all_quotes)
         harmfulqa_questions = harmfulqa_questions.dropna(subset=['questions'])
         harmfulqa_questions = harmfulqa_questions.drop_duplicates(subset=['questions'])
-        logger.info(f"HarmfulQA: {len(harmfulqa_questions)} unique questions after cleaning")
 
+    logger.info(f"Loaded: CategoricalHarmfulQA {len(categorical_questions)} unique, HarmfulQA {len(harmfulqa_questions)} unique")
     return categorical_questions, harmfulqa_questions
 
 def save_questions_to_file(questions_df, filename=os.path.join("data", "harmful_questions.csv")):
@@ -358,62 +351,127 @@ def save_questions_to_file(questions_df, filename=os.path.join("data", "harmful_
 
     return success
 
-def save_prompt_csv_stratified(categorical_questions_df, harmfulqa_questions_df, 
-                                n_per_dataset=250, random_state=48, filename="data/prompt.csv"):
+def _strip_quotes_for_save(text):
+    """Remove surrounding quotes from text (used before saving)."""
+    if not isinstance(text, str):
+        return text
+    text = text.strip()
+    while (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+        text = text.strip('"').strip("'").strip()
+    return text
+
+
+def select_prompts(categorical_questions_df, harmfulqa_questions_df, n_total=500,
+                   strategy="stratified", random_state=48):
     """
-    Create prompt.csv by sampling n_per_dataset questions from each dataset separately.
-    
+    Select exactly n_total prompts from the two datasets using the chosen strategy.
+    Does not load or use all prompts from both datasets — only samples up to n_total.
+
+    Strategies:
+      - stratified: Take n_total/2 from each dataset (balanced). If one has fewer,
+        take all from it and fill the rest from the other. Best for balanced representation.
+      - proportional: Sample n_total in proportion to each dataset's size. Good when
+        one dataset is much larger.
+      - union_sample: Combine both, drop duplicates, then randomly sample n_total
+        from the union. Maximizes diversity when there is overlap between datasets.
+
+    Args:
+        categorical_questions_df: DataFrame with 'questions' from CategoricalHarmfulQA
+        harmfulqa_questions_df: DataFrame with 'questions' from HarmfulQA
+        n_total: Target number of prompts (default: 500)
+        strategy: "stratified" | "proportional" | "union_sample"
+        random_state: Random seed for reproducibility
+
+    Returns:
+        DataFrame with columns ['questions'] and at most n_total rows (fewer if combined unique < n_total).
+    """
+    cat_df = categorical_questions_df.dropna(subset=['questions']).drop_duplicates(subset=['questions']) if not categorical_questions_df.empty else pd.DataFrame(columns=['questions'])
+    harm_df = harmfulqa_questions_df.dropna(subset=['questions']).drop_duplicates(subset=['questions']) if not harmfulqa_questions_df.empty else pd.DataFrame(columns=['questions'])
+    n_cat, n_harm = len(cat_df), len(harm_df)
+
+    if strategy == "union_sample":
+        combined = pd.concat([cat_df, harm_df], ignore_index=True)
+        combined = combined.drop_duplicates(subset=['questions'])
+        n_avail = len(combined)
+        n_take = min(n_total, n_avail)
+        out = combined.sample(n=n_take, random_state=random_state)
+        logger.info(f"Selected {n_take} from union ({n_avail} unique after dedup; target was {n_total})")
+        return out
+
+    if strategy == "proportional":
+        total_size = n_cat + n_harm
+        if total_size == 0:
+            return pd.DataFrame(columns=['questions'])
+        n_cat_take = min(n_cat, max(0, int(round(n_total * n_cat / total_size))))
+        n_harm_take = min(n_harm, n_total - n_cat_take)
+        if n_harm_take < 0:
+            n_harm_take = 0
+            n_cat_take = min(n_cat, n_total)
+        cat_sample = cat_df.sample(n=min(n_cat_take, n_cat), random_state=random_state) if n_cat else pd.DataFrame(columns=['questions'])
+        harm_sample = harm_df.sample(n=min(n_harm_take, n_harm), random_state=random_state) if n_harm else pd.DataFrame(columns=['questions'])
+        out = pd.concat([cat_sample, harm_sample], ignore_index=True)
+        logger.info(f"Selected {len(cat_sample)} from CategoricalHarmfulQA, {len(harm_sample)} from HarmfulQA → {len(out)} total (target {n_total})")
+        return out
+
+    # stratified: n_total/2 from each, fill from the other if one is short
+    half = n_total // 2
+    n_cat_take = min(half, n_cat)
+    n_harm_take = min(half, n_harm)
+    shortfall = n_total - (n_cat_take + n_harm_take)
+    if shortfall > 0 and n_cat_take < n_cat:
+        extra_cat = min(shortfall, n_cat - n_cat_take)
+        n_cat_take += extra_cat
+        shortfall -= extra_cat
+    if shortfall > 0 and n_harm_take < n_harm:
+        n_harm_take += min(shortfall, n_harm - n_harm_take)
+    cat_sample = cat_df.sample(n=n_cat_take, random_state=random_state) if n_cat_take and n_cat else pd.DataFrame(columns=['questions'])
+    harm_sample = harm_df.sample(n=n_harm_take, random_state=random_state) if n_harm_take and n_harm else pd.DataFrame(columns=['questions'])
+    out = pd.concat([cat_sample, harm_sample], ignore_index=True)
+    logger.info(
+        f"Selected {len(cat_sample)} from CategoricalHarmfulQA ({n_cat} available), "
+        f"{len(harm_sample)} from HarmfulQA ({n_harm} available) → {len(out)} total (target {n_total})"
+    )
+    return out
+
+
+def save_prompt_csv_stratified(categorical_questions_df, harmfulqa_questions_df,
+                                n_total=500, strategy="stratified", random_state=48,
+                                filename="data/prompt.csv", selected_df=None):
+    """
+    Create prompt.csv by selecting n_total questions using the given strategy.
+    Does not use all prompts from both datasets — only the selected subset.
+
     Args:
         categorical_questions_df: DataFrame with questions from CategoricalHarmfulQA
         harmfulqa_questions_df: DataFrame with questions from HarmfulQA
-        n_per_dataset: Number of questions to sample from each dataset (default: 250)
-        random_state: Random seed for reproducibility (default: 48)
+        n_total: Number of questions to select (default: 500)
+        strategy: "stratified" (half from each), "proportional", or "union_sample"
+        random_state: Random seed for reproducibility
         filename: Output filename (default: "data/prompt.csv")
-    
+        selected_df: If provided, use this instead of calling select_prompts (avoids duplicate log).
+
     Returns:
         bool: True if successful, False otherwise
     """
     outdir = os.path.dirname(filename)
     if outdir and not os.path.exists(outdir):
         os.makedirs(outdir, exist_ok=True)
-
     try:
-        # Sample from each dataset separately
-        categorical_sample = categorical_questions_df.sample(
-            n=min(n_per_dataset, len(categorical_questions_df)), 
-            random_state=random_state
-        ) if not categorical_questions_df.empty else pd.DataFrame(columns=['questions'])
-        
-        harmfulqa_sample = harmfulqa_questions_df.sample(
-            n=min(n_per_dataset, len(harmfulqa_questions_df)), 
-            random_state=random_state
-        ) if not harmfulqa_questions_df.empty else pd.DataFrame(columns=['questions'])
-        
-        # Combine samples
-        combined_sample = pd.concat([categorical_sample, harmfulqa_sample], ignore_index=True)
-        
-        # Aggressively remove all quotes before saving
-        def strip_all_quotes(text):
-            """Remove all surrounding quotes from text"""
-            if not isinstance(text, str):
-                return text
-            text = text.strip()
-            while (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
-                text = text.strip('"').strip("'").strip()
-            return text
-        combined_sample['questions'] = combined_sample['questions'].apply(strip_all_quotes)
-        
-        # Save to file (QUOTE_MINIMAL only quotes when necessary, but we've already stripped quotes from text)
-        combined_sample[['questions']].to_csv(filename, index=False, header=True, quoting=csv.QUOTE_MINIMAL)
-        logger.info(f"Saved {len(combined_sample)} questions to {filename} "
-                   f"({len(categorical_sample)} from CategoricalHarmfulQA, "
-                   f"{len(harmfulqa_sample)} from HarmfulQA)")
+        if selected_df is not None:
+            selected = selected_df
+        else:
+            selected = select_prompts(
+                categorical_questions_df, harmfulqa_questions_df,
+                n_total=n_total, strategy=strategy, random_state=random_state
+            )
+        selected = selected.copy()
+        selected['questions'] = selected['questions'].astype(str).str.strip().apply(_strip_quotes_for_save)
+        selected[['questions']].to_csv(filename, index=False, header=True, quoting=csv.QUOTE_MINIMAL)
+        logger.info(f"Saved {len(selected)} questions to {filename}")
         return True
     except Exception as e:
-        logger.error(f"Failed to save stratified prompt.csv: {e}")
+        logger.error(f"Failed to save prompt CSV: {e}")
         return False
-
-    return success
 
 def get_questions_as_list(questions_df):
     """
@@ -427,43 +485,72 @@ def get_questions_as_list(questions_df):
     """
     return questions_df['questions'].tolist()
 
-if __name__ == "__main__":
-    # Load datasets separately for stratified sampling
-    categorical_questions, harmfulqa_questions = load_harmful_datasets_separate()
-    
-    # Also load combined for harmful_questions.csv and prompt_extended.csv
-    all_questions = load_harmful_datasets()
 
-    if not all_questions.empty:
-        logger.info(f"Number of unique questions (combined): {len(all_questions)}")
-        
-        # Save full datasets (harmful_questions.csv and prompt_extended.csv)
-        saved = save_questions_to_file(all_questions)
-        
-        # Save stratified prompt.csv (250 from each dataset)
-        prompt_saved = save_prompt_csv_stratified(
-            categorical_questions, 
-            harmfulqa_questions, 
-            n_per_dataset=250, 
-            random_state=48
-        )
-        
-        if saved and prompt_saved:
-            print("="*50)
-            print("Saved questions to:")
-            print("  - data/harmful_questions.csv (all unique questions)")
-            print("  - data/prompt_extended.csv (all unique questions)")
-            print("  - data/prompt.csv (250 from each dataset = 500 total)")
-            print("="*50)
-            print("SAMPLE QUESTIONS:")
-            print("="*50)
-            print(all_questions.sample(min(5, len(all_questions))))
-            print("="*50)
-            print(f"TOTAL UNIQUE QUESTIONS: {len(all_questions)}")
-            print(f"CategoricalHarmfulQA: {len(categorical_questions)} unique questions")
-            print(f"HarmfulQA: {len(harmfulqa_questions)} unique questions")
-            print("="*50)
-        else:
-            logger.error("Failed to save some files.")
+def build_prompt_csv(n_total=500, strategy="stratified", random_state=48,
+                     filename="data/prompt.csv", save_full_combined=False):
+    """
+    Load both datasets, select n_total prompts (without using all), and save to prompt CSV.
+    Single entry point for producing data/prompt.csv.
+
+    Args:
+        n_total: Number of prompts to select (default: 500)
+        strategy: "stratified" (balanced), "proportional", or "union_sample"
+        random_state: Random seed
+        filename: Output path (default: "data/prompt.csv")
+        save_full_combined: If True, also save full unique questions to harmful_questions.csv
+                           and prompt_extended.csv (default: False — only the 500 selection is saved)
+
+    Returns:
+        Tuple of (success: bool, selected_df: DataFrame)
+    """
+    categorical_questions, harmfulqa_questions = load_harmful_datasets_separate()
+    if categorical_questions.empty and harmfulqa_questions.empty:
+        logger.error("No questions loaded from either dataset.")
+        return False, pd.DataFrame(columns=['questions'])
+    selected = select_prompts(
+        categorical_questions, harmfulqa_questions,
+        n_total=n_total, strategy=strategy, random_state=random_state
+    )
+    if selected.empty:
+        logger.error("Selection produced 0 questions.")
+        return False, selected
+    success = save_prompt_csv_stratified(
+        categorical_questions, harmfulqa_questions,
+        n_total=n_total, strategy=strategy, random_state=random_state,
+        filename=filename, selected_df=selected
+    )
+    if save_full_combined:
+        all_questions = load_harmful_datasets()
+        if not all_questions.empty:
+            save_questions_to_file(all_questions)
+    return success, selected
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Build prompt.csv with selected prompts from harmful QA datasets.")
+    parser.add_argument("--n-total", type=int, default=500, help="Number of prompts to select (default: 500)")
+    parser.add_argument("--strategy", choices=["stratified", "proportional", "union_sample"], default="stratified",
+                        help="Selection strategy: stratified=half per dataset, proportional=by size, union_sample=dedupe then sample (default: stratified)")
+    parser.add_argument("--seed", type=int, default=48, help="Random seed (default: 48)")
+    parser.add_argument("--output", type=str, default="data/prompt.csv", help="Output CSV path (default: data/prompt.csv)")
+    parser.add_argument("--save-full", action="store_true", help="Also save full combined datasets to harmful_questions.csv and prompt_extended.csv")
+    args = parser.parse_args()
+
+    success, selected = build_prompt_csv(
+        n_total=args.n_total,
+        strategy=args.strategy,
+        random_state=args.seed,
+        filename=args.output,
+        save_full_combined=args.save_full,
+    )
+    if success:
+        print("=" * 50)
+        print(f"Saved {len(selected)} questions to {args.output}")
+        print(f"Strategy: {args.strategy}, n_total: {args.n_total}")
+        print("=" * 50)
+        print("Sample questions:")
+        print(selected.sample(min(5, len(selected)), random_state=args.seed)[['questions']])
+        print("=" * 50)
     else:
-        logger.error("No questions were loaded!")
+        logger.error("Failed to build prompt CSV.")

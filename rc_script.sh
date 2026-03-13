@@ -1,16 +1,22 @@
 #!/bin/bash -l
+#
+# SLURM run script for ToxSearch-S (sequential or parallel).
+# Run from project root: sbatch rc_script.sh
+#
+# Termination: by --max-total-genomes (required for parallel). Optional --output-dir for stable path.
+# See experiments/RESEARCH_QUESTIONS.txt for RQ runs.
 
 #SBATCH --job-name=txshs3
-#SBATCH --time=0-00:59:00
+#SBATCH --time=2-23:59:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=2
-#SBATCH --ntasks=3
+#SBATCH --ntasks=5
 #SBATCH --gpus-per-task=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=1g
 #SBATCH --account=evostar
-#SBATCH --partition=debug
+#SBATCH --partition=tier3
 ##SBATCH --gres=gpu:a100:2
 
 set -euo pipefail
@@ -65,31 +71,27 @@ llm = Llama(
     model_path="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q3_K_S.gguf",
     n_ctx=1024,
     n_gpu_layers=-1,
-    n_batch=256,
+    n_batch=1024,
     verbose=False,
 )
 print("LLAMA_GPU_SMOKETEST_OK")
 PY
 
 
-cd /home/os9660/ToxSearch-S || exit 1
 export PYTHONPATH=/home/os9660/ToxSearch-S/src
-python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|cluster0" || exit 1
+python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|cluster0|min-stability" || exit 1
 
-# 8) Run: use srun + --parallel for parallel (MPI); for single-process omit srun and --parallel.
-#    Profile is written to the run's output dir (data/outputs/<timestamp>/profile_main.prof).
-#    Non-parallel (single process):
-#      python src/main.py \
-#    Parallel (MPI, use srun):
-#      srun python src/main.py --parallel \
-python src/main.py \
+# 9) MPI launch with srun (1 master + (ntasks-1) workers). Termination by --max-total-genomes (required).
+srun python src/main.py \
+    --parallel \
     --profile \
-    --batch-size 1000 \
-    --generations 400 \
+    --batch-size 25 \
+    --max-total-genomes 5000 \
     --moderation-methods google \
     --stagnation-limit 5 \
     --theta-sim 0.35 \
     --theta-merge 0.35 \
+    --min-stability-gens 5 \
     --species-capacity 100 \
     --cluster0-max-capacity 1000 \
     --cluster0-min-cluster-size 1 \

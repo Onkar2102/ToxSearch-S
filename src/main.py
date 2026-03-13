@@ -155,7 +155,7 @@ def update_model_configs(rg_model, pg_model, logger):
 def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
          max_total_genomes=None, seed=None,
          # Speciation parameters
-         theta_sim=0.2, theta_merge=0.1, species_capacity=100, cluster0_max_capacity=1000,
+         theta_sim=0.2, theta_merge=0.1, min_stability_gens=5, species_capacity=100, cluster0_max_capacity=1000,
          cluster0_min_cluster_size=2, min_island_size=2, species_stagnation=20,
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64):
     """
@@ -166,8 +166,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     default). Evolution runs for the specified number of generations.
 
     Args:
-        max_generations (int, optional): Maximum evolution generations to run.
-            If None, no limit (run until interrupted).
+        max_generations (int, optional): Not used for termination. Kept for API compatibility;
+            termination is only by max_total_genomes.
         moderation_methods (List[str], optional): Moderation APIs to use.
             If None, uses ['google'] for evaluation.
         rg_model (str): Response generator model path. Default GGUF path.
@@ -177,7 +177,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         max_variants (int): Maximum number of variants per evolution cycle. Default 1.
         stagnation_limit (int): Unused; kept for API compatibility.
         seed_file (str): Path to initial prompt CSV. Default "data/prompt.csv".
-        theta_sim, theta_merge, species_capacity, cluster0_*, min_island_size,
+        theta_sim, theta_merge, min_stability_gens, species_capacity, cluster0_*, min_island_size,
         species_stagnation, embedding_*: Speciation and embedding configuration.
 
     Returns:
@@ -306,6 +306,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     speciation_config = SpeciationConfig(
         theta_sim=theta_sim,
         theta_merge=theta_merge,
+        min_stability_gens=min_stability_gens,
         species_capacity=species_capacity,
         cluster0_max_capacity=cluster0_max_capacity,
         cluster0_min_cluster_size=cluster0_min_cluster_size,
@@ -541,10 +542,11 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         generation_count = 0
         logger.debug("Starting fresh")
     
-    # Evolution loop: generate → moderate → speciate → redistribute each generation
+    # Evolution loop: generate → moderate → speciate → redistribute each generation.
+    # Termination is only by max_total_genomes (--max-total-genomes). --generations is not used for termination.
     terminated_by_total_genomes = False
     final_total_genomes = None
-    while max_generations is None or generation_count < max_generations:
+    while True:
         generation_count += 1
         gen_start = time.time()
         logger.info("=== Starting Generation %d ===", generation_count)
@@ -996,10 +998,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
 
     if terminated_by_total_genomes:
         pass  # Already logged when breaking
-    elif max_generations is not None and generation_count >= max_generations:
-        logger.info("Evolution completed: Maximum generation limit (%d) reached.", max_generations)
     else:
-        logger.info("Evolution completed: Loop exited due to other conditions.")
+        logger.info("Evolution completed: Loop exited (termination is only by --max-total-genomes).")
 
     total_time = time.time() - start_time
     logger.info("=== Pipeline Completed ===")
@@ -1037,7 +1037,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Evolutionary Text Generation and Safety Analysis Framework")
     parser.add_argument("--generations", type=int, default=None,
-                       help="Maximum number of evolution generations.")
+                       help="Not used for termination. Kept for compatibility; termination is only by --max-total-genomes.")
     parser.add_argument("--moderation-methods", nargs="+", choices=["google", "all"], default=["google"],
                        help="Moderation methods to use: google (Perspective API), all (google only)")
     parser.add_argument("--stagnation-limit", type=int, default=5,
@@ -1046,6 +1046,8 @@ if __name__ == "__main__":
                        help="Similarity threshold for species assignment (ensemble distance, default: 0.2)")
     parser.add_argument("--theta-merge", type=float, default=0.1,
                        help="Merge threshold for combining similar species (ensemble distance, default: 0.1)")
+    parser.add_argument("--min-stability-gens", type=int, default=5,
+                       help="Minimum generations a species must exist before it can be merged (default: 5)")
     parser.add_argument("--species-capacity", type=int, default=100,
                        help="Maximum individuals per species (default: 100)")
     parser.add_argument("--cluster0-max-capacity", type=int, default=1000,
@@ -1121,6 +1123,7 @@ if __name__ == "__main__":
         speciation_config = SpeciationConfig(
             theta_sim=args.theta_sim,
             theta_merge=args.theta_merge,
+            min_stability_gens=args.min_stability_gens,
             species_capacity=args.species_capacity,
             cluster0_max_capacity=args.cluster0_max_capacity,
             cluster0_min_cluster_size=args.cluster0_min_cluster_size,
@@ -1164,6 +1167,7 @@ if __name__ == "__main__":
              seed=getattr(args, "seed", None),
              # Speciation parameters
              theta_sim=args.theta_sim, theta_merge=args.theta_merge,
+             min_stability_gens=args.min_stability_gens,
              species_capacity=args.species_capacity, cluster0_max_capacity=args.cluster0_max_capacity,
              cluster0_min_cluster_size=args.cluster0_min_cluster_size, min_island_size=args.min_island_size,
              species_stagnation=args.species_stagnation, embedding_model=args.embedding_model,
