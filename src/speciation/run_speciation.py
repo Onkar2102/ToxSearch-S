@@ -3287,6 +3287,8 @@ def run_speciation(
             "active_species_count": active_count,
             "frozen_species_count": frozen_count,  # Frozen species count (for reference)
             "reserves_size": actual_reserves_size,
+            "largest_species_size": 0,
+            "average_species_size": 0.0,
             "speciation_events": 0,
             "merge_events": 0,
             "extinction_events": 0,
@@ -3365,13 +3367,17 @@ def run_speciation(
                 logger.warning("speciation_state.json not found, using in-memory counts")
             
             total_species_count = active_count + frozen_count
-            
+            sizes = [sp.size for sp in state["species"].values()]
+            largest_species_size = max(sizes) if sizes else 0
+            average_species_size = (sum(sizes) / len(sizes)) if sizes else 0.0
             # Create result with current state
             no_genomes_result = {
                 "species_count": total_species_count,  # Total species (active + frozen) for EvolutionTracker
                 "active_species_count": active_count,
                 "frozen_species_count": frozen_count,  # Frozen species count (for reference)
                 "reserves_size": actual_reserves_size,
+                "largest_species_size": largest_species_size,
+                "average_species_size": round(average_species_size, 2),
                 "speciation_events": 0,
                 "merge_events": 0,
                 "extinction_events": 0,
@@ -3505,11 +3511,17 @@ def run_speciation(
             current_metrics = state["metrics_tracker"].history[-1]
             logger.debug(f"Retrieved metrics from metrics_tracker for generation {current_generation}")
         
+        # Species size distribution (for RQ2 diversity / tracker and scripts; no speciation logic change)
+        sizes = [sp.size for sp in state["species"].values()]
+        largest_species_size = max(sizes) if sizes else 0
+        average_species_size = (sum(sizes) / len(sizes)) if sizes else 0.0
         result = {
             "species_count": total_species_count,  # Total species (active + frozen) for EvolutionTracker
             "active_species_count": active_count,  # Only active species
             "frozen_species_count": frozen_count,  # Frozen species count (for reference)
             "reserves_size": actual_reserves_size,
+            "largest_species_size": largest_species_size,
+            "average_species_size": round(average_species_size, 2),
             "speciation_events": events.get("speciation", 0),
             "merge_events": events.get("merge", 0),
             "extinction_events": events.get("extinction", 0),
@@ -3574,6 +3586,8 @@ def run_speciation(
             "species_count": 0,
             "active_species_count": 0,
             "frozen_species_count": 0,
+            "largest_species_size": 0,
+            "average_species_size": 0.0,
             "reserves_size": 0,
             "speciation_events": 0,
             "merge_events": 0,
@@ -3756,6 +3770,8 @@ def update_evolution_tracker_with_speciation(
             "active_species_count": active_species_count,  # Active only
             "frozen_species_count": frozen_species_count,  # Frozen only
             "reserves_size": speciation_result.get("reserves_size", 0),
+            "largest_species_size": speciation_result.get("largest_species_size", 0),
+            "average_species_size": speciation_result.get("average_species_size", 0.0),
             "speciation_events": speciation_result.get("speciation_events", 0),
             "merge_events": speciation_result.get("merge_events", 0),
             "extinction_events": speciation_result.get("extinction_events", 0),

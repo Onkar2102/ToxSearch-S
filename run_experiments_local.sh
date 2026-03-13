@@ -21,7 +21,7 @@
 # Termination (sequential only):
 #   Always by --max-total-genomes (no generations cap). Required.
 # Research questions and full experiment matrix:
-#   See experiments/RQ_EXPERIMENTS.md.
+#   See experiments/RESEARCH_QUESTIONS.txt.
 
 set -Eeuo pipefail
 

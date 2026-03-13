@@ -144,6 +144,7 @@ class LlamaCppChatInterface(ModelInterface):
             llama_params = {
                 "model_path": model_path,
                 "n_ctx": device_config.get("context_length", 4096),
+                "n_batch": device_config.get("n_batch", 1024),
                 "n_threads": device_config.get("num_threads", None),
                 "n_gpu_layers": device_config.get("gpu_layers", 0),
                 "verbose": False,
@@ -199,6 +200,7 @@ class LlamaCppChatInterface(ModelInterface):
         device_config = {
             "device": device,
             "context_length": 4096,
+            "n_batch": 1024,
             "num_threads": None,
             "use_mmap": True,
             "use_mlock": False,
@@ -241,7 +243,8 @@ class LlamaCppChatInterface(ModelInterface):
                 "low_vram": False,
                 "f16_kv": False,
             })
-        
+        if config.get("n_batch") is not None:
+            device_config["n_batch"] = config["n_batch"]
         return device_config
     
     @classmethod

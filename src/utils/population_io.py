@@ -2259,6 +2259,8 @@ def update_evolution_tracker_with_statistics(
                 "active_species_count": statistics.get("active_species_count", statistics.get("species_count", 0)),
                 "frozen_species_count": statistics.get("frozen_species_count", 0),
                 "reserves_size": statistics.get("reserves_size", statistics.get("reserves_count", 0)),
+                "largest_species_size": statistics.get("largest_species_size", 0),
+                "average_species_size": statistics.get("average_species_size", 0.0),
                 "speciation_events": statistics.get("speciation_events", 0),
                 "merge_events": statistics.get("merge_events", 0),
                 "extinction_events": statistics.get("extinction_events", 0),
@@ -2471,6 +2473,125 @@ def update_run_metadata_at_end(
         return False
 
 
+def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compute run_summary from EvolutionTracker (generations + run_metadata).
+    Used for four-level metrics: run-level aggregation.
+    """
+    gens = tracker.get("generations") or []
+    run_meta = tracker.get("run_metadata") or {}
+    total_wall = run_meta.get("run_duration_seconds") or 0.0
+    num_workers = run_meta.get("num_workers", 1)
+
+    total_evaluated = 0
+    total_integrated = 0
+    total_discarded = 0
+    for g in gens:
+        vi = g.get("variants_integrated")
+        if vi is not None:
+            total_integrated += int(vi)
+    if gens:
+        last = gens[-1]
+        if last.get("total_evaluated") is not None:
+            total_evaluated = int(last["total_evaluated"])
+        if last.get("total_discarded") is not None:
+            total_discarded = int(last["total_discarded"])
+    if total_evaluated == 0 and gens:
+        for g in gens:
+            te = g.get("total_evaluated")
+            if te is not None:
+                total_evaluated += int(te)
+            else:
+                budget = g.get("budget") or {}
+                total_evaluated += int(budget.get("llm_calls", 0) or 0)
+        total_discarded = max(0, total_evaluated - total_integrated)
+
+    final_best = tracker.get("population_max_toxicity") or 0.0
+    final_mean = 0.0
+    final_species = 0
+    final_elites = 0
+    final_reserves = 0
+    final_archived = 0
+    if gens:
+        last = gens[-1]
+        final_mean = float(last.get("avg_fitness_generation", 0) or last.get("avg_fitness", 0) or 0)
+        spec = last.get("speciation") or {}
+        final_species = int(spec.get("species_count", 0) or 0)
+        final_elites = int(last.get("elites_count", 0) or 0)
+        final_reserves = int(last.get("reserves_count", 0) or 0)
+        final_archived = int(last.get("archived_count", 0) or 0)
+
+    total_gens = len(gens)
+    throughput_ev = (total_evaluated / total_wall) if total_wall > 0 else None
+    throughput_int = (total_integrated / total_wall) if total_wall > 0 else None
+
+    return {
+        "total_wall_clock_seconds": round(total_wall, 2),
+        "total_evaluated": total_evaluated,
+        "total_integrated": total_integrated,
+        "total_discarded": total_discarded,
+        "final_best_fitness": round(final_best, 4),
+        "final_mean_fitness": round(final_mean, 4),
+        "final_species_count": final_species,
+        "final_elites_count": final_elites,
+        "final_reserves_count": final_reserves,
+        "final_archived_count": final_archived,
+        "total_generations": total_gens,
+        "num_workers": num_workers,
+        "gpu_count": run_meta.get("gpu_count"),
+        "throughput_evaluated_per_second": round(throughput_ev, 4) if throughput_ev is not None else None,
+        "throughput_integrated_per_second": round(throughput_int, 4) if throughput_int is not None else None,
+        "speedup_vs_sequential": None,
+        "parallel_efficiency": None,
+    }
+
+
+def write_run_summary_and_termination(
+    evolution_tracker_path: str,
+    run_duration_seconds: float,
+    run_mode: str,
+    termination_threshold: Optional[int] = None,
+    logger=None,
+    log_file: Optional[str] = None,
+) -> bool:
+    """
+    Update run_metadata (duration, mode), compute and write run_summary and termination_metrics.
+    Call at end of run (sequential and parallel).
+    termination_threshold: e.g. max_total_genomes; used for overshoot.
+    """
+    _logger = logger or get_logger("WriteRunSummary", log_file)
+    try:
+        path = Path(evolution_tracker_path)
+        if not path.exists():
+            _logger.warning("EvolutionTracker.json not found at %s", evolution_tracker_path)
+            return False
+        with open(path, "r", encoding="utf-8") as f:
+            tracker = json.load(f)
+        tracker.setdefault("run_metadata", {}).update({
+            "run_duration_seconds": round(run_duration_seconds, 2),
+            "run_mode": run_mode,
+        })
+        run_summary = compute_run_summary(tracker)
+        tracker["run_summary"] = run_summary
+        if termination_threshold is not None:
+            te = run_summary.get("total_evaluated", 0)
+            tracker["termination_metrics"] = {
+                "termination_criterion": "max_total_genomes",
+                "termination_threshold": termination_threshold,
+                "final_evaluated": te,
+                "final_integrated": run_summary.get("total_integrated", 0),
+                "overshoot_evaluated": max(0, te - termination_threshold),
+            }
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(tracker, f, indent=2, ensure_ascii=False)
+        _logger.debug("Wrote run_summary and run_metadata (termination_metrics=%s)",
+                     termination_threshold is not None)
+        return True
+    except Exception as e:
+        _logger.warning("Failed to write run_summary/termination: %s", e, exc_info=True)
+        return False
+
+
 # ============================================================================
 # Module Exports
 # ============================================================================
@@ -2519,4 +2640,6 @@ __all__ = [
     "calculate_generation_statistics",
     "update_evolution_tracker_with_statistics",
     "update_run_metadata_at_end",
+    "compute_run_summary",
+    "write_run_summary_and_termination",
 ]

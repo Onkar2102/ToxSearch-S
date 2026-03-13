@@ -366,10 +366,11 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         gen_stats["total_discarded"] = total_discarded
 
         _spec_keys = ("species_count", "active_species_count", "frozen_species_count",
-                     "reserves_size", "speciation_events", "merge_events",
-                     "extinction_events", "archived_count", "elites_moved",
-                     "reserves_moved", "genomes_updated", "inter_species_diversity",
-                     "intra_species_diversity", "cluster_quality", "speciation_duration_seconds")
+                     "reserves_size", "largest_species_size", "average_species_size",
+                     "speciation_events", "merge_events", "extinction_events",
+                     "archived_count", "elites_moved", "reserves_moved", "genomes_updated",
+                     "inter_species_diversity", "intra_species_diversity", "cluster_quality",
+                     "speciation_duration_seconds")
         gen_stats.update({k: speciation_result[k] for k in _spec_keys if k in speciation_result})
         if generation_duration_seconds is not None:
             gen_stats["generation_duration_seconds"] = round(generation_duration_seconds, 3)
@@ -492,7 +493,11 @@ def _run_live_analysis(outputs_path, logger):
 
 
 def _run_final_statistics(outputs_path, north_star_metric, start_time, generations_completed,
-                          log_file, logger):
+                          log_file, logger,
+                          accepted_per_worker=None,
+                          total_wait_for_results_seconds=None,
+                          total_merge_speciation_seconds=None,
+                          in_flight_at_stop=None):
     """Generate final statistics and plots at the end of a parallel run."""
     try:
         execution_time = time.time() - start_time
@@ -518,6 +523,18 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
             json.dump(tracker, f, indent=2, ensure_ascii=False)
         logger.debug("Marked EvolutionTracker status='complete', execution_time_seconds=%.2f, run_mode=parallel",
                      execution_time)
+
+        # Optional master timing and per-worker accepted counts (for RQ1 / worker imbalance analysis)
+        master_metrics = {
+            "total_wait_for_results_seconds": round(total_wait_for_results_seconds, 2) if total_wait_for_results_seconds is not None else None,
+            "total_merge_speciation_seconds": round(total_merge_speciation_seconds, 2) if total_merge_speciation_seconds is not None else None,
+            "in_flight_at_stop": in_flight_at_stop,
+            "accepted_per_worker": accepted_per_worker or {},
+        }
+        master_path = outputs_path / "master_metrics.json"
+        with open(master_path, "w", encoding="utf-8") as f:
+            json.dump(master_metrics, f, indent=2, ensure_ascii=False)
+        logger.debug("Wrote master_metrics.json: %s", master_path)
 
         from ea.run_evolution import create_final_statistics_with_tracker
         final_stats = create_final_statistics_with_tracker(
@@ -585,6 +602,11 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     gen0_assignments = {}
     gen0_expected = 0
     gen0_returned = 0
+    # Master-level metrics (written at end to master_metrics.json; no change to dispatch/merge logic)
+    accepted_per_worker = defaultdict(int)  # Count of genomes accepted per worker_rank (from accepted_genomes)
+    total_wait_for_results_seconds = 0.0   # Time from previous gen_start to cycle_start when we speciate
+    total_merge_speciation_seconds = 0.0   # Time in _merge_and_speciate (cycle_elapsed) per speciation
+    in_flight_at_stop = None                # Buffered count when shutdown was set (termination metric)
     seed_file = (config_dict or {}).get("seed_file")
     if seed_file:
         try:
@@ -728,6 +750,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 should_speciate = True
 
             if should_speciate:
+                wait_seconds = time.time() - gen_start  # Optional master timing: wait for results until merge
+                total_wait_for_results_seconds += wait_seconds
                 cycle_start = time.time()
                 logger.info("-"*50)
                 logger.info("Merge+speciation triggered: %d buffered, K=%d, "
@@ -740,6 +764,10 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         north_star_metric, speciation_config, log_file, logger,
                         run_speciation_fn=run_speciation_fn,
                     )
+                for g in (accepted_genomes or []):
+                    r = g.get("worker_rank")
+                    if r is not None:
+                        accepted_per_worker[r] += 1  # Per-worker accepted count for worker_metrics aggregation
                 total_integrated += accepted
                 total_discarded += discarded
 
@@ -756,6 +784,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 _run_live_analysis(outputs_path, logger)
 
                 cycle_elapsed = time.time() - cycle_start
+                total_merge_speciation_seconds += cycle_elapsed  # Optional master timing: merge + speciation
                 logger.info("Post-speciation summary: generation_id=%d  "
                             "total_evaluated=%d  total_integrated=%d  "
                             "total_discarded=%d  cycle_time=%.2fs",
@@ -780,6 +809,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             total_genomes = last.get("elites_count", 0) + last.get("reserves_count", 0) + last.get("archived_count", 0)
                             if total_genomes >= max_total:
                                 shutdown = True
+                                in_flight_at_stop = _total_buffered()  # Termination: buffered genomes when STOP sent
                                 logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
                                             total_genomes, max_total)
                     except Exception as e:
@@ -804,6 +834,10 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 north_star_metric, speciation_config, log_file, logger,
                 run_speciation_fn=run_speciation_fn,
             )
+        for g in (accepted_genomes or []):
+            r = g.get("worker_rank")
+            if r is not None:
+                accepted_per_worker[r] += 1  # Drain phase: include accepted counts for final master_metrics
         total_integrated += accepted
         total_discarded += discarded
         gen_duration = time.time() - gen_start
@@ -820,7 +854,13 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                      drain_elapsed, accepted, discarded)
         logger.info("="*50)
 
-    _run_final_statistics(outputs_path, north_star_metric, start_time, generation_id, log_file, logger)
+    _run_final_statistics(
+        outputs_path, north_star_metric, start_time, generation_id, log_file, logger,
+        accepted_per_worker=dict(accepted_per_worker),
+        total_wait_for_results_seconds=total_wait_for_results_seconds,
+        total_merge_speciation_seconds=total_merge_speciation_seconds,
+        in_flight_at_stop=in_flight_at_stop,
+    )
 
     # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
     try:
@@ -920,10 +960,18 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     from gne.evaluator import evaluate_single_genome
     from utils.refusal_penalty import apply_refusal_penalty_single
 
+    # ---- Worker-level metrics (written on exit to worker_<rank>_stats.json) ----
     seq = 0
     cycle = 0
     total_errors = 0
     worker_start_time = time.time()
+    total_response_time = 0.0
+    total_evaluation_time = 0.0
+    total_variant_creation_time = 0.0
+    total_evaluation_api_wait = 0.0
+    stop_signals_received = 0
+    discarded_buffered_at_stop = 0
+    did_gen0 = False
 
     logger.info("="*50)
     logger.info("Worker %d ready. Entering request loop.", rank)
@@ -938,6 +986,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
         data, tag_id, _ = recv_payload(comm, source=0, logger=logger)
 
         if tag_id == STOP or (tag_id == PARENTS and data is None):
+            stop_signals_received += 1  # Termination metrics: count STOP (or PARENTS/None) received
             logger.info("Received shutdown from master (tag=%s). Exiting request loop.",
                         "STOP" if tag_id == STOP else "PARENTS/None")
             break
@@ -968,6 +1017,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             gen0_processed = []
             for i, p in enumerate(prompts):
                 if _check_stop(comm, logger):
+                    discarded_buffered_at_stop += len(prompts) - i  # Termination: count prompts not yet processed
                     logger.info("Worker %d: STOP during GEN0_BATCH; discarding %d remaining prompts.",
                                 rank, len(prompts) - i)
                     break
@@ -1010,6 +1060,12 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     logger.info("Gen0 progress: %d/%d prompts processed (%d ok, %d errors)",
                                  i + 1, len(prompts), gen0_ok, gen0_err)
 
+            # Accumulate timing from genomes (for worker stats on exit)
+            for g in gen0_processed:
+                total_response_time += float(g.get("response_duration", 0) or 0)
+                total_evaluation_time += float(g.get("evaluation_duration", 0) or 0)
+                total_evaluation_api_wait += float(g.get("evaluation_api_wait_seconds", 0) or 0)
+            did_gen0 = True
             gen0_batch_elapsed = time.time() - gen0_batch_start
             logger.info("Gen0 batch complete: sent %d variants (%d ok, %d errors) "
                         "for request_id=%s in %.2fs",
@@ -1046,6 +1102,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                          len(variants), evolve_elapsed)
 
             if _check_stop(comm, logger):
+                discarded_buffered_at_stop += len(variants)  # Termination: variants created but not sent
                 logger.info("Worker %d: STOP after variant creation; discarding all %d variants (none sent).",
                             rank, len(variants))
                 cycle += 1
@@ -1056,6 +1113,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             processed_variants = []
             for i, variant in enumerate(variants):
                 if _check_stop(comm, logger):
+                    discarded_buffered_at_stop += len(variants) - i  # Termination: variants not yet evaluated/sent
                     logger.info("Worker %d: STOP during evaluation; discarding %d remaining variant(s).",
                                 rank, len(variants) - i)
                     break
@@ -1092,13 +1150,48 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                 logger.debug("Sent EVALUATED_VARIANT  local_variant_id=%s  status=%s",
                              v.get("local_variant_id"), v.get("status"))
 
+            # Accumulate timing for worker stats (response, evaluation, API wait, variant creation)
+            for v in processed_variants:
+                total_response_time += float(v.get("response_duration", 0) or 0)
+                total_evaluation_time += float(v.get("evaluation_duration", 0) or 0)
+                total_evaluation_api_wait += float(v.get("evaluation_api_wait_seconds", 0) or 0)
+            total_variant_creation_time += batch_variant_creation_duration
             logger.info("Evolution cycle %d complete: sent %d variants (%d ok, %d errors) "
                         "in %.2fs  (total_sent=%d)",
                         cycle, len(variants), cycle_ok, cycle_err, cycle_elapsed, seq)
 
         cycle += 1
 
-    worker_elapsed = time.time() - worker_start_time
+    worker_stop_time = time.time()
+    worker_elapsed = worker_stop_time - worker_start_time
+    tasks_received = (1 if did_gen0 else 0) + cycle  # GEN0 counts as one task; each PARENTS cycle counts as one
+    try:
+        # Write per-worker stats to run dir for post-run aggregation (aggregate_worker_metrics.py)
+        out_path = Path(outputs_path) if outputs_path else None
+        if out_path and out_path.is_dir():
+            stats = {
+                "worker_id": rank,
+                "start_time": worker_start_time,
+                "stop_time": worker_stop_time,
+                "active_seconds": round(worker_elapsed, 2),
+                "idle_seconds": 0.0,
+                "tasks_received": tasks_received,
+                "genomes_evaluated": seq,
+                "total_response_time": round(total_response_time, 2),
+                "total_evaluation_time": round(total_evaluation_time, 2),
+                "total_variant_creation_time": round(total_variant_creation_time, 2),
+                "total_evaluation_api_wait_seconds": round(total_evaluation_api_wait, 2),
+                "stop_signals_received": stop_signals_received,
+                "discarded_buffered_at_stop": discarded_buffered_at_stop,
+                "total_errors": total_errors,
+            }
+            stats_path = out_path / f"worker_{rank}_stats.json"
+            with open(stats_path, "w", encoding="utf-8") as f:
+                json.dump(stats, f, indent=2, ensure_ascii=False)
+            logger.info("Worker %d wrote stats to %s", rank, stats_path)
+    except Exception as e:
+        logger.warning("Worker %d failed to write stats file: %s", rank, e)
+
     logger.info("="*50)
     logger.info("Worker %d done. total_variants_sent=%d  cycles=%d  "
                 "total_errors=%d  uptime=%.1fs",
