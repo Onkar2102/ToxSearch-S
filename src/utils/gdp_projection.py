@@ -526,7 +526,7 @@ def generate_gdp_3d_toxicity_figure(
                 ax.set_ylabel("MDS 2")
                 ax.set_zlabel("Toxicity (fitness)")
                 ax.view_init(elev=elev, azim=azim)
-            fig.subplots_adjust(left=0.08, right=0.92, bottom=0.08, top=0.95)
+            plt.tight_layout()
             plt.savefig(save_fpath, dpi=300, bbox_inches="tight", facecolor="white")
             plt.close()
             return True
@@ -563,7 +563,7 @@ def generate_gdp_3d_toxicity_figure(
             title += " [color = generation: purple = early, yellow = late]"
             fig.colorbar(sm, ax=ax, shrink=0.6, label="Generation")
         ax.set_title(title)
-        fig.subplots_adjust(left=0.08, right=0.92, bottom=0.08, top=0.92)
+        plt.tight_layout()
         plt.savefig(
             save_fpath,
             dpi=300 if use_pub_style else 150,
@@ -638,7 +638,7 @@ def generate_gdp_3d_generation_axis_toxicity_color(
 
         fig.colorbar(sm, ax=axes, shrink=0.5, aspect=25, label="Toxicity (fitness)")
         plt.suptitle("Genetic distance (MDS) + Generation (Z), color = Toxicity", fontsize=14)
-        fig.subplots_adjust(left=0.08, right=0.92, bottom=0.08, top=0.88)
+        plt.tight_layout()
         plt.savefig(save_fpath, dpi=300, bbox_inches="tight", facecolor="white")
         plt.close()
         return True

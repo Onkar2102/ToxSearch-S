@@ -11,6 +11,7 @@ PARENTS_REQUEST   = 10
 PARENTS           = 11
 EVALUATED_VARIANT = 12
 GEN0_BATCH        = 13
+STOP              = 14  # Master tells workers to stop (discard in-progress or remaining work per policy)
 
 
 def send_payload(comm, dest, tag, payload, logger=None):
@@ -29,6 +30,16 @@ def recv_payload(comm, source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, logger=None):
     if logger:
         logger.debug("recv <- rank %d  tag=%d  payload_type=%s", source_rank, tag_id, type(data).__name__)
     return data, tag_id, source_rank
+
+
+def _check_stop(comm, logger=None):
+    """Non-blocking check for STOP from master (rank 0). If present, receive it and return True."""
+    if comm.Iprobe(source=0, tag=STOP):
+        comm.recv(source=0, tag=STOP)
+        if logger:
+            logger.info("Received STOP from master; stopping current work and discarding remaining.")
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -499,9 +510,14 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
         tracker["status"] = "complete"
         tracker["execution_time_seconds"] = round(execution_time, 2)
         tracker["generations_completed"] = generations_completed
+        tracker.setdefault("run_metadata", {}).update({
+            "run_duration_seconds": round(execution_time, 2),
+            "run_mode": "parallel",
+        })
         with open(tracker_path, "w", encoding="utf-8") as f:
             json.dump(tracker, f, indent=2, ensure_ascii=False)
-        logger.debug("Marked EvolutionTracker status='complete', execution_time_seconds=%.2f", execution_time)
+        logger.debug("Marked EvolutionTracker status='complete', execution_time_seconds=%.2f, run_mode=parallel",
+                     execution_time)
 
         from ea.run_evolution import create_final_statistics_with_tracker
         final_stats = create_final_statistics_with_tracker(
@@ -610,7 +626,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         recv_count += 1
 
         tag_name = {PARENTS_REQUEST: "PARENTS_REQUEST", EVALUATED_VARIANT: "EVALUATED_VARIANT",
-                    PARENTS: "PARENTS", GEN0_BATCH: "GEN0_BATCH"}.get(tag_id, f"UNKNOWN({tag_id})")
+                    PARENTS: "PARENTS", GEN0_BATCH: "GEN0_BATCH", STOP: "STOP"}.get(tag_id, f"UNKNOWN({tag_id})")
         logger.debug("recv #%d: source=worker%d  tag=%s  gen0_complete=%s  shutdown=%s",
                       recv_count, source, tag_name, gen0_complete, shutdown)
 
@@ -751,28 +767,28 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 gen0_complete = True
                 generation_id += 1
 
-                # Termination reached: master will send shutdown to workers on their next request;
-                # workers stop immediately. Genomes already in buffers are included in drain (not discarded).
-                if max_generations is not None and generation_id >= max_generations:
-                    shutdown = True
-                    logger.info("SHUTDOWN REASON: max generations reached (%d/%d).",
-                                generation_id, max_generations)
-                else:
-                    max_total = (config_dict or {}).get("max_total_genomes")
-                    if max_total is not None:
-                        try:
-                            with open(outputs_path / "EvolutionTracker.json", "r", encoding="utf-8") as f:
-                                tracker = json.load(f)
-                            gens = tracker.get("generations") or []
-                            last = next((g for g in reversed(gens) if g.get("generation_number") == generation_id - 1), None)
-                            if last is not None:
-                                total_genomes = last.get("elites_count", 0) + last.get("reserves_count", 0) + last.get("archived_count", 0)
-                                if total_genomes >= max_total:
-                                    shutdown = True
-                                    logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
-                                                total_genomes, max_total)
-                        except Exception as e:
-                            logger.debug("Could not check max_total_genomes: %s", e)
+                # Termination: only max_total_genomes is used. (max_generations is kept but never set.)
+                # Send STOP to all workers so they can stop mid-cycle if needed.
+                max_total = (config_dict or {}).get("max_total_genomes")
+                if max_total is not None:
+                    try:
+                        with open(outputs_path / "EvolutionTracker.json", "r", encoding="utf-8") as f:
+                            tracker = json.load(f)
+                        gens = tracker.get("generations") or []
+                        last = next((g for g in reversed(gens) if g.get("generation_number") == generation_id - 1), None)
+                        if last is not None:
+                            total_genomes = last.get("elites_count", 0) + last.get("reserves_count", 0) + last.get("archived_count", 0)
+                            if total_genomes >= max_total:
+                                shutdown = True
+                                logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
+                                            total_genomes, max_total)
+                    except Exception as e:
+                        logger.debug("Could not check max_total_genomes: %s", e)
+                if shutdown:
+                    # Send STOP to all workers immediately; do not wait for them to send PARENTS_REQUEST.
+                    for w in range(1, size):
+                        send_payload(comm, w, STOP, None, logger=logger)
+                    logger.info("Sent STOP to all %d worker(s) (immediate broadcast).", size - 1)
 
     logger.info("All workers finished requesting. recv_count=%d", recv_count)
 
@@ -921,8 +937,9 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
         data, tag_id, _ = recv_payload(comm, source=0, logger=logger)
 
-        if tag_id == PARENTS and data is None:
-            logger.info("Received shutdown (None) from master. Exiting request loop.")
+        if tag_id == STOP or (tag_id == PARENTS and data is None):
+            logger.info("Received shutdown from master (tag=%s). Exiting request loop.",
+                        "STOP" if tag_id == STOP else "PARENTS/None")
             break
 
         # ---- GEN0_BATCH (evaluation-only) ----
@@ -950,6 +967,10 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
             gen0_processed = []
             for i, p in enumerate(prompts):
+                if _check_stop(comm, logger):
+                    logger.info("Worker %d: STOP during GEN0_BATCH; discarding %d remaining prompts.",
+                                rank, len(prompts) - i)
+                    break
                 local_variant_id = f"{rank}_{seq}"
                 genome = {
                     "request_id": req_id,
@@ -1024,10 +1045,20 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             logger.info("Generated %d variant(s) in %.2fs. Processing pipeline...",
                          len(variants), evolve_elapsed)
 
+            if _check_stop(comm, logger):
+                logger.info("Worker %d: STOP after variant creation; discarding all %d variants (none sent).",
+                            rank, len(variants))
+                cycle += 1
+                continue
+
             cycle_ok = 0
             cycle_err = 0
             processed_variants = []
             for i, variant in enumerate(variants):
+                if _check_stop(comm, logger):
+                    logger.info("Worker %d: STOP during evaluation; discarding %d remaining variant(s).",
+                                rank, len(variants) - i)
+                    break
                 local_variant_id = f"{rank}_{seq}"
                 variant["request_id"] = req_id
                 variant["local_variant_id"] = local_variant_id

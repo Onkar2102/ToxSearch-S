@@ -1009,6 +1009,19 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     if final_total_genomes is not None:
         logger.info("Total genomes: %d", final_total_genomes)
 
+    # Write run-level metadata for RQ analysis (run_duration_seconds, run_mode)
+    try:
+        from utils.population_io import update_run_metadata_at_end
+        update_run_metadata_at_end(
+            evolution_tracker_path=str(get_outputs_path() / "EvolutionTracker.json"),
+            run_duration_seconds=total_time,
+            run_mode="sequential",
+            logger=logger,
+            log_file=log_file,
+        )
+    except Exception as e:
+        logger.warning("Failed to update run metadata at end (non-fatal): %s", e)
+
     # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
     try:
         with PerformanceLogger(logger, "Final GDP projection plot"):

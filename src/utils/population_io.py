@@ -1520,12 +1520,15 @@ def calculate_budget_metrics(
     Calculate evaluation budget metrics for a generation.
     
     Budget metrics track computational cost:
-    - llm_calls: Number of LLM calls (response generation) in this generation
+    - llm_calls: Total LLM calls = response generation + variant creation (operators that use LLM).
+    - llm_calls_response_generation: One LLM call per genome (response generator).
+    - llm_calls_variant_creation: One LLM call per genome when the operator that created it uses the LLM.
     - api_calls: Number of moderation API calls (Perspective API) in this generation
-    - total_response_time: Total LLM response generation time (seconds)
-    - total_evaluation_time: Total moderation API evaluation time (seconds)
+    - total_response_time, total_evaluation_time, total_variant_creation_time, total_evaluation_api_wait_seconds
     
-    These are counted from genomes created in the current generation.
+    Operators that use LLM for variant creation: InformedEvolution, LLM synonym/antonym, MLM, Paraphrasing,
+    StylisticMutator, BackTranslation, Negation, TypographicalErrors, ConceptAddition, SemanticFusionCrossover.
+    Non-LLM operators (e.g. SemanticSimilarityCrossover) do not add to llm_calls_variant_creation.
     
     Args:
         elites_genomes: List of elite genomes
@@ -1538,12 +1541,30 @@ def calculate_budget_metrics(
         Dictionary with budget metrics
     """
     _logger = logger or get_logger("BudgetMetrics")
+
+    # Operator names that use the LLM for variant creation (one LLM call per genome created by these).
+    OPERATORS_USING_LLM = frozenset({
+        "InformedEvolutionOperator",
+        "LLM_POSAwareSynonymReplacement",
+        "POSAwareAntonymReplacement",
+        "MLMOperator",
+        "LLMBasedParaphrasingOperator",
+        "StylisticMutator",
+        "LLMBackTranslationHIOperator",
+        "NegationOperator",
+        "TypographicalErrorsOperator",
+        "ConceptAdditionOperator",
+        "SemanticFusionCrossover",
+    })
     
     budget = {
         "llm_calls": 0,
+        "llm_calls_response_generation": 0,
+        "llm_calls_variant_creation": 0,
         "api_calls": 0,
         "total_response_time": 0.0,
         "total_evaluation_time": 0.0,
+        "total_variant_creation_time": 0.0,
         "total_evaluation_api_wait_seconds": 0.0,
     }
     
@@ -1553,11 +1574,17 @@ def calculate_budget_metrics(
         current_gen_genomes = [g for g in all_genomes if g and g.get("generation") == current_generation]
         
         for genome in current_gen_genomes:
-            # Count LLM calls (each genome with response_duration had an LLM call)
+            # Response generation: one LLM call per genome that got a response
             if genome.get("response_duration") is not None or genome.get("generated_output"):
-                budget["llm_calls"] += 1
+                budget["llm_calls_response_generation"] += 1
                 if genome.get("response_duration"):
                     budget["total_response_time"] += float(genome.get("response_duration", 0))
+            # Variant creation: one LLM call per genome when the operator uses the LLM
+            op_name = (genome.get("creation_info") or {}).get("operator")
+            if op_name and op_name in OPERATORS_USING_LLM:
+                budget["llm_calls_variant_creation"] += 1
+            # Total LLM calls = response gen + variant creation
+            budget["llm_calls"] = budget["llm_calls_response_generation"] + budget["llm_calls_variant_creation"]
             
             # Count API calls (each genome with evaluation_duration had an API call)
             if genome.get("evaluation_duration") is not None or genome.get("moderation_result"):
@@ -1566,15 +1593,22 @@ def calculate_budget_metrics(
                     budget["total_evaluation_time"] += float(genome.get("evaluation_duration", 0))
             # Time spent waiting on API (rate-limit/retry sleep) for this genome
             budget["total_evaluation_api_wait_seconds"] += float(genome.get("evaluation_api_wait_seconds", 0) or 0)
+            # Variant creation (operator) time per genome
+            if genome.get("variant_creation_duration") is not None:
+                budget["total_variant_creation_time"] += float(genome.get("variant_creation_duration", 0))
         
+        # Recompute total after loop (we were overwriting inside loop)
+        budget["llm_calls"] = budget["llm_calls_response_generation"] + budget["llm_calls_variant_creation"]
         # Round times to 2 decimal places
         budget["total_response_time"] = round(budget["total_response_time"], 2)
         budget["total_evaluation_time"] = round(budget["total_evaluation_time"], 2)
+        budget["total_variant_creation_time"] = round(budget["total_variant_creation_time"], 2)
         budget["total_evaluation_api_wait_seconds"] = round(budget["total_evaluation_api_wait_seconds"], 2)
         
         _logger.debug(
-            f"Gen {current_generation} budget: {budget['llm_calls']} LLM calls ({budget['total_response_time']}s), "
-            f"{budget['api_calls']} API calls ({budget['total_evaluation_time']}s)"
+            f"Gen {current_generation} budget: llm_calls={budget['llm_calls']} (response={budget['llm_calls_response_generation']}, "
+            f"variant_creation={budget['llm_calls_variant_creation']}), {budget['total_response_time']}s response, "
+            f"api_calls={budget['api_calls']}, variant_creation={budget['total_variant_creation_time']}s"
         )
         
         return budget
@@ -2096,7 +2130,7 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "speciation": None,  # Will be set by speciation update
         "budget": None,  # Will be set if available
         "generation_duration_seconds": None,  # Wall-clock duration for this generation
-        "genomes_per_second": None,  # variants_created / generation_duration_seconds (for scaling analysis)
+        "genomes_per_second": None,  # variants_integrated / generation_duration_seconds (throughput into population)
     }
 
 
@@ -2243,9 +2277,12 @@ def update_evolution_tracker_with_statistics(
         if "llm_calls" in statistics:
             gen_entry["budget"] = {
                 "llm_calls": statistics.get("llm_calls", 0),
+                "llm_calls_response_generation": statistics.get("llm_calls_response_generation", 0),
+                "llm_calls_variant_creation": statistics.get("llm_calls_variant_creation", 0),
                 "api_calls": statistics.get("api_calls", 0),
                 "total_response_time": statistics.get("total_response_time", 0.0),
                 "total_evaluation_time": statistics.get("total_evaluation_time", 0.0),
+                "total_variant_creation_time": statistics.get("total_variant_creation_time", 0.0),
                 "total_evaluation_api_wait_seconds": statistics.get("total_evaluation_api_wait_seconds", 0.0),
             }
             
@@ -2253,19 +2290,34 @@ def update_evolution_tracker_with_statistics(
             if "cumulative_budget" not in tracker:
                 tracker["cumulative_budget"] = {
                     "total_llm_calls": 0,
+                    "total_llm_calls_response_generation": 0,
+                    "total_llm_calls_variant_creation": 0,
                     "total_api_calls": 0,
                     "total_response_time": 0.0,
                     "total_evaluation_time": 0.0,
+                    "total_variant_creation_time": 0.0,
                     "total_evaluation_api_wait_seconds": 0.0,
                 }
             
             tracker["cumulative_budget"]["total_llm_calls"] += statistics.get("llm_calls", 0)
+            tracker["cumulative_budget"]["total_llm_calls_response_generation"] = (
+                tracker["cumulative_budget"].get("total_llm_calls_response_generation", 0)
+                + statistics.get("llm_calls_response_generation", 0)
+            )
+            tracker["cumulative_budget"]["total_llm_calls_variant_creation"] = (
+                tracker["cumulative_budget"].get("total_llm_calls_variant_creation", 0)
+                + statistics.get("llm_calls_variant_creation", 0)
+            )
             tracker["cumulative_budget"]["total_api_calls"] += statistics.get("api_calls", 0)
             tracker["cumulative_budget"]["total_response_time"] = round(
                 tracker["cumulative_budget"]["total_response_time"] + statistics.get("total_response_time", 0.0), 2
             )
             tracker["cumulative_budget"]["total_evaluation_time"] = round(
                 tracker["cumulative_budget"]["total_evaluation_time"] + statistics.get("total_evaluation_time", 0.0), 2
+            )
+            tracker["cumulative_budget"]["total_variant_creation_time"] = round(
+                tracker["cumulative_budget"].get("total_variant_creation_time", 0.0)
+                + statistics.get("total_variant_creation_time", 0.0), 2
             )
             tracker["cumulative_budget"]["total_evaluation_api_wait_seconds"] = round(
                 tracker["cumulative_budget"].get("total_evaluation_api_wait_seconds", 0.0)
@@ -2288,16 +2340,18 @@ def update_evolution_tracker_with_statistics(
         
         if statistics.get("variants_created") is not None:
             gen_entry["variants_created"] = statistics.get("variants_created", 0)
+        if statistics.get("variants_integrated") is not None:
+            gen_entry["variants_integrated"] = statistics.get("variants_integrated", 0)
+        # Throughput = genomes added to population this generation / wall-clock duration of this generation.
+        # Duration is from previous population update (or run start) until this update.
         gd = statistics.get("generation_duration_seconds")
-        vc = statistics.get("variants_created")
-        if gd and gd > 0 and vc is not None:
-            gen_entry["genomes_per_second"] = round(vc / gd, 4)
+        vi = statistics.get("variants_integrated")
+        if gd is not None and gd > 0 and vi is not None:
+            gen_entry["genomes_per_second"] = round(vi / gd, 4)
         if statistics.get("mutation_variants") is not None:
             gen_entry["mutation_variants"] = statistics.get("mutation_variants", 0)
         if statistics.get("crossover_variants") is not None:
             gen_entry["crossover_variants"] = statistics.get("crossover_variants", 0)
-        if statistics.get("variants_integrated") is not None:
-            gen_entry["variants_integrated"] = statistics.get("variants_integrated", 0)
         
         # Parents and top_10: use from statistics if provided (e.g. parallel master), else load from files
         if statistics.get("parents") is not None:
@@ -2372,6 +2426,51 @@ def update_evolution_tracker_with_statistics(
         return False
 
 
+def update_run_metadata_at_end(
+    evolution_tracker_path: str,
+    run_duration_seconds: float,
+    run_mode: str,
+    logger=None,
+    log_file: Optional[str] = None,
+) -> bool:
+    """
+    Update EvolutionTracker run_metadata at end of run with wall-clock duration and mode.
+
+    Use for RQ analysis: run_duration_seconds (total wall-clock) and run_mode
+    ("sequential" | "parallel") so configurations are uniquely identifiable.
+
+    Args:
+        evolution_tracker_path: Path to EvolutionTracker.json
+        run_duration_seconds: Total run wall-clock time in seconds
+        run_mode: "sequential" or "parallel"
+        logger: Optional logger
+        log_file: Optional log file path
+
+    Returns:
+        True if update succeeded, False otherwise
+    """
+    _logger = logger or get_logger("UpdateRunMetadata", log_file)
+    try:
+        tracker_path = Path(evolution_tracker_path)
+        if not tracker_path.exists():
+            _logger.warning("EvolutionTracker.json not found at %s", evolution_tracker_path)
+            return False
+        with open(tracker_path, "r", encoding="utf-8") as f:
+            tracker = json.load(f)
+        tracker.setdefault("run_metadata", {}).update({
+            "run_duration_seconds": round(run_duration_seconds, 2),
+            "run_mode": run_mode,
+        })
+        with open(tracker_path, "w", encoding="utf-8") as f:
+            json.dump(tracker, f, indent=2, ensure_ascii=False)
+        _logger.debug("Updated run_metadata: run_duration_seconds=%.2f  run_mode=%s",
+                      run_duration_seconds, run_mode)
+        return True
+    except Exception as e:
+        _logger.warning("Failed to update run_metadata at end: %s", e, exc_info=True)
+        return False
+
+
 # ============================================================================
 # Module Exports
 # ============================================================================
@@ -2419,4 +2518,5 @@ __all__ = [
     # Generation statistics
     "calculate_generation_statistics",
     "update_evolution_tracker_with_statistics",
+    "update_run_metadata_at_end",
 ]
