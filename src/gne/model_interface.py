@@ -43,13 +43,16 @@ class LlamaCppChatInterface(ModelInterface):
     _MODEL_CACHE_ACCESS_COUNT = {}
     _MODEL_CACHE_LOCK = None
     
-    def __init__(self, model_cfg: Dict[str, Any], log_file: Optional[str] = None):
+    def __init__(self, model_cfg: Dict[str, Any], log_file: Optional[str] = None, cache_key_suffix: Optional[str] = None):
         """
         Initialize the LlamaCpp chat interface.
-        
+
         Args:
             model_cfg: Model configuration dictionary
             log_file: Optional log file path
+            cache_key_suffix: If set (e.g. "response_generator", "prompt_generator"), the cache key
+                is path + suffix so RG and PG get separate instances even when using the same model
+                path. Ensures correct behavior for different seeds and any RG/PG model combination.
         """
         self.logger = get_logger("LlamaCppChatInterface", log_file)
         self.model_cfg = model_cfg
@@ -71,10 +74,11 @@ class LlamaCppChatInterface(ModelInterface):
         if self._MODEL_CACHE_LOCK is None:
             self._MODEL_CACHE_LOCK = threading.Lock()
         
-        self._model_cache_key = absolute_model_path
+        # Key by (path, role) so RG and PG never share an instance — supports different models and seeds.
+        self._model_cache_key = f"{absolute_model_path}|{cache_key_suffix}" if cache_key_suffix else absolute_model_path
 
-        self.logger.info(f"Loading llama.cpp model: {absolute_model_path}")
-        self._load_model(absolute_model_path)
+        self.logger.info(f"Loading llama.cpp model: {absolute_model_path}" + (f" (role={cache_key_suffix})" if cache_key_suffix else ""))
+        self._load_model(absolute_model_path, cache_key=self._model_cache_key)
         self.model = self._MODEL_CACHE[self._model_cache_key]
         self.generation_args = model_cfg.get("generation_args", {})
         
@@ -114,20 +118,22 @@ class LlamaCppChatInterface(ModelInterface):
                 del self._MODEL_CACHE_ACCESS_COUNT[model_path]
                 self.logger.info(f"Removed model {model_path} from cache (access count: {access_count})")
     
-    def _load_model(self, model_path: str):
-        """Load model using llama.cpp with device-specific optimizations."""
+    def _load_model(self, model_path: str, cache_key: Optional[str] = None):
+        """Load model using llama.cpp with device-specific optimizations.
+        cache_key: Key for model cache (default: model_path). Use path|role so RG and PG get separate instances.
+        """
+        if cache_key is None:
+            cache_key = model_path
         try:
             if not os.path.isabs(model_path):
                 from pathlib import Path
                 project_root = Path(__file__).resolve().parents[2]
                 model_path = str(project_root / model_path)
 
-            self._model_cache_key = model_path
-
-            if model_path in self._MODEL_CACHE:
-                # Reuse cached model and bump access count
-                self._MODEL_CACHE_ACCESS_COUNT[model_path] = self._MODEL_CACHE_ACCESS_COUNT.get(model_path, 0) + 1
-                self.logger.debug(f"Reusing cached model: {model_path} (accesses={self._MODEL_CACHE_ACCESS_COUNT[model_path]})")
+            if cache_key in self._MODEL_CACHE:
+                # Reuse only when same path and same role (e.g. same operator loading same model again).
+                self._MODEL_CACHE_ACCESS_COUNT[cache_key] = self._MODEL_CACHE_ACCESS_COUNT.get(cache_key, 0) + 1
+                self.logger.debug("Reusing cached model: %s (accesses=%d)", cache_key, self._MODEL_CACHE_ACCESS_COUNT[cache_key])
                 self._cleanup_model_cache_if_needed()
                 return
             
@@ -135,7 +141,7 @@ class LlamaCppChatInterface(ModelInterface):
                 gguf_path = f"{model_path}.gguf"
                 if os.path.exists(gguf_path):
                     model_path = gguf_path
-                    self._model_cache_key = model_path
+                    # Keep cache_key unchanged (it already includes role suffix if any)
                 else:
                     raise FileNotFoundError(f"Model file not found: {model_path}")
             
@@ -181,8 +187,8 @@ class LlamaCppChatInterface(ModelInterface):
             self.logger.debug(f"Llama.cpp parameters: {llama_params}")
             model = Llama(**llama_params)
             
-            self._MODEL_CACHE[model_path] = model
-            self._MODEL_CACHE_ACCESS_COUNT[model_path] = 1
+            self._MODEL_CACHE[cache_key] = model
+            self._MODEL_CACHE_ACCESS_COUNT[cache_key] = 1
             self.logger.info(f"Model loaded successfully: {model_path}")
             self._cleanup_model_cache_if_needed()
             

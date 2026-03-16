@@ -32,7 +32,9 @@ class ResponseGenerator:
                 raise ValueError(f"Configuration file is empty: {config_path}")
             if model_key not in config:
                 raise ValueError(f"Model '{model_key}' not found in configuration. Available keys: {list(config.keys())}")
-            self.model_cfg = config[model_key]
+            self.model_cfg = dict(config[model_key])
+            if config.get("device_config"):
+                self.model_cfg["device_config"] = config["device_config"]
             if seed is not None:
                 self.model_cfg.setdefault("generation_args", {})["seed"] = seed
             if not self.model_cfg.get("name"):
@@ -49,7 +51,9 @@ class ResponseGenerator:
             raise
 
         try:
-            self.model_interface = LlamaCppChatInterface(self.model_cfg, log_file)
+            self.model_interface = LlamaCppChatInterface(
+                self.model_cfg, log_file, cache_key_suffix="response_generator"
+            )
         except Exception as e:
             self.logger.error(f"Failed to initialize model interface: {e}")
             raise

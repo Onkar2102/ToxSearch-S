@@ -67,6 +67,8 @@ SEQUENTIAL_EXPERIMENTS=(
         --embedding-model all-MiniLM-L6-v2 \
         --embedding-dim 384 \
         --embedding-batch-size 64 \
+        --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
+        --pg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
         --operators all \
         --max-variants 1 \
         --seed-file data/prompt.csv \

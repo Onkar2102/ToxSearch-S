@@ -573,6 +573,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     if num_perspective_keys:
         logger.info("Perspective API: %d key(s) loaded; worker rank R uses key index (R-1) %% %d",
                     num_perspective_keys, num_perspective_keys)
+        assignments = [f"worker {r} → key index {(r - 1) % num_perspective_keys}" for r in range(1, size)]
+        logger.info("Perspective API key assignment: %s", ", ".join(assignments))
     else:
         logger.warning("No Perspective API keys in config; workers will not receive key_index")
 
@@ -671,10 +673,11 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 if n_prompts_batch <= 0:
                     logger.warning("Sent empty GEN0_BATCH to worker %d  [%d:%d]  (no prompts)",
                                   source, payload["prompt_start"], payload["prompt_end"])
+                key_idx = payload.get("perspective_key_index")
                 logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  (%d prompts)  "
-                            "remaining_gen0_assignments=%d",
+                            "perspective_key_index=%s  remaining_gen0_assignments=%d",
                             source, payload["prompt_start"], payload["prompt_end"],
-                            n_prompts_batch, len(gen0_assignments))
+                            n_prompts_batch, key_idx if key_idx is not None else "none", len(gen0_assignments))
 
             elif shutdown:
                 # Worker requested more work only after finishing and reporting current task(s);
@@ -710,9 +713,11 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     if num_keys:
                         payload["perspective_key_index"] = (source - 1) % num_keys
                     send_payload(comm, source, PARENTS, payload, logger=logger)
+                    key_idx = payload.get("perspective_key_index")
                     logger.info("Sent PARENTS to worker %d  (%d parents, %d top_10)  "
-                                "selection_time=%.2fs",
-                                source, len(parents), len(top_10), parent_sel_elapsed)
+                                "perspective_key_index=%s  selection_time=%.2fs",
+                                source, len(parents), len(top_10),
+                                key_idx if key_idx is not None else "none", parent_sel_elapsed)
                 except Exception as e:
                     logger.error("Parent selection failed for worker %d: %s", source, e, exc_info=True)
                     send_payload(comm, source, PARENTS, None, logger=logger)
