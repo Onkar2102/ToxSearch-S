@@ -1,6 +1,4 @@
-# GPU utilization: increase n_batch to improve GPU utilization during inference.
 device_config:
-  n_batch: 2048
   auto_detect: true
   cpu:
     enable_mkl: true
@@ -30,6 +28,7 @@ device_config:
     memory_pressure_relief: true
     use_mlock: true
     use_mmap: true
+  n_batch: 2048
   preferred_device: mps
 prompt_generator:
   generation_args:

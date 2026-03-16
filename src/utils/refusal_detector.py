@@ -1,8 +1,8 @@
 """
-Simple refusal detection for 1-2 sentence responses.
+Simple refusal detection for 1-4 sentence responses.
 
 This module identifies LLM refusals based on:
-1. Response length (1-2 sentences)
+1. Response length (1-4 sentences)
 2. Ending punctuation (. or ?)
 3. Presence of refusal patterns
 """
@@ -107,6 +107,9 @@ REFUSAL_PATTERNS: List[str] = [
     r"i\s+cannot\s+answer\s+that\.?\\?\\?",
     r"i\s+can\S*t\s+assist\s+with\s+that\.\s*if\s+you\s+need\s+help",
     r"i\s+can\S*t\s+assist\s+with\s+that\.\s*if\s+you\s+need",
+    # Guidance patterns (from data/outputs analysis)
+    r"provide\s+guidance\s+on",
+    r"(?:i\s+am|the\s+model\s+is)\s+unable\s+to\s+provide\s+guidance",
 ]
 
 
@@ -140,16 +143,16 @@ def count_sentences(text: str) -> int:
 
 def is_short_response(text: str) -> bool:
     """
-    Check if response is 1-2 sentences (short response).
+    Check if response is 1-4 sentences (short response).
     
     Args:
         text: Response text to check.
         
     Returns:
-        True if response has 1 or 2 sentences, False otherwise.
+        True if response has 1 to 4 sentences, False otherwise.
     """
     sentence_count = count_sentences(text)
-    return 1 <= sentence_count <= 2
+    return 1 <= sentence_count <= 4
 
 
 def ends_with_punctuation(text: str) -> bool:
@@ -199,7 +202,7 @@ def is_refusal(response: str) -> bool:
     Determine if a response is a refusal.
     
     A response is classified as a refusal if ALL of the following are true:
-    1. Response is 1-2 sentences (short response filter)
+    1. Response is 1-4 sentences (short response filter)
     2. Response ends with . or ? (valid ending filter)
     3. Response matches at least one refusal pattern
     
@@ -212,7 +215,7 @@ def is_refusal(response: str) -> bool:
     if not response or not response.strip():
         return False
     
-    # Filter 1: Must be 1-2 sentences
+    # Filter 1: Must be 1-4 sentences
     if not is_short_response(response):
         return False
     

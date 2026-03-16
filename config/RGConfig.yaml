@@ -1,7 +1,4 @@
-# GPU utilization: increase n_batch (prompt token batch for inference) and optionally num_threads
-# to keep the GPU fed. Larger n_batch = higher utilization but more VRAM (e.g. 512–2048).
 device_config:
-  n_batch: 2048
   auto_detect: true
   cpu:
     enable_mkl: true
@@ -31,6 +28,7 @@ device_config:
     memory_pressure_relief: false
     use_mlock: true
     use_mmap: true
+  n_batch: 2048
   preferred_device: null
 response_generator:
   generation_args:

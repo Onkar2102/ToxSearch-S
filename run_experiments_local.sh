@@ -72,10 +72,9 @@ SEQUENTIAL_EXPERIMENTS=(
         --operators all \
         --max-variants 1 \
         --seed-file data/prompt.csv \
-        --seed 42 \
+        --seed 137 \
         --batch-size 25 \
-        --max-total-genomes 80 \
-        --output-dir data/outputs/local_run"
+        --max-total-genomes 500 "
 )
 
 run_sequential() {

@@ -546,7 +546,28 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     # Termination is only by max_total_genomes (--max-total-genomes). --generations is not used for termination.
     terminated_by_total_genomes = False
     final_total_genomes = None
+    # After Gen 0 (or resume), check if we already reached max_total_genomes before starting next generation.
+    if evolution_tracker_path.exists() and max_total_genomes is not None:
+        try:
+            with open(evolution_tracker_path, 'r', encoding='utf-8') as f:
+                tracker = json.load(f)
+            gens = tracker.get("generations", [])
+            latest = max(gens, key=lambda g: g.get("generation_number", 0), default=None) if gens else None
+            if latest is not None:
+                total = latest.get("elites_count", 0) + latest.get("reserves_count", 0) + latest.get("archived_count", 0)
+                final_total_genomes = total
+                if total >= max_total_genomes:
+                    terminated_by_total_genomes = True
+                    logger.info(
+                        "Evolution completed: Total genomes limit already reached after Gen 0 (%d >= %d). Skipping further generations.",
+                        total, max_total_genomes
+                    )
+        except Exception as e:
+            logger.debug("Could not check post-Gen0 total genomes: %s", e)
+
     while True:
+        if terminated_by_total_genomes:
+            break
         generation_count += 1
         gen_start = time.time()
         logger.info("=== Starting Generation %d ===", generation_count)
