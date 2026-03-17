@@ -74,9 +74,11 @@ class DeviceManager:
                 self._device_cache = "cpu"
     
     def _load_config(self):
-        """Load device configuration from RGConfig.yaml"""
+        """Load device configuration from RGConfig.yaml (from project root, not cwd)."""
         try:
-            with open("config/RGConfig.yaml", 'r') as f:
+            from pathlib import Path
+            config_path = Path(__file__).resolve().parents[2] / "config" / "RGConfig.yaml"
+            with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
             self._config_cache = config.get("device_config", {})
             self.logger.debug("Device configuration loaded successfully")

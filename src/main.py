@@ -99,7 +99,7 @@ def update_model_configs(rg_model, pg_model, logger):
                 logger.warning("No GGUF files found under: %s", base_dir)
                 return None
             pref_order = [
-                "Q4_K_M", "Q4_K_S", "Q4_0", "Q5_K_M", "Q5_K_S", "Q4_K", "Q3_K_M", "Q3_K_L", "Q2_K"
+                "f32", "Q8_0", "Q8_K", "Q8_K_M", "Q4_K_M", "Q4_K_S", "Q4_0", "Q5_K_M", "Q5_K_S", "Q4_K", "Q3_K_M", "Q3_K_L", "Q2_K"
             ]
             for pref in pref_order:
                 for f in ggufs:
@@ -1136,10 +1136,18 @@ if __name__ == "__main__":
 
         if getattr(args, "max_total_genomes", None) is None:
             raise ValueError("Parallel mode requires --max-total-genomes; primary termination is by total genomes (elites + reserves + archives).")
-        get_logger, get_log_filename, _, _ = get_custom_logging()
+        get_logger, get_log_filename, _, PerformanceLogger = get_custom_logging()
         log_file = get_log_filename()
         logger = get_logger("master_worker", log_file)
         logger.info("Starting in parallel (MPI) mode. Rank-specific logs will be written for master and workers.")
+
+        # Update RG/PG config files so workers (which load from YAML) use --rg and --pg.
+        try:
+            with PerformanceLogger(logger, "Update model configs (parallel)"):
+                update_model_configs(args.rg, args.pg, logger)
+        except Exception as e:
+            logger.error("Config update failed: %s", e, exc_info=True)
+            sys.exit(1)
 
         speciation_config = SpeciationConfig(
             theta_sim=args.theta_sim,
@@ -1171,6 +1179,7 @@ if __name__ == "__main__":
                 speciation_config=speciation_config,
                 log_file=log_file,
                 run_speciation_fn=run_speciation,
+                stagnation_limit=getattr(args, "stagnation_limit", 5),
             )
         finally:
             _dump_profile()

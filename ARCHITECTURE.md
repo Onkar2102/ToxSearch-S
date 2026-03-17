@@ -418,7 +418,7 @@ else:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `theta_sim` | 0.25 | Similarity threshold for species assignment |
+| `theta_sim` | 0.2 | Similarity threshold for species assignment |
 | `theta_merge` | 0.1 | Merge threshold (must be ≤ theta_sim) |
 | `species_capacity` | 100 | Maximum individuals per species |
 | `cluster0_max_capacity` | 1000 | Maximum individuals in cluster 0 |

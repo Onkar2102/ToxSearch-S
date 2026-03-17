@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -7,11 +8,13 @@ from pathlib import Path
 import pandas as pd
 from mpi4py import MPI
 
-PARENTS_REQUEST   = 10
-PARENTS           = 11
-EVALUATED_VARIANT = 12
-GEN0_BATCH        = 13
-STOP              = 14  # Master tells workers to stop (discard in-progress or remaining work per policy)
+PARENTS_REQUEST     = 10
+PARENTS             = 11
+EVALUATED_VARIANT   = 12
+GEN0_BATCH          = 13
+STOP                = 14  # Master tells workers to stop (discard in-progress or remaining work per policy)
+WORKER_READY        = 20   # Worker finished init successfully
+WORKER_INIT_FAILED  = 21   # Worker failed to init (e.g. model load); payload {"rank": int, "error": str}
 
 
 def send_payload(comm, dest, tag, payload, logger=None):
@@ -437,11 +440,12 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         try:
             from utils.population_io import update_adaptive_selection_logic
             current_max = gen_stats.get("population_max_toxicity", 0.0001)
+            stagnation_limit = (config_dict or {}).get("stagnation_limit", 5)
             update_adaptive_selection_logic(
                 outputs_path=str(outputs_path),
                 current_max_toxicity=current_max,
                 previous_max_toxicity=prev_max,
-                stagnation_limit=10,
+                stagnation_limit=stagnation_limit,
                 north_star_metric=north_star_metric,
                 current_gen_avg_fitness=gen_stats.get("avg_fitness_generation"),
                 logger=logger,
@@ -577,6 +581,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         logger.info("Perspective API key assignment: %s", ", ".join(assignments))
     else:
         logger.warning("No Perspective API keys in config; workers will not receive key_index")
+        logger.error("Parallel mode requires at least one Perspective API key (PERSPECTIVE_API_KEY or PERSPECTIVE_API_KEYS). Aborting.")
+        comm.Abort(1)
 
     outputs_path = Path(outputs_path)
     outputs_path.mkdir(parents=True, exist_ok=True)
@@ -629,6 +635,9 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             n_prompts, gen0_expected, n_workers, gen0_assignments)
         except Exception as e:
             logger.warning("Failed to read seed file for gen0 distribution: %s", e)
+    if not gen0_assignments or gen0_expected == 0:
+        logger.error("Seed file missing, unreadable, or has no 'questions' column; cannot run Gen0. Aborting.")
+        comm.Abort(1)
 
     def _total_buffered():
         return sum(len(b) for b in buffers.values())
@@ -640,6 +649,33 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     recv_count = 0
     # Store parents/top_10 when we send PARENTS so we can write them into EvolutionTracker for this generation
     sent_parents_top10_by_gen = {}
+    # Worker ready phase: wait for WORKER_READY from each worker (or WORKER_INIT_FAILED / timeout → abort)
+    ready_workers = set()
+    ready_timeout_sec = 900
+    ready_start = time.time()
+    init_failed_msg = None
+    logger.info("Waiting for all %d worker(s) to report ready (timeout=%ds)...", n_workers, ready_timeout_sec)
+    while len(ready_workers) < n_workers:
+        if init_failed_msg:
+            logger.error("Worker init failed: %s", init_failed_msg)
+            comm.Abort(1)
+        if time.time() - ready_start > ready_timeout_sec:
+            logger.error("Workers did not all report ready within %d s (ready=%s). Aborting.",
+                         ready_timeout_sec, ready_workers)
+            comm.Abort(1)
+        if comm.Iprobe(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG):
+            status = MPI.Status()
+            data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+            src, tag_id = status.Get_source(), status.Get_tag()
+            if tag_id == WORKER_READY:
+                ready_workers.add(src)
+                logger.info("Worker %d ready (%d/%d).", src, len(ready_workers), n_workers)
+            elif tag_id == WORKER_INIT_FAILED:
+                init_failed_msg = (data or {}).get("error", "unknown") if isinstance(data, dict) else str(data)
+                logger.error("Worker %d reported init failure: %s", src, init_failed_msg)
+        else:
+            time.sleep(0.5)
+    logger.info("All workers ready. Starting dispatch loop.")
     logger.info("="*60)
     logger.info("Dispatch loop started. Waiting for messages from %d worker(s). "
                 "K=%d  max_generations=%s", n_workers, K, max_generations)
@@ -650,7 +686,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         recv_count += 1
 
         tag_name = {PARENTS_REQUEST: "PARENTS_REQUEST", EVALUATED_VARIANT: "EVALUATED_VARIANT",
-                    PARENTS: "PARENTS", GEN0_BATCH: "GEN0_BATCH", STOP: "STOP"}.get(tag_id, f"UNKNOWN({tag_id})")
+                    PARENTS: "PARENTS", GEN0_BATCH: "GEN0_BATCH", STOP: "STOP",
+                    WORKER_READY: "WORKER_READY", WORKER_INIT_FAILED: "WORKER_INIT_FAILED"}.get(tag_id, f"UNKNOWN({tag_id})")
         logger.debug("recv #%d: source=worker%d  tag=%s  gen0_complete=%s  shutdown=%s",
                       recv_count, source, tag_name, gen0_complete, shutdown)
 
@@ -933,37 +970,50 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     base_log_file = cfg.get("log_file")
     log_file = _rank_log_file(base_log_file, rank) or base_log_file
     outputs_path = cfg.get("outputs_path")
+    # Resolve config paths from project root when relative (workers may have different CWD)
+    rg_config_path = cfg.get("rg_config_path") or "config/RGConfig.yaml"
+    pg_config_path = cfg.get("pg_config_path") or "config/PGConfig.yaml"
 
-    if response_generator is None or prompt_generator is None:
-        from gne import get_ResponseGenerator, get_PromptGenerator
-        llm_seed = cfg.get("seed")
-        if response_generator is None:
-            RG = get_ResponseGenerator()
-            response_generator = RG(model_key="response_generator",
-                                    config_path="config/RGConfig.yaml",
-                                    log_file=log_file, seed=llm_seed)
-            logger.info("Worker %d: ResponseGenerator initialised", rank)
-        if prompt_generator is None:
-            PG = get_PromptGenerator()
-            prompt_generator = PG(model_key="prompt_generator",
-                                  config_path="config/PGConfig.yaml",
-                                  log_file=log_file, seed=llm_seed)
-            logger.info("Worker %d: PromptGenerator initialised", rank)
+    try:
+        if response_generator is None or prompt_generator is None:
+            from gne import get_ResponseGenerator, get_PromptGenerator
+            llm_seed = cfg.get("seed")
+            if response_generator is None:
+                RG = get_ResponseGenerator()
+                response_generator = RG(model_key="response_generator",
+                                        config_path=rg_config_path,
+                                        log_file=log_file, seed=llm_seed)
+                logger.info("Worker %d: ResponseGenerator initialised", rank)
+            if prompt_generator is None:
+                PG = get_PromptGenerator()
+                prompt_generator = PG(model_key="prompt_generator",
+                                      config_path=pg_config_path,
+                                      log_file=log_file, seed=llm_seed)
+                logger.info("Worker %d: PromptGenerator initialised", rank)
 
-    from ea.evolution_engine import set_global_generators, generate_single_variant
-    set_global_generators(response_generator, prompt_generator)
+        from ea.evolution_engine import set_global_generators, generate_single_variant
+        set_global_generators(response_generator, prompt_generator)
 
-    if evaluator is None:
-        from gne.evaluator import HybridModerationEvaluator
-        api_keys = cfg.get("perspective_api_keys")
-        evaluator = HybridModerationEvaluator(
-            config_path="config/RGConfig.yaml", log_file=log_file,
-            api_keys=api_keys or None)
-        logger.info("Worker %d: HybridModerationEvaluator initialised", rank)
+        if evaluator is None:
+            from gne.evaluator import HybridModerationEvaluator
+            api_keys = cfg.get("perspective_api_keys")
+            evaluator = HybridModerationEvaluator(
+                config_path=rg_config_path, log_file=log_file,
+                api_keys=api_keys or None)
+            logger.info("Worker %d: HybridModerationEvaluator initialised", rank)
 
-    from gne.response_generator import process_single_genome
-    from gne.evaluator import evaluate_single_genome
-    from utils.refusal_penalty import apply_refusal_penalty_single
+        from gne.response_generator import process_single_genome
+        from gne.evaluator import evaluate_single_genome
+        from utils.refusal_penalty import apply_refusal_penalty_single
+    except Exception as e:
+        logger.exception("Worker %d init failed: %s", rank, e)
+        try:
+            send_payload(comm, 0, WORKER_INIT_FAILED, {"rank": rank, "error": str(e)}, logger=logger)
+        except Exception:
+            pass
+        sys.exit(1)
+
+    send_payload(comm, 0, WORKER_READY, {"rank": rank}, logger=logger)
 
     # ---- Worker-level metrics (written on exit to worker_<rank>_stats.json) ----
     seq = 0
@@ -1260,6 +1310,7 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         run_speciation_fn=None,
         operators_mode="all", seed_file="data/prompt.csv", seed=None,
         moderation_methods=None,
+        stagnation_limit=5,
         response_generator=None, prompt_generator=None, evaluator=None,
         perspective_api_keys=None):
     """MPI entry point. Branch on rank. Primary termination is by total genomes (--max-total-genomes required)."""
@@ -1305,10 +1356,16 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
     if perspective_api_keys is None:
         perspective_api_keys = _load_perspective_api_keys()
 
+    from utils.population_io import get_project_root
+    project_root = get_project_root()
+    rg_config_path = str(project_root / "config" / "RGConfig.yaml")
+    pg_config_path = str(project_root / "config" / "PGConfig.yaml")
+    seed_file_abs = str(project_root / seed_file) if seed_file and not Path(seed_file).is_absolute() else seed_file
+
     config_dict = {
         "north_star_metric": north_star_metric,
         "operators_mode": operators_mode,
-        "seed_file": seed_file,
+        "seed_file": seed_file_abs,
         "seed": seed,
         "moderation_methods": moderation_methods,
         "log_file": log_file,
@@ -1316,6 +1373,9 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         "K": K,
         "perspective_api_keys": perspective_api_keys,
         "max_total_genomes": max_total_genomes,
+        "stagnation_limit": stagnation_limit,
+        "rg_config_path": rg_config_path,
+        "pg_config_path": pg_config_path,
     }
 
     logger.info("MPI rank %d of %d starting", rank, size)

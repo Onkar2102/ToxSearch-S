@@ -84,28 +84,29 @@ python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embeddin
 # 9) Run: uncomment SEQUENTIAL or PARALLEL (only one should run).
 
 # ---- SEQUENTIAL (single process) ----
-python src/main.py \
-    --profile \
-    --max-total-genomes 5000 \
-    --moderation-methods google \
-    --stagnation-limit 5 \
-    --theta-sim 0.35 \
-    --theta-merge 0.35 \
-    --min-stability-gens 5 \
-    --species-capacity 100 \
-    --cluster0-max-capacity 1000 \
-    --cluster0-min-cluster-size 1 \
-    --min-island-size 3 \
-    --species-stagnation 20 \
-    --embedding-model all-MiniLM-L6-v2 \
-    --embedding-dim 384 \
-    --embedding-batch-size 128 \
-    --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
-    --pg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
-    --operators all \
-    --max-variants 1 \
-    --seed-file data/prompt.csv \
-    --seed 42
+# (commented out so PARALLEL runs by default; uncomment to run sequential only)
+# python src/main.py \
+#     --profile \
+#     --max-total-genomes 5000 \
+#     --moderation-methods google \
+#     --stagnation-limit 5 \
+#     --theta-sim 0.35 \
+#     --theta-merge 0.35 \
+#     --min-stability-gens 5 \
+#     --species-capacity 100 \
+#     --cluster0-max-capacity 1000 \
+#     --cluster0-min-cluster-size 1 \
+#     --min-island-size 3 \
+#     --species-stagnation 20 \
+#     --embedding-model all-MiniLM-L6-v2 \
+#     --embedding-dim 384 \
+#     --embedding-batch-size 128 \
+#     --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
+#     --pg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
+#     --operators all \
+#     --max-variants 1 \
+#     --seed-file data/prompt.csv \
+#     --seed 42
 
 # ---- PARALLEL (srun, 1 master + (ntasks-1) workers) ----
 srun python src/main.py \
@@ -125,7 +126,7 @@ srun python src/main.py \
     --species-stagnation 20 \
     --embedding-model all-MiniLM-L6-v2 \
     --embedding-dim 384 \
-    --embedding-batch-size 128 \
+    --embedding-batch-size 64 \
     --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
     --pg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
     --operators all \

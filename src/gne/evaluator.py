@@ -106,10 +106,15 @@ class HybridModerationEvaluator:
         self.logger.info("Initializing Google Perspective Moderation Evaluator")
 
         import yaml
+        from pathlib import Path
         if config_path is None:
-            from pathlib import Path
             project_root = Path(__file__).resolve().parents[2]
             config_path = project_root / "config" / "RGConfig.yaml"
+        else:
+            config_path = Path(config_path)
+            if not config_path.is_absolute():
+                project_root = Path(__file__).resolve().parents[2]
+                config_path = project_root / config_path
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
         model_key = list(config.keys())[0] if config else "response_generator"

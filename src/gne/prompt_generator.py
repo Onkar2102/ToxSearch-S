@@ -24,6 +24,11 @@ class PromptGenerator:
         self.logger = get_logger("PromptGenerator", self.log_file)
         self.logger.debug(f"Logger correctly initialized with log_file: {self.log_file}")
 
+        from pathlib import Path
+        if config_path and not Path(config_path).is_absolute():
+            _project_root = Path(__file__).resolve().parents[2]
+            config_path = str(_project_root / config_path)
+
         try:
             with open(config_path, "r") as f:
                 config = yaml.safe_load(f)
