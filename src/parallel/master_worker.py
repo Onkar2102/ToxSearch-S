@@ -1327,6 +1327,17 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
     if max_total_genomes is None:
         raise ValueError("Parallel mode requires max_total_genomes (--max-total-genomes); primary termination is by total genomes.")
 
+    # Load .env from project root so PERSPECTIVE_API_KEY / PERSPECTIVE_API_KEYS are available (srun may have different CWD)
+    try:
+        from utils.population_io import get_project_root
+        _project_root = get_project_root()
+        _env_path = _project_root / ".env"
+        if _env_path.exists():
+            from dotenv import load_dotenv
+            load_dotenv(_env_path, override=True)
+    except Exception:
+        pass
+
     # Assign device by rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
     from utils.device_utils import device_manager
     device_manager.set_mpi_device(rank, size)
