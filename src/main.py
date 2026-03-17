@@ -126,7 +126,7 @@ def update_model_configs(rg_model, pg_model, logger):
                 rg_config["response_generator"] = rg_section
                 with open(rg_config_path, 'w') as f:
                     yaml.dump(rg_config, f, default_flow_style=False)
-                logger.debug("Updated RGConfig.yaml with file: %s", rg_file)
+                logger.info("Config updated from script (--rg): RGConfig.yaml response_generator.name = %s", rg_file)
             else:
                 logger.warning("Skipped RGConfig.yaml update; no file resolved for alias '%s'", rg_model)
 
@@ -141,11 +141,11 @@ def update_model_configs(rg_model, pg_model, logger):
                 pg_config["prompt_generator"] = pg_section
                 with open(pg_config_path, 'w') as f:
                     yaml.dump(pg_config, f, default_flow_style=False)
-                logger.debug("Updated PGConfig.yaml with file: %s", pg_file)
+                logger.info("Config updated from script (--pg): PGConfig.yaml prompt_generator.name = %s", pg_file)
             else:
                 logger.warning("Skipped PGConfig.yaml update; no file resolved for alias '%s'", pg_model)
 
-        logger.debug("Model configuration updates completed successfully")
+        logger.info("Project configs updated from script parameters: RG=%s, PG=%s", rg_file or "(unchanged)", pg_file or "(unchanged)")
 
     except Exception as e:
         logger.error("Failed to update model configurations: %s", e)
@@ -1130,9 +1130,13 @@ if __name__ == "__main__":
             print(f"  Inspect with: python -m pstats {profile_path}")
 
     if args.parallel:
+        from mpi4py import MPI
         from parallel.master_worker import run as run_parallel
         from speciation.run_speciation import run_speciation
         from speciation.config import SpeciationConfig
+
+        comm = MPI.COMM_WORLD
+        rank = comm.Get_rank()
 
         if getattr(args, "max_total_genomes", None) is None:
             raise ValueError("Parallel mode requires --max-total-genomes; primary termination is by total genomes (elites + reserves + archives).")
@@ -1141,13 +1145,16 @@ if __name__ == "__main__":
         logger = get_logger("master_worker", log_file)
         logger.info("Starting in parallel (MPI) mode. Rank-specific logs will be written for master and workers.")
 
-        # Update RG/PG config files so workers (which load from YAML) use --rg and --pg.
-        try:
-            with PerformanceLogger(logger, "Update model configs (parallel)"):
-                update_model_configs(args.rg, args.pg, logger)
-        except Exception as e:
-            logger.error("Config update failed: %s", e, exc_info=True)
-            sys.exit(1)
+        # Only rank 0 updates RG/PG YAML so workers (which load from YAML) see --rg and --pg. Barrier so workers wait.
+        if rank == 0:
+            try:
+                with PerformanceLogger(logger, "Update model configs (parallel)"):
+                    update_model_configs(args.rg, args.pg, logger)
+                logger.info("Parallel run: configs updated from script; workers will load --rg=%s --pg=%s from YAML", args.rg, args.pg)
+            except Exception as e:
+                logger.error("Config update failed: %s", e, exc_info=True)
+                sys.exit(1)
+        comm.Barrier()
 
         speciation_config = SpeciationConfig(
             theta_sim=args.theta_sim,

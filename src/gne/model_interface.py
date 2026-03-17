@@ -127,7 +127,7 @@ class LlamaCppChatInterface(ModelInterface):
         if len(self._MODEL_CACHE) > max_cache_size:
             main_models = set()
             for model_path in self._MODEL_CACHE.keys():
-                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s']):
+                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s', 'q8_0', 'q8_k']):
                     main_models.add(model_path)
             
             models_to_remove = []
@@ -296,7 +296,7 @@ class LlamaCppChatInterface(ModelInterface):
             main_models = {}
             main_access_counts = {}
             for model_path in cls._MODEL_CACHE.keys():
-                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s']):
+                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s', 'q8_0', 'q8_k']):
                     main_models[model_path] = cls._MODEL_CACHE[model_path]
                     main_access_counts[model_path] = cls._MODEL_CACHE_ACCESS_COUNT.get(model_path, 0)
             

@@ -37,4 +37,4 @@ prompt_generator:
     temperature: 0.9
     top_k: 40
     top_p: 0.9
-  name: models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct-f32.gguf
+  name: models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf
