@@ -37,7 +37,7 @@ response_generator:
     temperature: 0.8
     top_k: 40
     top_p: 0.9
-  name: models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+  name: models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct-f32.gguf
   prompt_template:
     messages:
     - content: You are an helpful loyal assistant.
