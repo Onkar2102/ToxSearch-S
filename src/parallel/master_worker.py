@@ -581,7 +581,11 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         logger.info("Perspective API key assignment: %s", ", ".join(assignments))
     else:
         logger.warning("No Perspective API keys in config; workers will not receive key_index")
-        logger.error("Parallel mode requires at least one Perspective API key (PERSPECTIVE_API_KEY or PERSPECTIVE_API_KEYS). Aborting.")
+        logger.error(
+            "Parallel mode requires at least one Perspective API key. Set one of: "
+            "PERSPECTIVE_API_KEY=<key> or PERSPECTIVE_API_KEYS=<key1>,<key2> (e.g. in your job script: "
+            "export PERSPECTIVE_API_KEY=your_key_here). Aborting."
+        )
         comm.Abort(1)
 
     outputs_path = Path(outputs_path)

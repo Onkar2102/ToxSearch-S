@@ -109,6 +109,9 @@ python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embeddin
 #     --seed 42
 
 # ---- PARALLEL (srun, 1 master + (ntasks-1) workers) ----
+# Perspective API key required (moderation). Set before srun, e.g.:
+#   export PERSPECTIVE_API_KEY=your_key_here
+# Or multiple keys: export PERSPECTIVE_API_KEYS=key1,key2
 srun python src/main.py \
     --parallel \
     --profile \

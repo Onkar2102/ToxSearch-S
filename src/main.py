@@ -62,24 +62,30 @@ def update_model_configs(rg_model, pg_model, logger):
     try:
         logger.info("Updating config files with models: RG=%s, PG=%s", rg_model, pg_model)
 
+        pref_order = [
+            "f32", "Q8_0", "Q8_K", "Q8_K_M", "Q4_K_M", "Q4_K_S", "Q4_0", "Q5_K_M", "Q5_K_S", "Q4_K", "Q3_K_M", "Q3_K_L", "Q2_K"
+        ]
+
         def resolve_model_entry(value: str) -> Optional[str]:
             """
             Resolve the provided model value to a concrete path string.
             - If it's a direct .gguf path that exists, return it as-is
-            - If it's a direct .gguf path that does not exist, treat parent dir as alias and pick by preference
+            - If it's a direct .gguf path that does not exist, resolve from parent dir and prefer the quantization in the requested filename (e.g. Q8_0)
             - Otherwise, treat it as an alias directory under models/ and pick a file by preference
             """
             if not value:
                 return None
+            requested_path = None  # When we fall back to alias from a missing .gguf path, keep hint for preference
             if _is_gguf_path(value):
                 p = Path(value)
                 if not p.is_absolute():
                     p = get_project_root() / value
                 if p.exists():
                     return value
-                # File missing: resolve from parent directory by preference
+                # File missing: resolve from parent directory; prefer quantization from requested filename
                 parent = p.parent
                 if parent.exists():
+                    requested_path = value  # e.g. .../Llama-3.1-8B-Instruct.Q8_0.gguf
                     alias = str(Path(value).parent).replace("\\", "/")
                     value = alias
                 else:
@@ -98,10 +104,14 @@ def update_model_configs(rg_model, pg_model, logger):
             if not ggufs:
                 logger.warning("No GGUF files found under: %s", base_dir)
                 return None
-            pref_order = [
-                "f32", "Q8_0", "Q8_K", "Q8_K_M", "Q4_K_M", "Q4_K_S", "Q4_0", "Q5_K_M", "Q5_K_S", "Q4_K", "Q3_K_M", "Q3_K_L", "Q2_K"
-            ]
-            for pref in pref_order:
+            # If user requested a specific file (e.g. ...Q8_0.gguf), prefer that quantization when resolving
+            order = pref_order
+            if requested_path:
+                preferred = [q for q in pref_order if q in requested_path]
+                if preferred:
+                    order = preferred + [p for p in pref_order if p not in preferred]
+                    logger.info("Preferring quantization from requested path: %s", preferred[0])
+            for pref in order:
                 for f in ggufs:
                     if pref in f.name:
                         rel = (Path(alias) / f.name) if str(alias).startswith("models/") else (Path("./models") / alias / f.name)
