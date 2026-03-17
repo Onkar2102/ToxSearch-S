@@ -1197,6 +1197,15 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     except Exception as e:
         logger.warning("Worker %d failed to write stats file: %s", rank, e)
 
+    # Release llama.cpp models before process exit to reduce chance of
+    # "AttributeError: 'LlamaModel' object has no attribute 'sampler'" during
+    # interpreter teardown (known llama-cpp-python bug in LlamaModel.__del__).
+    try:
+        from gne.model_interface import LlamaCppChatInterface
+        LlamaCppChatInterface.close_and_clear_model_cache()
+    except Exception as e:
+        logger.debug("Model cache cleanup on worker exit: %s", e)
+
     logger.info("="*50)
     logger.info("Worker %d done. total_variants_sent=%d  cycles=%d  "
                 "total_errors=%d  uptime=%.1fs",

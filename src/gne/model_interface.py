@@ -93,6 +93,32 @@ class LlamaCppChatInterface(ModelInterface):
             cls._MODEL_CACHE.clear()
             cls._MODEL_CACHE_ACCESS_COUNT.clear()
             logger.info("Model cache cleared - all models will be reloaded")
+
+    @classmethod
+    def close_and_clear_model_cache(cls):
+        """
+        Close all cached Llama models and clear the cache (e.g. on worker exit).
+        Swallows AttributeError from llama-cpp-python's LlamaModel.close() when
+        the internal 'sampler' attribute is missing (known library bug on teardown).
+        """
+        logger = get_logger("LlamaCppChatInterface")
+        with cls._MODEL_CACHE_LOCK:
+            for cache_key, model in list(cls._MODEL_CACHE.items()):
+                try:
+                    if hasattr(model, "close"):
+                        model.close()
+                except AttributeError as e:
+                    # Known llama-cpp-python bug: LlamaModel.close() accesses self.sampler
+                    # which may not exist if the object was partially initialized or torn down.
+                    logger.debug(
+                        "Ignoring AttributeError when closing model %s (known llama-cpp-python teardown): %s",
+                        cache_key[:80], e,
+                    )
+                except Exception as e:
+                    logger.warning("Error closing model %s: %s", cache_key[:80], e)
+            cls._MODEL_CACHE.clear()
+            cls._MODEL_CACHE_ACCESS_COUNT.clear()
+            logger.info("Model cache closed and cleared")
     
     def _cleanup_model_cache_if_needed(self):
         """Clean up unused models from cache, but preserve main RG/PG models."""

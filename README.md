@@ -336,3 +336,15 @@ Document the seed file, model path, and any non-default flags.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--moderation-methods` | google | Moderation API: `google` or `all` |
+
+---
+
+## Troubleshooting
+
+### `llama_context: n_ctx_per_seq (1024) < n_ctx_train (131072)`
+
+This is an **informational warning** from llama.cpp: the model was trained with a large context window (e.g. 131072 tokens), but inference is using a smaller context (`n_ctx`, e.g. 1024 or 4096) for memory and speed. You can ignore it unless you need longer context; to use a larger window, set `context_length` in your model’s `device_config` (e.g. in `config/RGConfig.yaml` or the config passed to the response generator).
+
+### `AttributeError: 'LlamaModel' object has no attribute 'sampler'` (during exit)
+
+This comes from a **known bug in llama-cpp-python**: the destructor `LlamaModel.__del__` calls `close()`, which accesses `self.sampler` without checking that it exists. It often appears when the process is shutting down (e.g. MPI workers after the job is stopped) and can be safely ignored; it does not affect results. Workers now call an explicit model cleanup before exit to reduce the chance of this message. To fix it in the library, patch `llama_cpp/_internals.py` so that `close()` uses `hasattr(self, "sampler") and self.sampler is not None` before using `self.sampler`, or upgrade to a version/fork that includes this fix (e.g. [llama-cpp-python#2104](https://github.com/abetlen/llama-cpp-python/issues/2104)).
