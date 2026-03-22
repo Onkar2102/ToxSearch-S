@@ -258,8 +258,8 @@ def _collect_operator_stats(accepted_genomes):
 
 def _aggregate_parents_from_genomes(accepted_genomes):
     """Build parents and top_10 for EvolutionTracker from creation_info of all genomes in this generation.
-    Each genome has 'parents' (list of {id, score}). We dedupe by id (normalized to str) and return slim format
-    {id, prompt, toxicity} so tracker format is consistent. top_10 = top 10 parents by score.
+    Each genome has 'parents' (list of {id, score}). We dedupe by id (normalized to str) and return
+    {id, toxicity} only (no prompt text in tracker). top_10 = top 10 parents by score.
     Returns (parents_list, top_10_list).
     """
     by_id = {}
@@ -271,7 +271,7 @@ def _aggregate_parents_from_genomes(accepted_genomes):
             key = str(pid)  # normalize so int 4 and str "4" dedupe
             score = p.get("score") or p.get("toxicity") or 0
             if key not in by_id or (by_id[key].get("toxicity") or 0) < score:
-                by_id[key] = {"id": pid, "prompt": (p.get("prompt") or "")[:100], "toxicity": score}
+                by_id[key] = {"id": pid, "toxicity": score}
     parents_list = list(by_id.values())
     top10_list = sorted(parents_list, key=lambda x: (x.get("toxicity") or 0), reverse=True)[:10]
     return parents_list, top10_list
@@ -346,7 +346,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["top_10"] = sent_parents_top10.get("top_10", [])
         else:
             def _slim(g):
-                return {"id": g.get("id"), "prompt": (g.get("prompt") or "")[:100], "toxicity": g.get("toxicity", 0)}
+                return {"id": g.get("id"), "toxicity": g.get("toxicity", 0)}
             parents_list, top10_list = [], []
             try:
                 parents_path = outputs_path / "parents.json"
@@ -738,9 +738,9 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     parents, top_10 = _select_parents(
                         outputs_path, north_star_metric, generation_id, logger)
                     parent_sel_elapsed = time.time() - parent_sel_start
-                    # Store for EvolutionTracker so this generation's entry gets correct parents/top_10
+                    # Store for EvolutionTracker (id + score only; full prompts stay in parents.json / MPI payload)
                     def _slim(g):
-                        return {"id": g.get("id"), "prompt": (g.get("prompt") or "")[:100], "toxicity": g.get("toxicity", 0)}
+                        return {"id": g.get("id"), "toxicity": g.get("toxicity", 0)}
                     sent_parents_top10_by_gen[generation_id] = {
                         "parents": [_slim(p) for p in parents] if parents else [],
                         "top_10": [_slim(t) for t in top_10] if top_10 else [],
@@ -784,15 +784,16 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             _buffer_state_str(), total_evaluated,
                             gen0_returned, gen0_expected)
 
+            # Generation 0: single speciation after *all* seed evaluations are buffered (not K-batched).
+            # Post-bootstrap: steady-state speciation every K evaluated genomes (unchanged).
             should_speciate = False
-            if _total_buffered() >= K:
-                should_speciate = True
-            elif (not gen0_complete and not gen0_assignments
-                  and gen0_returned >= gen0_expected
-                  and _total_buffered() > 0):
-                logger.info("Gen0 complete with partial batch: %d/%d returned, "
-                            "%d buffered (< K=%d). Triggering speciation.",
-                            gen0_returned, gen0_expected, _total_buffered(), K)
+            if not gen0_complete:
+                if (not gen0_assignments
+                        and gen0_expected > 0
+                        and gen0_returned >= gen0_expected
+                        and _total_buffered() > 0):
+                    should_speciate = True
+            elif _total_buffered() >= K:
                 should_speciate = True
 
             if should_speciate:
@@ -800,10 +801,18 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 total_wait_for_results_seconds += wait_seconds
                 cycle_start = time.time()
                 logger.info("-"*50)
-                logger.info("Merge+speciation triggered: %d buffered, K=%d, "
-                            "generation=%d", _total_buffered(), K, generation_id)
-
-                batch_size = min(_total_buffered(), K)
+                buf_n = _total_buffered()
+                if not gen0_complete:
+                    logger.info(
+                        "Gen0 bootstrap merge+speciation: %d buffered seed evaluations (all %d expected), "
+                        "generation_id=%d (single batch, not limited by K=%d)",
+                        buf_n, gen0_expected, generation_id, K,
+                    )
+                    batch_size = buf_n
+                else:
+                    logger.info("Merge+speciation triggered: %d buffered, K=%d, "
+                                "generation=%d", buf_n, K, generation_id)
+                    batch_size = min(buf_n, K)
                 accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
                     _merge_and_speciate(
                         buffers, batch_size, outputs_path, generation_id, next_genome_id,

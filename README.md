@@ -88,45 +88,52 @@ ToxSearch-S supports distributed execution via MPI, using a master-worker archit
 ### Basic Usage
 
 ```bash
-PYTHONPATH=src mpiexec -n 5 python src/main.py --parallel --batch-size 100 --seed-file data/prompt.csv
+PYTHONPATH=src mpiexec -n 5 python src/main.py --parallel --max-total-genomes 5000 --batch-size 100 --seed-file data/prompt.csv
 ```
 
-This launches 1 master + 4 workers. The `--batch-size` flag sets `K`, the number of genomes collected before triggering speciation.
+This launches 1 master + 4 workers. **`--max-total-genomes` is required** for parallel mode (primary termination). The `--batch-size` flag sets `K`, the number of genomes collected before triggering speciation **after** generation 0. **Generation 0** waits until **all** seed prompts have been evaluated, then runs a **single** merge/speciation on the full buffered bootstrap set (not capped by `K`).
 
 ### Full Example
 
 ```bash
 PYTHONPATH=src mpiexec -n 9 python src/main.py \
     --parallel \
+    --max-total-genomes 10000 \
     --batch-size 200 \
     --generations 50 \
     --seed-file data/prompt.csv \
+    --seed 42 \
     --operators all \
     --moderation-methods google \
     --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
+    --pg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
     --theta-sim 0.2 \
     --species-capacity 100
 ```
 
 ### How It Works
 
-- Rank 0 is the **single-threaded master**: receives worker messages, keeps per-worker in-memory buffers, runs merge/dedup/speciation, updates population files, and writes tracker/statistics.
-- Ranks 1..N are **workers**: request work, evolve prompts from parents, generate responses, evaluate with moderation APIs, and send evaluated genomes back immediately.
-- **Generation 0** uses index ranges (`prompt_start`, `prompt_end`) so workers read seed prompts locally.
+- **Config:** Only rank 0 updates `RGConfig.yaml` and `PGConfig.yaml` from `--rg` and `--pg` before the run; workers load models from those YAMLs (paths broadcast in config). Config and seed file paths are resolved from the project root.
+- Rank 0 is the **master** (CPU only): receives worker messages, keeps per-worker in-memory buffers, runs merge/dedup/speciation, updates population files, and writes tracker/statistics. Workers send **WORKER_READY** after loading models; master waits for all (or **WORKER_INIT_FAILED** / timeout) before starting the dispatch loop.
+- Ranks 1..N are **workers** (typically one GPU each): request work, evolve prompts from parents, generate responses, evaluate with moderation APIs, and send evaluated genomes back immediately.
+- **Generation 0** uses index ranges (`prompt_start`, `prompt_end`) so workers read seed prompts locally from the resolved seed file path.
 - `temp.json` is **transient**: it is filled only during merge/speciation and cleared by speciation; evaluated genomes wait in in-memory buffers first.
-- A generation increments when speciation runs. In parallel mode, this is driven by `K` (`--batch-size`): once `K` evaluated genomes are buffered, master runs speciation.
+- A generation increments when speciation runs. In parallel mode, **generation 0** runs once all seed evaluations are in the master buffer (full bootstrap). Each later generation runs when at least `K` (`--batch-size`) evaluated genomes are buffered. **Termination** is by `--max-total-genomes` (total genomes in elites + reserves + archive).
 
-### Multiple API Keys
+### API key and .env
 
-To distribute Perspective API rate limits across workers, set a comma-separated list:
+Parallel mode requires at least one Perspective API key. You can:
+
+- Put it in **`.env`** in the project root: `PERSPECTIVE_API_KEY=your_key` (or `PERSPECTIVE_API_KEYS=key1,key2`). The parallel runtime loads `.env` from the project root at startup; the sequential path loads it when the evaluator is imported.
+- Or export before running: `export PERSPECTIVE_API_KEY=your_key`
+
+To distribute rate limits across workers, set a comma-separated list:
 
 ```bash
 export PERSPECTIVE_API_KEYS="key1,key2,key3,key4"
 ```
 
-The master assigns keys round-robin to workers. Alternatively, use indexed variables: `PERSPECTIVE_API_KEY_0`, `PERSPECTIVE_API_KEY_1`, etc.
-
-If you currently store multiple keys in `PERSPECTIVE_API_KEY` as comma-separated values, that is also supported.
+The master assigns keys round-robin to workers. Alternatively, use indexed variables: `PERSPECTIVE_API_KEY_0`, `PERSPECTIVE_API_KEY_1`, etc. Storing multiple keys in `PERSPECTIVE_API_KEY` as comma-separated values is also supported.
 
 ### Logs
 
@@ -144,11 +151,13 @@ Worker logs follow the same structure for every rank; the only difference is the
 | Message | When | Meaning |
 |--------|------|--------|
 | `MPI rank N of M starting` | Once at startup | This process is worker N in a world of M ranks. |
-| `Worker N received config: [...]` | After master broadcasts | Worker received run configuration (keys: north_star_metric, seed_file, outputs_path, etc.). |
+| `Worker N received config: [...]` | After master broadcasts | Worker received run configuration (keys: north_star_metric, seed_file, outputs_path, rg_config_path, pg_config_path, etc.). |
 | `Worker N: ResponseGenerator initialised` | If not injected | LLM (response generator) loaded for this worker. |
 | `Worker N: PromptGenerator initialised` | If not injected | Prompt-generation model loaded. |
 | `Worker N: HybridModerationEvaluator initialised` | If not injected | Moderation (e.g. Perspective API) evaluator ready. |
-| `Worker N ready. Entering request loop.` | Before first request | Worker is idle and will now repeatedly request work from the master. |
+| (Master) `Waiting for all N worker(s) to report ready (timeout=900s)...` | After broadcast | Master waits for each worker to send WORKER_READY (or WORKER_INIT_FAILED); then starts dispatch loop. |
+| (Master) `All workers ready. Starting dispatch loop.` | When all workers ready | All workers finished init; master begins the main receive loop. |
+| `Worker N ready. Entering request loop.` | Before first request | Worker sent WORKER_READY and is idle; will repeatedly request work from the master. |
 | `Sent PARENTS_REQUEST request_id=... (cycle=C, total_sent=S)` | Every cycle | Worker asked master for work; `cycle` = request count, `total_sent` = total variants sent so far. |
 | **Generation 0 (bootstrap)** | | |
 | `GEN0_BATCH received: request_id=... prompts[S:E] (N prompts) key_idx=...` | When master sends seed batch | Worker received a slice of the seed file: prompts from index S to E (N prompts). `key_idx` is the Perspective API key index (if multiple keys). |
@@ -169,21 +178,15 @@ Worker logs follow the same structure for every rank; the only difference is the
 
 At **DEBUG** level you also see per-variant lines (e.g. which prompt is being generated or evaluated). **ERROR** lines indicate pipeline failures (e.g. LLM or API errors) for a specific variant; the worker continues and reports that variant as failed.
 
-### Running MPI Tests
+### Running tests
+
+From the project root, with `PYTHONPATH=src`:
 
 ```bash
-# Serialization round-trip (2 ranks)
-mpiexec -n 2 python tests/test_phase8_serialization.py
-
-# Full integration test (3 ranks)
-mpiexec -n 3 python tests/test_phase8_integration.py
-
-# All MPI tests
-mpiexec -n 3 python tests/test_phase3_mpi.py
-mpiexec -n 3 python tests/test_phase4_mpi.py
-mpiexec -n 3 python tests/test_phase5_mpi.py
-mpiexec -n 3 python tests/test_phase67_mpi.py
+PYTHONPATH=src python -m pytest tests/ -v
 ```
+
+See `tests/README.md` for details. Tests include refusal-detector unit tests and config-loading smoke tests.
 
 ### Running on HPC Clusters
 
@@ -216,10 +219,11 @@ export PYTHONPATH=src
 export PERSPECTIVE_API_KEY="your_key"
 
 # Run 1 master + 4 workers; each task gets one GPU from the scheduler
-srun --gpus-per-task=1 python src/main.py --parallel --batch-size 100 \
-  --generations 50 --seed-file data/prompt.csv \
-  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
-  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf
+# Parallel requires --max-total-genomes; optional: set PERSPECTIVE_API_KEY or use .env
+srun --gpus-per-task=1 python src/main.py --parallel --max-total-genomes 5000 --batch-size 100 \
+  --generations 50 --seed-file data/prompt.csv --seed 42 \
+  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf
 ```
 
 If your cluster uses `mpiexec` instead of `srun` for launching MPI, request the same number of GPUs and run:
@@ -275,7 +279,7 @@ To reproduce or compare experimental results, the following should be fixed or r
 - Moderation: metric name (e.g. `toxicity`) and API (e.g. Google Perspective). Multiple API keys only distribute rate limits; they do not change the metric.
 
 **Run configuration**
-- Record all command-line arguments (or config): `--generations`, `--batch-size`, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--seed-file`, model paths. For parallel runs, record the number of MPI ranks and GPU assignment (e.g. one GPU per worker).
+- Record all command-line arguments (or config): `--generations`, `--max-total-genomes`, `--batch-size`, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--seed-file`, `--seed`, model paths (`--rg`, `--pg`). For parallel runs, record the number of MPI ranks and GPU assignment (e.g. one GPU per worker). Config and seed paths are resolved from the project root.
 
 **Outputs**
 - Each run writes to an output directory (e.g. under `data/outputs/`) containing: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, and optionally figures in `figures/`. Parallel runs also produce one log file per rank. See [ARCHITECTURE.md](ARCHITECTURE.md) for a full list of artifacts and their role in the method.
@@ -297,12 +301,15 @@ Document the seed file, model path, and any non-default flags.
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `--generations` | None | Max evolution generations |
+| `--max-total-genomes` | None | Total genomes cap (elites + reserves + archive). **Required for parallel.** |
 | `--stagnation-limit` | 5 | Generations without improvement before EXPLORE mode |
 | `--max-variants` | 1 | Max variants per evolution cycle |
-| `--operators` | all | Operators: `ie`, `cm`, or `all` |
+| `--operators` | all | Operators: `ie` (InformedEvolution only), `cm` (all except InformedEvolution), `all` |
 | `--seed-file` | data/prompt.csv | Seed prompts CSV (requires `questions` column) |
-| `--parallel` | off | Run in MPI master-worker mode (use with `mpiexec`) |
-| `--batch-size` | 100 | Genomes per generation batch (`K`) for parallel mode |
+| `--seed` | None | Fixed seed for LLM generation (RG/PG); improves reproducibility when set |
+| `--parallel` | off | Run in MPI master-worker mode (use with `mpiexec` or `srun`) |
+| `--batch-size` | 100 | Genomes per speciation batch (`K`) for parallel mode after generation 0 (generation 0 uses all seed evaluations) |
+| `--output-dir` | None | Output directory (default: `data/outputs/<timestamp>`). Set for reproducible paths. |
 
 ### Speciation
 
@@ -340,6 +347,10 @@ Document the seed file, model path, and any non-default flags.
 ---
 
 ## Troubleshooting
+
+### `Parallel mode requires at least one Perspective API key`
+
+Set the key in the environment or in `.env` in the project root (see [API key and .env](#api-key-and-env)). Parallel runs load `.env` at startup so the key is available before workers are sent work.
 
 ### `llama_context: n_ctx_per_seq (1024) < n_ctx_train (131072)`
 

@@ -86,7 +86,7 @@ To reproduce or compare results, the following should be fixed or recorded.
 - For parallel runs: one log file per MPI rank (`*_master.log`, `*_worker1.log`, …). See README for interpretation of worker log messages.
 
 **Run configuration**
-- Record all command-line arguments (or equivalent config): `--generations`, `--batch-size` (K), `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, model paths, and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler).
+- Record all command-line arguments (or equivalent config): `--generations`, `--batch-size` (K), `--max-total-genomes` (required for parallel), `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, `--seed`, model paths (`--rg`, `--pg`), and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler). Config and seed paths are resolved from the project root so runs are independent of working directory.
 
 ---
 
@@ -130,6 +130,7 @@ src/
 │
 └── utils/                     # Utilities
     ├── population_io.py       # File I/O and statistics
+    ├── device_utils.py        # Device detection (CUDA/MPS/CPU) and MPI device assignment
     ├── refusal_detector.py    # Refusal detection
     ├── refusal_penalty.py     # Penalty application
     ├── cluster_quality.py     # Cluster quality metrics
@@ -236,7 +237,8 @@ PHASE 5: Post-Processing
 
 ### 5.3 Termination Conditions
 
-- Maximum generations reached
+- **Parallel:** Primary termination is by `--max-total-genomes` (total genomes in elites + reserves + archive). When the cap is reached, master signals shutdown and drains buffered genomes.
+- Maximum generations reached (sequential or as a secondary limit)
 - Threshold achieved (population_max_toxicity ≥ threshold)
 - All species frozen and reserves empty
 - Runtime error or user interruption
@@ -465,9 +467,9 @@ Workers **do not** wait for all variants in a batch to be evaluated before sendi
    - **Immediately** sends that single genome to the master as **EVALUATED_VARIANT**.
 4. Then requests work again (sends **PARENTS_REQUEST** and blocks on **recv**).
 
-The master runs a **single dispatch loop**: it blocks on **recv** from any worker. When it receives **EVALUATED_VARIANT**, it appends that genome to a **per-worker buffer** (`buffers[source]`) and increments `total_evaluated`. When the **total** number of genomes across all buffers reaches **K** (`--batch-size`), the master runs merge (drain up to K from buffers, round-robin), dedup, writes `temp.json`, runs speciation, updates the tracker, and increments the generation. So evaluated genomes from different workers are **interleaved** in the order they arrive; merge drains round-robin from worker buffers so no worker is starved.
+The master runs a **single dispatch loop**: it blocks on **recv** from any worker. When it receives **EVALUATED_VARIANT**, it appends that genome to a **per-worker buffer** (`buffers[source]`) and increments `total_evaluated`. **After generation 0**, when the **total** number of genomes across all buffers reaches **K** (`--batch-size`), the master runs merge (drain up to K from buffers, round-robin), dedup, writes `temp.json`, runs speciation, updates the tracker, and increments the generation. So evaluated genomes from different workers are **interleaved** in the order they arrive; merge drains round-robin from worker buffers so no worker is starved.
 
-**Generation 0** is similar: the master sends each worker a **GEN0_BATCH** (a slice of seed prompt indices). The worker loads those prompts, and for **each** prompt generates a response, evaluates it, and **immediately** sends one **EVALUATED_VARIANT** back. The master buffers them; when either buffered count ≥ K or all Gen0 assignments are done and all expected Gen0 genomes have been returned, the master runs speciation (possibly with a partial batch if &lt; K returned).
+**Generation 0 (bootstrap):** the master sends each worker a **GEN0_BATCH** (a slice of seed prompt indices). The worker loads those prompts, and for **each** prompt generates a response, evaluates it, and **immediately** sends one **EVALUATED_VARIANT** back. The master buffers them and **does not** trigger speciation on `K` alone. It waits until **all** GEN0 batches have been dispatched (`gen0_assignments` empty) **and** the number of returned Gen0 variants reaches the expected seed count; then it runs **one** merge/speciation that drains the **entire** buffered bootstrap set (cap = full buffer, not `K`). **Generation 1+** then follow the usual `K`-batched rule.
 
 **After shutdown** (e.g. max generations), the master may still have genomes left in buffers. It runs a **drain phase**: merge+speciation on the remaining buffered genomes, then final statistics.
 
@@ -477,14 +479,19 @@ The master runs a **single dispatch loop**: it blocks on **recv** from any worke
 - `PARENTS (11)`: Master -> Worker sends parents + top_10 and key index, or `None` for shutdown.
 - `EVALUATED_VARIANT (12)`: Worker -> Master sends one evaluated genome immediately after evaluation (`request_id`, `local_variant_id`).
 - `GEN0_BATCH (13)`: Master -> Worker sends seed prompt index range (`prompt_start`, `prompt_end`) for generation 0 bootstrap.
+- `STOP (14)`: Master -> Worker signals stop (workers may also receive `PARENTS` with payload `None` for shutdown).
+- `WORKER_READY (20)`: Worker -> Master signals successful init (models loaded); master waits for all workers before starting the dispatch loop.
+- `WORKER_INIT_FAILED (21)`: Worker -> Master signals init failure (e.g. model load error); payload `{rank, error}`; master aborts.
+
+**Startup:** Master broadcasts config; workers load `.env` from project root (for `PERSPECTIVE_API_KEY`), then init RG, PG, and evaluator. Each worker sends `WORKER_READY` on success or `WORKER_INIT_FAILED` on exception. Master waits for all `WORKER_READY` with a timeout (e.g. 900 s); on timeout or any `WORKER_INIT_FAILED`, the run aborts. Parallel mode requires at least one Perspective API key (abort with a clear error if missing).
 
 ### 10.4 Generation Semantics in Parallel
 
-- `K = --batch-size`.
+- `K = --batch-size` (applies after generation 0).
 - Master keeps evaluated genomes in **per-worker in-memory buffers**.
-- When buffered genomes reach `K`, master drains up to `K`, deduplicates by exact prompt match, writes `temp.json`, and runs speciation.
+- **Generation 0:** one speciation after all seed evaluations are buffered; merge drains the full buffer (all bootstrap genomes, round-robin), subject to dedup/error skips inside `_merge_and_speciate`.
+- **Generation 1+:** when buffered genomes reach `K`, master drains up to `K`, deduplicates by exact prompt match, writes `temp.json`, and runs speciation.
 - `generation_id` increments per speciation run.
-- In generation 0, if all assigned seed prompts are returned and buffered count is `< K`, master still performs partial speciation with available genomes.
 
 ### 10.5 `temp.json` in Parallel
 
@@ -504,7 +511,7 @@ The master runs a **single dispatch loop**: it blocks on **recv** from any worke
 
 - Parallel runtime writes per-rank logs (`*_master.log`, `*_workerN.log`) to avoid mixed concurrent output in one file. For a detailed interpretation of worker log messages (e.g. request cycles, Gen0 batches, evolution cycles, API key assignment), see the "Worker log messages" section in [README.md](README.md#worker-log-messages-what-they-mean).
 
-**Logging and streaming:** The implementation logs the streaming behaviour correctly. On the **master**, every **EVALUATED_VARIANT** received is logged at INFO (worker, request_id, local_variant_id, status, prompt snippet); buffer state is logged periodically (every 5 variants or when total buffered ≥ K) and at merge/speciation. On the **worker**, each **EVALUATED_VARIANT** send is logged at DEBUG to avoid log flood; INFO logs cover PARENTS received, number of variants generated, and evolution-cycle summary (variants sent, ok/errors, time, total_sent). So the flow (request work → receive parents → generate variants → evaluate and send each variant immediately) is observable in the logs.
+**Logging and streaming:** The implementation logs the streaming behaviour correctly. On the **master**, every **EVALUATED_VARIANT** received is logged at INFO (worker, request_id, local_variant_id, status, prompt snippet); buffer state is logged periodically (every 5 variants or when total buffered ≥ K) and at merge/speciation (during Gen0 bootstrap, buffered may stay &lt; K until all seeds complete). On the **worker**, each **EVALUATED_VARIANT** send is logged at DEBUG to avoid log flood; INFO logs cover PARENTS received, number of variants generated, and evolution-cycle summary (variants sent, ok/errors, time, total_sent). So the flow (request work → receive parents → generate variants → evaluate and send each variant immediately) is observable in the logs.
 
 ### 10.8 Device and GPU usage (HPC)
 
@@ -515,5 +522,6 @@ The master runs a **single dispatch loop**: it blocks on **recv** from any worke
 
 ## References
 
+- [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) — Architecture diagrams (system, components, sequential flow, master-worker MPI)
 - [README.md](README.md) — Installation, setup, hyperparameters, reproducibility, and worker log interpretation
 - [FIELD_DEFINITIONS.txt](FIELD_DEFINITIONS.txt) — Output file field definitions

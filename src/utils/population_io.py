@@ -2371,7 +2371,7 @@ def update_evolution_tracker_with_statistics(
                         parents_data = json.load(pf)
                     if parents_data:
                         gen_entry["parents"] = [
-                            {"id": p.get("id"), "prompt": p.get("prompt", "")[:100], "toxicity": p.get("toxicity", 0)}
+                            {"id": p.get("id"), "toxicity": p.get("toxicity", 0)}
                             for p in parents_data
                         ] if isinstance(parents_data, list) else []
                         _logger.debug("Loaded %d parents from %s for gen %d",
@@ -2386,7 +2386,7 @@ def update_evolution_tracker_with_statistics(
                         top10_data = json.load(tf)
                     if top10_data:
                         gen_entry["top_10"] = [
-                            {"id": t.get("id"), "prompt": t.get("prompt", "")[:100], "toxicity": t.get("toxicity", 0)}
+                            {"id": t.get("id"), "toxicity": t.get("toxicity", 0)}
                             for t in top10_data
                         ] if isinstance(top10_data, list) else []
                         _logger.debug("Loaded %d top_10 from %s for gen %d",
