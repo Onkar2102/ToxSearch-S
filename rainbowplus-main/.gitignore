@@ -94,12 +94,6 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# UV
-#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#uv.lock
-
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
@@ -167,43 +161,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Ruff stuff:
-.ruff_cache/
-
-# PyPI configuration file
-.pypirc
-
-*.DS_Store
-resources/
-logs/
-models/
-htmlcov/
-pre-modification/
-docs/ 
-tests/
-archive/
-.vscode/
-# Doxygen build output
-docs/html/
-docs/latex/
-.ARCHITECTURE.md
-tests/
-
-requirements_spack.txt
-project_script.sh
-
-# Data directory (outputs, archives, CSVs) — not in repo
-data/
-
-.cursor/
-
-experiments/*.json
-.spvenv/
-
-exaqc-main/
-
-genetic-distance-projection-main/
-
-*.txt
-
-
+# Remove local files
+rainbowplus/cal_time.py
+rainbowplus/api/
+.env

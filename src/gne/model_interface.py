@@ -186,34 +186,11 @@ class LlamaCppChatInterface(ModelInterface):
                 "f16_kv": device_config.get("f16_kv", True),
                 "logits_all": False,
                 "vocab_only": False,
+                "use_mmap": device_config.get("use_mmap", True),
+                "use_mlock": device_config.get("use_mlock", False),
             }
             
             device_name = device_config.get("device", "cpu")
-            try:
-                import torch
-                cvd = os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>")
-                if torch.cuda.is_available():
-                    self.logger.info(
-                        "LLM load device clarity: configured=%s torch.cuda.current_device=%s "
-                        "torch.cuda.device_count=%s CUDA_VISIBLE_DEVICES=%s",
-                        device_name,
-                        torch.cuda.current_device(),
-                        torch.cuda.device_count(),
-                        cvd,
-                    )
-                else:
-                    self.logger.info(
-                        "LLM load device clarity: configured=%s torch.cuda.is_available=False "
-                        "CUDA_VISIBLE_DEVICES=%s",
-                        device_name,
-                        cvd,
-                    )
-            except Exception as _probe:
-                self.logger.info(
-                    "LLM load device clarity: configured=%s (torch probe skipped: %s)",
-                    device_name,
-                    _probe,
-                )
             if device_name == "mps":
                 llama_params.update({
                     "n_gpu_layers": device_config.get("gpu_layers", 20),

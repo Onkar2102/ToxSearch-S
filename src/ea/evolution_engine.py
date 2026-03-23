@@ -789,11 +789,10 @@ def generate_single_variant(parents, prompt_generator, north_star_metric="toxici
         prompt_generator: PromptGenerator (LLM) instance for operators.
         north_star_metric: Fitness metric name.
         operators_mode: "all", "cm", or "ie".
-        top_10: Optional list of top-10 genome dicts. When InformedEvolutionOperator is
-                selected, this list is passed as operator_input[\"top_10_examples\"] so
-                workers need not read top_10.json. If None, IE loads from top_10.json.
+        top_10: Optional list of top-10 genome dicts for InformedEvolution.
         log_file: Optional log file path.
-        outputs_path: Optional outputs directory (top_10.json path for IE when top_10 is None).
+        outputs_path: Optional outputs directory (needed for top_10.json path if
+                      top_10 list is not supplied directly).
 
     Returns:
         List[Dict]: genome dicts with 'prompt', 'operator', 'variant_type',
@@ -851,9 +850,6 @@ def generate_single_variant(parents, prompt_generator, north_star_metric="toxici
             parent = random.choice(parents)
             operator_input = {"parent_data": parent}
             variant_type = "mutation"
-
-        if isinstance(op, InformedEvolutionOperator) and top_10 is not None:
-            operator_input = {**operator_input, "top_10_examples": list(top_10)}
 
         logger.debug("generate_single_variant: selected operator=%s  type=%s", op.name, variant_type)
         op_start = time.time()

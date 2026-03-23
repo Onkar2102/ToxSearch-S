@@ -116,7 +116,7 @@ PYTHONPATH=src mpiexec -n 9 python src/main.py \
 - **Config:** Only rank 0 updates `RGConfig.yaml` and `PGConfig.yaml` from `--rg` and `--pg` before the run; workers load models from those YAMLs (paths broadcast in config). Config and seed file paths are resolved from the project root.
 - Rank 0 is the **master** (CPU only): receives worker messages, keeps per-worker in-memory buffers, runs merge/dedup/speciation, updates population files, and writes tracker/statistics. Workers send **WORKER_READY** after loading models; master waits for all (or **WORKER_INIT_FAILED** / timeout) before starting the dispatch loop.
 - Ranks 1..N are **workers** (typically one GPU each): request work, evolve prompts from parents, generate responses, evaluate with moderation APIs, and send evaluated genomes back immediately.
-- **Generation 0** uses pull-based MPI batches: the master sends prompt strings in each `GEN0_BATCH` (batch size `--gen0-batch-size`, default 25); workers do not read the seed CSV for Gen0.
+- **Generation 0** uses index ranges (`prompt_start`, `prompt_end`) so workers read seed prompts locally from the resolved seed file path.
 - `temp.json` is **transient**: it is filled only during merge/speciation and cleared by speciation; evaluated genomes wait in in-memory buffers first.
 - A generation increments when speciation runs. In parallel mode, **generation 0** runs once all seed evaluations are in the master buffer (full bootstrap). Each later generation runs when at least `K` (`--batch-size`) evaluated genomes are buffered. **Termination** is by `--max-total-genomes` (total genomes in elites + reserves + archive).
 

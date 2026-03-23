@@ -108,7 +108,7 @@ flowchart LR
 | 10 | PARENTS_REQUEST | Worker → Master | Request work (`request_id`) |
 | 11 | PARENTS | Master → Worker | Parents + top_10 + key_index; or `None` (shutdown) |
 | 12 | EVALUATED_VARIANT | Worker → Master | One evaluated genome (`request_id`, genome) |
-| 13 | GEN0_BATCH | Master → Worker | Seed prompts (`prompts` list), `gen0_pending`, optional key index |
+| 13 | GEN0_BATCH | Master → Worker | Seed prompt range (`prompt_start`, `prompt_end`) |
 | 14 | STOP | Master → Worker | Stop signal |
 | 20 | WORKER_READY | Worker → Master | Init success (models loaded) |
 | 21 | WORKER_INIT_FAILED | Worker → Master | Init failure (`rank`, `error`) |

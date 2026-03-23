@@ -569,10 +569,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     start_time = time.time()
     gen_start = start_time  # Wall-clock start of current generation (for generation_duration_seconds)
     n_workers = size - 1
-    logger.info(
-        "Master started. MPI world_size=%d (rank 0 + %d worker rank(s))  K: %d  outputs: %s",
-        size, n_workers, K, outputs_path,
-    )
+    logger.info("Master started. Workers: %d  K: %d  outputs: %s", n_workers, K, outputs_path)
 
     comm.bcast(config_dict, root=0)
     logger.info("Broadcast config to workers: %s", list((config_dict or {}).keys()))
@@ -614,45 +611,36 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     shutdown = False
     finished_workers = 0
 
-    gen0_queue = []  # list of str; master pops batches for pull-based Gen0 (MPI payload only, no worker CSV read)
+    gen0_assignments = {}
     gen0_expected = 0
-    gen0_dispatched = 0
     gen0_returned = 0
-    gen0_batch_size = max(1, int((config_dict or {}).get("gen0_batch_size", 25)))
     # Master-level metrics (written at end to master_metrics.json; no change to dispatch/merge logic)
     accepted_per_worker = defaultdict(int)  # Count of genomes accepted per worker_rank (from accepted_genomes)
     total_wait_for_results_seconds = 0.0   # Time from previous gen_start to cycle_start when we speciate
     total_merge_speciation_seconds = 0.0   # Time in _merge_and_speciate (cycle_elapsed) per speciation
     in_flight_at_stop = None                # Buffered count when shutdown was set (termination metric)
     seed_file = (config_dict or {}).get("seed_file")
-    gen0_raw_count = 0
     if seed_file:
         try:
             df = pd.read_csv(seed_file, engine="python", on_bad_lines="skip",
                              sep=",", quotechar='"', skipinitialspace=True)
             if "questions" in df.columns:
-                raw_prompts = df["questions"].dropna().astype(str).str.strip().tolist()
-                gen0_raw_count = len(raw_prompts)
-                seen = set()
-                for p in raw_prompts:
-                    if p not in seen:
-                        seen.add(p)
-                        gen0_queue.append(p)
-                existing = _load_existing_prompts(outputs_path, logger)
-                before_pop = len(gen0_queue)
-                gen0_queue = [p for p in gen0_queue if p not in existing]
-                removed_existing = before_pop - len(gen0_queue)
-                gen0_expected = len(gen0_queue)
-                logger.info(
-                    "Gen0 queue (pull-based MPI): raw_rows=%d unique_after_csv_dedup=%d "
-                    "removed_already_in_population=%d gen0_expected=%d gen0_batch_size=%d",
-                    gen0_raw_count, before_pop, removed_existing, gen0_expected, gen0_batch_size,
-                )
+                n_prompts = len(df["questions"].dropna())
+                chunk = max(n_prompts // n_workers, 1)
+                remainder = n_prompts % n_workers
+                start = 0
+                for w in range(1, size):
+                    end = start + chunk + (1 if (w - 1) < remainder else 0)
+                    end = min(end, n_prompts)
+                    gen0_assignments[w] = (start, end)
+                    start = end
+                gen0_expected = sum(e - s for s, e in gen0_assignments.values())
+                logger.info("Gen0: %d prompts (%d expected) distributed among %d workers: %s",
+                            n_prompts, gen0_expected, n_workers, gen0_assignments)
         except Exception as e:
-            logger.warning("Failed to read seed file for Gen0 queue: %s", e)
-    if gen0_expected == 0:
-        logger.error("Seed file missing, unreadable, no 'questions' column, or no prompts left after dedup; "
-                     "cannot run Gen0. Aborting.")
+            logger.warning("Failed to read seed file for gen0 distribution: %s", e)
+    if not gen0_assignments or gen0_expected == 0:
+        logger.error("Seed file missing, unreadable, or has no 'questions' column; cannot run Gen0. Aborting.")
         comm.Abort(1)
 
     def _total_buffered():
@@ -679,24 +667,17 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             logger.error("Workers did not all report ready within %d s (ready=%s). Aborting.",
                          ready_timeout_sec, ready_workers)
             comm.Abort(1)
-        # Only recv WORKER_READY / WORKER_INIT_FAILED. Using ANY_TAG would consume and drop
-        # early workers' PARENTS_REQUEST (sent right after WORKER_READY), deadlocking them.
-        progressed = False
-        if comm.Iprobe(source=MPI.ANY_SOURCE, tag=WORKER_READY):
+        if comm.Iprobe(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG):
             status = MPI.Status()
-            comm.recv(source=MPI.ANY_SOURCE, tag=WORKER_READY, status=status)
-            src = status.Get_source()
-            ready_workers.add(src)
-            logger.info("Worker %d ready (%d/%d).", src, len(ready_workers), n_workers)
-            progressed = True
-        if comm.Iprobe(source=MPI.ANY_SOURCE, tag=WORKER_INIT_FAILED):
-            status = MPI.Status()
-            data = comm.recv(source=MPI.ANY_SOURCE, tag=WORKER_INIT_FAILED, status=status)
-            src = status.Get_source()
-            init_failed_msg = (data or {}).get("error", "unknown") if isinstance(data, dict) else str(data)
-            logger.error("Worker %d reported init failure: %s", src, init_failed_msg)
-            progressed = True
-        if not progressed:
+            data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
+            src, tag_id = status.Get_source(), status.Get_tag()
+            if tag_id == WORKER_READY:
+                ready_workers.add(src)
+                logger.info("Worker %d ready (%d/%d).", src, len(ready_workers), n_workers)
+            elif tag_id == WORKER_INIT_FAILED:
+                init_failed_msg = (data or {}).get("error", "unknown") if isinstance(data, dict) else str(data)
+                logger.error("Worker %d reported init failure: %s", src, init_failed_msg)
+        else:
             time.sleep(0.5)
     logger.info("All workers ready. Starting dispatch loop.")
     logger.info("="*60)
@@ -720,42 +701,24 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             logger.info("PARENTS_REQUEST from worker %d  request_id=%s", source, req_id)
 
             if not gen0_complete:
-                if gen0_queue:
-                    batch = gen0_queue[:gen0_batch_size]
-                    gen0_queue = gen0_queue[gen0_batch_size:]
-                    gen0_dispatched += len(batch)
-                    gen0_pending = bool(gen0_queue) or (gen0_returned < gen0_expected)
-                    payload = {
-                        "request_id": req_id,
-                        "prompts": batch,
-                        "gen0_pending": gen0_pending,
-                    }
-                    n_prompts_batch = len(batch)
+                if source in gen0_assignments:
+                    s, e = gen0_assignments.pop(source)
+                    payload = {"request_id": req_id, "prompt_start": s, "prompt_end": e}
                 else:
-                    batch = []
-                    payload = {
-                        "request_id": req_id,
-                        "prompts": [],
-                        "gen0_pending": True,
-                    }
-                    n_prompts_batch = 0
+                    payload = {"request_id": req_id, "prompt_start": 0, "prompt_end": 0}
                 num_keys = len((config_dict or {}).get("perspective_api_keys", []))
                 if num_keys:
                     payload["perspective_key_index"] = (source - 1) % num_keys
                 send_payload(comm, source, GEN0_BATCH, payload, logger=logger)
+                n_prompts_batch = payload["prompt_end"] - payload["prompt_start"]
                 if n_prompts_batch <= 0:
-                    logger.debug(
-                        "Sent empty GEN0_BATCH to worker %d  (queue drained; waiting for in-flight evals)  "
-                        "dispatched=%d/%d returned=%d/%d",
-                        source, gen0_dispatched, gen0_expected, gen0_returned, gen0_expected,
-                    )
+                    logger.warning("Sent empty GEN0_BATCH to worker %d  [%d:%d]  (no prompts)",
+                                  source, payload["prompt_start"], payload["prompt_end"])
                 key_idx = payload.get("perspective_key_index")
-                logger.info(
-                    "Sent GEN0_BATCH to worker %d  (%d prompts)  perspective_key_index=%s  "
-                    "dispatched=%d/%d returned=%d/%d queue_remaining=%d",
-                    source, n_prompts_batch, key_idx if key_idx is not None else "none",
-                    gen0_dispatched, gen0_expected, gen0_returned, gen0_expected, len(gen0_queue),
-                )
+                logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  (%d prompts)  "
+                            "perspective_key_index=%s  remaining_gen0_assignments=%d",
+                            source, payload["prompt_start"], payload["prompt_end"],
+                            n_prompts_batch, key_idx if key_idx is not None else "none", len(gen0_assignments))
 
             elif shutdown:
                 # Worker requested more work only after finishing and reporting current task(s);
@@ -825,7 +788,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             # Post-bootstrap: steady-state speciation every K evaluated genomes (unchanged).
             should_speciate = False
             if not gen0_complete:
-                if (gen0_dispatched == gen0_expected
+                if (not gen0_assignments
                         and gen0_expected > 0
                         and gen0_returned >= gen0_expected
                         and _total_buffered() > 0):
@@ -840,17 +803,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 logger.info("-"*50)
                 buf_n = _total_buffered()
                 if not gen0_complete:
-                    if gen0_dispatched != gen0_expected or gen0_returned != gen0_expected:
-                        logger.error(
-                            "Gen0 invariant violated before merge: dispatched=%d returned=%d expected=%d "
-                            "(merge will still run on buffered data)",
-                            gen0_dispatched, gen0_returned, gen0_expected,
-                        )
-                    else:
-                        logger.info(
-                            "Gen0 complete: dispatched=%d returned=%d expected=%d — starting merge+speciation",
-                            gen0_dispatched, gen0_returned, gen0_expected,
-                        )
                     logger.info(
                         "Gen0 bootstrap merge+speciation: %d buffered seed evaluations (all %d expected), "
                         "generation_id=%d (single batch, not limited by K=%d)",
@@ -922,14 +874,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     for w in range(1, size):
                         send_payload(comm, w, STOP, None, logger=logger)
                     logger.info("Sent STOP to all %d worker(s) (immediate broadcast).", size - 1)
-                    # Workers exit on STOP and will not send another PARENTS_REQUEST; unblock master.
-                    finished_workers = n_workers
-
-        else:
-            logger.warning(
-                "Master dispatch: unexpected message from worker %d tag=%s (%s); ignoring",
-                source, tag_id, tag_name,
-            )
 
     logger.info("All workers finished requesting. recv_count=%d", recv_count)
 
@@ -1006,6 +950,21 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 # Worker
 # ---------------------------------------------------------------------------
 
+def _load_seed_prompts(seed_file, start, end, logger):
+    """Load prompts from the seed CSV file for the given index range."""
+    try:
+        df = pd.read_csv(seed_file, engine="python", on_bad_lines="skip",
+                         sep=",", quotechar='"', skipinitialspace=True)
+        if "questions" not in df.columns:
+            logger.error("Seed file %s missing 'questions' column", seed_file)
+            return []
+        prompts = df["questions"].dropna().astype(str).str.strip().tolist()
+        return prompts[start:end]
+    except Exception as e:
+        logger.error("Failed to load seed prompts from %s: %s", seed_file, e, exc_info=True)
+        return []
+
+
 def worker_main(comm, rank, size, logger, config_dict=None,
                 response_generator=None, prompt_generator=None, evaluator=None):
     """Worker process (rank > 0).
@@ -1019,6 +978,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     cfg = config_dict or {}
     north_star_metric = cfg.get("north_star_metric", "toxicity")
     operators_mode = cfg.get("operators_mode", "all")
+    seed_file = cfg.get("seed_file", "data/prompt.csv")
     moderation_methods = cfg.get("moderation_methods")
     base_log_file = cfg.get("log_file")
     log_file = _rank_log_file(base_log_file, rank) or base_log_file
@@ -1101,32 +1061,23 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
         # ---- GEN0_BATCH (evaluation-only) ----
         if tag_id == GEN0_BATCH:
-            if data is None:
-                logger.error("Worker %d: GEN0_BATCH with null payload; skipping cycle", rank)
-                cycle += 1
-                continue
-            prompts = data.get("prompts")
-            if prompts is None:
-                prompts = []
-            gen0_pending = data.get("gen0_pending", True)
+            prompt_start = data.get("prompt_start", 0)
+            prompt_end = data.get("prompt_end", 0)
+            n_prompts = prompt_end - prompt_start
             key_idx = data.get("perspective_key_index")
-            n_prompts = len(prompts)
-            logger.info("GEN0_BATCH received: request_id=%s  n_prompts=%d  gen0_pending=%s  key_idx=%s",
-                        data.get("request_id"), n_prompts, gen0_pending, key_idx)
-
-            if n_prompts == 0:
-                if gen0_pending:
-                    logger.debug("Worker %d: empty Gen0 batch (waiting for other workers / in-flight); backoff 5s",
-                                 rank)
-                    time.sleep(5.0)
-                cycle += 1
-                continue
+            logger.info("GEN0_BATCH received: request_id=%s  prompts[%d:%d] (%d prompts)  "
+                        "key_idx=%s",
+                        data.get("request_id"), prompt_start, prompt_end, n_prompts, key_idx)
 
             if key_idx is not None and hasattr(evaluator, "select_key"):
                 evaluator.select_key(key_idx)
                 logger.info("Worker %d: using Perspective API key index %d", rank, key_idx)
 
-            logger.info("Gen0 batch: processing %d prompts from MPI payload...", len(prompts))
+            if n_prompts <= 0:
+                logger.warning("Worker %d: received empty GEN0 batch (prompts[%d:%d])", rank, prompt_start, prompt_end)
+
+            prompts = _load_seed_prompts(seed_file, prompt_start, prompt_end, logger)
+            logger.info("Gen0 batch: loaded %d prompts from seed file, processing...", len(prompts))
             gen0_batch_start = time.time()
             gen0_ok = 0
             gen0_err = 0
@@ -1167,15 +1118,15 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
             gen0_batch_elapsed = time.time() - gen0_batch_start
             gen0_batch_duration = round(gen0_batch_elapsed, 4)
-            for g_idx, genome in enumerate(gen0_processed):
+            for genome in gen0_processed:
                 genome["gen0_batch_duration"] = gen0_batch_duration
                 send_payload(comm, 0, EVALUATED_VARIANT, genome, logger=logger)
                 logger.debug("Sent EVALUATED_VARIANT (gen0)  local_variant_id=%s  status=%s",
                              genome.get("local_variant_id"), genome.get("status"))
 
-                if (g_idx + 1) % 5 == 0:
+                if (i + 1) % 5 == 0:
                     logger.info("Gen0 progress: %d/%d prompts processed (%d ok, %d errors)",
-                                 g_idx + 1, len(gen0_processed), gen0_ok, gen0_err)
+                                 i + 1, len(prompts), gen0_ok, gen0_err)
 
             # Accumulate timing from genomes (for worker stats on exit)
             for g in gen0_processed:
@@ -1277,10 +1228,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                         "in %.2fs  (total_sent=%d)",
                         cycle, len(variants), cycle_ok, cycle_err, cycle_elapsed, seq)
 
-        else:
-            logger.warning("Worker %d: unexpected message from master tag=%s (expected STOP, "
-                           "GEN0_BATCH, or PARENTS); skipping cycle", rank, tag_id)
-
         cycle += 1
 
     worker_stop_time = time.time()
@@ -1377,7 +1324,6 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         operators_mode="all", seed_file="data/prompt.csv", seed=None,
         moderation_methods=None,
         stagnation_limit=5,
-        gen0_batch_size=25,
         response_generator=None, prompt_generator=None, evaluator=None,
         perspective_api_keys=None):
     """MPI entry point. Branch on rank. Primary termination is by total genomes (--max-total-genomes required)."""
@@ -1389,8 +1335,6 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         raise RuntimeError("Need at least 2 MPI ranks (1 master + 1 worker)")
     if max_total_genomes is None:
         raise ValueError("Parallel mode requires max_total_genomes (--max-total-genomes); primary termination is by total genomes.")
-    if gen0_batch_size < 1:
-        raise ValueError("gen0_batch_size must be >= 1")
 
     # Load .env from project root so PERSPECTIVE_API_KEY / PERSPECTIVE_API_KEYS are available (srun may have different CWD)
     try:
@@ -1402,6 +1346,10 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
             load_dotenv(_env_path, override=True)
     except Exception:
         pass
+
+    # Assign device by rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
+    from utils.device_utils import device_manager
+    device_manager.set_mpi_device(rank, size)
 
     rank_log_file = _rank_log_file(log_file, rank)
     if rank_log_file is not None:
@@ -1424,58 +1372,6 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
                 datefmt="%H:%M:%S"))
             rank_logger.addHandler(ch)
         logger = rank_logger
-
-    # Assign device before any LLM load; log layout on this rank's logger (master + each worker).
-    from utils.device_utils import device_manager
-    device_manager.set_mpi_device(rank, size)
-    try:
-        import torch
-        cuda_avail = torch.cuda.is_available()
-        n_visible_cuda = torch.cuda.device_count() if cuda_avail else 0
-        torch_cuda_build = getattr(torch.version, "cuda", None)
-    except Exception as _torch_probe_err:
-        cuda_avail = False
-        n_visible_cuda = -1
-        torch_cuda_build = None
-        torch_probe_err = str(_torch_probe_err)
-    else:
-        torch_probe_err = None
-    assigned_dev = device_manager.get_optimal_device()
-    n_worker_ranks = size - 1
-    cvd = os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>")
-    slurm_gpus = os.environ.get("SLURM_STEP_GPUS", os.environ.get("SLURM_JOB_GPUS", "<unset>"))
-    local_rank = os.environ.get("LOCAL_RANK", "<unset>")
-    if rank == 0:
-        mapping_note = "master uses CPU for orchestration (not LLM device)"
-    elif cuda_avail and n_visible_cuda > 0:
-        mapping_note = f"worker maps to cuda:((rank-1) % n) -> {assigned_dev} (n={n_visible_cuda})"
-    else:
-        mapping_note = "no usable CUDA on this process; assigned_device is CPU/MPS per DeviceManager"
-
-    logger.info(
-        "MPI parallel: world_size=%d (rank0=master + %d worker rank(s)) rank=%d assigned_device=%s | "
-        "torch.cuda.is_available=%s torch.cuda.device_count=%s torch.version.cuda=%s | "
-        "CUDA_VISIBLE_DEVICES=%s LOCAL_RANK=%s SLURM_*_GPUS=%s | %s",
-        size,
-        n_worker_ranks,
-        rank,
-        assigned_dev,
-        cuda_avail,
-        n_visible_cuda if n_visible_cuda >= 0 else "n/a",
-        torch_cuda_build,
-        cvd,
-        local_rank,
-        slurm_gpus,
-        mapping_note,
-    )
-    if rank != 0:
-        logger.info(
-            "MPI worker layout: worker_index=%d (rank-1); if multiple workers share one GPU, "
-            "expect higher VRAM pressure — tune CUDA_VISIBLE_DEVICES or worker count.",
-            rank - 1,
-        )
-    if torch_probe_err:
-        logger.warning("MPI parallel: torch CUDA probe failed on this rank: %s", torch_probe_err)
 
     if outputs_path is None:
         from utils.population_io import get_outputs_path
@@ -1504,9 +1400,9 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         "stagnation_limit": stagnation_limit,
         "rg_config_path": rg_config_path,
         "pg_config_path": pg_config_path,
-        "gen0_batch_size": gen0_batch_size,
     }
 
+    logger.info("MPI rank %d of %d starting", rank, size)
     if rank == 0:
         master_main(comm, size, K, outputs_path, north_star_metric,
                     speciation_config, rank_log_file or log_file, logger,
