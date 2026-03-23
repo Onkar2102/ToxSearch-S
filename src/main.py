@@ -1109,6 +1109,8 @@ if __name__ == "__main__":
                        help="Fixed seed for LLM generation. When set, all processes (including workers) use this same seed for reproducibility.")
     parser.add_argument("--batch-size", type=int, default=100,
                        help="Number of genomes per generation batch (K) for parallel mode. Default: 100")
+    parser.add_argument("--gen0-batch-size", type=int, default=25,
+                       help="Number of seed prompts per Gen0 MPI batch (pull-based). Default: 25")
     parser.add_argument("--max-total-genomes", type=int, default=None,
                        help="Primary termination: stop when total genomes (elites + reserves + archives) reaches this cap. Required for both sequential and parallel. E.g. set to max_generations * K for fair comparison.")
     parser.add_argument("--parallel", action="store_true",
@@ -1197,6 +1199,7 @@ if __name__ == "__main__":
                 log_file=log_file,
                 run_speciation_fn=run_speciation,
                 stagnation_limit=getattr(args, "stagnation_limit", 5),
+                gen0_batch_size=getattr(args, "gen0_batch_size", 25),
             )
         finally:
             _dump_profile()

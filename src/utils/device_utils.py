@@ -5,6 +5,8 @@ Device detection and configuration utilities for CUDA, MPS, and CPU support.
 Provides centralized device detection and configuration for all components.
 """
 
+import os
+
 import torch
 import yaml
 from typing import Optional, Dict, Any
@@ -20,7 +22,8 @@ class DeviceManager:
     Provides device detection, configuration, and fallback mechanisms
     for all components in the project.
     When running under MPI, use set_mpi_device(rank, size) so rank 0 uses CPU
-    and workers use one GPU each (rank 1 -> cuda:0, rank 2 -> cuda:1, ...).
+    and worker ranks map to CUDA as cuda:((rank-1) % num_visible_gpus) when CUDA
+    is available (so all workers use a GPU if any exist; multiple ranks may share a GPU).
     """
     
     _instance = None
@@ -42,21 +45,71 @@ class DeviceManager:
     
     def set_mpi_device(self, rank: int, size: int) -> None:
         """
-        Set device by MPI rank: rank 0 = CPU (master), workers = CUDA, or MPS on Mac if no CUDA, else CPU.
+        Set device by MPI rank: rank 0 = CPU (master). Workers use CUDA when available,
+        mapping worker_index=(rank-1) to cuda:(worker_index % num_visible_gpus) so every
+        worker uses a GPU if the host exposes any (avoids CPU fallback when workers > GPUs).
+        If CUDA is unavailable, try MPS (macOS), else CPU.
         Call this at MPI entry (e.g. in master_worker.run()) before any model load.
         """
         self._mpi_rank = rank
         self._mpi_size = size
         self._device_cache = None
+        cvd = os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>")
+        try:
+            _tcuda = getattr(torch.version, "cuda", None)
+            _cuda_ok = torch.cuda.is_available()
+            _n_dev = torch.cuda.device_count() if _cuda_ok else 0
+        except Exception as _e:
+            _tcuda = None
+            _cuda_ok = False
+            _n_dev = 0
+            self.logger.warning("MPI set_mpi_device: torch CUDA probe failed rank=%d: %s", rank, _e)
+
         if rank == 0:
             self._device_cache = "cpu"
             self.logger.info("MPI rank 0 (master): using CPU")
+            self.logger.info(
+                "MPI GPU clarity (rank 0 master): torch.cuda.is_available=%s torch.cuda.device_count=%s "
+                "torch.version.cuda=%s CUDA_VISIBLE_DEVICES=%s (master stays on CPU for orchestration)",
+                _cuda_ok, _n_dev, _tcuda, cvd,
+            )
         else:
             worker_id = rank - 1
+            self.logger.info(
+                "MPI GPU clarity (rank %d worker_index=%d): torch.cuda.is_available=%s "
+                "torch.cuda.device_count=%s torch.version.cuda=%s CUDA_VISIBLE_DEVICES=%s",
+                rank, worker_id, _cuda_ok, _n_dev, _tcuda, cvd,
+            )
             try:
-                if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
-                    self._device_cache = f"cuda:{worker_id}"
-                    self.logger.info("MPI rank %d (worker): using cuda:%d", rank, worker_id)
+                if torch.cuda.is_available():
+                    n_gpu = torch.cuda.device_count()
+                    if n_gpu > 0:
+                        gpu_index = worker_id % n_gpu
+                        self._device_cache = f"cuda:{gpu_index}"
+                        if worker_id >= n_gpu:
+                            self.logger.warning(
+                                "MPI rank %d (worker index %d): %d CUDA device(s) visible on this host — "
+                                "assigned cuda:%d (shared with other worker rank(s); use one worker per GPU "
+                                "or set CUDA_VISIBLE_DEVICES to avoid sharing)",
+                                rank, worker_id, n_gpu, gpu_index,
+                            )
+                        else:
+                            self.logger.info(
+                                "MPI rank %d (worker index %d): using cuda:%d (%d GPU(s) visible)",
+                                rank, worker_id, gpu_index, n_gpu,
+                            )
+                    else:
+                        import platform
+                        has_mps = hasattr(torch.backends, "mps") and torch.backends.mps.is_built() and torch.backends.mps.is_available()
+                        if platform.system() == "Darwin" and has_mps:
+                            self._device_cache = "mps"
+                            self.logger.info("MPI rank %d (worker): using MPS (Apple Silicon)", rank)
+                        else:
+                            self._device_cache = "cpu"
+                            self.logger.warning(
+                                "MPI rank %d: CUDA reports 0 devices; using CPU",
+                                rank,
+                            )
                 else:
                     # No CUDA (e.g. Mac): try MPS for workers so Apple Silicon GPU is used
                     import platform
@@ -67,7 +120,7 @@ class DeviceManager:
                     else:
                         self._device_cache = "cpu"
                         self.logger.warning(
-                            "MPI rank %d: no CUDA/MPS; using CPU",
+                            "MPI rank %d: CUDA not available; using CPU",
                             rank)
             except Exception as e:
                 self.logger.warning("MPI rank %d: GPU check failed (%s), using CPU", rank, e)
@@ -89,8 +142,8 @@ class DeviceManager:
     def get_optimal_device(self) -> str:
         """
         Get the best available device with comprehensive error handling.
-        If set_mpi_device() was called, returns device for this MPI rank
-        (rank 0 = cpu, rank 1 = cuda:0, rank 2 = cuda:1, ...).
+        If set_mpi_device() was called, returns cached device for this MPI rank
+        (rank 0 = cpu; workers use cuda:((rank-1) % num_gpus) when CUDA visible).
         Otherwise priority order: MPS -> CUDA -> CPU.
         
         Returns:
@@ -103,8 +156,10 @@ class DeviceManager:
                 return "cpu"
             worker_id = self._mpi_rank - 1
             try:
-                if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
-                    return f"cuda:{worker_id}"
+                if torch.cuda.is_available():
+                    n_gpu = torch.cuda.device_count()
+                    if n_gpu > 0:
+                        return f"cuda:{worker_id % n_gpu}"
                 import platform
                 if platform.system() == "Darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_built() and torch.backends.mps.is_available():
                     return "mps"

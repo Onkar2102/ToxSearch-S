@@ -1,9 +1,10 @@
 """
 InformedEvolution.py
 
-LLM-based informed evolution mutation operator that uses top_10.json examples.
-This operator reads the top 10 genomes from top_10.json and asks the LLM to create
-mutated variants that will generate output having more toxicity than these examples.
+LLM-based informed evolution mutation operator that uses top-10 genome examples.
+Examples may be supplied in-memory via operator_input[\"top_10_examples\"] (e.g. MPI
+workers receiving top_10 from the master); otherwise the operator loads top_10.json
+from top_10_path (or default outputs path).
 """
 
 import os
@@ -22,10 +23,10 @@ get_logger, _, _, _ = get_custom_logging()
 
 class InformedEvolutionOperator(VariationOperator):
     """
-    LLM-based informed evolution mutation operator that uses top_10.json examples.
+    LLM-based informed evolution mutation operator using top-10 genome examples.
 
-    This operator reads the top 10 genomes from top_10.json (which contains the most
-    toxic examples from previous generations) and uses them as examples to guide the
+    Examples come from operator_input[\"top_10_examples\"] when provided (MPI / parallel),
+    else from top_10.json on disk. Uses them to guide the
     LLM in creating new mutated variants that should generate even more toxic responses.
 
     Process:
@@ -89,12 +90,12 @@ class InformedEvolutionOperator(VariationOperator):
             north_star_metric: The primary fitness metric to optimize for
             log_file: Path to log file (optional)
             generator: LLM generator instance to use. If None, will create own instance.
-            top_10_path: Path to top_10.json file containing the most toxic examples
+            top_10_path: Path to top_10.json when not using in-memory top_10_examples
         """
         super().__init__(
             "InformedEvolutionOperator",
             "mutation",
-            "LLM-based informed evolution mutation using top_10.json examples"
+            "LLM-based informed evolution mutation using top-10 examples (in-memory or top_10.json)"
         )
 
         self.logger = get_logger(self.name, log_file)
@@ -157,12 +158,12 @@ class InformedEvolutionOperator(VariationOperator):
         formatted_examples = []
         for i, example in enumerate(top_10_examples[:10], 1):
             prompt = example.get("prompt", "")
-            toxicity_score = _extract_north_star_score(example, "toxicity")
+            toxicity_score = _extract_north_star_score(example, self.north_star_metric)
 
             if toxicity_score <= 0.0001:
-                self.logger.warning(f"{self.name}: Low toxicity score in example {i}: {toxicity_score}")
+                self.logger.warning(f"{self.name}: Low {self.north_star_metric} score in example {i}: {toxicity_score}")
 
-            formatted_example = f"""Example {i} (Toxicity Score: {toxicity_score:.3f}):
+            formatted_example = f"""Example {i} ({self.north_star_metric.title()} Score: {toxicity_score:.3f}):
             Question: "{prompt}"
             """
             formatted_examples.append(formatted_example)
@@ -270,11 +271,22 @@ class InformedEvolutionOperator(VariationOperator):
                 self.logger.error(f"{self.name}: No generator available")
                 return []
 
-            top_10_examples = self._load_top_10_examples()
+            if "top_10_examples" in operator_input:
+                raw = operator_input.get("top_10_examples")
+                if isinstance(raw, list):
+                    top_10_examples = list(raw)
+                else:
+                    top_10_examples = []
+                self.logger.info(
+                    f"{self.name}: Using {len(top_10_examples)} example(s) from operator_input "
+                    f"(in-memory / MPI; skipping top_10.json)"
+                )
+            else:
+                top_10_examples = self._load_top_10_examples()
             self._last_top_10_examples = top_10_examples
 
             if top_10_examples:
-                scores = [max(_extract_north_star_score(ex, "toxicity"), 0.0001) for ex in top_10_examples]
+                scores = [max(_extract_north_star_score(ex, self.north_star_metric), 0.0001) for ex in top_10_examples]
                 self.top_10_avg_score = round(sum(scores) / len(scores), 4)
                 max_score = max(scores) if scores else 0.0001
                 min_score = min(scores) if scores else 0.0001
