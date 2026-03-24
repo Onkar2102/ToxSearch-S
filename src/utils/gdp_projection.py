@@ -650,6 +650,14 @@ def generate_gdp_3d_generation_axis_toxicity_color(
 # PLOTLY INTERACTIVE 3D VISUALIZATION (NEW)
 # ============================================================================
 
+def _gdp_reduced_population_info(reduced_genome_data: Any) -> Any:
+    """GDP ReducedGenomeData stores metadata on `_population_info` (see matplotlib GDP paths)."""
+    info = getattr(reduced_genome_data, "_population_info", None)
+    if info is not None:
+        return info
+    return getattr(reduced_genome_data, "population_info", None)
+
+
 def generate_gdp_3d_plotly_toxicity_figure(
     reduced_genome_data: Any,
     genomes: List[Dict[str, Any]],
@@ -681,18 +689,20 @@ def generate_gdp_3d_plotly_toxicity_figure(
             return False
         
         positions_2d = reduced_genome_data.reduced_positions
-        population_info = reduced_genome_data.population_info
-        
+        population_info = _gdp_reduced_population_info(reduced_genome_data)
+        if not positions_2d or population_info is None:
+            return False
+
         ids = list(positions_2d.keys())
         if not ids:
             return False
-        
+
         x = np.array([positions_2d[i][0] for i in ids])
         y = np.array([positions_2d[i][1] for i in ids])
-        
+
         # Get Z values (toxicity)
         z = np.array([population_info.get(i, {}).get("fitness", 0.5) for i in ids])
-        
+
         # Determine colors based on color_by
         if color_by == "alive":
             source = [population_info.get(i, {}).get("alive", "archived") for i in ids]
@@ -710,20 +720,20 @@ def generate_gdp_3d_plotly_toxicity_figure(
         else:  # toxicity
             colors = z
             color_label = "Toxicity (Z-axis)"
-        
+
+        # alive: discrete HTML color strings — omit colorscale/colorbar (Plotly rejects colorscale=None)
+        marker_kw: Dict[str, Any] = dict(size=4, color=colors, opacity=0.8)
+        if color_by != "alive":
+            marker_kw["colorscale"] = "Viridis"
+            marker_kw["colorbar"] = dict(title=color_label)
+            marker_kw["line"] = dict(width=0)
+
         # Create interactive scatter plot
         fig = go.Figure(data=[
             go.Scatter3d(
                 x=x, y=y, z=z,
                 mode='markers',
-                marker=dict(
-                    size=4,
-                    color=colors,
-                    colorscale='Viridis' if color_by != "alive" else None,
-                    colorbar=dict(title=color_label) if color_by != "alive" else None,
-                    opacity=0.8,
-                    line=dict(width=0) if color_by != "alive" else None
-                ),
+                marker=marker_kw,
                 text=[f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>Gen: {population_info.get(i, {}).get('generation', 0)}<br>Species: {population_info.get(i, {}).get('species_id', 0)}" for i in ids],
                 hoverinfo='text',
             )
@@ -761,7 +771,8 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
     use_pub_style: bool = False,
 ) -> bool:
     """
-    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2, Z=Generation; Color=Toxicity.
+    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2, Z=Generation.
+    Default color = toxicity (Viridis); dropdown switches color: toxicity, species, generation, alive/archived.
     
     Args:
         reduced_genome_data: ReducedGenomeData object with reduced_positions and population_info
@@ -774,6 +785,7 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
     """
     try:
         import plotly.graph_objects as go
+        import plotly.express as px
     except ImportError:
         return False
     
@@ -782,56 +794,165 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
             return False
         
         positions_2d = reduced_genome_data.reduced_positions
-        population_info = reduced_genome_data.population_info
-        
+        population_info = _gdp_reduced_population_info(reduced_genome_data)
+        if not positions_2d or population_info is None:
+            return False
+
         ids = list(positions_2d.keys())
         if not ids:
             return False
-        
+
         x = np.array([positions_2d[i][0] for i in ids])
         y = np.array([positions_2d[i][1] for i in ids])
-        
-        # Z = Generation, Color = Toxicity
+
         z_gen = np.array([int(population_info.get(i, {}).get("generation", 0)) for i in ids])
-        colors = np.array([population_info.get(i, {}).get("fitness", 0.5) for i in ids])
-        
-        # Create interactive scatter plot
-        fig = go.Figure(data=[
-            go.Scatter3d(
-                x=x, y=y, z=z_gen,
-                mode='markers',
-                marker=dict(
-                    size=4,
-                    color=colors,
-                    colorscale='Viridis',
-                    colorbar=dict(title='Toxicity'),
-                    opacity=0.8,
-                ),
-                text=[f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>Gen: {population_info.get(i, {}).get('generation', 0)}<br>Species: {population_info.get(i, {}).get('species_id', 0)}" for i in ids],
-                hoverinfo='text',
-            )
-        ])
-        
-        # Update layout with better styling
-        fig.update_layout(
-            title="Genetic Distance Projection (MDS) + Generation (Z-axis) [color = Toxicity]",
-            scene=dict(
-                xaxis=dict(title='MDS 1'),
-                yaxis=dict(title='MDS 2'),
-                zaxis=dict(title='Generation'),
-                bgcolor='rgba(240, 240, 240, 0.5)' if use_pub_style else 'white',
-                camera=dict(
-                    eye=dict(x=1.5, y=1.5, z=1.3)
+        tox = np.array([float(population_info.get(i, {}).get("fitness", 0.5)) for i in ids], dtype=float)
+        species_ids = [int(population_info.get(i, {}).get("species_id", 0) or 0) for i in ids]
+
+        palette = list(px.colors.qualitative.Plotly) + list(px.colors.qualitative.Dark24)
+        uniq_spec = sorted(set(species_ids))
+        sid_to_hex = {sid: palette[j % len(palette)] for j, sid in enumerate(uniq_spec)}
+        species_hex = [sid_to_hex[sid] for sid in species_ids]
+
+        alive_hex = []
+        for i in ids:
+            a = population_info.get(i, {}).get("alive", "archived")
+            alive_hex.append("#2ca02c" if str(a).lower() == "alive" else "#d62728")
+
+        hover = [
+            f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>"
+            f"Gen: {population_info.get(i, {}).get('generation', 0)}<br>"
+            f"Species: {population_info.get(i, {}).get('species_id', 0)}<br>"
+            f"Alive: {population_info.get(i, {}).get('alive', 'archived')}"
+            for i in ids
+        ]
+
+        # One trace; dropdown uses restyle to swap marker coloring mode
+        fig = go.Figure(
+            data=[
+                go.Scatter3d(
+                    x=x,
+                    y=y,
+                    z=z_gen,
+                    mode="markers",
+                    marker=dict(
+                        size=4,
+                        color=tox,
+                        colorscale="Viridis",
+                        colorbar=dict(title=dict(text="Toxicity")),
+                        opacity=0.8,
+                        showscale=True,
+                    ),
+                    text=hover,
+                    hoverinfo="text",
                 )
-            ),
-            hovermode='closest',
-            height=800 if use_pub_style else 700,
-            width=1000 if use_pub_style else 900,
-            template='plotly' if use_pub_style else 'plotly_white',
-            font=dict(family="Arial, sans-serif", size=11),
+            ]
         )
-        
-        fig.write_html(save_fpath)
+
+        # Restyle presets: continuous scales vs discrete HTML colors (no colorscale)
+        def _btn(label: str, m: Dict[str, Any]) -> Dict[str, Any]:
+            return dict(label=label, method="restyle", args=[m])
+
+        buttons = [
+            _btn(
+                "Color: toxicity (Viridis)",
+                {
+                    "marker.color": [tox],
+                    "marker.colorscale": "Viridis",
+                    "marker.autocolorscale": True,
+                    "marker.showscale": True,
+                    "marker.colorbar": [{"title": {"text": "Toxicity"}}],
+                },
+            ),
+            _btn(
+                "Color: species (discrete)",
+                {
+                    "marker.color": [species_hex],
+                    "marker.colorscale": [None],
+                    "marker.autocolorscale": False,
+                    "marker.showscale": False,
+                    "marker.colorbar": [None],
+                },
+            ),
+            _btn(
+                "Color: generation (Plasma)",
+                {
+                    "marker.color": [z_gen],
+                    "marker.colorscale": "Plasma",
+                    "marker.autocolorscale": True,
+                    "marker.showscale": True,
+                    "marker.colorbar": [{"title": {"text": "Generation"}}],
+                },
+            ),
+            _btn(
+                "Color: alive vs archived",
+                {
+                    "marker.color": [alive_hex],
+                    "marker.colorscale": [None],
+                    "marker.autocolorscale": False,
+                    "marker.showscale": False,
+                    "marker.colorbar": [None],
+                },
+            ),
+        ]
+
+        fig.update_layout(
+            title=dict(
+                text="Genetic Distance Projection (MDS) + Generation (Z-axis) — use dropdown to change coloring",
+                x=0.5,
+                xanchor="center",
+            ),
+            scene=dict(
+                xaxis=dict(title="MDS 1"),
+                yaxis=dict(title="MDS 2"),
+                zaxis=dict(title="Generation"),
+                bgcolor="rgba(240, 240, 240, 0.5)" if use_pub_style else "white",
+                camera=dict(eye=dict(x=1.5, y=1.5, z=1.3)),
+            ),
+            hovermode="closest",
+            height=800 if use_pub_style else 720,
+            width=1000 if use_pub_style else 900,
+            template="plotly" if use_pub_style else "plotly_white",
+            font=dict(family="Arial, sans-serif", size=11),
+            updatemenus=[
+                dict(
+                    active=0,
+                    buttons=buttons,
+                    direction="down",
+                    showactive=True,
+                    x=0.02,
+                    xanchor="left",
+                    y=1.18,
+                    yanchor="top",
+                    bgcolor="rgba(255,255,255,0.92)",
+                    bordercolor="#888",
+                    borderwidth=1,
+                    pad=dict(r=6, t=6, b=6, l=6),
+                )
+            ],
+            annotations=[
+                dict(
+                    text="Point color mode:",
+                    x=0.02,
+                    y=1.22,
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    xanchor="left",
+                    yanchor="bottom",
+                    font=dict(size=12),
+                )
+            ],
+        )
+
+        fig.write_html(
+            save_fpath,
+            config={
+                "displayModeBar": True,
+                "displaylogo": False,
+                "scrollZoom": True,
+            },
+        )
         return True
     except Exception:
         return False

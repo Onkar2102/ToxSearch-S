@@ -27,6 +27,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _log_subdir_for_model(model: str) -> str:
+    """
+    Avoid Path(log_dir) / absolute_model_path collapsing to an absolute path on POSIX.
+    Use a filesystem-safe tag for log layout.
+    """
+    if not model:
+        return "unnamed_model"
+    s = str(model).strip()
+    if s.lower().endswith(".gguf"):
+        return Path(s).stem.replace(" ", "_")[:200]
+    if s.startswith("/"):
+        return Path(s).name.replace(" ", "_")[:200] or "local_model"
+    return s.replace("/", "__").replace("\\", "_")[:200]
+
+
 def parse_arguments():
     """
     Parse command-line arguments for adversarial prompt generation.
@@ -81,7 +96,10 @@ def parse_arguments():
         help="Number of iterations between log saves",
     )
     parser.add_argument(
-        "--dataset", type=str, default="./data/do-not-answer.json", help="Dataset name"
+        "--dataset",
+        type=str,
+        default=None,
+        help="Seed JSON/JSONL path (overrides sample_prompts in YAML if set)",
     )
     parser.add_argument(
         "--target_llm",
@@ -143,9 +161,10 @@ def run_rainbowplus(
 
     # Prepare log directory
     dataset_name = Path(config.sample_prompts).stem
-    log_dir = (
-        Path(args.log_dir) / config.target_llm.model_kwargs["model"] / dataset_name
+    model_tag = _log_subdir_for_model(
+        config.target_llm.model_kwargs.get("model", "unnamed_model")
     )
+    log_dir = Path(args.log_dir) / model_tag / dataset_name
     log_dir.mkdir(parents=True, exist_ok=True)
 
     all_genomes_path = log_dir / "all_genomes.jsonl"
@@ -293,7 +312,8 @@ if __name__ == "__main__":
     # Update configuration based on command-line arguments
     if args.target_llm is not None:
         config.target_llm.model_kwargs["model"] = args.target_llm
-    config.sample_prompts = args.dataset
+    if args.dataset is not None:
+        config.sample_prompts = args.dataset
 
     # Initialize language models and scoring functions
     llms = initialize_language_models(config)

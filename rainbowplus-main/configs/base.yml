@@ -8,8 +8,11 @@
 #   temperature, top_p, top_k, max_tokens (vLLM uses max_tokens = llama.cpp max_new_tokens).
 # repetition_penalty is not passed to vLLM (llama.cpp-only in ToxSearch-S).
 #
-# Replace model: with your local single-file .gguf path on the cluster; tokenizer: must
-# match the instruct model family. CLI --target_llm overrides target model_kwargs["model"] only.
+# Replace model: with your local single-file .gguf path on the cluster.
+# tokenizer: MUST be a Hugging Face repo id (same instruct family), e.g.
+#   meta-llama/Meta-Llama-3.1-8B-Instruct
+# Omitting tokenizer causes HF errors like "Repo id must be in the form ..." for .gguf paths.
+# CLI --target_llm overrides target model_kwargs["model"] only.
 
 
 # Archive Configuration

@@ -24,7 +24,7 @@ src_dir = project_root / "src"
 sys.path.insert(0, str(src_dir))
 
 from utils.gdp_projection import (
-    run_gdp_projection_mds,
+    run_gdp_projection,
     generate_gdp_3d_plotly_toxicity_figure,
     generate_gdp_3d_plotly_generation_axis_toxicity_color,
 )
@@ -69,7 +69,7 @@ def generate_interactive_plots(outputs_path: Path, output_dir: Path = None) -> b
     
     # Step 1: Run MDS-GDP projection
     logger.info("Step 1: Computing MDS-GDP projection...")
-    payload, reduced_data = run_gdp_projection_mds(
+    payload, reduced_data = run_gdp_projection(
         elites_path=elites_path,
         reserves_path=reserves_path,
         output_dir=output_dir,

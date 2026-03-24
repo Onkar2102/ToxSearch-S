@@ -132,7 +132,8 @@ def initialize_language_models(config: ConfigurationLoader):
                 model_name = model_config.model_kwargs.get("model", "unnamed_model")
                 llm_switchers[model_name] = llm_switcher
                 seen_model_configs.add(config_key)
-            except ValueError as e:
-                logger.error(f"Error initializing model {model_config}: {e}")
+            except Exception:
+                logger.exception("Error initializing model %s", model_config)
+                raise
 
     return llm_switchers
