@@ -2264,7 +2264,8 @@ def update_evolution_tracker_with_statistics(
                 "speciation_events": statistics.get("speciation_events", 0),
                 "merge_events": statistics.get("merge_events", 0),
                 "extinction_events": statistics.get("extinction_events", 0),
-                "archived_count": statistics.get("archived_count", 0),
+                # Genomes archived in this speciation step (see run_speciation state["_archived_count"])
+                "archived_count": statistics.get("archived_this_generation", 0),
                 "elites_moved": statistics.get("elites_moved", 0),
                 "reserves_moved": statistics.get("reserves_moved", 0),
                 "genomes_updated": statistics.get("genomes_updated", 0),

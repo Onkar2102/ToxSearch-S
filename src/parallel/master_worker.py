@@ -368,13 +368,19 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         gen_stats["total_integrated"] = total_integrated
         gen_stats["total_discarded"] = total_discarded
 
+        # Do NOT merge speciation_result["archived_count"] into gen_stats: that field is the
+        # count archived *this speciation invocation only* (state reset each run). Overwriting
+        # calculate_generation_statistics()["archived_count"] (cumulative from archive.json)
+        # breaks max_total_genomes termination (elites+reserves+archived sum too small).
         _spec_keys = ("species_count", "active_species_count", "frozen_species_count",
                      "reserves_size", "largest_species_size", "average_species_size",
                      "speciation_events", "merge_events", "extinction_events",
-                     "archived_count", "elites_moved", "reserves_moved", "genomes_updated",
+                     "elites_moved", "reserves_moved", "genomes_updated",
                      "inter_species_diversity", "intra_species_diversity", "cluster_quality",
                      "speciation_duration_seconds")
         gen_stats.update({k: speciation_result[k] for k in _spec_keys if k in speciation_result})
+        if speciation_result.get("archived_count") is not None:
+            gen_stats["archived_this_generation"] = speciation_result["archived_count"]
         if generation_duration_seconds is not None:
             gen_stats["generation_duration_seconds"] = round(generation_duration_seconds, 3)
         if accepted_genomes:

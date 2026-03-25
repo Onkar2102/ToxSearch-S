@@ -1,15 +1,14 @@
 """
 live_analysis.py
 
-Live analysis and visualization generation after each generation.
-Since we're not keeping historic data, we calculate and visualize metrics live.
+Live analysis and visualization generation after each generation (or post-hoc on a run folder).
+Reads EvolutionTracker.json and writes figures under <outputs>/figures/.
 """
 
 import json
-import os
 from pathlib import Path
 from typing import Dict, List, Optional, Any
-import pandas as pd
+
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -17,10 +16,15 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 from utils import get_custom_logging, get_system_utils
-from utils.population_io import _extract_north_star_score
 
 get_logger, _, _, _ = get_custom_logging()
 _, _, _, get_outputs_path, _, _, _ = get_system_utils()
+
+
+def _generations_chronological(tracker: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Return generations sorted by generation_number (required for sensible line/stack plots)."""
+    gens = tracker.get("generations") or []
+    return sorted(gens, key=lambda g: int(g.get("generation_number", 0) or 0))
 
 
 def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]:
@@ -46,7 +50,7 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
             _logger.warning("No generation data found for fitness plot")
             return None
         
-        generations = tracker["generations"]
+        generations = _generations_chronological(tracker)
         if not generations:
             return None
         
@@ -107,7 +111,7 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
             _logger.warning("No generation data found for speciation plot")
             return None
         
-        generations = tracker["generations"]
+        generations = _generations_chronological(tracker)
         if not generations:
             return None
         
@@ -169,7 +173,7 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
             _logger.warning("No generation data found for operator statistics plot")
             return None
         
-        generations = tracker["generations"]
+        generations = _generations_chronological(tracker)
         if not generations:
             return None
         
@@ -227,7 +231,12 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
 
 
 def generate_population_composition_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """Generate population composition plot showing elites vs reserves over generations."""
+    """Stacked area plot: cumulative genome counts in elites, reserves, and archive per generation.
+
+    Values come from EvolutionTracker (same semantics as calculate_generation_statistics: counts of
+    genomes in elites.json / reserves.json / archive.json with generation ≤ that generation).
+    Stacked height = elites + reserves + archive (total genomes tracked across pools).
+    """
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
@@ -236,25 +245,38 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
             _logger.warning("No generation data found for population composition plot")
             return None
         
-        generations = tracker["generations"]
+        generations = _generations_chronological(tracker)
         if not generations:
             return None
         
         gen_nums = [g.get("generation_number", 0) for g in generations]
-        elites_counts = [g.get("elites_count", 0) for g in generations]
-        reserves_counts = [g.get("reserves_count", 0) for g in generations]
+        elites_counts = [int(g.get("elites_count", 0) or 0) for g in generations]
+        reserves_counts = [int(g.get("reserves_count", 0) or 0) for g in generations]
+        archive_counts = [int(g.get("archived_count", 0) or 0) for g in generations]
         
         plt.figure(figsize=(10, 6))
-        plt.plot(gen_nums, elites_counts, 'o-', label='Elites', linewidth=2, markersize=6, color='#377eb8')
-        plt.plot(gen_nums, reserves_counts, 's-', label='Reserves', linewidth=2, markersize=6, color='#4daf4a')
+        # Bottom → top: elites, reserves, archive (stacked total = all three pools)
+        plt.stackplot(
+            gen_nums,
+            elites_counts,
+            reserves_counts,
+            archive_counts,
+            labels=["Elites (cumulative)", "Reserves (cumulative)", "Archive (cumulative)"],
+            colors=["#377eb8", "#4daf4a", "#984ea3"],
+            alpha=0.88,
+        )
         
-        plt.xlabel('Generation', fontsize=12)
-        plt.ylabel('Population Count', fontsize=12)
-        plt.title('Population Composition Over Generations', fontsize=14, fontweight='bold')
+        plt.xlabel("Generation", fontsize=12)
+        plt.ylabel("Cumulative genome count (per pool)", fontsize=12)
+        plt.title(
+            "Population composition (cumulative: elites + reserves + archive)",
+            fontsize=14,
+            fontweight="bold",
+        )
         plt.xlim(left=0)
         plt.ylim(bottom=0)
-        plt.legend(fontsize=10)
-        plt.grid(True, alpha=0.3)
+        plt.legend(loc="upper left", fontsize=10)
+        plt.grid(True, alpha=0.3, axis="y")
         plt.tight_layout()
         
         if outputs_path is None:

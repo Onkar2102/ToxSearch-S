@@ -454,7 +454,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["speciation_events"] = speciation_result.get("speciation_events", 0)
             gen0_stats["merge_events"] = speciation_result.get("merge_events", 0)
             gen0_stats["extinction_events"] = speciation_result.get("extinction_events", 0)
-            gen0_stats["archived_count"] = speciation_result.get("archived_count", 0)
+            # Cumulative archive size stays from calculate_generation_statistics(); per-gen archive events:
+            gen0_stats["archived_this_generation"] = speciation_result.get("archived_count", 0)
             gen0_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
             gen0_stats["reserves_moved"] = speciation_result.get("reserves_moved", 0)
             gen0_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
@@ -882,7 +883,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             gen_stats["speciation_events"] = speciation_result.get("speciation_events", 0)
                             gen_stats["merge_events"] = speciation_result.get("merge_events", 0)
                             gen_stats["extinction_events"] = speciation_result.get("extinction_events", 0)
-                            gen_stats["archived_count"] = speciation_result.get("archived_count", 0)
+                            gen_stats["archived_this_generation"] = speciation_result.get("archived_count", 0)
                             gen_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
                             gen_stats["reserves_moved"] = speciation_result.get("reserves_moved", 0)
                             gen_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
