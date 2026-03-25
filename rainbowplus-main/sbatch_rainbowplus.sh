@@ -54,6 +54,11 @@ NUM_MUTATIONS="${NUM_MUTATIONS:-100}"
 FITNESS_THRESHOLD="${FITNESS_THRESHOLD:-0.3}"
 LOG_INTERVAL="${LOG_INTERVAL:-50}"
 LOG_DIR="${LOG_DIR:-./logs}"
+# Per-job folder: logs/<model>/<dataset>/<run_id>/all_genomes.jsonl
+# On Slurm, defaults to job id. For job arrays use:
+#   #SBATCH --array=1-10
+#   export RUN_ID="${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
+RUN_ID="${RUN_ID:-${SLURM_JOB_ID:-}}"
 
 CMD=(
   python -m rainbowplus.rainbowplus
@@ -77,6 +82,14 @@ fi
 
 if [ -n "${NO_SHUFFLE:-}" ]; then
   CMD+=(--no-shuffle)
+fi
+
+if [ -n "${RUN_ID}" ]; then
+  CMD+=(--run_id "$RUN_ID")
+fi
+
+if [ -n "${RANDOM_SEED:-}" ]; then
+  CMD+=(--random_seed "$RANDOM_SEED")
 fi
 
 echo "Working directory: $RP_ROOT"

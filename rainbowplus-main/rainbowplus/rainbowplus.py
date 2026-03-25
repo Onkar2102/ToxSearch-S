@@ -102,6 +102,24 @@ def parse_arguments():
         "--log_dir", type=str, default="./logs", help="Directory for storing logs"
     )
     parser.add_argument(
+        "--run_id",
+        type=str,
+        default=None,
+        help=(
+            "Optional subdirectory under log_dir/model/dataset so parallel jobs do not "
+            "overwrite all_genomes.jsonl (e.g. run01 or ${SLURM_JOB_ID})"
+        ),
+    )
+    parser.add_argument(
+        "--random_seed",
+        type=int,
+        default=None,
+        help=(
+            "If set, seeds Python random and dataset shuffle for reproducible runs "
+            "(omit for independent stochastic replicates)"
+        ),
+    )
+    parser.add_argument(
         "--log_interval",
         type=int,
         default=50,
@@ -156,14 +174,21 @@ def run_rainbowplus(
 
     similarity_fn is unused (BLEU replaced by exact dedup); kept for API compatibility.
     """
+    if args.random_seed is not None:
+        random.seed(args.random_seed)
+
     if seed_prompts is None:
         seed_prompts = []
     if not seed_prompts:
+        shuffle_seed = (
+            args.random_seed if args.random_seed is not None else 0
+        )
         seed_prompts = load_json(
             config.sample_prompts,
             field="question",
             num_samples=args.num_samples,
             shuffle=args.shuffle,
+            seed=shuffle_seed,
         )
 
     # Load category descriptors
@@ -181,6 +206,8 @@ def run_rainbowplus(
         config.target_llm.model_kwargs.get("model", "unnamed_model")
     )
     log_dir = Path(args.log_dir) / model_tag / dataset_name
+    if args.run_id:
+        log_dir = log_dir / str(args.run_id).replace("/", "_")
     log_dir.mkdir(parents=True, exist_ok=True)
 
     all_genomes_path = log_dir / "all_genomes.jsonl"
@@ -244,6 +271,15 @@ def run_rainbowplus(
                 candidates = llms[target_model].batch_generate(
                     target_prompts, config.target_llm.sampling_params
                 )
+
+                if len(candidates) != len(mutated_prompts):
+                    logger.error(
+                        "Target batch_generate returned %d outputs for %d prompts; skipping iteration %d",
+                        len(candidates),
+                        len(mutated_prompts),
+                        i,
+                    )
+                    continue
 
                 # Score fitness (Perspective: response text only)
                 fitness_scores = fitness_fn.batch_score(

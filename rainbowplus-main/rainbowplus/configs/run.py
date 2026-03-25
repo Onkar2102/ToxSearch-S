@@ -29,7 +29,6 @@ class ConfigurationLoader:
         try:
             with open(file_path, encoding="utf-8") as file:
                 data = yaml.safe_load(file) or {}
-                print(data)
                 return ConfigurationLoader._create_config(data)
         except ParserError as e:
             raise ValueError(f"Invalid YAML format: {e}")
