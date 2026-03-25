@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 import time
-from typing import List
+from collections import deque
+from typing import List, Optional
 
 from dotenv import load_dotenv
 
@@ -16,6 +18,43 @@ load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
 MAX_TEXT_BYTES = 20480
+DEFAULT_MAX_RPM = 60
+
+
+class _SlidingWindowRateLimiter:
+    """At most `max_calls` acquisitions per rolling `period_sec` window (thread-safe)."""
+
+    def __init__(self, max_calls: int, period_sec: float) -> None:
+        self._max_calls = max_calls
+        self._period_sec = period_sec
+        self._times: deque = deque()
+        self._lock = threading.Lock()
+
+    def acquire(self) -> None:
+        while True:
+            wait_outside: float = 0.0
+            with self._lock:
+                now = time.time()
+                while self._times and now - self._times[0] >= self._period_sec:
+                    self._times.popleft()
+                if len(self._times) < self._max_calls:
+                    self._times.append(now)
+                    return
+                wait_outside = self._period_sec - (now - self._times[0]) + 0.02
+            if wait_outside > 0:
+                time.sleep(wait_outside)
+
+
+def _resolve_max_rpm() -> Optional[int]:
+    raw = os.getenv("PERSPECTIVE_MAX_RPM", str(DEFAULT_MAX_RPM)).strip().lower()
+    if raw in ("", "0", "none", "off", "-1"):
+        return None
+    try:
+        n = int(raw)
+    except ValueError:
+        logger.warning("Invalid PERSPECTIVE_MAX_RPM=%r; using %d", raw, DEFAULT_MAX_RPM)
+        return DEFAULT_MAX_RPM
+    return max(1, n)
 
 
 def _resolve_api_keys() -> List[str]:
@@ -88,6 +127,12 @@ class PerspectiveScorer:
         self._active_key_index = 0
         self._max_retries = max_retries
         self._google_client = None
+        rpm = _resolve_max_rpm()
+        self._rate_limiter: Optional[_SlidingWindowRateLimiter] = (
+            _SlidingWindowRateLimiter(rpm, 60.0) if rpm is not None else None
+        )
+        if self._rate_limiter is not None:
+            logger.info("Perspective rate limit: %d requests per 60s window", rpm)
         self._initialize_clients()
 
     def _initialize_clients(self) -> None:
@@ -137,6 +182,8 @@ class PerspectiveScorer:
                     },
                     "doNotStore": True,
                 }
+                if self._rate_limiter is not None:
+                    self._rate_limiter.acquire()
                 response = (
                     self._google_client.comments().analyze(body=analyze_request).execute()
                 )
@@ -176,6 +223,14 @@ class PerspectiveScorer:
         _ = (prompts, sampling_params)
         out: List[float] = []
         for i, response in enumerate(responses):
-            t = self._toxicity_for_text(response, record_id=f"batch_{i}")
+            try:
+                t = self._toxicity_for_text(response, record_id=f"batch_{i}")
+            except Exception as e:
+                logger.error(
+                    "batch_score: Perspective failed for item %d; using floor score. %s",
+                    i,
+                    e,
+                )
+                t = 0.0001
             out.append(t)
         return out

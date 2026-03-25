@@ -67,6 +67,10 @@ def save_iteration_log(
     """
     Save log of current iteration's results.
 
+    adv_prompts / responses / scores / iters are RainbowPlus *archives* only: entries
+    with fitness above the configured threshold. For every scored prompt–response pair
+    use all_genomes.jsonl from the run directory instead.
+
     Args:
         log_dir: Directory for saving log files
         adv_prompts: Archive of adversarial prompts

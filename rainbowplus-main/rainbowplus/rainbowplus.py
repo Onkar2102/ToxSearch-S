@@ -51,16 +51,25 @@ def parse_arguments():
     """
     parser = argparse.ArgumentParser(description="Adversarial Prompt Generation")
     parser.add_argument(
-        "--num_samples", type=int, default=150, help="Number of initial seed prompts"
+        "--num_samples",
+        type=int,
+        default=100,
+        help="Seed prompts to load (ToxSearch-S default --batch-size is 100; align for comparison)",
     )
     parser.add_argument(
-        "--max_iters", type=int, default=1000, help="Maximum number of iteration steps"
+        "--max_iters",
+        type=int,
+        default=20000,
+        help="Upper bound on outer-loop iterations (stop earlier when --max_genomes reached)",
     )
     parser.add_argument(
         "--max_genomes",
         type=int,
         default=5000,
-        help="Stop after this many scored genomes (append-only log); primary termination",
+        help=(
+            "Stop after this many scored rows in all_genomes.jsonl (ToxSearch-S: "
+            "--max-total-genomes; e.g. 50 gens × --batch-size 100 = 5000)"
+        ),
     )
     parser.add_argument(
         "--sim_threshold",
@@ -71,13 +80,16 @@ def parse_arguments():
     parser.add_argument(
         "--num_mutations",
         type=int,
-        default=5,
-        help="Number of prompt mutations per iteration",
+        default=100,
+        help=(
+            "Mutated prompts scored per iteration (ToxSearch-S parallel default "
+            "--batch-size 100; each is RG+Perspective evaluated)"
+        ),
     )
     parser.add_argument(
         "--fitness_threshold",
         type=float,
-        default=0.5,
+        default=0.3,
         help="Minimum fitness score to add prompt to archive",
     )
     parser.add_argument(
@@ -108,8 +120,12 @@ def parse_arguments():
         help="Override target model (HF id or local GGUF path). If omitted, uses target_llm.model_kwargs.model from the YAML config.",
     )
     parser.add_argument(
-        "--shuffle", type=bool, default=True, help="Shuffle seed prompts"
+        "--no-shuffle",
+        dest="shuffle",
+        action="store_false",
+        help="Keep seed file order (default: shuffle on load, reproducible with datasets seed inside load_json)",
     )
+    parser.set_defaults(shuffle=True)
     return parser.parse_args()
 
 
@@ -174,7 +190,8 @@ def run_rainbowplus(
     i = -1  # last iteration index (safe if max_iters == 0)
 
     # Main adversarial prompt generation loop
-    with open(all_genomes_path, "a", encoding="utf-8") as all_genomes_file:
+    # Fresh jsonl per run (append mode made cluster restarts look "empty" or mix runs).
+    with open(all_genomes_path, "w", encoding="utf-8") as all_genomes_file:
         for i in range(args.max_iters):
             if stop_run:
                 break
@@ -293,6 +310,13 @@ def run_rainbowplus(
                 save_iteration_log(
                     log_dir, adv_prompts, responses, scores, iters, timestamp, iteration=i
                 )
+
+    logger.info(
+        "Wrote %d genome records to %s (rainbowplus_log_*.json archives only hold "
+        "prompts above --fitness-threshold).",
+        total_genomes_count,
+        all_genomes_path,
+    )
 
     # Save final log
     timestamp = time.strftime(r"%Y%m%d-%H%M%S")

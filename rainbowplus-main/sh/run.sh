@@ -1,12 +1,13 @@
 #!/bin/bash
 
 # Common experiment parameters
-MAX_ITERS=400
-NUM_SAMPLES=-1
+MAX_ITERS=10000
+NUM_SAMPLES=100
 SIM_THRESHOLD=0.6
-NUM_MUTATIONS=10
-FITNESS_THRESHOLD=0.6
-LOG_INTERVAL=50
+NUM_MUTATIONS=3
+FITNESS_THRESHOLD=0.3
+MAX_GENOMES=1000
+LOG_INTERVAL=10
 DATASET="./data/harmbench.json"
 LOG_DIR="./logs-sota"
 
@@ -20,6 +21,7 @@ run_experiment() {
         --config_file "$config_file" \
         --num_samples "$NUM_SAMPLES" \
         --max_iters "$MAX_ITERS" \
+        --max_genomes "$MAX_GENOMES" \
         --sim_threshold "$SIM_THRESHOLD" \
         --num_mutations "$NUM_MUTATIONS" \
         --fitness_threshold "$FITNESS_THRESHOLD" \

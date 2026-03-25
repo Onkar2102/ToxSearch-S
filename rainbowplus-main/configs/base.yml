@@ -6,12 +6,12 @@
 #   target_llm  ↔  config/RGConfig.yaml  (response_generator.generation_args)
 #   mutator_llm ↔  config/PGConfig.yaml (prompt_generator.generation_args)
 #   temperature, top_p, top_k, max_tokens (vLLM uses max_tokens = llama.cpp max_new_tokens).
-# repetition_penalty is not passed to vLLM (llama.cpp-only in ToxSearch-S).
+# repetition_penalty matches llama.cpp RG/PG (vLLM SamplingParams).
 #
-# Replace model: with your local single-file .gguf path on the cluster.
-# tokenizer: MUST be a Hugging Face repo id (same instruct family), e.g.
-#   meta-llama/Meta-Llama-3.1-8B-Instruct
-# Omitting tokenizer causes HF errors like "Repo id must be in the form ..." for .gguf paths.
+# Use a Hugging Face model id for vLLM model loading.
+# Example (Llama 3.2 3B Instruct): meta-llama/Llama-3.2-3B-Instruct
+# NOTE: "Meta-Llama-..." is not a valid repo name here; use "Llama-...".
+# Local GGUF paths often fail in this vLLM codepath.
 # CLI --target_llm overrides target model_kwargs["model"] only.
 
 
@@ -21,7 +21,7 @@ archive:
   descriptor: [Risk Category, Attack Style]
 
 # Seed dataset
-sample_prompts: ./data/do-not-answer.json
+sample_prompts: ./data/toxsearch_seed.jsonl
 
 
 # Target LLM Configuration — RG-aligned: temperature 0.8, top_p 0.9, top_k 40, max 2048
@@ -29,8 +29,8 @@ target_llm:
   type_: vllm
 
   model_kwargs:
-    model: /path/to/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf
-    tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+    model: meta-llama/Llama-3.2-3B-Instruct
+    tokenizer: meta-llama/Llama-3.2-3B-Instruct
     trust_remote_code: True
     max_model_len: 4096
     gpu_memory_utilization: 0.8
@@ -40,6 +40,7 @@ target_llm:
     top_p: 0.9
     top_k: 40
     max_tokens: 2048
+    repetition_penalty: 1.0
 
 
 # Mutator LLM Configuration — PG-aligned: temperature 0.9, top_p 0.9, top_k 40, max 2048
@@ -48,8 +49,8 @@ mutator_llm:
   type_: vllm
 
   model_kwargs:
-    model: /path/to/Meta-Llama-3.1-8B-Instruct-Q8_0.gguf
-    tokenizer: meta-llama/Meta-Llama-3.1-8B-Instruct
+    model: meta-llama/Llama-3.2-3B-Instruct
+    tokenizer: meta-llama/Llama-3.2-3B-Instruct
     trust_remote_code: True
     max_model_len: 4096
     gpu_memory_utilization: 0.8
@@ -59,6 +60,7 @@ mutator_llm:
     top_p: 0.9
     top_k: 40
     max_tokens: 2048
+    repetition_penalty: 1.1
 
 
 # Fitness LLM Configuration (reference / Llama-Guard runs; PerspectiveScorer ignores this for API fitness)
