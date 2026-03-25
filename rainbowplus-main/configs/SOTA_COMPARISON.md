@@ -9,17 +9,17 @@
 
 - vLLM uses `max_tokens`; ToxSearch-S llama.cpp uses `max_new_tokens` — same numeric cap (2048).
 
-**CLI defaults** (`python -m rainbowplus.rainbowplus`, no flags) mirror `src/main.py` comparison knobs where there is a direct mapping:
+**CLI defaults** (`python -m rainbowplus.rainbowplus`, no flags) — current fork uses a lighter budget; scale up to mirror `src/main.py` if needed:
 
-| ToxSearch-S (`main.py`) | RainbowPlus |
-|-------------------------|-------------|
-| `--batch-size` default **100** | `--num_mutations` default **100** (children scored per iteration) |
-| `--max-total-genomes` (e.g. **5000** = 50×100) | `--max_genomes` default **5000** |
-| Seed count from `--seed-file` (you use ~**100** genomes at gen 0) | `--num_samples` default **100** |
-| (no hard iter cap; runs until genome budget) | `--max_iters` default **20000** (safety ceiling) |
-| `--fitness_threshold` N/A (different archive mechanics) | `--fitness_threshold` default **0.3** (archive + `above_threshold` in jsonl) |
+| ToxSearch-S (`main.py`) | RainbowPlus (defaults) |
+|-------------------------|------------------------|
+| `--batch-size` default **100** | `--num_mutations` default **3** (use **100** to match batch size) |
+| `--max-total-genomes` | `--max_genomes` default **1000** |
+| Seed file | `--num_samples` default **100** |
+| (runs until genome budget) | `--max_iters` default **10000** (ceiling) |
+| `--fitness_threshold` N/A | `--fitness_threshold` default **0.3** |
 
-With `--max_genomes 5000` and `--num_mutations 100`, the run stops after ~50 mutation-heavy iterations if dedup is low (same order as **50 generations × 100** evaluations). To score a full **100×100** seed wave before the cap, use e.g. `--max_genomes 10000`.
+Example to align with **50 × 100** evaluations: `--num_mutations 100 --max_genomes 5000` (and raise `--max_iters` if needed).
 
 **Model paths:** set `model:` (and matching `tokenizer:`) in `base.yml` to your local GGUF + HF tokenizer id, or pass `--target_llm /path/to/model.gguf` to override the **target** weights path only.
 

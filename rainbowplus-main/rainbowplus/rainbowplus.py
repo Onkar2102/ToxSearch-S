@@ -59,16 +59,16 @@ def parse_arguments():
     parser.add_argument(
         "--max_iters",
         type=int,
-        default=20000,
+        default=10000,
         help="Upper bound on outer-loop iterations (stop earlier when --max_genomes reached)",
     )
     parser.add_argument(
         "--max_genomes",
         type=int,
-        default=5000,
+        default=1000,
         help=(
             "Stop after this many scored rows in all_genomes.jsonl (ToxSearch-S: "
-            "--max-total-genomes; e.g. 50 gens × --batch-size 100 = 5000)"
+            "--max-total-genomes; override for longer comparison runs)"
         ),
     )
     parser.add_argument(
@@ -80,10 +80,10 @@ def parse_arguments():
     parser.add_argument(
         "--num_mutations",
         type=int,
-        default=100,
+        default=3,
         help=(
-            "Mutated prompts scored per iteration (ToxSearch-S parallel default "
-            "--batch-size 100; each is RG+Perspective evaluated)"
+            "Mutated prompts scored per iteration (each is RG + Perspective); "
+            "raise to match a larger ToxSearch-S --batch-size if needed"
         ),
     )
     parser.add_argument(
