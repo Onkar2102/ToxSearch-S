@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """
-Generate interactive 3D Plotly visualizations for ToxSearch-S GDP analysis.
+Generate interactive 3D Plotly visualization for ToxSearch-S GDP analysis.
 
-Creates standalone HTML files with full interactive controls:
-- Rotate, zoom, pan with mouse
-- Hover for genome details (ID, toxicity, generation, species)
-- Legend toggle for data series
+Writes one HTML file with dropdowns: view (Z + color), marker size, and opacity.
 
 Usage:
     python scripts/generate_interactive_3d_plots.py <outputs_dir> [--output-dir <dir>]
@@ -25,8 +22,7 @@ sys.path.insert(0, str(src_dir))
 
 from utils.gdp_projection import (
     run_gdp_projection,
-    generate_gdp_3d_plotly_toxicity_figure,
-    generate_gdp_3d_plotly_generation_axis_toxicity_color,
+    generate_gdp_3d_plotly_unified,
 )
 from utils import get_custom_logging
 
@@ -43,7 +39,7 @@ def generate_interactive_plots(outputs_path: Path, output_dir: Path = None) -> b
         output_dir: Where to save the plots (defaults to outputs_path/figures)
     
     Returns:
-        True if successful, False otherwise
+        True if the unified HTML was written successfully
     """
     outputs_path = Path(outputs_path)
     if not outputs_path.exists():
@@ -101,73 +97,27 @@ def generate_interactive_plots(outputs_path: Path, output_dir: Path = None) -> b
     
     logger.info(f"Loaded {len(genomes)} total genomes")
     
-    # Step 3: Generate interactive 3D plots
-    logger.info("Step 3: Generating interactive Plotly visualizations...")
-    
-    # Plot 1: Toxicity on Z-axis, colored by species ID
-    plot1_path = output_dir / "genetic_distance_projection_3d_toxicity_interactive.html"
-    success1 = generate_gdp_3d_plotly_toxicity_figure(
+    # Step 3: Single interactive HTML (dropdown: Z-axis + color mode)
+    logger.info("Step 3: Generating interactive Plotly visualization...")
+    out_path = output_dir / "genetic_distance_projection_3d_interactive.html"
+    ok = generate_gdp_3d_plotly_unified(
         reduced_data,
         genomes,
-        str(plot1_path),
-        color_by="species_id",
+        str(out_path),
         use_pub_style=False,
     )
-    if success1:
-        logger.info(f"✓ Generated: {plot1_path}")
+    if ok:
+        logger.info(f"✓ Generated: {out_path}")
     else:
-        logger.warning(f"✗ Failed to generate: {plot1_path}")
-    
-    # Plot 2: Toxicity on Z-axis, colored by alive/archived
-    plot2_path = output_dir / "genetic_distance_projection_3d_toxicity_alive_interactive.html"
-    success2 = generate_gdp_3d_plotly_toxicity_figure(
-        reduced_data,
-        genomes,
-        str(plot2_path),
-        color_by="alive",
-        use_pub_style=False,
-    )
-    if success2:
-        logger.info(f"✓ Generated: {plot2_path}")
-    else:
-        logger.warning(f"✗ Failed to generate: {plot2_path}")
-    
-    # Plot 3: Generation on Z-axis, colored by toxicity
-    plot3_path = output_dir / "genetic_distance_projection_3d_generation_axis_interactive.html"
-    success3 = generate_gdp_3d_plotly_generation_axis_toxicity_color(
-        reduced_data,
-        genomes,
-        str(plot3_path),
-        use_pub_style=False,
-    )
-    if success3:
-        logger.info(f"✓ Generated: {plot3_path}")
-    else:
-        logger.warning(f"✗ Failed to generate: {plot3_path}")
-    
-    # Summary
-    successful = sum([success1, success2, success3])
+        logger.warning(f"✗ Failed to generate: {out_path}")
     logger.info("="*60)
-    logger.info(f"Interactive 3D plot generation complete: {successful}/3 successful")
+    logger.info("Interactive 3D plot: view (Z + color), marker size, and opacity dropdowns.")
     logger.info("="*60)
-    logger.info("\nGenerated files:")
-    logger.info(f"  1. {plot1_path.name}")
-    logger.info(f"     Axes: MDS1(X), MDS2(Y), Toxicity(Z)")
-    logger.info(f"     Colors: Species ID")
-    logger.info(f"  2. {plot2_path.name}")
-    logger.info(f"     Axes: MDS1(X), MDS2(Y), Toxicity(Z)")
-    logger.info(f"     Colors: Active (green) vs Archived (red)")
-    logger.info(f"  3. {plot3_path.name}")
-    logger.info(f"     Axes: MDS1(X), MDS2(Y), Generation(Z)")
-    logger.info(f"     Colors: Toxicity gradient (purple→yellow)")
-    logger.info("\nInteractive features:")
     logger.info("  • Rotate: Click and drag with mouse")
     logger.info("  • Zoom: Scroll wheel")
     logger.info("  • Pan: Right-click and drag")
-    logger.info("  • Hover: View genome details (ID, toxicity, generation, species)")
-    logger.info("  • Toggle: Click legend items to show/hide data")
-    
-    return successful == 3
+    logger.info("  • Hover: Genome details (ID, toxicity, generation, species, alive)")
+    return ok
 
 
 def main():

@@ -156,6 +156,17 @@ class PerspectiveScorer:
 
     def _toxicity_for_text(self, text: str, record_id: str) -> float:
         """Single Perspective analyze call; returns normalized toxicity in [0.0001, 1.0]."""
+        if text is None:
+            text = ""
+        text = text.strip()
+        if not text:
+            logger.warning(
+                "Perspective: empty comment for %s (model returned no text); "
+                "using floor score, skipping API (COMMENT_EMPTY).",
+                record_id,
+            )
+            return 0.0001
+
         text_bytes = text.encode("utf-8")
         if len(text_bytes) > MAX_TEXT_BYTES:
             logger.warning(

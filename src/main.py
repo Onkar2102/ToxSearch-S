@@ -459,9 +459,12 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
             gen0_stats["reserves_moved"] = speciation_result.get("reserves_moved", 0)
             gen0_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
-            gen0_stats["generation_duration_seconds"] = time.time() - gen0_start
             if speciation_result.get("speciation_duration_seconds") is not None:
                 gen0_stats["speciation_duration_seconds"] = speciation_result["speciation_duration_seconds"]
+            gen0_stats["evaluated_this_generation"] = gen0_stats.get("api_calls")
+            gen0_stats["discarded_this_generation"] = 0
+            gen0_stats["generation_duration_seconds"] = round(time.time() - gen0_start, 3)
+            gen0_stats["generation_duration_scope"] = "through_evolution_tracker_statistics_write"
             
             # Update EvolutionTracker with all statistics (include run params for RQ analysis)
             update_evolution_tracker_with_statistics(
@@ -853,7 +856,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             logger=logger,
                             log_file=log_file
                         )
-                        gen_stats["generation_duration_seconds"] = time.time() - gen_start
                         
                         # Override variant statistics with what we calculated from temp.json before speciation
                         gen_stats["max_score_variants"] = max_score_variants
@@ -960,6 +962,10 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             except Exception as e:
                                 logger.warning(f"Gen {generation_count}: Failed to recalculate population_max_toxicity: {e}")
                         
+                        # Per-generation evaluation count (moderation completions); matches parallel evaluated_this_generation
+                        gen_stats["evaluated_this_generation"] = gen_stats.get("api_calls")
+                        gen_stats["generation_duration_seconds"] = round(time.time() - gen_start, 3)
+                        gen_stats["generation_duration_scope"] = "through_evolution_tracker_statistics_write"
                         # Update EvolutionTracker with all statistics
                         update_evolution_tracker_with_statistics(
                             evolution_tracker_path=str(evolution_tracker_path),
@@ -1108,8 +1114,10 @@ if __name__ == "__main__":
                        help="Path to CSV file with seed prompts (must have 'questions' column). Default: data/prompt.csv")
     parser.add_argument("--seed", type=int, default=None,
                        help="Fixed seed for LLM generation. When set, all processes (including workers) use this same seed for reproducibility.")
-    parser.add_argument("--batch-size", type=int, default=100,
-                       help="Number of genomes per generation batch (K) for parallel mode. Default: 100")
+    parser.add_argument("--batch-size", type=int, default=None,
+                       help="Parallel merge batch threshold (K). If omitted with --operators all, uses "
+                            "sequential parity: 24 (default selection mode) or 39 (explore/exploit) "
+                            "times --max-variants. With --operators cm or ie, default is 100 when omitted.")
     parser.add_argument("--max-total-genomes", type=int, default=None,
                        help="Primary termination: stop when total genomes (elites + reserves + archives) reaches this cap. Required for both sequential and parallel. E.g. set to max_generations * K for fair comparison.")
     parser.add_argument("--parallel", action="store_true",
@@ -1126,6 +1134,11 @@ if __name__ == "__main__":
         set_outputs_path(args.output_dir)
 
     import sys
+
+    if getattr(args, "max_total_genomes", None) is None:
+        parser.error(
+            "--max-total-genomes is required (sequential and parallel): primary termination is total genomes in elites+reserves+archive."
+        )
 
     prof = None
     if args.profile is not None:
@@ -1149,8 +1162,6 @@ if __name__ == "__main__":
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
-        if getattr(args, "max_total_genomes", None) is None:
-            raise ValueError("Parallel mode requires --max-total-genomes; primary termination is by total genomes (elites + reserves + archives).")
         get_logger, get_log_filename, _, PerformanceLogger = get_custom_logging()
         log_file = get_log_filename()
         logger = get_logger("master_worker", log_file)
@@ -1198,6 +1209,7 @@ if __name__ == "__main__":
                 log_file=log_file,
                 run_speciation_fn=run_speciation,
                 stagnation_limit=getattr(args, "stagnation_limit", 5),
+                max_variants=args.max_variants,
             )
         finally:
             _dump_profile()

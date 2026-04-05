@@ -460,6 +460,9 @@ def generate_gdp_3d_toxicity_figure(
     try:
         import matplotlib
         matplotlib.use("Agg")
+        from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+        configure_matplotlib_embedded_fonts()
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
 
@@ -589,6 +592,9 @@ def generate_gdp_3d_generation_axis_toxicity_color(
     try:
         import matplotlib
         matplotlib.use("Agg")
+        from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+        configure_matplotlib_embedded_fonts()
         import matplotlib.pyplot as plt
 
         positions = reduced_genome_data.reduced_positions
@@ -942,6 +948,308 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
                     yanchor="bottom",
                     font=dict(size=12),
                 )
+            ],
+        )
+
+        fig.write_html(
+            save_fpath,
+            config={
+                "displayModeBar": True,
+                "displaylogo": False,
+                "scrollZoom": True,
+            },
+        )
+        return True
+    except Exception:
+        return False
+
+
+def generate_gdp_3d_plotly_unified(
+    reduced_genome_data: Any,
+    genomes: List[Dict[str, Any]],
+    save_fpath: str,
+    use_pub_style: bool = False,
+) -> bool:
+    """
+    Single interactive HTML: MDS1 (X), MDS2 (Y), Z = toxicity OR generation,
+    with dropdowns for view (Z + color), marker size, and opacity.
+
+    Z-axis: toxicity (fitness) or generation (time).
+    Color: toxicity (Viridis), species (discrete), generation (Plasma), or alive vs archived.
+    """
+    try:
+        import plotly.graph_objects as go
+        import plotly.express as px
+    except ImportError:
+        return False
+
+    try:
+        if reduced_genome_data is None:
+            return False
+
+        positions_2d = reduced_genome_data.reduced_positions
+        population_info = _gdp_reduced_population_info(reduced_genome_data)
+        if not positions_2d or population_info is None:
+            return False
+
+        ids = list(positions_2d.keys())
+        if not ids:
+            return False
+
+        x = np.array([positions_2d[i][0] for i in ids])
+        y = np.array([positions_2d[i][1] for i in ids])
+        z_gen = np.array([int(population_info.get(i, {}).get("generation", 0)) for i in ids])
+        tox = np.array([float(population_info.get(i, {}).get("fitness", 0.5)) for i in ids], dtype=float)
+        species_ids = [int(population_info.get(i, {}).get("species_id", 0) or 0) for i in ids]
+
+        palette = list(px.colors.qualitative.Plotly) + list(px.colors.qualitative.Dark24)
+        uniq_spec = sorted(set(species_ids))
+        sid_to_hex = {sid: palette[j % len(palette)] for j, sid in enumerate(uniq_spec)}
+        species_hex = [sid_to_hex[sid] for sid in species_ids]
+
+        alive_hex = []
+        for i in ids:
+            a = population_info.get(i, {}).get("alive", "archived")
+            alive_hex.append("#2ca02c" if str(a).lower() == "alive" else "#d62728")
+
+        hover = [
+            f"ID: {i}<br>Toxicity: {population_info.get(i, {}).get('fitness', 0):.3f}<br>"
+            f"Gen: {population_info.get(i, {}).get('generation', 0)}<br>"
+            f"Species: {population_info.get(i, {}).get('species_id', 0)}<br>"
+            f"Alive: {population_info.get(i, {}).get('alive', 'archived')}"
+            for i in ids
+        ]
+
+        def _marker_restyle(color_mode: str) -> Dict[str, Any]:
+            if color_mode == "species":
+                return {
+                    "marker.color": [species_hex],
+                    "marker.colorscale": [None],
+                    "marker.autocolorscale": False,
+                    "marker.showscale": False,
+                    "marker.colorbar": [None],
+                }
+            if color_mode == "alive":
+                return {
+                    "marker.color": [alive_hex],
+                    "marker.colorscale": [None],
+                    "marker.autocolorscale": False,
+                    "marker.showscale": False,
+                    "marker.colorbar": [None],
+                }
+            if color_mode == "toxicity":
+                return {
+                    "marker.color": [tox],
+                    "marker.colorscale": "Viridis",
+                    "marker.autocolorscale": True,
+                    "marker.showscale": True,
+                    "marker.colorbar": [{"title": {"text": "Toxicity"}}],
+                }
+            if color_mode == "generation":
+                return {
+                    "marker.color": [z_gen],
+                    "marker.colorscale": "Plasma",
+                    "marker.autocolorscale": True,
+                    "marker.showscale": True,
+                    "marker.colorbar": [{"title": {"text": "Generation"}}],
+                }
+            raise ValueError(f"unknown color_mode: {color_mode}")
+
+        default_marker_size = 4
+        default_marker_opacity = 0.8
+
+        def _trace_layout(z_is_toxicity: bool, color_mode: str) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+            z_arr = tox if z_is_toxicity else z_gen.astype(float)
+            z_title = "Toxicity (fitness)" if z_is_toxicity else "Generation"
+            trace_patch = {"z": [z_arr]}
+            trace_patch.update(_marker_restyle(color_mode))
+            # Keep size/opacity in sync when switching view (matches defaults; user can restyle after).
+            trace_patch["marker.size"] = default_marker_size
+            trace_patch["marker.opacity"] = default_marker_opacity
+            layout_patch = {
+                "scene": {
+                    "zaxis": {"title": {"text": z_title}},
+                },
+            }
+            return trace_patch, layout_patch
+
+        # Order: all Toxicity-Z modes first, then Generation-Z (default = index 4: Gen Z + toxicity color)
+        modes: List[Tuple[str, bool, str]] = [
+            ("Toxicity (Z) · species", True, "species"),
+            ("Toxicity (Z) · alive vs archived", True, "alive"),
+            ("Toxicity (Z) · generation (color)", True, "generation"),
+            ("Toxicity (Z) · toxicity (color)", True, "toxicity"),
+            ("Generation (Z) · toxicity (color)", False, "toxicity"),
+            ("Generation (Z) · species", False, "species"),
+            ("Generation (Z) · generation (color)", False, "generation"),
+            ("Generation (Z) · alive vs archived", False, "alive"),
+        ]
+
+        buttons = []
+        for label, z_is_toxicity, cm in modes:
+            tp, lp = _trace_layout(z_is_toxicity, cm)
+            buttons.append(
+                dict(
+                    label=label,
+                    method="update",
+                    args=[tp, lp],
+                )
+            )
+
+        marker_sizes = [2, 4, 6, 8, 12]
+        size_buttons = [
+            dict(label=f"{s}px", method="restyle", args=[{"marker.size": s}, [0]]) for s in marker_sizes
+        ]
+        size_active = marker_sizes.index(default_marker_size)
+
+        opacities = [0.25, 0.5, 0.75, 0.8, 1.0]
+        opacity_buttons = []
+        for o in opacities:
+            if o == 0.8:
+                lbl = "80% (default)"
+            elif o == 1.0:
+                lbl = "100%"
+            else:
+                lbl = f"{int(round(o * 100))}%"
+            opacity_buttons.append(dict(label=lbl, method="restyle", args=[{"marker.opacity": o}, [0]]))
+        opacity_active = opacities.index(default_marker_opacity)
+
+        # Initial trace matches "Generation (Z) · toxicity (color)" (index 4)
+        fig = go.Figure(
+            data=[
+                go.Scatter3d(
+                    x=x,
+                    y=y,
+                    z=z_gen.astype(float),
+                    mode="markers",
+                    marker=dict(
+                        size=4,
+                        color=tox,
+                        colorscale="Viridis",
+                        colorbar=dict(title=dict(text="Toxicity")),
+                        opacity=0.8,
+                        showscale=True,
+                    ),
+                    text=hover,
+                    hoverinfo="text",
+                )
+            ]
+        )
+
+        # Title on top; controls in a vertical stack on the left; 3D scene on the right
+        _sidebar_x = 0.02
+        _menu_pad = dict(r=4, t=4, b=4, l=4)
+        _scene_x0 = 0.26
+        # Three rows: (label_y, menu_y) in paper coords, top to bottom
+        _control_rows = (
+            (0.82, 0.765),
+            (0.54, 0.485),
+            (0.26, 0.205),
+        )
+
+        fig.update_layout(
+            title=dict(
+                text="GDP 3D",
+                x=0.5,
+                xanchor="center",
+                y=0.98,
+                yref="paper",
+                yanchor="top",
+                font=dict(size=20, family="Arial, sans-serif"),
+            ),
+            margin=dict(t=36, l=8, r=96, b=48),
+            scene=dict(
+                xaxis=dict(title="MDS 1"),
+                yaxis=dict(title="MDS 2"),
+                zaxis=dict(title="Generation"),
+                bgcolor="rgba(240, 240, 240, 0.5)" if use_pub_style else "white",
+                camera=dict(eye=dict(x=1.5, y=1.5, z=1.3)),
+                domain=dict(x=[_scene_x0, 0.99], y=[0.02, 0.90]),
+            ),
+            hovermode="closest",
+            height=800 if use_pub_style else 720,
+            width=1120 if use_pub_style else 1020,
+            template="plotly" if use_pub_style else "plotly_white",
+            font=dict(family="Arial, sans-serif", size=11),
+            uirevision="gdp3d_unified",
+            updatemenus=[
+                dict(
+                    active=4,
+                    buttons=buttons,
+                    direction="down",
+                    showactive=True,
+                    x=_sidebar_x,
+                    xanchor="left",
+                    y=_control_rows[0][1],
+                    yanchor="top",
+                    bgcolor="rgba(255,255,255,0.96)",
+                    bordercolor="#ccc",
+                    borderwidth=1,
+                    pad=_menu_pad,
+                ),
+                dict(
+                    active=size_active,
+                    buttons=size_buttons,
+                    direction="down",
+                    showactive=True,
+                    x=_sidebar_x,
+                    xanchor="left",
+                    y=_control_rows[1][1],
+                    yanchor="top",
+                    bgcolor="rgba(255,255,255,0.96)",
+                    bordercolor="#ccc",
+                    borderwidth=1,
+                    pad=_menu_pad,
+                ),
+                dict(
+                    active=opacity_active,
+                    buttons=opacity_buttons,
+                    direction="down",
+                    showactive=True,
+                    x=_sidebar_x,
+                    xanchor="left",
+                    y=_control_rows[2][1],
+                    yanchor="top",
+                    bgcolor="rgba(255,255,255,0.96)",
+                    bordercolor="#ccc",
+                    borderwidth=1,
+                    pad=_menu_pad,
+                ),
+            ],
+            annotations=[
+                dict(
+                    text="<b>View</b>",
+                    x=_sidebar_x,
+                    y=_control_rows[0][0],
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    xanchor="left",
+                    yanchor="bottom",
+                    font=dict(size=11, color="#333"),
+                ),
+                dict(
+                    text="<b>Size</b>",
+                    x=_sidebar_x,
+                    y=_control_rows[1][0],
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    xanchor="left",
+                    yanchor="bottom",
+                    font=dict(size=11, color="#333"),
+                ),
+                dict(
+                    text="<b>Opacity</b>",
+                    x=_sidebar_x,
+                    y=_control_rows[2][0],
+                    xref="paper",
+                    yref="paper",
+                    showarrow=False,
+                    xanchor="left",
+                    yanchor="bottom",
+                    font=dict(size=11, color="#333"),
+                ),
             ],
         )
 

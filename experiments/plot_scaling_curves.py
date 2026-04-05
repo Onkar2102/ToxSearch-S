@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -64,6 +65,15 @@ def main():
     ap.add_argument("--no-plot", action="store_true", help="Only print summary, do not plot")
     args = ap.parse_args()
     try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        _proj = Path(__file__).resolve().parents[1]
+        if str(_proj / "src") not in sys.path:
+            sys.path.insert(0, str(_proj / "src"))
+        from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+        configure_matplotlib_embedded_fonts()
         import matplotlib.pyplot as plt
     except ImportError:
         print("matplotlib not found; install it to generate plots. Printing summary only.")

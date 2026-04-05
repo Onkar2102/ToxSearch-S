@@ -1,75 +1,130 @@
 #!/bin/bash -l
 #
 # SLURM run script for RainbowPlus (single-node vLLM + Google Perspective).
-# Modeled on repo-root rc_script.sh (Spack, CUDA paths, .spvenv, threading env).
 #
-# Submit from anywhere:
-#   sbatch /path/to/rainbowplus-main/sbatch_rainbowplus.sh
+# Job arrays (RIT): https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
+#   • Uncomment #SBATCH --array=START-END in this file, or: sbatch --array=0-7 sbatch_rainbowplus.sh
+#   • Logs: logs/slurm_<jobname>_<jobid>_<arraytask>.{out,err}
+#   • Per-task RUN_ID defaults to ${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID} (set USE_ARRAY_RUN_ID=0 to use only job id).
+#   • Optional per-task env: sbatch --export=ALL,RANDOM_SEED=123,CONFIG_FILE=configs/foo.yml ...
+# Spack is OFF by default: activating the NLP Spack view can inject libcrypto.so that
+# breaks system Python 3.9 in .venv-rainbow (ImportError: OPENSSL_* / _hashlib). Use USE_SPACK=1
+# only if you use a Spack-built Python or accept fixing LD_LIBRARY_PATH.
+#
+# Slurm copies this script to /var/spool/slurmd/job*/ — do not trust BASH_SOURCE for the repo path.
+# Submit from the repo root. We resolve RP_ROOT by checking (in order) RAINBOWPLUS_ROOT,
+# SLURM_SUBMIT_DIR, then the job's initial $PWD (often same as submit dir when you cd first).
+# If your site omits SLURM_SUBMIT_DIR, initial PWD still usually works. Last resort: set
+#   sbatch --export=ALL,RAINBOWPLUS_ROOT=/absolute/path/to/rainbowplus-main
+# Or add once:  #SBATCH --chdir=/absolute/path/to/rainbowplus-main
+#
+# Python env: activates ${RP_ROOT}/.venv-rainbow when present (override with VENV_ACTIVATE).
 #
 # Parent ToxSearch-S tree (optional): if this file lives in .../ToxSearch-S/rainbowplus-main/,
 # we auto-use ../.spvenv when present (same as running rc_script.sh from ToxSearch-S root).
 
 #SBATCH --job-name=rainbowplus
-#SBATCH --time=2-23:59:00
-#SBATCH --output=logs-slurm/%x_%j.out
-#SBATCH --error=logs-slurm/%x_%j.err
+#SBATCH --time=0-10:00:00
+# Slurm logs under ./logs/ (paths relative to submission dir — run sbatch from repo root).
+# %a = array task id (empty for non-array jobs on some sites → log name may end with _).
+# RIT job-array tutorial: https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
+#SBATCH --output=logs/slurm_%x_%j_%a.out
+#SBATCH --error=logs/slurm_%x_%j_%a.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
-#SBATCH --mem=10G
+#SBATCH --mem=9G
 #SBATCH --account=evostar
 #SBATCH --partition=tier3
 #SBATCH --gres=gpu:a100:1
-## Job array (optional): #SBATCH --array=0-9
+## If Slurm never sets SLURM_SUBMIT_DIR / wrong cwd, set repo once (absolute path):
+##SBATCH --chdir=/path/to/rainbowplus-main
+#
+# Job array (GPU: one task = one node = one GPU). RIT pattern: --array and %a in logs above.
+# Enable ONE of: (1) uncomment the next line, (2) sbatch --array=0-7 sbatch_rainbowplus.sh
+# Throttle concurrency (e.g. max 2 array tasks at once): ##SBATCH --array=0-15%2
+#SBATCH --array=0-7
 
 set -euo pipefail
 
+# Capture before any cd (Slurm usually starts the job in your submit directory).
+START_PWD=$(pwd)
+
+_is_rainbow_repo() {
+  [[ -n "$1" && -d "$1/rainbowplus" && -f "$1/configs/base.yml" ]]
+}
+
 # ------------------------------------------------------------------------------
-# 0) Repo root (directory containing this script)
+# 0) Repo root (Slurm batch script lives in spool; BASH_SOURCE is not the git checkout)
 # ------------------------------------------------------------------------------
-RP_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-cd "$RP_ROOT"
-mkdir -p logs-slurm
+RP_ROOT=""
+if [[ -n "${RAINBOWPLUS_ROOT:-}" ]] && _is_rainbow_repo "${RAINBOWPLUS_ROOT}"; then
+  RP_ROOT=$(cd "${RAINBOWPLUS_ROOT}" && pwd)
+elif [[ -n "${SLURM_SUBMIT_DIR:-}" ]] && _is_rainbow_repo "${SLURM_SUBMIT_DIR}"; then
+  RP_ROOT=$(cd "${SLURM_SUBMIT_DIR}" && pwd)
+elif _is_rainbow_repo "${START_PWD}"; then
+  RP_ROOT=$(cd "${START_PWD}" && pwd)
+else
+  _from_script=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  if _is_rainbow_repo "${_from_script}"; then
+    RP_ROOT="${_from_script}"
+  fi
+fi
+
+if [[ -z "${RP_ROOT}" ]]; then
+  echo "ERROR: Could not find RainbowPlus repo (need rainbowplus/ + configs/base.yml)." >&2
+  echo "  SLURM_SUBMIT_DIR=${SLURM_SUBMIT_DIR:-<unset>}  START_PWD=${START_PWD}  BASH_SOURCE=${BASH_SOURCE[0]}" >&2
+  echo "  Fix: sbatch --export=ALL,RAINBOWPLUS_ROOT=/path/to/rainbowplus-main ..." >&2
+  echo "  Or add: #SBATCH --chdir=/path/to/rainbowplus-main" >&2
+  exit 1
+fi
+
+cd "$RP_ROOT" || { echo "ERROR: cannot cd to RP_ROOT=$RP_ROOT" >&2; exit 1; }
 
 # Parent project root (ToxSearch-S when layout is .../ToxSearch-S/rainbowplus-main/)
 TOX_ROOT="${TOX_ROOT:-$(cd "${RP_ROOT}/.." && pwd)}"
 
 # ------------------------------------------------------------------------------
-# 1) Spack env (same pattern as rc_script.sh; set USE_SPACK=0 to skip)
+# 1) Spack env — activation commented out (OpenSSL / system-Python venv conflicts).
+#    Uncomment the block below to re-enable; then USE_SPACK=1 will matter again.
 # ------------------------------------------------------------------------------
-if [[ "${USE_SPACK:-1}" == "1" ]] && command -v spack >/dev/null 2>&1; then
-  SPACK_ENV_NAME="${SPACK_ENV_NAME:-default-nlp-x86_64-25111801}"
-  # shellcheck disable=SC1090
-  spack env activate "${SPACK_ENV_NAME}"
-else
-  echo "[INFO] Skipping Spack (USE_SPACK=${USE_SPACK:-1} or spack not in PATH)"
-fi
+echo "[INFO] Spack env activation disabled in this script (block commented out)."
+# if [[ "${USE_SPACK:-0}" == "1" ]] && command -v spack >/dev/null 2>&1; then
+#   SPACK_ENV_NAME="${SPACK_ENV_NAME:-default-nlp-x86_64-25111801}"
+#   # shellcheck disable=SC1090
+#   spack env activate "${SPACK_ENV_NAME}"
+# else
+#   echo "[INFO] Spack skipped (USE_SPACK=${USE_SPACK:-0}). Set USE_SPACK=1 to match rc_script.sh."
+# fi
 
 # ------------------------------------------------------------------------------
-# 2) CUDA: find nvcc and expose libs (same as rc_script.sh)
+# 2) CUDA toolkit (optional at runtime: vLLM/torch use the driver + bundled runtimes)
+# Default SKIP_NVCC_CHECK=1 — no nvcc required. Set SKIP_NVCC_CHECK=0 to fail if nvcc
+# missing (rc_script.sh style). If libcudart errors appear, run: module load cuda/...
 # ------------------------------------------------------------------------------
 NVCC_PATH=$(command -v nvcc || true)
-if [[ -z "${NVCC_PATH}" ]]; then
-  if [[ "${SKIP_NVCC_CHECK:-0}" == "1" ]]; then
-    echo "[WARN] nvcc not in PATH; SKIP_NVCC_CHECK=1 (set LD_LIBRARY_PATH yourself if needed)"
-  else
-    echo "ERROR: nvcc not found in PATH; CUDA toolkit not visible after env setup. Set SKIP_NVCC_CHECK=1 to bypass (conda-only)." >&2
-    exit 1
-  fi
-else
+if [[ -n "${NVCC_PATH}" ]]; then
   CUDA_ROOT=$(dirname "$(dirname "$NVCC_PATH")")
   export LD_LIBRARY_PATH="$CUDA_ROOT/lib64:$CUDA_ROOT/lib:${LD_LIBRARY_PATH:-}"
   echo "[DEBUG] NVCC_PATH=$NVCC_PATH"
   echo "[DEBUG] CUDA_ROOT=$CUDA_ROOT"
   echo "[DEBUG] LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+elif [[ "${SKIP_NVCC_CHECK:-1}" == "1" ]]; then
+  echo "[INFO] nvcc not in PATH; continuing (SKIP_NVCC_CHECK=1 default). Add a cuda module or Spack if GPU libs fail."
+else
+  echo "ERROR: nvcc not in PATH. Set SKIP_NVCC_CHECK=1 or load CUDA (e.g. module load cuda)." >&2
+  exit 1
 fi
 
 # ------------------------------------------------------------------------------
-# 3) Python venv (prefer explicit VENV_ACTIVATE; else ToxSearch-S .spvenv; else local)
+# 3) Python venv (VENV_ACTIVATE override, else repo .venv-rainbow, then fallbacks)
 # ------------------------------------------------------------------------------
 if [[ -n "${VENV_ACTIVATE:-}" ]]; then
   # shellcheck source=/dev/null
   source "${VENV_ACTIVATE}"
+elif [[ -f "${RP_ROOT}/.venv-rainbow/bin/activate" ]]; then
+  # shellcheck source=/dev/null
+  source "${RP_ROOT}/.venv-rainbow/bin/activate"
 elif [[ -f "${TOX_ROOT}/.spvenv/bin/activate" ]]; then
   # shellcheck source=/dev/null
   source "${TOX_ROOT}/.spvenv/bin/activate"
@@ -80,7 +135,7 @@ elif [[ -f "${RP_ROOT}/venv/bin/activate" ]]; then
   # shellcheck source=/dev/null
   source "${RP_ROOT}/venv/bin/activate"
 else
-  echo "ERROR: No venv found. Set VENV_ACTIVATE=/path/to/venv/bin/activate or create .spvenv/venv under ${TOX_ROOT} or ${RP_ROOT}" >&2
+  echo "ERROR: No venv found. Create ${RP_ROOT}/.venv-rainbow or set VENV_ACTIVATE=/path/to/venv/bin/activate" >&2
   exit 1
 fi
 
@@ -152,16 +207,17 @@ CONFIG_FILE="${CONFIG_FILE:-configs/base.yml}"
 NUM_SAMPLES="${NUM_SAMPLES:-100}"
 MAX_ITERS="${MAX_ITERS:-10000}"
 MAX_GENOMES="${MAX_GENOMES:-1000}"
-NUM_MUTATIONS="${NUM_MUTATIONS:-3}"
+NUM_MUTATIONS="${NUM_MUTATIONS:-2}"
 FITNESS_THRESHOLD="${FITNESS_THRESHOLD:-0.3}"
 LOG_INTERVAL="${LOG_INTERVAL:-50}"
 LOG_DIR="${LOG_DIR:-${RP_ROOT}/logs}"
 
-# RUN_ID: explicit > Slurm job > local timestamp
+# RUN_ID: explicit > Slurm job (+ array task when USE_ARRAY_RUN_ID!=0) > local timestamp
+# For job arrays, default RUN_ID is ${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID} so runs do not clobber.
 if [[ -n "${RUN_ID:-}" ]]; then
   :
 elif [[ -n "${SLURM_JOB_ID:-}" ]]; then
-  if [[ -n "${SLURM_ARRAY_TASK_ID:-}" && "${USE_ARRAY_RUN_ID:-0}" == "1" ]]; then
+  if [[ -n "${SLURM_ARRAY_TASK_ID:-}" && "${USE_ARRAY_RUN_ID:-1}" != "0" ]]; then
     RUN_ID="${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
   else
     RUN_ID="${SLURM_JOB_ID}"

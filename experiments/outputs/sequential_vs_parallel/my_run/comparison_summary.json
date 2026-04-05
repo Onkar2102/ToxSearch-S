@@ -1,0 +1,136 @@
+{
+  "sequential_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122",
+  "parallel_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260323_0306-4",
+  "sequential_summary": {
+    "label": "sequential (20260211_2122)",
+    "run_metadata": {},
+    "total_generations": 251,
+    "total_population_integrated": 3256,
+    "integrated_count_source": "variants_integrated when present else llm_calls",
+    "total_duration_seconds": 23488.209999999992,
+    "total_budget_duration_seconds": 23488.209999999992,
+    "overall_integrated_per_wall_second": 0.13862273881236592,
+    "overall_integrated_per_budget_second": 0.13862273881236592,
+    "overall_throughput_eval_per_s": 0.13862273881236592,
+    "overall_throughput_budget_eval_per_s": 0.13862273881236592,
+    "final_best_fitness": 0.9288,
+    "duration_is_wall_clock": false
+  },
+  "parallel_summary": {
+    "label": "parallel (20260323_0306-4)",
+    "run_metadata": {
+      "num_workers": 4,
+      "batch_size": 25,
+      "theta_sim": 0.3,
+      "species_capacity": 100,
+      "num_perspective_keys": 4,
+      "max_total_genomes": 5000
+    },
+    "total_generations": 282,
+    "total_population_integrated": 5066,
+    "integrated_count_source": "variants_integrated when present else llm_calls",
+    "total_duration_seconds": 141760.483,
+    "total_budget_duration_seconds": 107183.44600000007,
+    "overall_integrated_per_wall_second": 0.03573633422228111,
+    "overall_integrated_per_budget_second": 0.047264761388619625,
+    "overall_throughput_eval_per_s": 0.03573633422228111,
+    "overall_throughput_budget_eval_per_s": 0.047264761388619625,
+    "final_best_fitness": 0.6491,
+    "duration_is_wall_clock": true
+  },
+  "time_to_best_toxicity_cumulative_wall_s": {
+    "sequential": {
+      "time_to_best_ge_0.3": 4150.48,
+      "time_to_best_ge_0.5": 9777.28,
+      "time_to_best_ge_0.7": 10999.94,
+      "time_to_best_ge_0.9": 17880.92
+    },
+    "parallel": {
+      "time_to_best_ge_0.3": 2396.12,
+      "time_to_best_ge_0.5": 16865.71,
+      "time_to_best_ge_0.7": null,
+      "time_to_best_ge_0.9": null
+    },
+    "thresholds": [
+      0.3,
+      0.5,
+      0.7,
+      0.9
+    ]
+  },
+  "time_to_best_toxicity_cumulative_budget_s": {
+    "sequential": {
+      "time_to_best_ge_0.3": 4150.48,
+      "time_to_best_ge_0.5": 9777.28,
+      "time_to_best_ge_0.7": 10999.94,
+      "time_to_best_ge_0.9": 17880.92
+    },
+    "parallel": {
+      "time_to_best_ge_0.3": 5682.43,
+      "time_to_best_ge_0.5": 17980.91,
+      "time_to_best_ge_0.7": null,
+      "time_to_best_ge_0.9": null
+    },
+    "thresholds": [
+      0.3,
+      0.5,
+      0.7,
+      0.9
+    ]
+  },
+  "parallel_run_metadata": {
+    "num_workers": 4,
+    "batch_size": 25,
+    "theta_sim": 0.3,
+    "species_capacity": 100,
+    "num_perspective_keys": 4,
+    "max_total_genomes": 5000
+  },
+  "sequential_run_metadata": null,
+  "time_breakdown_sequential": {
+    "seconds_llm_response_and_variant": 23082.49,
+    "seconds_moderation_and_eval": 405.7199999999998,
+    "seconds_speciation": 0.0,
+    "seconds_wall_total": 0.0,
+    "seconds_overhead_sync_idle": 0.0,
+    "seconds_active_work_sum": 23488.210000000003
+  },
+  "time_breakdown_parallel": {
+    "seconds_llm_response_and_variant": 159535.04999999987,
+    "seconds_moderation_and_eval": 493.4000000000005,
+    "seconds_speciation": 33570.30600000001,
+    "seconds_wall_total": 141760.483,
+    "seconds_overhead_sync_idle": 0.0,
+    "seconds_active_work_sum": 193598.75599999988
+  },
+  "notes": {
+    "population_integrated": "Sum of variants_integrated per generation when present; else llm_calls (sequential legacy).",
+    "time_breakdown": "LLM = total_response_time + total_variant_creation_time; moderation = eval + API wait; overhead = wall \u2212 (LLM+mod+spec) when wall is logged.",
+    "throughput": "integrated / wall_seconds and integrated / active_work_seconds (sum of LLM+mod+spec).",
+    "fairness": "Runs differ in generations, batch, and caps; interpret side-by-side cautiously."
+  },
+  "throughput_speedup_wall_parallel_over_sequential": 0.25779561512380994,
+  "throughput_speedup_budget_parallel_over_sequential": 0.3409596563562005,
+  "optional_metrics_sequential": {
+    "run_id": "20260211_2122-2",
+    "Qmax": 0.9288,
+    "AUC": 0.7217203187250997,
+    "G_observed": 251,
+    "ttt_0.8": 111,
+    "ttt_0.9": 177,
+    "ttt_0.95": 251,
+    "n_unique_prompts": 395,
+    "top10_mean": 0.91882,
+    "top10_n": 10,
+    "top50_mean": 0.9068920000000001,
+    "top50_n": 50,
+    "n_embeddings": 395,
+    "cluster_count": 29,
+    "semantic_spread": 0.808360755443573,
+    "n_species": 9,
+    "mean_inter_distance": 0.9644596576690674,
+    "mean_intra_distance": 0.28299103606107334,
+    "separation_ratio": 3.408092606371192
+  },
+  "optional_metrics_parallel": null
+}

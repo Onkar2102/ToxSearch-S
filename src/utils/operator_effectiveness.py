@@ -459,8 +459,10 @@ def generate_operator_effectiveness_visualizations(
     try:
         import matplotlib
         matplotlib.use('Agg')
+        from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+        configure_matplotlib_embedded_fonts()
         import matplotlib.pyplot as plt
-        
         outputs_dir = Path(outputs_path)
         cumulative_file = outputs_dir / "operator_effectiveness_cumulative.csv"
         

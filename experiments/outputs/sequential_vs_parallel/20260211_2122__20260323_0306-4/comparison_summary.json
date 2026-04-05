@@ -1,0 +1,114 @@
+{
+  "sequential_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122",
+  "parallel_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260323_0306-4",
+  "sequential_summary": {
+    "label": "sequential (20260211_2122)",
+    "run_metadata": {},
+    "total_generations": 251,
+    "total_evaluated": 3256,
+    "total_duration_seconds": 23488.209999999992,
+    "total_budget_duration_seconds": 23488.209999999992,
+    "overall_throughput_eval_per_s": 0.13862273881236592,
+    "overall_throughput_budget_eval_per_s": 0.13862273881236592,
+    "final_best_fitness": 0.9288,
+    "duration_is_wall_clock": false
+  },
+  "parallel_summary": {
+    "label": "parallel (20260323_0306-4)",
+    "run_metadata": {
+      "num_workers": 4,
+      "batch_size": 25,
+      "theta_sim": 0.3,
+      "species_capacity": 100,
+      "num_perspective_keys": 4,
+      "max_total_genomes": 5000
+    },
+    "total_generations": 282,
+    "total_evaluated": 6405,
+    "total_duration_seconds": 141760.483,
+    "total_budget_duration_seconds": 107183.44600000007,
+    "overall_throughput_eval_per_s": 0.04518184380057452,
+    "overall_throughput_budget_eval_per_s": 0.05975736215833176,
+    "final_best_fitness": 0.6491,
+    "duration_is_wall_clock": true
+  },
+  "time_to_best_toxicity_cumulative_wall_s": {
+    "sequential": {
+      "time_to_best_ge_0.3": 4150.48,
+      "time_to_best_ge_0.5": 9777.28,
+      "time_to_best_ge_0.7": 10999.94,
+      "time_to_best_ge_0.9": 17880.92
+    },
+    "parallel": {
+      "time_to_best_ge_0.3": 2396.12,
+      "time_to_best_ge_0.5": 16865.71,
+      "time_to_best_ge_0.7": null,
+      "time_to_best_ge_0.9": null
+    },
+    "thresholds": [
+      0.3,
+      0.5,
+      0.7,
+      0.9
+    ]
+  },
+  "time_to_best_toxicity_cumulative_budget_s": {
+    "sequential": {
+      "time_to_best_ge_0.3": 4150.48,
+      "time_to_best_ge_0.5": 9777.28,
+      "time_to_best_ge_0.7": 10999.94,
+      "time_to_best_ge_0.9": 17880.92
+    },
+    "parallel": {
+      "time_to_best_ge_0.3": 5682.43,
+      "time_to_best_ge_0.5": 17980.91,
+      "time_to_best_ge_0.7": null,
+      "time_to_best_ge_0.9": null
+    },
+    "thresholds": [
+      0.3,
+      0.5,
+      0.7,
+      0.9
+    ]
+  },
+  "parallel_run_metadata": {
+    "num_workers": 4,
+    "batch_size": 25,
+    "theta_sim": 0.3,
+    "species_capacity": 100,
+    "num_perspective_keys": 4,
+    "max_total_genomes": 5000
+  },
+  "sequential_run_metadata": null,
+  "notes": {
+    "duration_effective": "Per generation: wall generation_duration_seconds if present; else budget time (response+eval+speciation).",
+    "duration_budget": "Always: budget total_response_time + total_evaluation_time + speciation_duration_seconds (comparable across runs).",
+    "throughput_speedup_budget": "Use overall_throughput_budget_eval_per_s and throughput_speedup_budget_parallel_over_sequential for apples-to-apples scaling; wall-based numbers mix definitions.",
+    "fairness": "Runs differ in generations, batch size, and caps; compare budget throughput, time-to-quality, and species curves together."
+  },
+  "throughput_speedup_wall_parallel_over_sequential": 0.3259338560734312,
+  "throughput_speedup_budget_parallel_over_sequential": 0.43107907598923495,
+  "optional_metrics_sequential": {
+    "run_id": "20260211_2122-2",
+    "Qmax": 0.9288,
+    "AUC": 0.7217203187250997,
+    "G_observed": 251,
+    "ttt_0.8": 111,
+    "ttt_0.9": 177,
+    "ttt_0.95": 251,
+    "n_unique_prompts": 395,
+    "top10_mean": 0.91882,
+    "top10_n": 10,
+    "top50_mean": 0.9068920000000001,
+    "top50_n": 50,
+    "n_embeddings": 395,
+    "cluster_count": 29,
+    "semantic_spread": 0.808360755443573,
+    "n_species": 9,
+    "mean_inter_distance": 0.9644596576690674,
+    "mean_intra_distance": 0.28299103606107334,
+    "separation_ratio": 3.408092606371192
+  },
+  "optional_metrics_parallel": null
+}

@@ -101,8 +101,8 @@
   },
   {
     "metric":"semantic_spread",
-    "baseline_median":0.67894274,
-    "speciation_median":0.8335694075,
+    "baseline_median":0.6789426804,
+    "speciation_median":0.8335694671,
     "baseline_iqr":[
       0.6599152684,
       0.7032049298
@@ -111,7 +111,7 @@
       0.831327796,
       0.8540700078
     ],
-    "median_diff":0.1546266675,
+    "median_diff":0.1546267867,
     "U_statistic":0.0,
     "p_value":0.0079365079,
     "cliffs_delta":1.0,

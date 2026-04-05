@@ -25,13 +25,18 @@ import numpy as np
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Project root
 PROJ = Path(__file__).resolve().parents[1]
 if str(PROJ) not in sys.path:
     sys.path.insert(0, str(PROJ))
+if str(PROJ / "src") not in sys.path:
+    sys.path.insert(0, str(PROJ / "src"))
+from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+configure_matplotlib_embedded_fonts()
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def load_json(path: Path) -> Any:

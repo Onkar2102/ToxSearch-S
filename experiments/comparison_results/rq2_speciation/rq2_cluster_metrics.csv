@@ -1,0 +1,6 @@
+run_id,n_species,n_elites,n_reserves,mean_inter_dist,mean_intra_dist,separation_ratio
+run01_speciated,21,298,208,0.8822,0.3870,2.2795
+run02_speciated,24,376,136,0.8162,0.4683,1.7428
+run03_speciated,28,322,162,0.8730,0.4191,2.0830
+run04_speciated,12,171,243,0.8498,0.5017,1.6937
+run05_speciated,20,261,179,0.8578,0.4683,1.8316

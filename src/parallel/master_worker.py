@@ -16,6 +16,44 @@ STOP                = 14  # Master tells workers to stop (discard in-progress or
 WORKER_READY        = 20   # Worker finished init successfully
 WORKER_INIT_FAILED  = 21   # Worker failed to init (e.g. model load); payload {"rank": int, "error": str}
 
+# Sequential parity: EvolutionEngine operators="all", max_variants=1 (see ea/evolution_engine.py).
+K_PARALLEL_MERGE_ALL_DEFAULT = 24          # 2 parents: 2 crossover + 22 mutation applies
+K_PARALLEL_MERGE_ALL_EXPLORE_EXPLOIT = 39  # 3 parents: 6 crossover + 33 mutation applies
+# When operators_mode != "all", merge K is not tied to that grid; keep legacy default unless --batch-size is set.
+LEGACY_PARALLEL_MERGE_K_NON_ALL = 100
+
+
+def _read_tracker_selection_mode(outputs_path):
+    """Top-level selection_mode from EvolutionTracker.json ('default', 'explore', 'exploit', ...)."""
+    path = Path(outputs_path) / "EvolutionTracker.json"
+    if not path.exists():
+        return "default"
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            tracker = json.load(f)
+        return str(tracker.get("selection_mode", "default")).lower()
+    except Exception:
+        return "default"
+
+
+def resolve_parallel_merge_k(outputs_path, operators_mode, max_variants, batch_size_override):
+    """Batch threshold K for parallel merge: explicit override, else 24/39 for operators=all, else 100.
+
+    batch_size_override: None = use sequential parity (or legacy 100 for non-all operators_mode).
+    """
+    if batch_size_override is not None:
+        return int(batch_size_override)
+    om = (operators_mode or "all").lower()
+    if om != "all":
+        return LEGACY_PARALLEL_MERGE_K_NON_ALL
+    mv = max(1, int(max_variants or 1))
+    mode = _read_tracker_selection_mode(outputs_path)
+    if mode in ("explore", "exploration", "exploit", "exploitation"):
+        base = K_PARALLEL_MERGE_ALL_EXPLORE_EXPLOIT
+    else:
+        base = K_PARALLEL_MERGE_ALL_DEFAULT
+    return base * mv
+
 
 def send_payload(comm, dest, tag, payload, logger=None):
     """Send a dict (or None) to dest with the given tag."""
@@ -281,11 +319,16 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                     total_discarded, speciation_result, logger,
                     north_star_metric="toxicity", log_file=None,
                     accepted_genomes=None, sent_parents_top10=None,
-                    generation_duration_seconds=None, n_workers=None,
-                    batch_size_K=None, speciation_config=None, config_dict=None):
+                    generation_duration_seconds=None, generation_wall_start=None, n_workers=None,
+                    batch_size_K=None, speciation_config=None, config_dict=None,
+                    evaluated_this_generation=None, discarded_this_generation=None):
     """Update EvolutionTracker with full generation statistics after speciation.
     sent_parents_top10: optional dict {"parents": [...], "top_10": [...]} captured when PARENTS were sent for this generation.
+    evaluated_this_generation / discarded_this_generation: per-merge deltas (MPI eval variants since last speciation).
     batch_size_K, speciation_config, config_dict: optional, for run_metadata (RQ analysis).
+    generation_wall_start: if set, generation_duration_seconds is set immediately before the tracker write
+    as (now - generation_wall_start), matching sequential timing scope (through main tracker row).
+    generation_duration_seconds: optional explicit duration when generation_wall_start is None.
     """
     logger.debug("Updating EvolutionTracker (full): gen=%d  evaluated=%d  "
                  "integrated=%d  discarded=%d  accepted_genomes=%d",
@@ -364,9 +407,10 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["parents"] = parents_list
             gen_stats["top_10"] = top10_list
 
-        gen_stats["total_evaluated"] = total_evaluated
-        gen_stats["total_integrated"] = total_integrated
-        gen_stats["total_discarded"] = total_discarded
+        if evaluated_this_generation is not None:
+            gen_stats["evaluated_this_generation"] = int(evaluated_this_generation)
+        if discarded_this_generation is not None:
+            gen_stats["discarded_this_generation"] = int(discarded_this_generation)
 
         # Do NOT merge speciation_result["archived_count"] into gen_stats: that field is the
         # count archived *this speciation invocation only* (state reset each run). Overwriting
@@ -381,8 +425,11 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         gen_stats.update({k: speciation_result[k] for k in _spec_keys if k in speciation_result})
         if speciation_result.get("archived_count") is not None:
             gen_stats["archived_this_generation"] = speciation_result["archived_count"]
-        if generation_duration_seconds is not None:
+        if generation_wall_start is not None:
+            gen_stats["generation_duration_seconds"] = round(time.time() - generation_wall_start, 3)
+        elif generation_duration_seconds is not None:
             gen_stats["generation_duration_seconds"] = round(generation_duration_seconds, 3)
+        gen_stats["generation_duration_scope"] = "through_evolution_tracker_statistics_write"
         if accepted_genomes:
             total_api_wait = sum(float(g.get("evaluation_api_wait_seconds") or 0) for g in accepted_genomes)
             gen_stats["total_evaluation_api_wait_seconds"] = round(total_api_wait, 2)
@@ -468,26 +515,21 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                      gen_stats.get("population_max_toxicity", 0.0001))
 
     except Exception as e:
-        logger.error("Full tracker update failed, falling back to minimal: %s", e, exc_info=True)
-        logger.info("Using minimal tracker update (full update failed)")
-        with open(tracker_path, "r", encoding="utf-8") as f:
-            tracker = json.load(f)
-        gen_entry = {
-            "generation_number": generation_id,
-            "total_evaluated": total_evaluated,
-            "total_integrated": total_integrated,
-            "total_discarded": total_discarded,
-            "species_count": speciation_result.get("species_count", 0),
-            "reserves_size": speciation_result.get("reserves_size", 0),
-            "elites_moved": speciation_result.get("elites_moved", 0),
-            "reserves_moved": speciation_result.get("reserves_moved", 0),
-        }
-        tracker["total_generations"] = generation_id + 1
-        tracker.setdefault("generations", []).append(gen_entry)
-        with open(tracker_path, "w", encoding="utf-8") as f:
-            json.dump(tracker, f, indent=2, ensure_ascii=False)
-        logger.info("Tracker updated (minimal): gen=%d  evaluated=%d  integrated=%d  discarded=%d",
-                     generation_id, total_evaluated, total_integrated, total_discarded)
+        logger.error("EvolutionTracker full update failed: %s", e, exc_info=True)
+        try:
+            tracker = {}
+            if tracker_path.exists():
+                with open(tracker_path, "r", encoding="utf-8") as f:
+                    tracker = json.load(f)
+            tracker["status"] = "degraded"
+            tracker["last_tracker_error"] = str(e)[:4000]
+            with open(tracker_path, "w", encoding="utf-8") as f:
+                json.dump(tracker, f, indent=2, ensure_ascii=False)
+        except Exception as save_err:
+            logger.error("Could not persist degraded tracker state: %s", save_err, exc_info=True)
+        raise RuntimeError(
+            f"EvolutionTracker update failed for generation {generation_id}: {e}"
+        ) from e
 
 
 def _run_live_analysis(outputs_path, logger):
@@ -507,7 +549,8 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
                           accepted_per_worker=None,
                           total_wait_for_results_seconds=None,
                           total_merge_speciation_seconds=None,
-                          in_flight_at_stop=None):
+                          in_flight_at_stop=None,
+                          merge_k_history=None):
     """Generate final statistics and plots at the end of a parallel run."""
     try:
         execution_time = time.time() - start_time
@@ -540,6 +583,7 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
             "total_merge_speciation_seconds": round(total_merge_speciation_seconds, 2) if total_merge_speciation_seconds is not None else None,
             "in_flight_at_stop": in_flight_at_stop,
             "accepted_per_worker": accepted_per_worker or {},
+            "merge_k_history": merge_k_history or [],
         }
         master_path = outputs_path / "master_metrics.json"
         with open(master_path, "w", encoding="utf-8") as f:
@@ -569,13 +613,29 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 speciation_config, log_file, logger,
                 max_generations=None, run_speciation_fn=None,
                 config_dict=None):
-    """Master process (rank 0). Dispatch loop with per-worker buffers."""
+    """Master process (rank 0). Dispatch loop with per-worker buffers.
+
+    K: optional int override for merge batch threshold. If None, use sequential parity
+    (24 / 39 for operators=all from EvolutionTracker selection_mode) or 100 for other operator modes.
+    """
     from utils.population_io import get_max_genome_id_from_all_files
 
     start_time = time.time()
     gen_start = start_time  # Wall-clock start of current generation (for generation_duration_seconds)
     n_workers = size - 1
-    logger.info("Master started. Workers: %d  K: %d  outputs: %s", n_workers, K, outputs_path)
+    batch_size_override = K
+    merge_k_history = []
+    initial_merge_k = resolve_parallel_merge_k(
+        outputs_path,
+        (config_dict or {}).get("operators_mode", "all"),
+        (config_dict or {}).get("max_variants", 1),
+        batch_size_override,
+    )
+    k_mode = "override" if batch_size_override is not None else "sequential_parity"
+    logger.info(
+        "Master started. Workers: %d  merge_K=%d (%s)  outputs: %s",
+        n_workers, initial_merge_k, k_mode, outputs_path,
+    )
 
     comm.bcast(config_dict, root=0)
     logger.info("Broadcast config to workers: %s", list((config_dict or {}).keys()))
@@ -613,6 +673,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     total_evaluated = 0
     total_integrated = 0
     total_discarded = 0
+    snap_evaluated = 0
+    snap_discarded = 0
     gen0_complete = False
     shutdown = False
     finished_workers = 0
@@ -688,7 +750,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     logger.info("All workers ready. Starting dispatch loop.")
     logger.info("="*60)
     logger.info("Dispatch loop started. Waiting for messages from %d worker(s). "
-                "K=%d  max_generations=%s", n_workers, K, max_generations)
+                "merge_K=%d  max_generations=%s", n_workers, initial_merge_k, max_generations)
     logger.info("="*60)
 
     while finished_workers < n_workers:
@@ -785,13 +847,22 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             if not gen0_complete:
                 gen0_returned += 1
 
-            if total_evaluated % 5 == 0 or _total_buffered() >= K:
-                logger.info("Buffer state: %s  total_evaluated=%d  gen0_returned=%d/%d",
-                            _buffer_state_str(), total_evaluated,
-                            gen0_returned, gen0_expected)
+            merge_k = resolve_parallel_merge_k(
+                outputs_path,
+                (config_dict or {}).get("operators_mode", "all"),
+                (config_dict or {}).get("max_variants", 1),
+                batch_size_override,
+            )
+
+            if total_evaluated % 5 == 0 or (gen0_complete and _total_buffered() >= merge_k):
+                logger.info(
+                    "Buffer state: %s  total_evaluated=%d  gen0_returned=%d/%d  merge_K=%d",
+                    _buffer_state_str(), total_evaluated,
+                    gen0_returned, gen0_expected, merge_k,
+                )
 
             # Generation 0: single speciation after *all* seed evaluations are buffered (not K-batched).
-            # Post-bootstrap: steady-state speciation every K evaluated genomes (unchanged).
+            # Post-bootstrap: steady-state speciation when buffered count reaches merge_K (sequential parity).
             should_speciate = False
             if not gen0_complete:
                 if (not gen0_assignments
@@ -799,7 +870,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         and gen0_returned >= gen0_expected
                         and _total_buffered() > 0):
                     should_speciate = True
-            elif _total_buffered() >= K:
+            elif _total_buffered() >= merge_k:
                 should_speciate = True
 
             if should_speciate:
@@ -811,14 +882,24 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 if not gen0_complete:
                     logger.info(
                         "Gen0 bootstrap merge+speciation: %d buffered seed evaluations (all %d expected), "
-                        "generation_id=%d (single batch, not limited by K=%d)",
-                        buf_n, gen0_expected, generation_id, K,
+                        "generation_id=%d (single batch; steady-state merge_K will be %d)",
+                        buf_n, gen0_expected, generation_id, merge_k,
                     )
                     batch_size = buf_n
+                    tracker_batch_k = buf_n
                 else:
-                    logger.info("Merge+speciation triggered: %d buffered, K=%d, "
-                                "generation=%d", buf_n, K, generation_id)
-                    batch_size = min(buf_n, K)
+                    logger.info(
+                        "Merge+speciation triggered: K_used=%d  buffered=%d  generation_id=%d",
+                        merge_k, buf_n, generation_id,
+                    )
+                    batch_size = min(buf_n, merge_k)
+                    tracker_batch_k = merge_k
+                    merge_k_history.append({
+                        "generation_number": generation_id,
+                        "merge_k_used": merge_k,
+                        "buffered_before_merge": buf_n,
+                    })
+                eval_this_gen = total_evaluated - snap_evaluated
                 accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
                     _merge_and_speciate(
                         buffers, batch_size, outputs_path, generation_id, next_genome_id,
@@ -832,14 +913,17 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 total_integrated += accepted
                 total_discarded += discarded
 
-                gen_duration = time.time() - gen_start
                 _update_tracker(outputs_path, generation_id, total_evaluated,
                                 total_integrated, total_discarded, spec_result, logger,
                                 north_star_metric=north_star_metric, log_file=log_file,
                                 accepted_genomes=accepted_genomes,
                                 sent_parents_top10=sent_parents_top10_by_gen.get(generation_id),
-                                generation_duration_seconds=gen_duration, n_workers=n_workers,
-                                batch_size_K=K, speciation_config=speciation_config, config_dict=config_dict)
+                                generation_wall_start=gen_start, n_workers=n_workers,
+                                batch_size_K=tracker_batch_k, speciation_config=speciation_config, config_dict=config_dict,
+                                evaluated_this_generation=eval_this_gen,
+                                discarded_this_generation=discarded)
+                snap_evaluated = total_evaluated
+                snap_discarded = total_discarded
                 gen_start = time.time()
 
                 _run_live_analysis(outputs_path, logger)
@@ -901,14 +985,25 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 accepted_per_worker[r] += 1  # Drain phase: include accepted counts for final master_metrics
         total_integrated += accepted
         total_discarded += discarded
-        gen_duration = time.time() - gen_start
+        drain_batch_k = len(accepted_genomes or [])
+        merge_k_history.append({
+            "generation_number": generation_id,
+            "merge_k_used": drain_batch_k,
+            "buffered_before_merge": drain_batch_k,
+            "drain_phase": True,
+        })
+        eval_this_gen = total_evaluated - snap_evaluated
         _update_tracker(outputs_path, generation_id, total_evaluated,
                         total_integrated, total_discarded, spec_result, logger,
                         north_star_metric=north_star_metric, log_file=log_file,
                         accepted_genomes=accepted_genomes,
                         sent_parents_top10=sent_parents_top10_by_gen.get(generation_id),
-                        generation_duration_seconds=gen_duration, n_workers=n_workers,
-                        batch_size_K=K, speciation_config=speciation_config, config_dict=config_dict)
+                        generation_wall_start=gen_start, n_workers=n_workers,
+                        batch_size_K=drain_batch_k, speciation_config=speciation_config, config_dict=config_dict,
+                        evaluated_this_generation=eval_this_gen,
+                        discarded_this_generation=discarded)
+        snap_evaluated = total_evaluated
+        snap_discarded = total_discarded
         _run_live_analysis(outputs_path, logger)
         drain_elapsed = time.time() - drain_start
         logger.info("Drain complete (%.2fs): accepted=%d  discarded=%d (buffered genomes included in population)",
@@ -921,6 +1016,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         total_wait_for_results_seconds=total_wait_for_results_seconds,
         total_merge_speciation_seconds=total_merge_speciation_seconds,
         in_flight_at_stop=in_flight_at_stop,
+        merge_k_history=merge_k_history,
     )
 
     # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
@@ -1124,15 +1220,16 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
             gen0_batch_elapsed = time.time() - gen0_batch_start
             gen0_batch_duration = round(gen0_batch_elapsed, 4)
-            for genome in gen0_processed:
+            n_sent = len(gen0_processed)
+            for j, genome in enumerate(gen0_processed):
                 genome["gen0_batch_duration"] = gen0_batch_duration
                 send_payload(comm, 0, EVALUATED_VARIANT, genome, logger=logger)
                 logger.debug("Sent EVALUATED_VARIANT (gen0)  local_variant_id=%s  status=%s",
                              genome.get("local_variant_id"), genome.get("status"))
 
-                if (i + 1) % 5 == 0:
-                    logger.info("Gen0 progress: %d/%d prompts processed (%d ok, %d errors)",
-                                 i + 1, len(prompts), gen0_ok, gen0_err)
+                if (j + 1) % 5 == 0 or (j + 1) == n_sent:
+                    logger.info("Gen0 progress: %d/%d variants sent (%d ok, %d errors)",
+                                 j + 1, n_sent, gen0_ok, gen0_err)
 
             # Accumulate timing from genomes (for worker stats on exit)
             for g in gen0_processed:
@@ -1143,7 +1240,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             gen0_batch_elapsed = time.time() - gen0_batch_start
             logger.info("Gen0 batch complete: sent %d variants (%d ok, %d errors) "
                         "for request_id=%s in %.2fs",
-                        len(prompts), gen0_ok, gen0_err, req_id, gen0_batch_elapsed)
+                        n_sent, gen0_ok, gen0_err, req_id, gen0_batch_elapsed)
 
         # ---- PARENTS (evolve + respond + evaluate) ----
         elif tag_id == PARENTS:
@@ -1323,13 +1420,14 @@ def _rank_log_file(base_log_file, rank):
     return f"{stem}_{suffix}{ext}"
 
 
-def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
+def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
         speciation_config=None, log_file=None, max_generations=2,
         max_total_genomes=None,
         run_speciation_fn=None,
         operators_mode="all", seed_file="data/prompt.csv", seed=None,
         moderation_methods=None,
         stagnation_limit=5,
+        max_variants=1,
         response_generator=None, prompt_generator=None, evaluator=None,
         perspective_api_keys=None):
     """MPI entry point. Branch on rank. Primary termination is by total genomes (--max-total-genomes required)."""
@@ -1401,6 +1499,7 @@ def run(logger, K=4, outputs_path=None, north_star_metric="toxicity",
         "log_file": log_file,
         "outputs_path": outputs_path,
         "K": K,
+        "max_variants": max_variants,
         "perspective_api_keys": perspective_api_keys,
         "max_total_genomes": max_total_genomes,
         "stagnation_limit": stagnation_limit,

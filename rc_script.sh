@@ -4,7 +4,7 @@
 # Run from project root: sbatch rc_script.sh
 #
 # Termination: by --max-total-genomes (required for parallel). Optional --output-dir for stable path.
-# See experiments/RESEARCH_QUESTIONS.txt for RQ runs.
+# See experiments/EXPERIMENT_PLAN.md for experiment categories (C1/C2/C3).
 
 #SBATCH --job-name=txs101
 #SBATCH --time=03-23:59:00

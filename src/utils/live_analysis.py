@@ -12,6 +12,9 @@ from typing import Dict, List, Optional, Any
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
+from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+configure_matplotlib_embedded_fonts()
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
@@ -41,7 +44,7 @@ def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]
 
 
 def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """Generate fitness evolution plot showing max, avg, min scores over generations."""
+    """Generate fitness evolution plot showing per-generation max/min/avg and cumulative max."""
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
@@ -54,32 +57,40 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
         if not generations:
             return None
         
-        gen_nums = [g.get("generation_number", 0) for g in generations]
-        # best_fitness = per-gen max over elites+reserves; fall back to max_score_variants
-        best_fitness_scores = [
-            g.get("best_fitness", g.get("max_score_variants", 0.0)) for g in generations
-        ]
-        avg_scores = [g.get("avg_fitness_generation", 0.0) for g in generations]
-        avg_elites = [g.get("avg_fitness_elites", 0.0) for g in generations]
+        gen_nums = [int(g.get("generation_number", 0) or 0) for g in generations]
+
+        # Per-generation stats (prefer explicit per-gen variant stats if available).
+        # max_score_variants / min_score_variants are computed from evaluated genomes for that generation.
+        max_scores = [float(g.get("max_score_variants", g.get("best_fitness", 0.0)) or 0.0) for g in generations]
+        min_scores = [float(g.get("min_score_variants", 0.0) or 0.0) for g in generations]
+        avg_scores = [float(g.get("avg_fitness_generation", g.get("avg_fitness", 0.0)) or 0.0) for g in generations]
         
         # Calculate cumulative best fitness (running maximum across all generations)
         cumulative_best = []
         current_max = 0.0
-        for score in best_fitness_scores:
-            current_max = max(current_max, score)
+        for score in max_scores:
+            current_max = max(current_max, float(score))
             cumulative_best.append(current_max)
         
         plt.figure(figsize=(10, 6))
-        plt.plot(gen_nums, best_fitness_scores, 'o-', label='Best Fitness (elites+reserves)', linewidth=2, markersize=6)
-        plt.plot(gen_nums, avg_scores, 's-', label='Avg Fitness (population)', linewidth=2, markersize=6)
-        plt.plot(gen_nums, avg_elites, '^-', label='Avg Fitness (elites)', linewidth=2, markersize=6)
-        plt.plot(gen_nums, cumulative_best, '--', label='Cumulative Best', linewidth=2, color='red', alpha=0.7)
+        # Color/meaning convention (paper-ready):
+        # - Blue: per-generation max
+        # - Green: per-generation min
+        # - Orange: per-generation average (population)
+        # - Red dashed: cumulative max up to that generation
+        plt.plot(gen_nums, max_scores, 'o-', label='Max Fitness', linewidth=2, markersize=6, color='#1f77b4')
+        plt.plot(gen_nums, min_scores, '^-', label='Min Fitness', linewidth=2, markersize=6, color='#2ca02c')
+        plt.plot(gen_nums, avg_scores, 's-', label='Avg Fitness', linewidth=2, markersize=6, color='#ff7f0e')
+        plt.plot(gen_nums, cumulative_best, '--', label='Cumulative Max Score', linewidth=2, color='red', alpha=0.75)
         
         plt.xlabel('Generation', fontsize=12)
         plt.ylabel('Fitness Score', fontsize=12)
         plt.title('Fitness Evolution Over Generations', fontsize=14, fontweight='bold')
         plt.legend(fontsize=10)
         plt.grid(True, alpha=0.3)
+        # Anchor axes at origin (0, 0); upper bounds follow data
+        plt.xlim(left=0)
+        plt.ylim(bottom=0)
         plt.tight_layout()
         
         if outputs_path is None:

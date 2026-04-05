@@ -31,6 +31,11 @@ if str(PROJ) not in sys.path:
 try:
     import matplotlib
     matplotlib.use("Agg")
+    if str(PROJ / "src") not in sys.path:
+        sys.path.insert(0, str(PROJ / "src"))
+    from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+    configure_matplotlib_embedded_fonts()
     import matplotlib.pyplot as plt
     HAS_MATPLOTLIB = True
 except ImportError:
@@ -46,15 +51,17 @@ def load_tracker(run_dir: Path) -> Optional[Dict[str, Any]]:
 
 
 def _evaluated_in_generation(gen: Dict[str, Any]) -> Optional[int]:
-    """Number of genomes evaluated in this generation (response gen + moderation)."""
-    # Parallel: total_evaluated is written per generation
+    """Number of genomes evaluated in this generation (moderation / pipeline completions)."""
+    if gen.get("evaluated_this_generation") is not None:
+        return int(gen["evaluated_this_generation"])
+    budget = gen.get("budget") or {}
+    if budget.get("api_calls") is not None:
+        return int(budget["api_calls"])
+    if budget.get("llm_calls") is not None:
+        return int(budget["llm_calls"])
+    # Legacy parallel rows (cumulative; do not use for throughput — prefer evaluated_this_generation)
     if gen.get("total_evaluated") is not None:
         return int(gen["total_evaluated"])
-    # Sequential: use budget.llm_calls (one per genome that got response + evaluation)
-    budget = gen.get("budget") or {}
-    llm = budget.get("llm_calls")
-    if llm is not None:
-        return int(llm)
     return None
 
 

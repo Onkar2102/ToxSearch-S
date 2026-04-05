@@ -44,6 +44,15 @@ import colorsys
 
 warnings.filterwarnings('ignore')
 
+import matplotlib
+
+try:
+    from src.utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+except ImportError:
+    from utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts
+
+configure_matplotlib_embedded_fonts()
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -78,7 +87,9 @@ if not (PROJ / "src").exists():
             PROJ = p
             break
 
-BASE = PROJ / "data" / "outputs"
+# Override with: export TOXSEARCH_DATA_OUTPUTS="/path/to/.../toxsearch_s_outputs copy"
+_outputs_override = os.environ.get("TOXSEARCH_DATA_OUTPUTS", "").strip()
+BASE = Path(_outputs_override).resolve() if _outputs_override else (PROJ / "data" / "outputs")
 OUT = PROJ / "experiments" / "comparison_results" / "rq2_speciation"
 (OUT / "figures").mkdir(parents=True, exist_ok=True)
 

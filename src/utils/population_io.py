@@ -1543,14 +1543,22 @@ def calculate_budget_metrics(
     _logger = logger or get_logger("BudgetMetrics")
 
     # Operator names that use the LLM for variant creation (one LLM call per genome created by these).
+    # Operator `name` strings from VariationOperator (see ea/*); include aliases for robustness.
     OPERATORS_USING_LLM = frozenset({
         "InformedEvolutionOperator",
         "LLM_POSAwareSynonymReplacement",
         "POSAwareAntonymReplacement",
         "MLMOperator",
+        "MLM",
         "LLMBasedParaphrasingOperator",
+        "LLMBasedParaphrasing",
         "StylisticMutator",
         "LLMBackTranslationHIOperator",
+        "LLMBackTranslation_HI",
+        "LLMBackTranslation_FR",
+        "LLMBackTranslation_DE",
+        "LLMBackTranslation_JA",
+        "LLMBackTranslation_ZH",
         "NegationOperator",
         "TypographicalErrorsOperator",
         "ConceptAdditionOperator",
@@ -1573,6 +1581,10 @@ def calculate_budget_metrics(
         all_genomes = (elites_genomes or []) + (reserves_genomes or []) + (temp_genomes or [])
         current_gen_genomes = [g for g in all_genomes if g and g.get("generation") == current_generation]
         
+        def _operator_name_for_budget(genome: Dict[str, Any]) -> Optional[str]:
+            ci = genome.get("creation_info") or {}
+            return ci.get("operator") or genome.get("operator")
+
         for genome in current_gen_genomes:
             # Response generation: one LLM call per genome that got a response
             if genome.get("response_duration") is not None or genome.get("generated_output"):
@@ -1580,7 +1592,7 @@ def calculate_budget_metrics(
                 if genome.get("response_duration"):
                     budget["total_response_time"] += float(genome.get("response_duration", 0))
             # Variant creation: one LLM call per genome when the operator uses the LLM
-            op_name = (genome.get("creation_info") or {}).get("operator")
+            op_name = _operator_name_for_budget(genome)
             if op_name and op_name in OPERATORS_USING_LLM:
                 budget["llm_calls_variant_creation"] += 1
             # Total LLM calls = response gen + variant creation
@@ -2130,7 +2142,12 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "speciation": None,  # Will be set by speciation update
         "budget": None,  # Will be set if available
         "generation_duration_seconds": None,  # Wall-clock duration for this generation
+        # Preferred scope: through_evolution_tracker_statistics_write (sequential + parallel aligned on trailing edge).
+        "generation_duration_scope": None,
         "genomes_per_second": None,  # variants_integrated / generation_duration_seconds (throughput into population)
+        # Per-generation evaluation pipeline (parallel: master recv count since last merge; sequential: prefer api_calls)
+        "evaluated_this_generation": None,
+        "discarded_this_generation": None,
     }
 
 
@@ -2245,6 +2262,8 @@ def update_evolution_tracker_with_statistics(
             "avg_fitness_elites": round(statistics.get("avg_fitness_elites", gen_entry.get("avg_fitness_elites", 0.0001)), 4),
             "avg_fitness_reserves": round(statistics.get("avg_fitness_reserves", gen_entry.get("avg_fitness_reserves", 0.0001)), 4),
         })
+        if statistics.get("generation_duration_scope") is not None:
+            gen_entry["generation_duration_scope"] = statistics["generation_duration_scope"]
         
         # Speciation block: keep if already a non-empty dict; otherwise build from statistics.
         # This covers Gen 0 (EvolutionTracker may not exist when run_speciation's update runs)
@@ -2355,6 +2374,28 @@ def update_evolution_tracker_with_statistics(
             gen_entry["mutation_variants"] = statistics.get("mutation_variants", 0)
         if statistics.get("crossover_variants") is not None:
             gen_entry["crossover_variants"] = statistics.get("crossover_variants", 0)
+
+        eval_this = statistics.get("evaluated_this_generation")
+        if eval_this is None and statistics.get("api_calls") is not None:
+            try:
+                eval_this = int(statistics["api_calls"])
+            except (TypeError, ValueError):
+                eval_this = None
+        old_eval = gen_entry.get("evaluated_this_generation")
+        old_disc = gen_entry.get("discarded_this_generation")
+        if eval_this is not None:
+            ne = int(eval_this)
+            gen_entry["evaluated_this_generation"] = ne
+            prev_e = int(old_eval) if old_eval is not None else 0
+            tracker["cumulative_variants_evaluated"] = int(
+                tracker.get("cumulative_variants_evaluated", 0)) + (ne - prev_e)
+        disc_this = statistics.get("discarded_this_generation")
+        if disc_this is not None:
+            nd = int(disc_this)
+            gen_entry["discarded_this_generation"] = nd
+            prev_d = int(old_disc) if old_disc is not None else 0
+            tracker["cumulative_variants_discarded"] = int(
+                tracker.get("cumulative_variants_discarded", 0)) + (nd - prev_d)
         
         # Parents and top_10: use from statistics if provided (e.g. parallel master), else load from files
         if statistics.get("parents") is not None:
@@ -2377,8 +2418,8 @@ def update_evolution_tracker_with_statistics(
                         ] if isinstance(parents_data, list) else []
                         _logger.debug("Loaded %d parents from %s for gen %d",
                                       len(gen_entry["parents"]), parents_path, current_generation)
-            except Exception:
-                pass
+            except Exception as ex:
+                _logger.warning("Failed loading parents.json for tracker gen %d: %s", current_generation, ex)
         if not gen_entry.get("top_10"):
             top10_path = os.path.join(outputs_dir, "top_10.json")
             try:
@@ -2392,8 +2433,8 @@ def update_evolution_tracker_with_statistics(
                         ] if isinstance(top10_data, list) else []
                         _logger.debug("Loaded %d top_10 from %s for gen %d",
                                       len(gen_entry["top_10"]), top10_path, current_generation)
-            except Exception:
-                pass
+            except Exception as ex:
+                _logger.warning("Failed loading top_10.json for tracker gen %d: %s", current_generation, ex)
         
         # Add operator statistics if provided
         if operator_statistics:
@@ -2484,28 +2525,47 @@ def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
     total_wall = run_meta.get("run_duration_seconds") or 0.0
     num_workers = run_meta.get("num_workers", 1)
 
-    total_evaluated = 0
     total_integrated = 0
-    total_discarded = 0
     for g in gens:
         vi = g.get("variants_integrated")
         if vi is not None:
             total_integrated += int(vi)
-    if gens:
+
+    ce = tracker.get("cumulative_variants_evaluated")
+    if ce is not None:
+        total_evaluated = int(ce)
+    else:
+        total_evaluated = sum(int(g.get("evaluated_this_generation") or 0) for g in gens)
+    if total_evaluated == 0 and gens:
         last = gens[-1]
         if last.get("total_evaluated") is not None:
             total_evaluated = int(last["total_evaluated"])
-        if last.get("total_discarded") is not None:
-            total_discarded = int(last["total_discarded"])
     if total_evaluated == 0 and gens:
         for g in gens:
-            te = g.get("total_evaluated")
-            if te is not None:
-                total_evaluated += int(te)
+            etg = g.get("evaluated_this_generation")
+            if etg is not None:
+                total_evaluated += int(etg)
             else:
-                budget = g.get("budget") or {}
-                total_evaluated += int(budget.get("llm_calls", 0) or 0)
-        total_discarded = max(0, total_evaluated - total_integrated)
+                te = g.get("total_evaluated")
+                if te is not None:
+                    total_evaluated += int(te)
+                else:
+                    budget = g.get("budget") or {}
+                    ac = budget.get("api_calls")
+                    if ac is not None:
+                        total_evaluated += int(ac)
+                    else:
+                        total_evaluated += int(budget.get("llm_calls", 0) or 0)
+
+    cd = tracker.get("cumulative_variants_discarded")
+    if cd is not None:
+        total_discarded = int(cd)
+    else:
+        total_discarded = sum(int(g.get("discarded_this_generation") or 0) for g in gens)
+    if total_discarded == 0 and gens:
+        last = gens[-1]
+        if last.get("total_discarded") is not None:
+            total_discarded = int(last["total_discarded"])
 
     final_best = tracker.get("population_max_toxicity") or 0.0
     final_mean = 0.0

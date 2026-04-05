@@ -86,7 +86,7 @@ To reproduce or compare results, the following should be fixed or recorded.
 - For parallel runs: one log file per MPI rank (`*_master.log`, `*_worker1.log`, …). See README for interpretation of worker log messages.
 
 **Run configuration**
-- Record all command-line arguments (or equivalent config): `--generations`, `--batch-size` (K), `--max-total-genomes` (required for parallel), `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, `--seed`, model paths (`--rg`, `--pg`), and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler). Config and seed paths are resolved from the project root so runs are independent of working directory.
+- Record all command-line arguments (or equivalent config): `--generations`, `--batch-size` (K), **`--max-total-genomes` (required for sequential and parallel; primary termination)**, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--cluster0-max-capacity`, `--seed-file`, `--seed`, model paths (`--rg`, `--pg`), and any overrides. For multi-node or multi-GPU runs, record the number of MPI ranks and how GPUs are assigned (e.g. one GPU per worker via the scheduler). Config and seed paths are resolved from the project root so runs are independent of working directory. See README **Pre-execution checklist** before final batch runs.
 
 ---
 
@@ -412,6 +412,12 @@ else:
 | Davies-Bouldin Index | ≥ 0 | Lower = better |
 | Calinski-Harabasz Index | > 0 | Higher = better |
 
+### 8.5 Run artifacts and tracker fields
+
+- **`EvolutionTracker.json`** is updated each generation from `calculate_generation_statistics` and `update_evolution_tracker_with_statistics` in [`src/utils/population_io.py`](src/utils/population_io.py). Budget breakdowns come from `calculate_budget_metrics` in the same module (LLM variant-creation calls match operator name strings in `OPERATORS_USING_LLM`, plus `creation_info.operator` / `operator` on genomes).
+- **Per-generation evaluation:** `evaluated_this_generation` and `discarded_this_generation` are the portable fields for throughput analysis. Run-level **cumulative** totals use `cumulative_variants_evaluated` and `cumulative_variants_discarded` on the tracker root. Older parallel rows may lack `evaluated_this_generation`; scripts fall back to `budget.api_calls` / `budget.llm_calls` with caution.
+- **`generation_duration_seconds` + `generation_duration_scope`:** Both modes set scope **`through_evolution_tracker_statistics_write`** (trailing edge aligned at the main tracker row write). Start anchors still differ (sequential: generation loop / gen0 bootstrap; parallel: master clock after previous tracker update through merge+speciation+tracker prep). See [README.md](README.md#metrics-and-outputs-evolutiontracker-workers-c1c3).
+
 ---
 
 ## 9. Configuration Parameters
@@ -467,7 +473,9 @@ Workers **do not** wait for all variants in a batch to be evaluated before sendi
    - **Immediately** sends that single genome to the master as **EVALUATED_VARIANT**.
 4. Then requests work again (sends **PARENTS_REQUEST** and blocks on **recv**).
 
-The master runs a **single dispatch loop**: it blocks on **recv** from any worker. When it receives **EVALUATED_VARIANT**, it appends that genome to a **per-worker buffer** (`buffers[source]`) and increments `total_evaluated`. **After generation 0**, when the **total** number of genomes across all buffers reaches **K** (`--batch-size`), the master runs merge (drain up to K from buffers, round-robin), dedup, writes `temp.json`, runs speciation, updates the tracker, and increments the generation. So evaluated genomes from different workers are **interleaved** in the order they arrive; merge drains round-robin from worker buffers so no worker is starved.
+The master runs a **single dispatch loop**: it blocks on **recv** from any worker. When it receives **EVALUATED_VARIANT**, it appends that genome to a **per-worker buffer** (`buffers[source]`) and increments `total_evaluated`. **After generation 0**, when the **total** number of genomes across all buffers reaches **merge K**, the master runs merge (drain up to K from buffers, round-robin), dedup, writes `temp.json`, runs speciation, updates the tracker, and increments the generation. So evaluated genomes from different workers are **interleaved** in the order they arrive; merge drains round-robin from worker buffers so no worker is starved.
+
+**Merge K (sequential parity):** If `--batch-size` is **omitted** and `--operators all`, K is **`24 × --max-variants`** when `EvolutionTracker.selection_mode` is default (2 parents in sequential) and **`39 × --max-variants`** when selection mode is explore or exploit (3 parents), matching the sequential `EvolutionEngine` attempt counts. If `--batch-size` is set, it overrides. For `--operators cm` or `ie`, omitting `--batch-size` uses **100** (legacy default). Each merge logs `K_used`; `master_metrics.json` includes `merge_k_history`.
 
 **Generation 0 (bootstrap):** the master sends each worker a **GEN0_BATCH** (a slice of seed prompt indices). The worker loads those prompts, and for **each** prompt generates a response, evaluates it, and **immediately** sends one **EVALUATED_VARIANT** back. The master buffers them and **does not** trigger speciation on `K` alone. It waits until **all** GEN0 batches have been dispatched (`gen0_assignments` empty) **and** the number of returned Gen0 variants reaches the expected seed count; then it runs **one** merge/speciation that drains the **entire** buffered bootstrap set (cap = full buffer, not `K`). **Generation 1+** then follow the usual `K`-batched rule.
 
@@ -487,7 +495,7 @@ The master runs a **single dispatch loop**: it blocks on **recv** from any worke
 
 ### 10.4 Generation Semantics in Parallel
 
-- `K = --batch-size` (applies after generation 0).
+- **Merge batch K** after generation 0: `--batch-size` if set; else sequential parity **24 / 39** (times `--max-variants`) for `--operators all` from tracker `selection_mode`; else **100** for `cm` / `ie`.
 - Master keeps evaluated genomes in **per-worker in-memory buffers**.
 - **Generation 0:** one speciation after all seed evaluations are buffered; merge drains the full buffer (all bootstrap genomes, round-robin), subject to dedup/error skips inside `_merge_and_speciate`.
 - **Generation 1+:** when buffered genomes reach `K`, master drains up to `K`, deduplicates by exact prompt match, writes `temp.json`, and runs speciation.
@@ -504,16 +512,29 @@ The master runs a **single dispatch loop**: it blocks on **recv** from any worke
 - After each parallel speciation, master computes generation statistics from population files and updates `EvolutionTracker.json`.
 - Tracker stores per-generation population/speciation metrics (fitness, counts, diversity/cluster quality when available).
 - Operator statistics are aggregated from accepted evaluated genomes (`operator`, `variant_type`).
-- Master maintains cumulative counters (`total_evaluated`, `total_integrated`, `total_discarded`) in runtime state and logs them each generation.
+- Master maintains **runtime** cumulative counters (`total_evaluated`, `total_integrated`, `total_discarded`) for logging; **per-generation** evaluation counts in the tracker use `evaluated_this_generation` / `discarded_this_generation` (written via `_update_tracker`). Run-level cumulative totals on the tracker use `cumulative_variants_evaluated` / `cumulative_variants_discarded`.
+- `master_metrics.json` records `merge_k_history` (per merge: `generation_number`, `merge_k_used`, `buffered_before_merge`, optional `drain_phase`).
 - Live analysis/visualizations and final statistics generation run in parallel mode as best-effort post-processing steps.
+- If a full tracker update fails, the master sets `status="degraded"` and `last_tracker_error`, then raises **(fail-fast)** so the run does not silently continue with sparse generation rows.
 
-### 10.7 Logging
+### 10.7 Sequential vs parallel tracker parity (summary)
+
+| Aspect | Sequential (`src/main.py`) | Parallel (`src/parallel/master_worker.py`) |
+|--------|----------------------------|--------------------------------------------|
+| Generation update pipeline | Evolution → moderation → `run_speciation` → `calculate_generation_statistics` → `update_evolution_tracker_with_statistics` → adaptive selection | Buffered variants → merge/dedup → `run_speciation` → same statistics + tracker update → adaptive selection |
+| `evaluated_this_generation` | From `api_calls` / explicit field for that generation | Delta of evaluated variants since previous merge |
+| `generation_duration_seconds` | Through main `update_evolution_tracker_with_statistics` (after evolution→speciation→pre-tracker viz/aux passes); excludes adaptive selection and any post-tracker viz | Through same tracker write inside `_update_tracker` after merge+speciation (includes master-side stats prep); excludes adaptive selection and `_run_live_analysis` after the update |
+| Operator schedule | Full `EvolutionEngine` grid / schedule | Workers use `generate_single_variant` per request (not identical ordering to sequential) |
+
+Single sources of truth for population and budget stats: `calculate_generation_statistics` and `calculate_budget_metrics` in [`src/utils/population_io.py`](src/utils/population_io.py).
+
+### 10.8 Logging
 
 - Parallel runtime writes per-rank logs (`*_master.log`, `*_workerN.log`) to avoid mixed concurrent output in one file. For a detailed interpretation of worker log messages (e.g. request cycles, Gen0 batches, evolution cycles, API key assignment), see the "Worker log messages" section in [README.md](README.md#worker-log-messages-what-they-mean).
 
 **Logging and streaming:** The implementation logs the streaming behaviour correctly. On the **master**, every **EVALUATED_VARIANT** received is logged at INFO (worker, request_id, local_variant_id, status, prompt snippet); buffer state is logged periodically (every 5 variants or when total buffered ≥ K) and at merge/speciation (during Gen0 bootstrap, buffered may stay &lt; K until all seeds complete). On the **worker**, each **EVALUATED_VARIANT** send is logged at DEBUG to avoid log flood; INFO logs cover PARENTS received, number of variants generated, and evolution-cycle summary (variants sent, ok/errors, time, total_sent). So the flow (request work → receive parents → generate variants → evaluate and send each variant immediately) is observable in the logs.
 
-### 10.8 Device and GPU usage (HPC)
+### 10.9 Device and GPU usage (HPC)
 
 - **No rank-based GPU selection in code.** Device choice is centralized in `utils/device_utils.py` (DeviceManager): it picks MPS (macOS), then CUDA if available, then CPU. The LLM (llama.cpp) and embeddings (sentence-transformers) use that device; CUDA is always used as “device 0” from the process’s view.
 - **On HPC clusters**, assign one GPU per worker via the job scheduler (e.g. SLURM `--gpus-per-task=1`). The scheduler sets `CUDA_VISIBLE_DEVICES` (or equivalent) so each process sees exactly one GPU; the application then correctly uses that GPU without any code changes. See README “Running on HPC Clusters” for an example job script.

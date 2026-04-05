@@ -58,10 +58,59 @@ Edit `PARALLEL_EXPERIMENTS` (MPI) and/or `SEQUENTIAL_EXPERIMENTS` in the script 
 
 ```bash
 python src/main.py \
+    --max-total-genomes 5000 \
     --generations 50 \
     --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
     --seed-file data/prompt.csv
 ```
+
+**Pre-execution checklist (sequential + MPI)**
+
+- **`--max-total-genomes`**: Required in both modes (CLI enforces this). Termination is by total genomes in elites + reserves + archive, not by `--generations`.
+- **`.env`**: `PERSPECTIVE_API_KEY` or `PERSPECTIVE_API_KEYS` (parallel needs at least one key before workers start).
+- **`PYTHONPATH=src`** (or run from layouts that already set it); project root as cwd so `config/`, `data/`, and `.env` resolve.
+- **Parallel**: `mpiexec` / `srun` with **≥2 ranks** (1 master + ≥1 worker); optional `--output-dir` per experiment; omit `--batch-size` for K=24/39 parity when `--operators all`.
+- **Models**: GGUF paths exist; rank 0 updates `RGConfig.yaml` / `PGConfig.yaml` before workers load them (parallel).
+- **Post-run (parallel)**: `scripts/aggregate_worker_metrics.py <run_dir>` for `worker_metrics.json` if you need load-balance / API-wait summaries.
+- **Per-file `src/` review tracker**: [`docs/SRC_FINAL_REVIEW_CHECKLIST.md`](docs/SRC_FINAL_REVIEW_CHECKLIST.md) (line-chunk checklists for large modules).
+
+### Metrics and outputs (EvolutionTracker, workers, C1–C3)
+
+Canonical artifacts live under each run’s **`--output-dir`** (default: `data/outputs/...`):
+
+| File | Role |
+|------|------|
+| `EvolutionTracker.json` | Per-generation population, speciation, budget, and timing fields; run-level metadata under `run_metadata`. |
+| `master_metrics.json` | Parallel master only: merge batch history, timing aggregates. |
+| `*_workerN.log` / `*_master.log` | Per-rank logs in parallel mode. |
+
+**Per-generation fields (high level)**
+
+- **`evaluated_this_generation`**: Count of moderation/evaluation completions attributed to that generation. In **parallel** mode the master sets this from evaluated variants **since the previous merge/speciation** (not a cumulative run total). In **sequential** mode it is aligned with `budget.api_calls` for that generation when available. Legacy rows may only have ambiguous `total_evaluated` (cumulative); analysis scripts should prefer `evaluated_this_generation`.
+- **`discarded_this_generation`**: Variants rejected or dropped in that merge/speciation window (parallel); sequential uses the same field when provided.
+- **`cumulative_variants_evaluated` / `cumulative_variants_discarded`**: Run-level counters on the tracker root; updated when generation rows are written.
+- **`variants_integrated`**: Genomes accepted into the population from that generation’s variant set (after dedup/speciation rules).
+- **`budget.*`**: `llm_calls`, `api_calls`, and timing splits from `calculate_budget_metrics` / generation statistics (`src/utils/population_io.py`). Variant-creation LLM calls are counted when `creation_info.operator` or `operator` matches the LLM operator set in code.
+
+**`generation_duration_seconds` and `generation_duration_scope`**
+
+Both modes now use the same **trailing edge**: `generation_duration_scope` is **`through_evolution_tracker_statistics_write`** — wall time from a generation-local start until the main `update_evolution_tracker_with_statistics` call **persists** that generation’s row (just before adaptive selection runs on the tracker).
+
+- **Start anchor (still mode-specific):** **Sequential** — gen 0: before initial response generation; gen ≥ 1: start of the generation loop (evolution through pre-tracker work, including operator-effectiveness CSV, first live-analysis pass, and auxiliary tracker merge). **Parallel** — immediately after the previous generation’s full tracker update returned on the master (`gen_start` reset), through buffer fill, merge/dedup, speciation, and master-side `calculate_generation_statistics` / tracker prep inside `_update_tracker`.
+- **Not included:** adaptive selection update (`update_adaptive_selection_logic`) and any visualization passes **after** that tracker write (sequential may run an additional `run_live_analysis` after adaptive selection).
+
+Absolute seconds are still **not** directly comparable across modes (parallel overlaps worker GPU time; sequential is single-process), but the **definition of what the duration stops at** matches for C2-style accounting.
+
+**Experiments C1–C3**
+
+- Full study design, budgets, and gaps: [`experiments/EXPERIMENT_PLAN.md`](experiments/EXPERIMENT_PLAN.md).
+- **C1** (quality/diversity, three-way): helpers in [`experiments/rainbowplus_io.py`](experiments/rainbowplus_io.py), omnibus-style entry [`experiments/rq1_three_way.py`](experiments/rq1_three_way.py), and an approximate **single-pool** sequential baseline launcher [`scripts/run_c1_baseline_single_pool.sh`](scripts/run_c1_baseline_single_pool.sh) (see script header for caveats). Extend [`experiments/rq1.py`](experiments/rq1.py) for publication figures.
+- **C2** (sequential vs parallel): [`experiments/compare_sequential_vs_parallel.py`](experiments/compare_sequential_vs_parallel.py), [`scripts/experiment_metrics.py`](scripts/experiment_metrics.py), [`scripts/aggregate_worker_metrics.py`](scripts/aggregate_worker_metrics.py).
+- **C3** (species vs archive cells): [`experiments/c3_species_bridge.py`](experiments/c3_species_bridge.py) bridges ToxSearch-S tracker species counts to RainbowPlus-style archive keys when JSONL is available.
+
+**Parallel merge batching**
+
+Sequential runs ignore `--batch-size`. In parallel, omitting `--batch-size` uses merge **K** in parity with sequential operator counts (see Parallel Mode section below).
 
 ---
 
@@ -91,7 +140,7 @@ ToxSearch-S supports distributed execution via MPI, using a master-worker archit
 PYTHONPATH=src mpiexec -n 5 python src/main.py --parallel --max-total-genomes 5000 --batch-size 100 --seed-file data/prompt.csv
 ```
 
-This launches 1 master + 4 workers. **`--max-total-genomes` is required** for parallel mode (primary termination). The `--batch-size` flag sets `K`, the number of genomes collected before triggering speciation **after** generation 0. **Generation 0** waits until **all** seed prompts have been evaluated, then runs a **single** merge/speciation on the full buffered bootstrap set (not capped by `K`).
+This launches 1 master + 4 workers. **`--max-total-genomes` is required** for parallel mode (primary termination). **`--batch-size`** optionally overrides merge `K` (buffered genomes before speciation **after** generation 0). If you **omit** `--batch-size` with `--operators all`, `K` follows **sequential parity**: **24** (default selection mode) or **39** (explore/exploit), scaled by `--max-variants`. With `--operators cm` or `ie`, omitting `--batch-size` uses **100**. **Generation 0** waits until **all** seed prompts have been evaluated, then runs a **single** merge/speciation on the full buffered bootstrap set (not capped by `K`).
 
 ### Full Example
 
@@ -118,7 +167,7 @@ PYTHONPATH=src mpiexec -n 9 python src/main.py \
 - Ranks 1..N are **workers** (typically one GPU each): request work, evolve prompts from parents, generate responses, evaluate with moderation APIs, and send evaluated genomes back immediately.
 - **Generation 0** uses index ranges (`prompt_start`, `prompt_end`) so workers read seed prompts locally from the resolved seed file path.
 - `temp.json` is **transient**: it is filled only during merge/speciation and cleared by speciation; evaluated genomes wait in in-memory buffers first.
-- A generation increments when speciation runs. In parallel mode, **generation 0** runs once all seed evaluations are in the master buffer (full bootstrap). Each later generation runs when at least `K` (`--batch-size`) evaluated genomes are buffered. **Termination** is by `--max-total-genomes` (total genomes in elites + reserves + archive).
+- A generation increments when speciation runs. In parallel mode, **generation 0** runs once all seed evaluations are in the master buffer (full bootstrap). Each later generation runs when at least **merge K** evaluated genomes are buffered (`--batch-size` if set, else 24/39 parity for `--operators all` as above). **Termination** is by `--max-total-genomes` (total genomes in elites + reserves + archive).
 
 ### API key and .env
 
@@ -308,7 +357,7 @@ Document the seed file, model path, and any non-default flags.
 | `--seed-file` | data/prompt.csv | Seed prompts CSV (requires `questions` column) |
 | `--seed` | None | Fixed seed for LLM generation (RG/PG); improves reproducibility when set |
 | `--parallel` | off | Run in MPI master-worker mode (use with `mpiexec` or `srun`) |
-| `--batch-size` | 100 | Genomes per speciation batch (`K`) for parallel mode after generation 0 (generation 0 uses all seed evaluations) |
+| `--batch-size` | None | Parallel merge `K` after generation 0. Omit for auto: **24/39 × max-variants** (`operators all`, from tracker mode) or **100** (`cm`/`ie`). Generation 0 always uses all seed evaluations |
 | `--output-dir` | None | Output directory (default: `data/outputs/<timestamp>`). Set for reproducible paths. |
 
 ### Speciation
