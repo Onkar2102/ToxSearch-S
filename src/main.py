@@ -979,13 +979,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                         # Total genomes (elites + reserves + archives) for termination and summary
                         total_genomes = gen_stats["elites_count"] + gen_stats["reserves_count"] + gen_stats.get("archived_count", 0)
                         final_total_genomes = total_genomes
-                        if max_total_genomes is not None and total_genomes >= max_total_genomes:
-                            logger.info("Evolution completed: Total genomes limit reached (%d >= %d).", total_genomes, max_total_genomes)
-                            terminated_by_total_genomes = True
-                            break
-                        # Update adaptive selection logic (AFTER statistics are calculated and saved)
-                        # Compare current generation's population_max_toxicity vs previous cumulative
-                        # If current > previous cumulative, there's improvement (new best found)
+                        # Adaptive selection after statistics are saved, before cap break, so avg_fitness_history
+                        # includes the generation that hits --max-total-genomes.
                         try:
                             outputs_path = str(get_outputs_path())
                             
@@ -1020,6 +1015,11 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             # Live analysis completion is already logged by run_live_analysis (N/N visualizations)
                         except Exception as e:
                             logger.warning("Failed to run live analysis: %s", e)
+                        
+                        if max_total_genomes is not None and total_genomes >= max_total_genomes:
+                            logger.info("Evolution completed: Total genomes limit reached (%d >= %d).", total_genomes, max_total_genomes)
+                            terminated_by_total_genomes = True
+                            break
                 except Exception as e:
                     logger.warning("Failed to update generation metrics in EvolutionTracker: %s", e)
             except Exception as e:
@@ -1162,9 +1162,26 @@ if __name__ == "__main__":
         comm = MPI.COMM_WORLD
         rank = comm.Get_rank()
 
+        # Default outputs dir is minute-based; each rank has its own process-global. Broadcast from rank 0
+        # so master and workers never split across two timestamp folders if they cross a minute boundary.
+        if getattr(args, "output_dir", None) is None:
+            _parallel_outputs = None
+            if rank == 0:
+                _parallel_outputs = str(get_outputs_path())
+            _parallel_outputs = comm.bcast(_parallel_outputs, root=0)
+            set_outputs_path(_parallel_outputs)
+
+        from parallel.master_worker import _rank_log_file
+        from utils import custom_logging as _parallel_log_state
+
         get_logger, get_log_filename, _, PerformanceLogger = get_custom_logging()
-        log_file = get_log_filename()
-        logger = get_logger("master_worker", log_file)
+        # One canonical base path for the run (avoid every rank racing log_index.json).
+        log_file = get_log_filename() if rank == 0 else None
+        log_file = comm.bcast(log_file, root=0)
+        if log_file is not None:
+            _parallel_log_state._CURRENT_LOG_FILE = log_file
+        per_rank_log = _rank_log_file(log_file, rank)
+        logger = get_logger("master_worker", per_rank_log)
         logger.info("Starting in parallel (MPI) mode. Rank-specific logs will be written for master and workers.")
 
         # Only rank 0 updates RG/PG YAML so workers (which load from YAML) see --rg and --pg. Barrier so workers wait.

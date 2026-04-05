@@ -48,8 +48,17 @@ def _max_genome_id_from_iter(genomes) -> int:
         if not isinstance(g, dict):
             continue
         kid = g.get("id")
-        if kid is not None and isinstance(kid, (int, float)):
-            out = max(out, int(kid))
+        if kid is None or isinstance(kid, bool):
+            continue
+        try:
+            if isinstance(kid, str):
+                s = kid.strip()
+                if s.isdigit() or (s.startswith("-") and s[1:].isdigit()):
+                    out = max(out, int(s))
+            elif isinstance(kid, (int, float)):
+                out = max(out, int(kid))
+        except (TypeError, ValueError):
+            continue
     return out
 
 
@@ -130,7 +139,6 @@ def _extract_north_star_score(genome, metric="toxicity"):
     return 0.0001
 
 
-
 def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None):
     """Initialize the system components and create gen0 if needed
     
@@ -146,9 +154,7 @@ def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None):
     
     logger.debug("Initializing pipeline for device: %s", device)
     
-    population_io_functions = get_population_io()
-    
-    load_and_initialize_population, get_population_files_info, load_population, save_population, sort_population_json, load_genome_by_id, consolidate_generations_to_single_file, migrate_from_split_to_single, sort_population_by_elite_criteria, load_elites, save_elites, get_population_stats_steady_state = get_population_io()
+    load_and_initialize_population = get_population_io()[0]
     
     ResponseGenerator = get_ResponseGenerator()
     response_generator = ResponseGenerator(model_key="response_generator", config_path="config/RGConfig.yaml", log_file=log_file, seed=seed)
@@ -1241,11 +1247,6 @@ def migrate_from_split_to_single(base_dir: str = "outputs",
 
 
 
-def _extract_score(genome: Dict[str, Any], north_star_metric: str = "toxicity") -> float:
-    """Extract score from genome using north star metric."""
-    return _extract_north_star_score(genome, north_star_metric)
-
-
 def sort_population_by_elite_criteria(population: List[Dict[str, Any]], north_star_metric: str = "toxicity", 
                                      *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
     """
@@ -1271,7 +1272,7 @@ def sort_population_by_elite_criteria(population: List[Dict[str, Any]], north_st
     
     with PerformanceLogger(_logger, "Sort Population by Elite Criteria", north_star_metric=north_star_metric):
         def sort_key(genome: Dict[str, Any]) -> tuple:
-            score = _extract_score(genome, north_star_metric)
+            score = _extract_north_star_score(genome, north_star_metric)
             generation = genome.get("generation", 0)
             genome_id = genome.get("id", 0)
             # Genome IDs are always integers
@@ -1801,9 +1802,6 @@ def update_adaptive_selection_logic(
         else:
             current_avg_fitness = calculate_average_fitness(outputs_path, north_star_metric, logger=_logger, log_file=log_file)
         
-        # Update avg_fitness_history using sliding window from generations
-        avg_fitness_history = tracker.get("avg_fitness_history", [])
-        
         # Get current generation number - should be the latest generation
         generations = tracker.get("generations", [])
         if generations:
@@ -1822,40 +1820,36 @@ def update_adaptive_selection_logic(
         if not generation_updated:
             _logger.warning(f"Generation {current_generation} not found in EvolutionTracker for avg_fitness update")
         
-        # Build avg_fitness_history from the last m generations
-        # IMPORTANT: Re-fetch generations after update to ensure we have the latest values
-        generations = tracker.get("generations", [])
-        # Filter for generations with valid avg_fitness (exclude None)
-        # Only include generations where avg_fitness was actually calculated (not the initial 0.0 placeholder)
-        generations_with_avg_fitness = []
+        # Build ordered avg fitness from all generation rows (used for slope); persist only a short tail on disk.
+        generations = sorted(
+            tracker.get("generations", []),
+            key=lambda x: x.get("generation_number", 0),
+        )
+        avg_fitness_history = []
         for gen in generations:
-            if "avg_fitness" in gen and gen["avg_fitness"] is not None:
-                # Skip initial placeholder 0.0 values that haven't been updated yet
-                # If avg_fitness is 0.0 and this is the first time we're calculating, 
-                # it means the calculation hasn't happened yet or returned 0.0 legitimately
-                # We include it only if it's not the initial placeholder (i.e., if current_avg_fitness was calculated)
-                if gen["generation_number"] == current_generation:
-                    # For the current generation, use the calculated value we just computed
-                    generations_with_avg_fitness.append(gen)
-                elif gen["avg_fitness"] > 0.0 or gen.get("elites_count", 0) > 0 or gen.get("reserves_count", 0) > 0 or gen.get("archived_count", 0) > 0:
-                    # For past generations, include if avg_fitness > 0 or if population exists (indicating it was calculated)
-                    generations_with_avg_fitness.append(gen)
-                # Otherwise, skip 0.0 values that are likely placeholders
+            af = gen.get("avg_fitness")
+            if af is None:
+                af = gen.get("avg_fitness_generation")
+            if af is not None:
+                avg_fitness_history.append(round(float(af), 4))
+        _hist_cap = max(1, int(stagnation_limit)) if stagnation_limit else 5
+        tracker["avg_fitness_history"] = avg_fitness_history[-_hist_cap:]
         
-        # Sort by generation number and take the last m generations (sliding window)
-        generations_with_avg_fitness.sort(key=lambda x: x["generation_number"])
-        # Take the last stagnation_limit generations (or all if fewer than stagnation_limit exist)
-        recent_generations = generations_with_avg_fitness[-stagnation_limit:]
+        # Selection slope uses the last stagnation_limit points (same window as stored history when cap matches).
+        slope_window = (
+            avg_fitness_history[-stagnation_limit:]
+            if stagnation_limit and len(avg_fitness_history) > stagnation_limit
+            else avg_fitness_history
+        )
+        _logger.info(
+            "avg_fitness_history: stored %d values (last %d gens); full series len=%d; slope window=%d",
+            len(tracker["avg_fitness_history"]),
+            _hist_cap,
+            len(avg_fitness_history),
+            len(slope_window),
+        )
         
-        # Extract avg_fitness values for the sliding window (round to 4 decimal places)
-        avg_fitness_history = [round(gen["avg_fitness"], 4) for gen in recent_generations]
-        
-        _logger.info(f"Built avg_fitness_history with {len(avg_fitness_history)} entries from {len(generations_with_avg_fitness)} total generations (window size: {stagnation_limit})")
-        
-        tracker["avg_fitness_history"] = avg_fitness_history
-        
-        # Calculate slope of avg_fitness_history (already rounded in calculate_slope, but ensure it's 4 decimals)
-        slope_of_avg_fitness = calculate_slope(avg_fitness_history)
+        slope_of_avg_fitness = calculate_slope(slope_window)
         slope_of_avg_fitness = round(slope_of_avg_fitness, 4)
         tracker["slope_of_avg_fitness"] = slope_of_avg_fitness
         
@@ -2005,6 +1999,35 @@ def calculate_generation_statistics(
         elites_up_to_gen = [g for g in elites_genomes if _get_generation_value(g, current_generation) <= current_generation]
         reserves_up_to_gen = [g for g in reserves_genomes if _get_generation_value(g, current_generation) <= current_generation]
         archive_up_to_gen = [g for g in archive_genomes if _get_generation_value(g, current_generation) <= current_generation]
+        
+        # Unique genome ids per file (cap and totals are defined on distinct individuals)
+        _seen_e, _uniq_e = set(), []
+        for g in elites_up_to_gen:
+            if g.get("id") is None:
+                continue
+            _k = str(g["id"])
+            if _k not in _seen_e:
+                _seen_e.add(_k)
+                _uniq_e.append(g)
+        elites_up_to_gen = _uniq_e
+        _seen_r, _uniq_r = set(), []
+        for g in reserves_up_to_gen:
+            if g.get("id") is None:
+                continue
+            _k = str(g["id"])
+            if _k not in _seen_r:
+                _seen_r.add(_k)
+                _uniq_r.append(g)
+        reserves_up_to_gen = _uniq_r
+        _seen_a, _uniq_a = set(), []
+        for g in archive_up_to_gen:
+            if g.get("id") is None:
+                continue
+            _k = str(g["id"])
+            if _k not in _seen_a:
+                _seen_a.add(_k)
+                _uniq_a.append(g)
+        archive_up_to_gen = _uniq_a
         
         stats["elites_count"] = len(elites_up_to_gen)
         stats["reserves_count"] = len(reserves_up_to_gen)
@@ -2505,9 +2528,11 @@ def update_run_metadata_at_end(
             "run_duration_seconds": round(run_duration_seconds, 2),
             "run_mode": run_mode,
         })
+        tracker["status"] = "complete"
+        tracker["execution_time_seconds"] = round(run_duration_seconds, 2)
         with open(tracker_path, "w", encoding="utf-8") as f:
             json.dump(tracker, f, indent=2, ensure_ascii=False)
-        _logger.debug("Updated run_metadata: run_duration_seconds=%.2f  run_mode=%s",
+        _logger.debug("Updated run_metadata: run_duration_seconds=%.2f  run_mode=%s  status=complete",
                       run_duration_seconds, run_mode)
         return True
     except Exception as e:

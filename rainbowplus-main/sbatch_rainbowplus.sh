@@ -1,12 +1,6 @@
 #!/bin/bash -l
 #
 # SLURM run script for RainbowPlus (single-node vLLM + Google Perspective).
-#
-# Job arrays (RIT): https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
-#   • Uncomment #SBATCH --array=START-END in this file, or: sbatch --array=0-7 sbatch_rainbowplus.sh
-#   • Logs: logs/slurm_<jobname>_<jobid>_<arraytask>.{out,err}
-#   • Per-task RUN_ID defaults to ${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID} (set USE_ARRAY_RUN_ID=0 to use only job id).
-#   • Optional per-task env: sbatch --export=ALL,RANDOM_SEED=123,CONFIG_FILE=configs/foo.yml ...
 # Spack is OFF by default: activating the NLP Spack view can inject libcrypto.so that
 # breaks system Python 3.9 in .venv-rainbow (ImportError: OPENSSL_* / _hashlib). Use USE_SPACK=1
 # only if you use a Spack-built Python or accept fixing LD_LIBRARY_PATH.
@@ -24,12 +18,10 @@
 # we auto-use ../.spvenv when present (same as running rc_script.sh from ToxSearch-S root).
 
 #SBATCH --job-name=rainbowplus
-#SBATCH --time=0-10:00:00
+#SBATCH --time=0-03:00:00
 # Slurm logs under ./logs/ (paths relative to submission dir — run sbatch from repo root).
-# %a = array task id (empty for non-array jobs on some sites → log name may end with _).
-# RIT job-array tutorial: https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
-#SBATCH --output=logs/slurm_%x_%j_%a.out
-#SBATCH --error=logs/slurm_%x_%j_%a.err
+#SBATCH --output=logs/slurm_%x_%j.out
+#SBATCH --error=logs/slurm_%x_%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
@@ -39,11 +31,7 @@
 #SBATCH --gres=gpu:a100:1
 ## If Slurm never sets SLURM_SUBMIT_DIR / wrong cwd, set repo once (absolute path):
 ##SBATCH --chdir=/path/to/rainbowplus-main
-#
-# Job array (GPU: one task = one node = one GPU). RIT pattern: --array and %a in logs above.
-# Enable ONE of: (1) uncomment the next line, (2) sbatch --array=0-7 sbatch_rainbowplus.sh
-# Throttle concurrency (e.g. max 2 array tasks at once): ##SBATCH --array=0-15%2
-#SBATCH --array=0-7
+## Job array (optional): #SBATCH --array=0-9
 
 set -euo pipefail
 
@@ -212,12 +200,11 @@ FITNESS_THRESHOLD="${FITNESS_THRESHOLD:-0.3}"
 LOG_INTERVAL="${LOG_INTERVAL:-50}"
 LOG_DIR="${LOG_DIR:-${RP_ROOT}/logs}"
 
-# RUN_ID: explicit > Slurm job (+ array task when USE_ARRAY_RUN_ID!=0) > local timestamp
-# For job arrays, default RUN_ID is ${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID} so runs do not clobber.
+# RUN_ID: explicit > Slurm job > local timestamp
 if [[ -n "${RUN_ID:-}" ]]; then
   :
 elif [[ -n "${SLURM_JOB_ID:-}" ]]; then
-  if [[ -n "${SLURM_ARRAY_TASK_ID:-}" && "${USE_ARRAY_RUN_ID:-1}" != "0" ]]; then
+  if [[ -n "${SLURM_ARRAY_TASK_ID:-}" && "${USE_ARRAY_RUN_ID:-0}" == "1" ]]; then
     RUN_ID="${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
   else
     RUN_ID="${SLURM_JOB_ID}"

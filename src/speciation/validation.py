@@ -28,7 +28,8 @@ def validate_speciation_consistency(
     1. Species IDs in elites.json match species in speciation_state.json
     2. Elites have species_id > 0; reserves have species_id = 0
     3. Species sizes match between state and elites.json
-    4. No duplicate genome IDs across elites, reserves, archive
+    4. No duplicate genome IDs across elites, reserves, archive (ids compared as str)
+    4b. No duplicate prompt strings (case-sensitive) across those files
     5. cluster0.size and cluster0_size_from_reserves match len(reserves.json)
     6. Sum invariant / temp: if expect_temp_empty, temp must be []; else if temp has
        genomes and differs from elites+reserves+archive by >1, error.
@@ -143,17 +144,49 @@ def validate_speciation_consistency(
             # Don't validate sizes until after distribution
             logger.debug("Skipping size validation: elites.json is empty (before distribution)")
         
-        # Check 4: Duplicate IDs
+        # Check 4: Duplicate IDs (normalize to str so int 1 and "1" count as the same id)
         all_genome_ids = []
-        all_genome_ids.extend([g.get("id") for g in elites if g.get("id") is not None])
-        all_genome_ids.extend([g.get("id") for g in reserves if g.get("id") is not None])
-        all_genome_ids.extend([g.get("id") for g in archive if g.get("id") is not None])
+        for g in elites:
+            x = g.get("id")
+            if x is not None and x != "":
+                all_genome_ids.append(str(x))
+        for g in reserves:
+            x = g.get("id")
+            if x is not None and x != "":
+                all_genome_ids.append(str(x))
+        for g in archive:
+            x = g.get("id")
+            if x is not None and x != "":
+                all_genome_ids.append(str(x))
         
         from collections import Counter
         id_counts = Counter(all_genome_ids)
         duplicates = [gid for gid, count in id_counts.items() if count > 1]
         if duplicates:
             errors.append(f"Duplicate genome IDs found: {duplicates[:10]}")  # Limit to first 10
+        
+        # Check 4b: duplicate prompts (case-sensitive exact string match) across living population
+        all_prompts = []
+        for g in elites:
+            p = g.get("prompt")
+            if isinstance(p, str):
+                all_prompts.append(p)
+        for g in reserves:
+            p = g.get("prompt")
+            if isinstance(p, str):
+                all_prompts.append(p)
+        for g in archive:
+            p = g.get("prompt")
+            if isinstance(p, str):
+                all_prompts.append(p)
+        prompt_counts = Counter(all_prompts)
+        dup_prompts = [p for p, count in prompt_counts.items() if count > 1]
+        if dup_prompts:
+            preview = [repr(s[:40] + ("..." if len(s) > 40 else "")) for s in dup_prompts[:5]]
+            errors.append(
+                f"Duplicate prompts (case-sensitive) across elites/reserves/archive: {len(dup_prompts)} distinct strings; "
+                f"preview={preview}"
+            )
         
         # Check 5: cluster0.size and cluster0_size_from_reserves match len(reserves)
         reserves_len = len(reserves)

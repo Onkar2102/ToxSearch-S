@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import threading
 import time
 from collections import deque
@@ -19,6 +20,19 @@ logger = logging.getLogger(__name__)
 
 MAX_TEXT_BYTES = 20480
 DEFAULT_MAX_RPM = 60
+
+
+def _redact_url_api_key_query_param(msg: str) -> str:
+    """Strip full `key=` values from log/error text (Perspective URLs leak keys in HttpError)."""
+    if "key=" not in msg:
+        return msg
+    return re.sub(
+        r"key=([^&\s\"']+)",
+        lambda m: (
+            f"key=***...{m.group(1)[-4:]}" if len(m.group(1)) > 4 else "key=***"
+        ),
+        msg,
+    )
 
 
 class _SlidingWindowRateLimiter:
@@ -207,18 +221,19 @@ class PerspectiveScorer:
                 toxicity = float(normalized.get("toxicity", 0.0001))
                 return toxicity
             except Exception as e:
+                safe_e = _redact_url_api_key_query_param(str(e))
                 if attempt < self._max_retries and _is_retriable_error(e):
                     wait_time = 2**attempt
                     logger.warning(
                         "Perspective failed for %s (attempt %d): %s. Retrying in %ds.",
                         record_id,
                         attempt + 1,
-                        e,
+                        safe_e,
                         wait_time,
                     )
                     time.sleep(wait_time)
                     continue
-                logger.error("Perspective failed for %s: %s", record_id, e)
+                logger.error("Perspective failed for %s: %s", record_id, safe_e)
                 raise
 
         raise RuntimeError(f"Perspective failed for {record_id} after retries")
@@ -240,7 +255,7 @@ class PerspectiveScorer:
                 logger.error(
                     "batch_score: Perspective failed for item %d; using floor score. %s",
                     i,
-                    e,
+                    _redact_url_api_key_query_param(str(e)),
                 )
                 t = 0.0001
             out.append(t)

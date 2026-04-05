@@ -946,17 +946,24 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 max_total = (config_dict or {}).get("max_total_genomes")
                 if max_total is not None:
                     try:
-                        with open(outputs_path / "EvolutionTracker.json", "r", encoding="utf-8") as f:
-                            tracker = json.load(f)
-                        gens = tracker.get("generations") or []
-                        last = next((g for g in reversed(gens) if g.get("generation_number") == generation_id - 1), None)
-                        if last is not None:
-                            total_genomes = last.get("elites_count", 0) + last.get("reserves_count", 0) + last.get("archived_count", 0)
-                            if total_genomes >= max_total:
-                                shutdown = True
-                                in_flight_at_stop = _total_buffered()  # Termination: buffered genomes when STOP sent
-                                logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
-                                            total_genomes, max_total)
+                        from utils.population_io import calculate_generation_statistics
+                        gen_stats = calculate_generation_statistics(
+                            outputs_path=str(outputs_path),
+                            north_star_metric=north_star_metric,
+                            current_generation=generation_id - 1,
+                            logger=logger,
+                            log_file=log_file,
+                        )
+                        total_genomes = (
+                            gen_stats.get("elites_count", 0)
+                            + gen_stats.get("reserves_count", 0)
+                            + gen_stats.get("archived_count", 0)
+                        )
+                        if total_genomes >= max_total:
+                            shutdown = True
+                            in_flight_at_stop = _total_buffered()  # Termination: buffered genomes when STOP sent
+                            logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
+                                        total_genomes, max_total)
                     except Exception as e:
                         logger.debug("Could not check max_total_genomes: %s", e)
                 if shutdown:

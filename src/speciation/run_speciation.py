@@ -225,14 +225,18 @@ def _deduplicate_genomes(genomes: List[Dict]) -> List[Dict]:
 
 
 def _write_json_atomic(file_path: Path, data: List[Dict], logger, file_name: str) -> None:
-    """Write JSON file atomically using temp file."""
-    if not data:
-        return
+    """Write JSON file atomically using temp file.
+
+    Always writes, including ``[]``. Skipping empty lists would leave stale genomes on disk
+    (e.g. reserves.json not cleared when all genomes move to elites), breaking the placement
+    invariant (same id in both files).
+    """
+    out = data if isinstance(data, list) else []
     temp_path = file_path.with_suffix('.json.tmp')
     with open(temp_path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        json.dump(out, f, indent=2, ensure_ascii=False)
     temp_path.replace(file_path)
-    logger.info(f"Wrote {len(data)} genomes to {file_name}")
+    logger.info(f"Wrote {len(out)} genomes to {file_name}")
 
 
 def _validate_active_count(state: Dict[str, Any], calculated_count: int, source: str) -> int:
@@ -506,6 +510,30 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
             elif gid and file_name in untracked_by_file:
                 untracked_by_file[file_name].append(genome)
     
+    # Collapse to one dict per genome id so the same id cannot route to both elites and reserves.
+    # Tracker species_id wins; later rows only fill missing keys on the canonical dict.
+    _merged_by_id = {}
+    _merge_order = []
+    for genome in tracked_genomes:
+        gid = str(genome.get("id")) if genome.get("id") else None
+        if not gid:
+            continue
+        if gid not in _merged_by_id:
+            _merged_by_id[gid] = genome
+            _merge_order.append(gid)
+        else:
+            canon = _merged_by_id[gid]
+            if genome_tracker.exists(gid):
+                canon["species_id"] = genome_tracker.get_species_id(gid)
+            for _k, _v in genome.items():
+                if _v is not None and (_k not in canon or canon.get(_k) is None):
+                    canon[_k] = _v
+    tracked_genomes = [_merged_by_id[gid] for gid in _merge_order]
+    for genome in tracked_genomes:
+        gid = str(genome.get("id")) if genome.get("id") else None
+        if gid and genome_tracker.exists(gid):
+            genome["species_id"] = genome_tracker.get_species_id(gid)
+    
     # Redistribute tracked genomes by species_id
     elites_to_save = untracked_by_file["elites"]
     reserves_to_save = untracked_by_file["reserves"]
@@ -550,8 +578,9 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
     for genome_list in [elites_to_save, reserves_to_save]:
         to_archive = [g for g in genome_list if g.get("archive_reason")]
         for genome in to_archive:
-            gid = str(genome.get("id")) if genome.get("id") else None
-            if gid:
+            _rid = genome.get("id")
+            gid = str(_rid) if _rid is not None and _rid != "" else None
+            if gid is not None:
                 if genome_tracker.exists(gid) and genome_tracker.get_species_id(gid) != -1:
                     genome_tracker.update_species_id(gid, -1, current_generation, f"archive_reason_{genome.get('archive_reason')}")
                 elif not genome_tracker.exists(gid):
@@ -569,6 +598,115 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
     elites_deduped = _deduplicate_genomes(elites_to_save)
     reserves_deduped = _deduplicate_genomes(reserves_to_save)
     archive_deduped = _deduplicate_genomes(archive_to_save)
+    
+    # One case-sensitive prompt string at most across elites ∪ reserves ∪ archive (elites win, then reserves, then archive).
+    _seen_prompts = set()
+    _removed_dup_prompt_ids = []
+    _new_elites = []
+    for g in elites_deduped:
+        pr = g.get("prompt")
+        if pr is None:
+            _new_elites.append(g)
+            continue
+        if not isinstance(pr, str):
+            pr = str(pr)
+        if pr in _seen_prompts:
+            gid = g.get("id")
+            if gid is not None:
+                _removed_dup_prompt_ids.append(str(gid))
+            logger.warning(
+                "Phase 7: omitting genome id=%s from elites — duplicate prompt (case-sensitive) already retained",
+                gid,
+            )
+            continue
+        _seen_prompts.add(pr)
+        _new_elites.append(g)
+    elites_deduped = _new_elites
+    _new_reserves = []
+    for g in reserves_deduped:
+        pr = g.get("prompt")
+        if pr is None:
+            _new_reserves.append(g)
+            continue
+        if not isinstance(pr, str):
+            pr = str(pr)
+        if pr in _seen_prompts:
+            gid = g.get("id")
+            if gid is not None:
+                _removed_dup_prompt_ids.append(str(gid))
+            logger.warning(
+                "Phase 7: omitting genome id=%s from reserves — duplicate prompt (case-sensitive) already retained",
+                gid,
+            )
+            continue
+        _seen_prompts.add(pr)
+        _new_reserves.append(g)
+    reserves_deduped = _new_reserves
+    _new_archive = []
+    for g in archive_deduped:
+        pr = g.get("prompt")
+        if pr is None:
+            _new_archive.append(g)
+            continue
+        if not isinstance(pr, str):
+            pr = str(pr)
+        if pr in _seen_prompts:
+            gid = g.get("id")
+            if gid is not None:
+                _removed_dup_prompt_ids.append(str(gid))
+            logger.warning(
+                "Phase 7: omitting genome id=%s from archive — duplicate prompt (case-sensitive) already retained",
+                gid,
+            )
+            continue
+        _seen_prompts.add(pr)
+        _new_archive.append(g)
+    archive_deduped = _new_archive
+
+    # Placement invariant: each genome id in at most one of elites / reserves / archive.
+    # Elites win over reserves if the same id appears in both (should not happen after correct
+    # routing + empty-file writes; guards against stale rows or edge cases).
+    _elite_ids = {
+        str(g.get("id"))
+        for g in elites_deduped
+        if g.get("id") is not None and str(g.get("id")) != ""
+    }
+    _n_res_before = len(reserves_deduped)
+    reserves_deduped = [
+        g
+        for g in reserves_deduped
+        if g.get("id") is None
+        or str(g.get("id")) == ""
+        or str(g.get("id")) not in _elite_ids
+    ]
+    if len(reserves_deduped) < _n_res_before:
+        logger.warning(
+            "Phase 7: dropped %d reserve row(s) whose id already appears in elites (placement invariant)",
+            _n_res_before - len(reserves_deduped),
+        )
+    _living_ids = _elite_ids | {
+        str(g.get("id"))
+        for g in reserves_deduped
+        if g.get("id") is not None and str(g.get("id")) != ""
+    }
+    _n_arch_before = len(archive_deduped)
+    archive_deduped = [
+        g
+        for g in archive_deduped
+        if g.get("id") is None
+        or str(g.get("id")) == ""
+        or str(g.get("id")) not in _living_ids
+    ]
+    if len(archive_deduped) < _n_arch_before:
+        logger.warning(
+            "Phase 7: dropped %d archive row(s) whose id already appears in elites or reserves",
+            _n_arch_before - len(archive_deduped),
+        )
+
+    for _rid in _removed_dup_prompt_ids:
+        if _rid in genome_tracker.genomes:
+            del genome_tracker.genomes[_rid]
+            genome_tracker._dirty = True
     
     _write_json_atomic(elites_path, elites_deduped, logger, "elites.json")
     _write_json_atomic(reserves_path, reserves_deduped, logger, "reserves.json")

@@ -394,22 +394,22 @@ class GenomeTracker:
             except Exception as e:
                 errors.append(f"Failed to load archive.json: {e}")
         
-        # Validate tracker vs files
+        # Validate tracker vs files (keys str(gid) so tracker str ids match JSON int/string ids)
         all_file_genomes = {}
         for g in elites_genomes:
             gid = g.get("id")
-            if gid:
-                all_file_genomes[gid] = ("elites", g.get("species_id"))
+            if gid is not None and gid != "":
+                all_file_genomes[str(gid)] = ("elites", g.get("species_id"))
         
         for g in reserves_genomes:
             gid = g.get("id")
-            if gid:
-                all_file_genomes[gid] = ("reserves", g.get("species_id", 0))
+            if gid is not None and gid != "":
+                all_file_genomes[str(gid)] = ("reserves", g.get("species_id", 0))
         
         for g in archive_genomes:
             gid = g.get("id")
-            if gid:
-                all_file_genomes[gid] = ("archive", g.get("species_id", -1))
+            if gid is not None and gid != "":
+                all_file_genomes[str(gid)] = ("archive", g.get("species_id", -1))
         
         # Check each genome in tracker
         for genome_id, data in self.genomes.items():

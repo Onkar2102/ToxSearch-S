@@ -490,7 +490,7 @@ def run_evolution(north_star_metric, log_file=None, current_cycle=None, max_vari
 
     try:
         with PerformanceLogger(logger, "Evolution: Load population"):
-            _, _, load_population, _, _, _, _, _, _, _, _, _ = get_population_io()
+            load_population = get_population_io()[2]
             population = load_population(str(outputs_path), logger=logger)
             logger.debug("Loaded %d genomes", len(population))
     except Exception as e:

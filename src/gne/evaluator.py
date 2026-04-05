@@ -8,6 +8,7 @@ using the Google Perspective API. Results are cached for efficiency.
 """
 
 import os
+import re
 import json
 import time
 import hashlib
@@ -29,6 +30,20 @@ _MAX_CACHE_SIZE = 5000
 _cache_lock = threading.Lock()
 
 _thread_pool = None
+
+
+def _redact_url_api_key_query_param(msg: str) -> str:
+    """Strip full `key=` values from log/error text (Perspective URLs leak keys in HttpError)."""
+    if "key=" not in msg:
+        return msg
+    return re.sub(
+        r"key=([^&\s\"']+)",
+        lambda m: (
+            f"key=***...{m.group(1)[-4:]}" if len(m.group(1)) > 4 else "key=***"
+        ),
+        msg,
+    )
+
 
 def _get_thread_pool():
     """Get or create the shared ThreadPoolExecutor for parallel moderation requests.
@@ -204,7 +219,10 @@ class HybridModerationEvaluator:
                                  self._active_key_index)
                 
         except Exception as e:
-            self.logger.error("Failed to initialize API clients: %s", e)
+            self.logger.error(
+                "Failed to initialize API clients: %s",
+                _redact_url_api_key_query_param(str(e)),
+            )
             raise
     
     def _evaluate_with_google(self, text: str, genome_id: str, max_retries: int = 10) -> Optional[Dict[str, Any]]:
@@ -281,17 +299,28 @@ class HybridModerationEvaluator:
             except Exception as e:
                 attempt_durations.append(round(time.time() - attempt_start, 4))
                 is_retriable = self._is_retriable_error(e)
-                
+                safe_err = _redact_url_api_key_query_param(str(e))
+
                 if attempt < max_retries and is_retriable:
                     wait_time = 2 ** attempt
-                    self.logger.warning("Google API evaluation failed for genome %s (attempt %d/%d): %s. Retrying in %ds...", 
-                                      genome_id, attempt + 1, max_retries + 1, str(e), wait_time)
+                    self.logger.warning(
+                        "Google API evaluation failed for genome %s (attempt %d/%d): %s. Retrying in %ds...",
+                        genome_id,
+                        attempt + 1,
+                        max_retries + 1,
+                        safe_err,
+                        wait_time,
+                    )
                     time.sleep(wait_time)
                     api_wait_seconds += wait_time
                     continue
                 else:
-                    self.logger.error("Google API evaluation failed for genome %s after %d attempts: %s", 
-                                    genome_id, attempt + 1, e)
+                    self.logger.error(
+                        "Google API evaluation failed for genome %s after %d attempts: %s",
+                        genome_id,
+                        attempt + 1,
+                        safe_err,
+                    )
                     return None, {"retries": attempt + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
         
         return None, {"retries": max_retries + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
@@ -396,9 +425,15 @@ class HybridModerationEvaluator:
             return unified_result
             
         except Exception as e:
-            self.logger.error("Unexpected error evaluating genome %s: %s", genome_id, e, exc_info=True)
+            safe_err = _redact_url_api_key_query_param(str(e))
+            self.logger.error(
+                "Unexpected error evaluating genome %s: %s",
+                genome_id,
+                safe_err,
+                exc_info=True,
+            )
             return {
-                "error": str(e)
+                "error": safe_err
             }
         finally:
             end_time = time.time()
@@ -499,9 +534,15 @@ class HybridModerationEvaluator:
                     time.sleep(0.75)
                         
                 except Exception as e:
-                    self.logger.error("Failed to process evaluation for genome %s: %s", genome.get('id'), e, exc_info=True)
+                    safe_err = _redact_url_api_key_query_param(str(e))
+                    self.logger.error(
+                        "Failed to process evaluation for genome %s: %s",
+                        genome.get('id'),
+                        safe_err,
+                        exc_info=True,
+                    )
                     genome['status'] = 'error'
-                    genome['error'] = str(e)
+                    genome['error'] = safe_err
                     total_errors += 1
                     self._save_single_genome(genome, pop_path)
                     
@@ -528,7 +569,11 @@ class HybridModerationEvaluator:
             return population
             
         except Exception as e:
-            self.logger.error("Population evaluation failed: %s", e, exc_info=True)
+            self.logger.error(
+                "Population evaluation failed: %s",
+                _redact_url_api_key_query_param(str(e)),
+                exc_info=True,
+            )
             raise
     
     def _save_single_genome(self, genome: Dict[str, Any], pop_path: str) -> None:
@@ -595,7 +640,8 @@ class HybridModerationEvaluator:
         try:
             self.logger.info("Starting hybrid population evaluation pipeline")
             
-            _, _, load_population, *rest = get_population_io()
+            _pio = get_population_io()
+            load_population, save_population = _pio[2], _pio[3]
             population = load_population(pop_path, logger=self.logger)
             
             if moderation_methods is None:
@@ -605,13 +651,16 @@ class HybridModerationEvaluator:
             
             updated_population = self._evaluate_population_sync(population, north_star_metric, pop_path=pop_path, moderation_methods=moderation_methods)
             
-            _, _, _, save_population, *rest = get_population_io()
             save_population(updated_population, pop_path, logger=self.logger)
             
             self.logger.info("Hybrid population evaluation completed successfully")
             
         except Exception as e:
-            self.logger.error("Hybrid population evaluation pipeline failed: %s", e, exc_info=True)
+            self.logger.error(
+                "Hybrid population evaluation pipeline failed: %s",
+                _redact_url_api_key_query_param(str(e)),
+                exc_info=True,
+            )
             raise
 
 def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None, 
@@ -638,7 +687,11 @@ def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None,
         logger.info("Hybrid moderation evaluation completed successfully")
         
     except Exception as e:
-        logger.error("Hybrid moderation evaluation failed: %s", e, exc_info=True)
+        logger.error(
+            "Hybrid moderation evaluation failed: %s",
+            _redact_url_api_key_query_param(str(e)),
+            exc_info=True,
+        )
 
 
 def evaluate_single_genome(evaluator, genome, moderation_methods=None):
