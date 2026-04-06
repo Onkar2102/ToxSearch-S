@@ -738,17 +738,27 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             logger.error("Workers did not all report ready within %d s (ready=%s). Aborting.",
                          ready_timeout_sec, ready_workers)
             comm.Abort(1)
-        if comm.Iprobe(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG):
+        # Only recv WORKER_READY / WORKER_INIT_FAILED. Do not use ANY_TAG: workers send
+        # PARENTS_REQUEST immediately after WORKER_READY; recv+drop would deadlock them.
+        progressed = False
+        if comm.Iprobe(source=MPI.ANY_SOURCE, tag=WORKER_INIT_FAILED):
             status = MPI.Status()
-            data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
-            src, tag_id = status.Get_source(), status.Get_tag()
-            if tag_id == WORKER_READY:
-                ready_workers.add(src)
-                logger.info("Worker %d ready (%d/%d).", src, len(ready_workers), n_workers)
-            elif tag_id == WORKER_INIT_FAILED:
-                init_failed_msg = (data or {}).get("error", "unknown") if isinstance(data, dict) else str(data)
-                logger.error("Worker %d reported init failure: %s", src, init_failed_msg)
+            data = comm.recv(source=MPI.ANY_SOURCE, tag=WORKER_INIT_FAILED, status=status)
+            src = status.Get_source()
+            init_failed_msg = (data or {}).get("error", "unknown") if isinstance(data, dict) else str(data)
+            logger.error("Worker %d reported init failure: %s", src, init_failed_msg)
+            progressed = True
         else:
+            for src in range(1, size):
+                if src in ready_workers:
+                    continue
+                if comm.Iprobe(source=src, tag=WORKER_READY):
+                    comm.recv(source=src, tag=WORKER_READY)
+                    ready_workers.add(src)
+                    logger.info("Worker %d ready (%d/%d).", src, len(ready_workers), n_workers)
+                    progressed = True
+                    break
+        if not progressed:
             time.sleep(0.5)
     logger.info("All workers ready. Starting dispatch loop.")
     logger.info("="*60)
