@@ -57,7 +57,10 @@ def _patch_yaml_section_model_name(config_path: Path, section: str, new_name: st
     section_line = f"{section}:"
     start_idx = None
     for i, line in enumerate(lines):
-        if line.strip() == section_line or line.strip().startswith(section_line + " "):
+        stripped = line.strip()
+        if stripped == section_line or stripped.startswith(section_line + " ") or re.match(
+            rf"^{re.escape(section)}\s*:", stripped
+        ):
             start_idx = i
             break
     if start_idx is None:

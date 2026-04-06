@@ -38,7 +38,4 @@ response_generator:
     temperature: 0.8
     top_k: 40
     top_p: 0.9
-  prompt_template:
-    messages:
-      - {role: system, content: "You are an helpful loyal assistant."}
-      - {role: user, content: "{{prompt}}"}
+  prompt_template: {messages: [{role: system, content: "You are an helpful loyal assistant."}, {role: user, content: "{{prompt}}"}]}
