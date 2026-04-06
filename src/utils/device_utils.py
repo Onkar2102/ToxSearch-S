@@ -5,6 +5,7 @@ Device detection and configuration utilities for CUDA, MPS, and CPU support.
 Provides centralized device detection and configuration for all components.
 """
 
+import re
 import torch
 import yaml
 from typing import Optional, Dict, Any
@@ -87,11 +88,19 @@ class DeviceManager:
                 head_lines = []
                 for line in text.splitlines(keepends=True):
                     stripped = line.strip()
-                    if stripped.startswith("response_generator:") or stripped.startswith("response_generator "):
+                    # Match response_generator key even with odd spacing (e.g. "response_generator :")
+                    if re.match(r"response_generator\s*:", stripped):
                         break
                     head_lines.append(line)
                 head = "".join(head_lines)
-                config = yaml.safe_load(head) if head.strip() else {}
+                try:
+                    config = yaml.safe_load(head) if head.strip() else {}
+                except yaml.YAMLError as exc_head:
+                    self.logger.warning(
+                        "RGConfig.yaml: header-only parse failed (%s); using empty device_config.",
+                        exc_head,
+                    )
+                    config = {}
                 if config:
                     self.logger.warning(
                         "RGConfig.yaml: full parse failed; loaded device_config from header only. "

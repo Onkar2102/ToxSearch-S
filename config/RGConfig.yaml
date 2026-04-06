@@ -40,7 +40,7 @@ response_generator:
     top_p: 0.9
   prompt_template:
     messages:
-      - content: "You are an helpful loyal assistant."
-        role: system
-      - content: "{{prompt}}"
-        role: user
+      - role: system
+        content: "You are an helpful loyal assistant."
+      - role: user
+        content: "{{prompt}}"
