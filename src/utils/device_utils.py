@@ -78,9 +78,26 @@ class DeviceManager:
         try:
             from pathlib import Path
             config_path = Path(__file__).resolve().parents[2] / "config" / "RGConfig.yaml"
-            with open(config_path, 'r') as f:
-                config = yaml.safe_load(f)
-            self._config_cache = config.get("device_config", {})
+            text = config_path.read_text(encoding="utf-8")
+            try:
+                config = yaml.safe_load(text)
+            except yaml.YAMLError:
+                # Full file can be invalid if a prior run used yaml.dump on the whole file.
+                # ``device_config`` lives at the top; parse only through ``response_generator:``.
+                head_lines = []
+                for line in text.splitlines(keepends=True):
+                    stripped = line.strip()
+                    if stripped.startswith("response_generator:") or stripped.startswith("response_generator "):
+                        break
+                    head_lines.append(line)
+                head = "".join(head_lines)
+                config = yaml.safe_load(head) if head.strip() else {}
+                if config:
+                    self.logger.warning(
+                        "RGConfig.yaml: full parse failed; loaded device_config from header only. "
+                        "Restore config/RGConfig.yaml from the repo or fix YAML below response_generator."
+                    )
+            self._config_cache = (config or {}).get("device_config", {})
             self.logger.debug("Device configuration loaded successfully")
         except Exception as e:
             self.logger.warning(f"Failed to load device config, using defaults: {e}")

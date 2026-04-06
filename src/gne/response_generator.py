@@ -49,7 +49,13 @@ class ResponseGenerator:
             self.logger.error(f"Configuration file not found: {config_path}")
             raise
         except yaml.YAMLError as e:
-            self.logger.error(f"Failed to parse YAML configuration: {e}")
+            self.logger.error(
+                "Failed to parse YAML configuration (%s): %s. "
+                "Restore a valid file from the repository (e.g. `git checkout -- config/RGConfig.yaml`) "
+                "if an older build rewrote this file with `yaml.dump`.",
+                config_path,
+                e,
+            )
             raise
         except Exception as e:
             self.logger.error(f"Failed to load model configuration: {e}")

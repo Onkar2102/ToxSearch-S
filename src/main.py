@@ -64,8 +64,6 @@ def _patch_yaml_section_model_name(config_path: Path, section: str, new_name: st
     if start_idx is None:
         raise ValueError(f"Section '{section}' not found in {config_path}")
     section_indent = len(lines[start_idx]) - len(lines[start_idx].lstrip())
-    # First-level children of ``section`` are typically section_indent + 2 spaces
-    child_indent = section_indent + 2
     name_re = re.compile(r"^(\s*)name:\s*.+$")
     for j in range(start_idx + 1, len(lines)):
         line = lines[j]
@@ -74,8 +72,6 @@ def _patch_yaml_section_model_name(config_path: Path, section: str, new_name: st
         cur_indent = len(line) - len(line.lstrip())
         if cur_indent <= section_indent:
             break
-        if cur_indent != child_indent:
-            continue
         if not line.lstrip().startswith("name:"):
             continue
         m = name_re.match(line.rstrip("\r\n"))
@@ -85,7 +81,7 @@ def _patch_yaml_section_model_name(config_path: Path, section: str, new_name: st
         lines[j] = f"{indent}name: {json.dumps(new_name)}\n"
         config_path.write_text("".join(lines))
         return
-    raise ValueError(f"No direct-child 'name:' under '{section}' in {config_path}")
+    raise ValueError(f"No 'name:' key found under '{section}' in {config_path}")
 
 
 def update_model_configs(rg_model, pg_model, logger):
@@ -189,7 +185,7 @@ def update_model_configs(rg_model, pg_model, logger):
         raise
 
 
-def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", pg_model="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
+def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", pg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
          max_total_genomes=None, seed=None,
          # Speciation parameters
          theta_sim=0.2, theta_merge=0.1, min_stability_gens=5, species_capacity=100, cluster0_max_capacity=1000,
@@ -1129,9 +1125,9 @@ if __name__ == "__main__":
                        help="Embedding dimensionality (default: 384)")
     parser.add_argument("--embedding-batch-size", type=int, default=64,
                        help="Batch size for embedding computation (default: 64)")
-    parser.add_argument("--rg", type=str, default="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+    parser.add_argument("--rg", type=str, default="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf",
                        help="Response generator model: pass a direct .gguf path or an alias under models/")
-    parser.add_argument("--pg", type=str, default="models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+    parser.add_argument("--pg", type=str, default="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf",
                        help="Prompt generator model: pass a direct .gguf path or an alias under models/")
     parser.add_argument("--operators", type=str, choices=["ie", "cm", "all"], default="all",
                        help="Operator configuration mode: ie (InformedEvolution only), cm (all except InformedEvolution), all (all operators)")
