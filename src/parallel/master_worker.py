@@ -16,6 +16,9 @@ STOP                = 14  # Master tells workers to stop (discard in-progress or
 WORKER_READY        = 20   # Worker finished init successfully
 WORKER_INIT_FAILED  = 21   # Worker failed to init (e.g. model load); payload {"rank": int, "error": str}
 
+# GEN0_BATCH payload: bootstrap_wait True means gen0 slice already handed out; worker sleeps and retries PARENTS_REQUEST.
+BOOTSTRAP_WAIT_RETRY_SECONDS = 30
+
 # Sequential parity: EvolutionEngine operators="all", max_variants=1 (see ea/evolution_engine.py).
 K_PARALLEL_MERGE_ALL_DEFAULT = 24          # 2 parents: 2 crossover + 22 mutation applies
 K_PARALLEL_MERGE_ALL_EXPLORE_EXPLOIT = 39  # 3 parents: 6 crossover + 33 mutation applies
@@ -773,20 +776,37 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     s, e = gen0_assignments.pop(source)
                     payload = {"request_id": req_id, "prompt_start": s, "prompt_end": e}
                 else:
-                    payload = {"request_id": req_id, "prompt_start": 0, "prompt_end": 0}
+                    # Slice already handed out; other workers still in gen0 — do not send bare [0:0] (causes recv storms).
+                    payload = {
+                        "request_id": req_id,
+                        "prompt_start": 0,
+                        "prompt_end": 0,
+                        "bootstrap_wait": True,
+                        "retry_after_seconds": BOOTSTRAP_WAIT_RETRY_SECONDS,
+                    }
                 num_keys = len((config_dict or {}).get("perspective_api_keys", []))
                 if num_keys:
                     payload["perspective_key_index"] = (source - 1) % num_keys
                 send_payload(comm, source, GEN0_BATCH, payload, logger=logger)
                 n_prompts_batch = payload["prompt_end"] - payload["prompt_start"]
-                if n_prompts_batch <= 0:
+                key_idx = payload.get("perspective_key_index")
+                if payload.get("bootstrap_wait"):
+                    logger.info(
+                        "Sent GEN0_BATCH (bootstrap wait) to worker %d  retry_after_seconds=%d  "
+                        "perspective_key_index=%s  remaining_gen0_assignments=%d",
+                        source,
+                        int(payload.get("retry_after_seconds") or BOOTSTRAP_WAIT_RETRY_SECONDS),
+                        key_idx if key_idx is not None else "none",
+                        len(gen0_assignments),
+                    )
+                elif n_prompts_batch <= 0:
                     logger.warning("Sent empty GEN0_BATCH to worker %d  [%d:%d]  (no prompts)",
                                   source, payload["prompt_start"], payload["prompt_end"])
-                key_idx = payload.get("perspective_key_index")
-                logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  (%d prompts)  "
-                            "perspective_key_index=%s  remaining_gen0_assignments=%d",
-                            source, payload["prompt_start"], payload["prompt_end"],
-                            n_prompts_batch, key_idx if key_idx is not None else "none", len(gen0_assignments))
+                else:
+                    logger.info("Sent GEN0_BATCH to worker %d  [%d:%d]  (%d prompts)  "
+                                "perspective_key_index=%s  remaining_gen0_assignments=%d",
+                                source, payload["prompt_start"], payload["prompt_end"],
+                                n_prompts_batch, key_idx if key_idx is not None else "none", len(gen0_assignments))
 
             elif shutdown:
                 # Worker requested more work only after finishing and reporting current task(s);
@@ -1170,6 +1190,26 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
         # ---- GEN0_BATCH (evaluation-only) ----
         if tag_id == GEN0_BATCH:
+            if data.get("bootstrap_wait"):
+                retry_sec = int(data.get("retry_after_seconds") or BOOTSTRAP_WAIT_RETRY_SECONDS)
+                logger.info(
+                    "Worker %d: GEN0_BATCH bootstrap wait (gen0 still in progress elsewhere); "
+                    "sleeping %ds then retrying PARENTS_REQUEST (request_id=%s)",
+                    rank, retry_sec, data.get("request_id"),
+                )
+                remaining = float(retry_sec)
+                stopped_during_wait = False
+                while remaining > 0:
+                    if _check_stop(comm, logger):
+                        stopped_during_wait = True
+                        break
+                    chunk = min(remaining, 1.0)
+                    time.sleep(chunk)
+                    remaining -= chunk
+                if stopped_during_wait:
+                    break
+                continue
+
             prompt_start = data.get("prompt_start", 0)
             prompt_end = data.get("prompt_end", 0)
             n_prompts = prompt_end - prompt_start
