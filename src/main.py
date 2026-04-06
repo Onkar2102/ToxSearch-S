@@ -35,7 +35,6 @@ from gne import get_run_moderation_on_population
 from utils import get_population_io
 from ea.run_evolution import run_evolution
 from ea import get_create_final_statistics_with_tracker
-import yaml
 
 from utils import get_system_utils
 get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system, set_outputs_path = get_system_utils()
