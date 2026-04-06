@@ -1,14 +1,18 @@
 #!/bin/bash
-# Local experiment runner: sequential then MPI parallel (1 master + 4 workers = 5 ranks).
+# Local experiment runner: sequential sweeps over theta_sim (and matching theta_merge).
+# Parallel (MPI) block is commented out below; uncomment to run mpiexec after sequential.
 #
 # Usage:
 #   From project root: bash run_experiments_local.sh
 #
 # Options:
-#   - RUN_SEQUENTIAL=0   Skip sequential run (default: 1).
-#   - RUN_PARALLEL=0     Skip parallel run (default: 1).
-#   - MPI_RANKS=5        mpiexec -n value (default: 5 → 1 master + 4 workers).
+#   - RUN_SEQUENTIAL=0   Skip sequential runs (default: 1).
 #   - PYTHON=python3     Python interpreter (default: python3).
+#   - THETA_VALUES="0.25 0.30 0.35"  Override similarity sweep (space-separated).
+#
+# Parallel (disabled by default):
+#   - RUN_PARALLEL=0     Skip parallel run (default: 0).
+#   - MPI_RANKS=2        mpiexec -n value (default: 2 → 1 master + 1 worker).
 #
 # Environment:
 #   - .env is loaded if present (PERSPECTIVE_API_KEY, etc.).
@@ -53,12 +57,11 @@ RUN_TS="$(date +%Y%m%d_%H%M%S)"
 MPI_RANKS="${MPI_RANKS:-2}"
 
 # Shared ToxSearch-S CLI (sequential and parallel use the same knobs for comparability).
+# theta_sim / theta_merge are passed per run (see THETA_VALUES).
 # Termination: --max-total-genomes only.
 ARGS_ARR=(
     --moderation-methods google
     --stagnation-limit 5
-    --theta-sim 0.30
-    --theta-merge 0.30
     --min-stability-gens 5
     --species-capacity 100
     --cluster0-max-capacity 1000
@@ -74,49 +77,71 @@ ARGS_ARR=(
     --max-variants 1
     --seed-file data/prompt_100.csv
     --seed 42
-    --max-total-genomes 160
+    --max-total-genomes 100
 )
 
 run_with_python() {
     ( export PYTHONPATH="${SCRIPT_DIR}/src"; exec "$PYTHON" src/main.py "$@" )
 }
 
+# theta_sim sweep (similarity); theta_merge set to the same value each run.
+THETA_VALUES="${THETA_VALUES:-0.25 0.30 0.35}"
+
 run_sequential() {
+    local theta="${1:?run_sequential: theta required}"
+    local out_tag
+    out_tag="$(echo "$theta" | tr '.' 'p')"
     echo "=========================================="
-    echo "Sequential (single process)"
-    echo "Output: data/outputs/local_${RUN_TS}_sequential"
+    echo "Sequential (single process)  theta_sim=${theta}  theta_merge=${theta}"
+    echo "Output: data/outputs/local_${RUN_TS}_sequential_theta${out_tag}"
     echo "=========================================="
     run_with_python "${ARGS_ARR[@]}" \
-        --output-dir "data/outputs/local_${RUN_TS}_sequential"
+        --theta-sim "$theta" \
+        --theta-merge "$theta" \
+        --output-dir "data/outputs/local_${RUN_TS}_sequential_theta${out_tag}"
 }
 
-run_parallel() {
-    if ! command -v mpiexec >/dev/null 2>&1; then
-        echo "ERROR: mpiexec not found; install Open MPI or set RUN_PARALLEL=0." >&2
-        return 1
-    fi
-    echo "=========================================="
-    echo "Parallel (mpiexec -n ${MPI_RANKS}, --parallel)"
-    echo "Output: data/outputs/local_${RUN_TS}_parallel"
-    echo "=========================================="
-    ( export PYTHONPATH="${SCRIPT_DIR}/src"
-      exec mpiexec -n "${MPI_RANKS}" "$PYTHON" src/main.py --parallel "${ARGS_ARR[@]}" \
-        --output-dir "data/outputs/local_${RUN_TS}_parallel" )
-}
+# Parallel (MPI): uncomment function body and the RUN_PARALLEL block below to enable.
+# run_parallel() {
+#     if ! command -v mpiexec >/dev/null 2>&1; then
+#         echo "ERROR: mpiexec not found; install Open MPI or set RUN_PARALLEL=0." >&2
+#         return 1
+#     fi
+#     local theta="${1:?run_parallel: theta required}"
+#     local out_tag
+#     out_tag="$(echo "$theta" | tr '.' 'p')"
+#     echo "=========================================="
+#     echo "Parallel (mpiexec -n ${MPI_RANKS}, --parallel)  theta_sim=${theta}"
+#     echo "Output: data/outputs/local_${RUN_TS}_parallel_theta${out_tag}"
+#     echo "=========================================="
+#     ( export PYTHONPATH="${SCRIPT_DIR}/src"
+#       exec mpiexec -n "${MPI_RANKS}" "$PYTHON" src/main.py --parallel "${ARGS_ARR[@]}" \
+#         --theta-sim "$theta" --theta-merge "$theta" \
+#         --output-dir "data/outputs/local_${RUN_TS}_parallel_theta${out_tag}" )
+# }
 
 RUN_SEQUENTIAL="${RUN_SEQUENTIAL:-1}"
-RUN_PARALLEL="${RUN_PARALLEL:-1}"
+RUN_PARALLEL="${RUN_PARALLEL:-0}"
 
 if [ "$RUN_SEQUENTIAL" = "1" ]; then
-    run_sequential
-    echo ""
+    for theta in $THETA_VALUES; do
+        run_sequential "$theta"
+        echo ""
+    done
 fi
 
-if [ "$RUN_PARALLEL" = "1" ]; then
-    [ "$RUN_SEQUENTIAL" = "1" ] && { echo "Waiting 5 seconds before parallel run..."; sleep 5; echo ""; }
-    run_parallel
-    echo ""
-fi
+# if [ "$RUN_PARALLEL" = "1" ]; then
+#     if ! command -v mpiexec >/dev/null 2>&1; then
+#         echo "ERROR: mpiexec not found; set RUN_PARALLEL=0 or install Open MPI." >&2
+#         exit 1
+#     fi
+#     for theta in $THETA_VALUES; do
+#         [ "$RUN_SEQUENTIAL" = "1" ] && { echo "Waiting 5 seconds before parallel theta=${theta}..."; sleep 5; echo ""; }
+#         run_parallel "$theta"
+#         echo ""
+#     done
+# fi
 
 echo "All requested experiments completed!"
-echo "RUN_TS=${RUN_TS}  sequential: data/outputs/local_${RUN_TS}_sequential  parallel: data/outputs/local_${RUN_TS}_parallel"
+echo "RUN_TS=${RUN_TS}"
+echo "Sequential outputs: data/outputs/local_${RUN_TS}_sequential_theta0p25|0p30|0p35"

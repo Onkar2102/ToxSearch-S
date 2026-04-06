@@ -11,6 +11,7 @@ import sys
 import time
 import json
 import os
+import re
 
 from typing import Optional
 from pathlib import Path
@@ -44,6 +45,48 @@ def _is_gguf_path(value: str) -> bool:
     """Return True if the given value looks like a direct GGUF file path."""
     p = Path(value)
     return str(value).lower().endswith(".gguf") and (p.is_absolute() or str(value).startswith("./") or str(value).startswith("models/"))
+
+
+def _patch_yaml_section_model_name(config_path: Path, section: str, new_name: str) -> None:
+    """Set the first direct-child ``name:`` under ``section:`` without full yaml round-trip.
+
+    PyYAML's ``yaml.dump`` can rewrite nested mappings (e.g. ``prompt_template``) in a way that
+    later fails to parse; patching the ``name`` line avoids corrupting RGConfig/PGConfig.
+    """
+    text = config_path.read_text(encoding="utf-8")
+    lines = text.splitlines(keepends=True)
+    section_line = f"{section}:"
+    start_idx = None
+    for i, line in enumerate(lines):
+        if line.strip() == section_line or line.strip().startswith(section_line + " "):
+            start_idx = i
+            break
+    if start_idx is None:
+        raise ValueError(f"Section '{section}' not found in {config_path}")
+    section_indent = len(lines[start_idx]) - len(lines[start_idx].lstrip())
+    # First-level children of ``section`` are typically section_indent + 2 spaces
+    child_indent = section_indent + 2
+    name_re = re.compile(r"^(\s*)name:\s*.+$")
+    for j in range(start_idx + 1, len(lines)):
+        line = lines[j]
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        cur_indent = len(line) - len(line.lstrip())
+        if cur_indent <= section_indent:
+            break
+        if cur_indent != child_indent:
+            continue
+        if not line.lstrip().startswith("name:"):
+            continue
+        m = name_re.match(line.rstrip("\r\n"))
+        if not m:
+            continue
+        indent = m.group(1)
+        lines[j] = f"{indent}name: {json.dumps(new_name)}\n"
+        config_path.write_text("".join(lines))
+        return
+    raise ValueError(f"No direct-child 'name:' under '{section}' in {config_path}")
+
 
 def update_model_configs(rg_model, pg_model, logger):
     """Update configuration files with selected models.
@@ -126,34 +169,18 @@ def update_model_configs(rg_model, pg_model, logger):
             raise ValueError(f"No models could be resolved for RG={rg_model}, PG={pg_model}")
 
         rg_config_path = get_config_path() / "RGConfig.yaml"
-        if rg_config_path.exists():
-            with open(rg_config_path, 'r') as f:
-                rg_config = yaml.safe_load(f) or {}
-
-            if rg_file:
-                rg_section = rg_config.get("response_generator", {})
-                rg_section["name"] = rg_file
-                rg_config["response_generator"] = rg_section
-                with open(rg_config_path, 'w') as f:
-                    yaml.dump(rg_config, f, default_flow_style=False)
-                logger.info("Config updated from script (--rg): RGConfig.yaml response_generator.name = %s", rg_file)
-            else:
-                logger.warning("Skipped RGConfig.yaml update; no file resolved for alias '%s'", rg_model)
+        if rg_config_path.exists() and rg_file:
+            _patch_yaml_section_model_name(rg_config_path, "response_generator", rg_file)
+            logger.info("Config updated from script (--rg): RGConfig.yaml response_generator.name = %s", rg_file)
+        elif rg_config_path.exists() and not rg_file:
+            logger.warning("Skipped RGConfig.yaml update; no file resolved for alias '%s'", rg_model)
 
         pg_config_path = get_config_path() / "PGConfig.yaml"
-        if pg_config_path.exists():
-            with open(pg_config_path, 'r') as f:
-                pg_config = yaml.safe_load(f) or {}
-
-            if pg_file:
-                pg_section = pg_config.get("prompt_generator", {})
-                pg_section["name"] = pg_file
-                pg_config["prompt_generator"] = pg_section
-                with open(pg_config_path, 'w') as f:
-                    yaml.dump(pg_config, f, default_flow_style=False)
-                logger.info("Config updated from script (--pg): PGConfig.yaml prompt_generator.name = %s", pg_file)
-            else:
-                logger.warning("Skipped PGConfig.yaml update; no file resolved for alias '%s'", pg_model)
+        if pg_config_path.exists() and pg_file:
+            _patch_yaml_section_model_name(pg_config_path, "prompt_generator", pg_file)
+            logger.info("Config updated from script (--pg): PGConfig.yaml prompt_generator.name = %s", pg_file)
+        elif pg_config_path.exists() and not pg_file:
+            logger.warning("Skipped PGConfig.yaml update; no file resolved for alias '%s'", pg_model)
 
         logger.info("Project configs updated from script parameters: RG=%s, PG=%s", rg_file or "(unchanged)", pg_file or "(unchanged)")
 

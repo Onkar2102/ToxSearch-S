@@ -1,18 +1,19 @@
 #!/bin/bash -l
 
 #SBATCH --job-name=txs141
-#SBATCH --time=02-11:59:00
+#SBATCH --time=02-11:00:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
-#SBATCH --ntasks=5
+#SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=10g
 #SBATCH --account=evostar
 #SBATCH --partition=tier3
 #SBATCH --mail-user=slack:@U05PK8K2HEE
 #SBATCH --mail-type=ALL
-#SBATCH --gres=gpu:a100:4
+# Sequential single process: one GPU (parallel/MPI would request more elsewhere).
+#SBATCH --gres=gpu:a100:1
 
 set -euo pipefail
 cd /home/os9660/ToxSearch-S
@@ -76,133 +77,38 @@ PY
 export PYTHONPATH=/home/os9660/ToxSearch-S/src
 python /home/os9660/ToxSearch-S/src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|cluster0|min-stability" || exit 1
 
-# 9) MPI launch with srun (1 master + 4 workers = 5 ranks). Five full runs back-to-back.
-#    --ntasks=5 per srun so SLURM does not default to a single task.
-#    Output dirs default to data/outputs/YYYYMMDD_HHMM per process (minute resolution).
+# 9) Sequential ToxSearch-S (single process, no --parallel). Termination: --max-total-genomes.
+#    NUM_RUNS repetitions; same --seed 42 each run. Output dirs from main.py (timestamped).
+NUM_RUNS="${NUM_RUNS:-10}"
 
-echo "========== parallel run 1/5 =========="
-srun --ntasks=5 python src/main.py \
-    --parallel \
-    --profile \
-    --max-total-genomes 5000 \
-    --moderation-methods google \
-    --stagnation-limit 5 \
-    --theta-sim 0.30 \
-    --theta-merge 0.30 \
-    --min-stability-gens 5 \
-    --species-capacity 100 \
-    --cluster0-max-capacity 1000 \
-    --cluster0-min-cluster-size 1 \
-    --min-island-size 3 \
-    --species-stagnation 20 \
-    --embedding-model all-MiniLM-L6-v2 \
-    --embedding-dim 384 \
-    --embedding-batch-size 64 \
-    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --operators all \
-    --max-variants 1 \
-    --seed-file data/prompt.csv \
-    --seed 42
+for ((i = 1; i <= NUM_RUNS; i++)); do
+    echo ""
+    echo "=========================================="
+    echo "Run ${i}/${NUM_RUNS}  (seed=42)"
+    echo "=========================================="
 
-echo "========== parallel run 2/5 =========="
-srun --ntasks=5 python src/main.py \
-    --parallel \
-    --profile \
-    --max-total-genomes 5000 \
-    --moderation-methods google \
-    --stagnation-limit 5 \
-    --theta-sim 0.30 \
-    --theta-merge 0.30 \
-    --min-stability-gens 5 \
-    --species-capacity 100 \
-    --cluster0-max-capacity 1000 \
-    --cluster0-min-cluster-size 1 \
-    --min-island-size 3 \
-    --species-stagnation 20 \
-    --embedding-model all-MiniLM-L6-v2 \
-    --embedding-dim 384 \
-    --embedding-batch-size 64 \
-    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --operators all \
-    --max-variants 1 \
-    --seed-file data/prompt.csv \
-    --seed 42
+    srun python src/main.py \
+        --profile \
+        --max-total-genomes 1000 \
+        --moderation-methods google \
+        --stagnation-limit 5 \
+        --theta-sim 0.25 \
+        --theta-merge 0.25 \
+        --min-stability-gens 5 \
+        --species-capacity 100 \
+        --cluster0-max-capacity 1000 \
+        --cluster0-min-cluster-size 1 \
+        --min-island-size 3 \
+        --species-stagnation 20 \
+        --embedding-model all-MiniLM-L6-v2 \
+        --embedding-dim 384 \
+        --embedding-batch-size 64 \
+        --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+        --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+        --operators all \
+        --max-variants 1 \
+        --seed-file data/prompt.csv \
+        --seed 42
+done
 
-echo "========== parallel run 3/5 =========="
-srun --ntasks=5 python src/main.py \
-    --parallel \
-    --profile \
-    --max-total-genomes 5000 \
-    --moderation-methods google \
-    --stagnation-limit 5 \
-    --theta-sim 0.30 \
-    --theta-merge 0.30 \
-    --min-stability-gens 5 \
-    --species-capacity 100 \
-    --cluster0-max-capacity 1000 \
-    --cluster0-min-cluster-size 1 \
-    --min-island-size 3 \
-    --species-stagnation 20 \
-    --embedding-model all-MiniLM-L6-v2 \
-    --embedding-dim 384 \
-    --embedding-batch-size 64 \
-    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --operators all \
-    --max-variants 1 \
-    --seed-file data/prompt.csv \
-    --seed 42
-
-echo "========== parallel run 4/5 =========="
-srun --ntasks=5 python src/main.py \
-    --parallel \
-    --profile \
-    --max-total-genomes 5000 \
-    --moderation-methods google \
-    --stagnation-limit 5 \
-    --theta-sim 0.30 \
-    --theta-merge 0.30 \
-    --min-stability-gens 5 \
-    --species-capacity 100 \
-    --cluster0-max-capacity 1000 \
-    --cluster0-min-cluster-size 1 \
-    --min-island-size 3 \
-    --species-stagnation 20 \
-    --embedding-model all-MiniLM-L6-v2 \
-    --embedding-dim 384 \
-    --embedding-batch-size 64 \
-    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --operators all \
-    --max-variants 1 \
-    --seed-file data/prompt.csv \
-    --seed 42
-
-echo "========== parallel run 5/5 =========="
-srun --ntasks=5 python src/main.py \
-    --parallel \
-    --profile \
-    --max-total-genomes 5000 \
-    --moderation-methods google \
-    --stagnation-limit 5 \
-    --theta-sim 0.30 \
-    --theta-merge 0.30 \
-    --min-stability-gens 5 \
-    --species-capacity 100 \
-    --cluster0-max-capacity 1000 \
-    --cluster0-min-cluster-size 1 \
-    --min-island-size 3 \
-    --species-stagnation 20 \
-    --embedding-model all-MiniLM-L6-v2 \
-    --embedding-dim 384 \
-    --embedding-batch-size 64 \
-    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
-    --operators all \
-    --max-variants 1 \
-    --seed-file data/prompt.csv \
-    --seed 42
-
-echo "All 5 parallel experiments completed!"
+echo "All ${NUM_RUNS} experiment runs completed!"
