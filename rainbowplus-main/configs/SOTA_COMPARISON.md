@@ -5,7 +5,7 @@
 | Role | ToxSearch-S source | `sampling_params` in `base.yml` |
 |------|-------------------|----------------------------------|
 | Target (response) | `config/RGConfig.yaml` → `response_generator.generation_args` | `temperature: 0.8`, `top_p: 0.9`, `top_k: 40`, `max_tokens: 2048`, `repetition_penalty: 1.0` |
-| Mutator (prompt variants) | `config/PGConfig.yaml` → `prompt_generator.generation_args` | `temperature: 0.9`, `top_p: 0.9`, `top_k: 40`, `max_tokens: 2048`, `repetition_penalty: 1.1` |
+| Mutator (prompt variants) | `config/PGConfig.yaml` → `prompt_generator.generation_args` (PG uses 0.9) | `temperature: 0.8`, `top_p: 0.9`, `top_k: 40`, `max_tokens: 2048`, `repetition_penalty: 1.1` |
 
 - vLLM uses `max_tokens`; ToxSearch-S llama.cpp uses `max_new_tokens` — same numeric cap (2048).
 

@@ -2,9 +2,9 @@
 #
 # Default config (--config_file configs/base.yml).
 #
-# Sampling matches parent ToxSearch-S for SOTA comparison:
+# Sampling matches parent ToxSearch-S for SOTA comparison (mutator temp 0.8 vs PG 0.9):
 #   target_llm  ↔  config/RGConfig.yaml  (response_generator.generation_args)
-#   mutator_llm ↔  config/PGConfig.yaml (prompt_generator.generation_args)
+#   mutator_llm ↔  config/PGConfig.yaml (prompt_generator.generation_args); temperature 0.8 here
 #   temperature, top_p, top_k, max_tokens (vLLM uses max_tokens = llama.cpp max_new_tokens).
 # repetition_penalty matches llama.cpp RG/PG (vLLM SamplingParams).
 #
@@ -43,7 +43,7 @@ target_llm:
     repetition_penalty: 1.0
 
 
-# Mutator LLM Configuration — PG-aligned: temperature 0.9, top_p 0.9, top_k 40, max 2048
+# Mutator LLM Configuration — prompt variants: temperature 0.8, top_p 0.9, top_k 40, max 2048
 # Same model_kwargs as target_llm so RainbowPlus loads one shared vLLM instance.
 mutator_llm:
   type_: vllm
@@ -56,7 +56,7 @@ mutator_llm:
     gpu_memory_utilization: 0.8
 
   sampling_params:
-    temperature: 0.9
+    temperature: 0.8
     top_p: 0.9
     top_k: 40
     max_tokens: 2048

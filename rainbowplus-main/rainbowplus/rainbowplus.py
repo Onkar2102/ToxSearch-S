@@ -1,6 +1,7 @@
 import sys
 import argparse
 import random
+import secrets
 import json
 import time
 import logging
@@ -120,6 +121,17 @@ def parse_arguments():
         ),
     )
     parser.add_argument(
+        "--vllm-seed",
+        type=int,
+        default=None,
+        dest="vllm_seed",
+        help=(
+            "Integer passed to vLLM SamplingParams.seed for target/mutator/fitness vLLM "
+            "for this entire process. If omitted, a random seed is chosen once at startup "
+            "(overrides any seed in YAML sampling_params)."
+        ),
+    )
+    parser.add_argument(
         "--log_interval",
         type=int,
         default=50,
@@ -145,6 +157,21 @@ def parse_arguments():
     )
     parser.set_defaults(shuffle=True)
     return parser.parse_args()
+
+
+def _inject_vllm_sampling_seed(config, seed: int) -> None:
+    """Set ``seed`` on every vLLM role's ``sampling_params`` (one value for the whole run)."""
+    for attr in ("target_llm", "mutator_llm", "fitness_llm"):
+        llm_cfg = getattr(config, attr, None)
+        if llm_cfg is None:
+            continue
+        if getattr(llm_cfg, "type_", None) != "vllm":
+            continue
+        sp = llm_cfg.sampling_params
+        if not isinstance(sp, dict):
+            llm_cfg.sampling_params = {"seed": int(seed)}
+        else:
+            sp["seed"] = int(seed)
 
 
 def load_descriptors(config):
@@ -374,6 +401,14 @@ if __name__ == "__main__":
         config.target_llm.model_kwargs["model"] = args.target_llm
     if args.dataset is not None:
         config.sample_prompts = args.dataset
+
+    vllm_seed = args.vllm_seed if args.vllm_seed is not None else secrets.randbelow(2**31)
+    args.vllm_seed = vllm_seed
+    _inject_vllm_sampling_seed(config, vllm_seed)
+    logger.info(
+        "vLLM SamplingParams.seed=%d for this run (override: --vllm-seed or env VLLM_SEED from sbatch)",
+        vllm_seed,
+    )
 
     # Initialize language models and scoring functions
     llms = initialize_language_models(config)

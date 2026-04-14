@@ -188,6 +188,7 @@ fi
 
 # ------------------------------------------------------------------------------
 # 9) Experiment parameters (override: sbatch --export=ALL,MAX_GENOMES=2000,...)
+#     VLLM_SEED: optional fixed vLLM SamplingParams.seed; if unset, Python picks a random seed per job.
 # ------------------------------------------------------------------------------
 CONFIG_FILE="${CONFIG_FILE:-configs/base.yml}"
 [[ -f "$CONFIG_FILE" ]] || { echo "ERROR: config not found: $CONFIG_FILE" >&2; exit 1; }
@@ -228,8 +229,8 @@ PY_CMD=(
 
 [[ -n "${DATASET:-}" ]] && PY_CMD+=(--dataset "$DATASET")
 [[ -n "${TARGET_LLM:-}" ]] && PY_CMD+=(--target_llm "$TARGET_LLM")
-[[ -n "${NO_SHUFFLE:-}" ]] && PY_CMD+=(--no-shuffle)
 [[ -n "${RANDOM_SEED:-}" ]] && PY_CMD+=(--random_seed "$RANDOM_SEED")
+[[ -n "${VLLM_SEED:-}" ]] && PY_CMD+=(--vllm-seed "$VLLM_SEED")
 
 # ------------------------------------------------------------------------------
 # 10) Run (single-task GPU: plain python; set USE_SRUN=1 if your site requires srun)
