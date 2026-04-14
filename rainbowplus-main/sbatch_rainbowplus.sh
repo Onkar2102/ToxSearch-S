@@ -1,6 +1,24 @@
 #!/bin/bash -l
 #
 # SLURM run script for RainbowPlus (single-node vLLM + Google Perspective).
+#
+# --- How to run (quick reference) ---
+#
+# 1) Install (once), from this directory (rainbowplus-main/):
+#      python -m venv .venv-rainbow && source .venv-rainbow/bin/activate
+#      pip install -e .
+#    Put PERSPECTIVE_API_KEY=... in ./.env (or export in the shell before sbatch).
+#
+# 2) Submit from the repo root (so configs/data paths resolve):
+#      cd /path/to/rainbowplus-main
+#      mkdir -p logs
+#      sbatch sbatch_rainbowplus.sh
+#
+# 3) Override defaults via environment (optional):
+#      sbatch --export=ALL,LOG_DIR=/path/to/outputs/run1,DATASET=./data/toxsearch_seed.jsonl sbatch_rainbowplus.sh
+#      sbatch --export=ALL,RANDOM_SEED=42,VLLM_SEED=42 sbatch_rainbowplus.sh   # reproducible
+#    If VLLM_SEED is unset, Python chooses a random vLLM seed per job. RUN_ID defaults to SLURM_JOB_ID.
+#
 # Spack is OFF by default: activating the NLP Spack view can inject libcrypto.so that
 # breaks system Python 3.9 in .venv-rainbow (ImportError: OPENSSL_* / _hashlib). Use USE_SPACK=1
 # only if you use a Spack-built Python or accept fixing LD_LIBRARY_PATH.
@@ -68,6 +86,9 @@ if [[ -z "${RP_ROOT}" ]]; then
 fi
 
 cd "$RP_ROOT" || { echo "ERROR: cannot cd to RP_ROOT=$RP_ROOT" >&2; exit 1; }
+
+# Slurm #SBATCH --output=logs/... requires this directory when the job starts.
+mkdir -p "${RP_ROOT}/logs"
 
 # Parent project root (ToxSearch-S when layout is .../ToxSearch-S/rainbowplus-main/)
 TOX_ROOT="${TOX_ROOT:-$(cd "${RP_ROOT}/.." && pwd)}"
@@ -242,6 +263,9 @@ echo "TOX_ROOT:   $TOX_ROOT"
 echo "Job ID:     ${SLURM_JOB_ID:-N/A}  Array task: ${SLURM_ARRAY_TASK_ID:-N/A}"
 echo "RUN_ID:     $RUN_ID"
 echo "LOG_DIR:    $LOG_DIR  -> <model>/<dataset>/$RUN_ID/"
+echo "DATASET:    ${DATASET:-<default from YAML>}"
+echo "RANDOM_SEED: ${RANDOM_SEED:-<unset; Python shuffle + random as in CLI>}"
+echo "VLLM_SEED:  ${VLLM_SEED:-<unset; random per job>}"
 echo "Command:    ${PY_CMD[*]}"
 echo "============================================================================"
 
