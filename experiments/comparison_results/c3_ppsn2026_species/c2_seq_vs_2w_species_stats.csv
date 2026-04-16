@@ -1,5 +1,0 @@
-metric,n_sequential,n_parallel_2w,median_sequential,median_parallel_2w,mann_whitney_p_two_sided
-final_species_count,7,7,19.0,14.0,0.3040129970593999
-final_active_species,7,7,19.0,14.0,0.3040129970593999
-total_speciation_events_tracker,7,7,1162.0,757.0,0.0005827505827505828
-n_species_with_toxicity,7,7,19.0,14.0,0.27585039186443694

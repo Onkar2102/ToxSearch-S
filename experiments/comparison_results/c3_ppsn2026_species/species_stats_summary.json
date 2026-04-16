@@ -1,0 +1,195 @@
+{
+  "n_by_mode": {
+    "sequential": 7,
+    "parallel_2w": 7,
+    "parallel_4w": 7
+  },
+  "kruskal_p": {
+    "final_species_count": 0.002657201489146814,
+    "final_active_species": 0.002657201489146814,
+    "total_speciation_events_tracker": 0.0009840922071207292,
+    "total_merge_events_tracker": NaN,
+    "total_extinction_events_tracker": 0.3678794411714319,
+    "n_species_with_toxicity": 0.002602062464452,
+    "mean_max_toxicity_per_species": 0.10515507543659665,
+    "global_max_toxicity": 0.5461706820061782
+  },
+  "pairwise_mwu": {
+    "final_species_count": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.3040129970593999,
+          "p_holm": 0.3040129970593999
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.004796827719835159,
+          "p_holm": 0.014390483159505477
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.004796827719835159,
+          "p_holm": 0.014390483159505477
+        }
+      ]
+    },
+    "final_active_species": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.3040129970593999,
+          "p_holm": 0.3040129970593999
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.004796827719835159,
+          "p_holm": 0.014390483159505477
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.004796827719835159,
+          "p_holm": 0.014390483159505477
+        }
+      ]
+    },
+    "total_speciation_events_tracker": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.0005827505827505828,
+          "p_holm": 0.0017482517482517483
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.0005827505827505828,
+          "p_holm": 0.0017482517482517483
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.3373725439387588,
+          "p_holm": 0.3373725439387588
+        }
+      ]
+    },
+    "total_merge_events_tracker": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 1.0,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "p_holm": 1.0
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "p_holm": 1.0
+        }
+      ]
+    },
+    "total_extinction_events_tracker": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.39136593830755195,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.39136593830755195,
+          "p_holm": 1.0
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "p_holm": 1.0
+        }
+      ]
+    },
+    "n_species_with_toxicity": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.27585039186443694,
+          "p_holm": 0.27585039186443694
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.004890624053570851,
+          "p_holm": 0.014671872160712553
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.004890624053570851,
+          "p_holm": 0.014671872160712553
+        }
+      ]
+    },
+    "mean_max_toxicity_per_species": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.31759906759906764,
+          "p_holm": 0.6351981351981353
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.026223776223776224,
+          "p_holm": 0.07867132867132867
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.534965034965035,
+          "p_holm": 0.6351981351981353
+        }
+      ]
+    },
+    "global_max_toxicity": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.3828671328671329,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.45571095571095577,
+          "p_holm": 1.0
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.7103729603729605,
+          "p_holm": 1.0
+        }
+      ]
+    }
+  }
+}

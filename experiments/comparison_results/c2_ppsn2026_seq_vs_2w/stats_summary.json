@@ -1,37 +1,581 @@
 {
-  "n_sequential": 7,
-  "n_parallel_2w": 7,
-  "mann_whitney_p": {
-    "wall_s": 0.0005827505827505828,
-    "throughput": 0.0005827505827505828
+  "n_by_mode": {
+    "sequential": 7,
+    "parallel_2w": 7,
+    "parallel_4w": 7
   },
-  "holm_p_adj": {
-    "wall_s": 0.0011655011655011655,
-    "throughput": 0.0011655011655011655
+  "kruskal_p": {
+    "wall_s": 0.00013515464601665026,
+    "throughput": 0.00013515464601665026,
+    "qmax": 0.9292484325430266,
+    "auc_best_vs_eval": 0.05062537167399522,
+    "final_inter_species_diversity": 0.05273446326117291,
+    "final_intra_species_diversity": 0.20055253727750572,
+    "final_silhouette": 0.911408222390493,
+    "final_davies_bouldin": 0.9529074667812623,
+    "final_calinski_harabasz": 0.12848436541800326
   },
-  "cliffs_delta_sequential_vs_parallel": {
-    "wall_s": 1.0,
-    "throughput": -1.0
-  },
-  "bootstrap_median_diff_parallel_minus_sequential": {
+  "pairwise_mwu": {
     "wall_s": {
-      "lo": -21422.69,
-      "hi": -16783.288250000005
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.0005827505827505828,
+          "cliffs_delta_a_vs_b": 1.0,
+          "median_diff_ci_lo_b_minus_a": -21422.69,
+          "median_diff_ci_hi_b_minus_a": -16783.288250000005,
+          "cliffs_ci_lo": 1.0,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.0017482517482517483
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.0005827505827505828,
+          "cliffs_delta_a_vs_b": 1.0,
+          "median_diff_ci_lo_b_minus_a": -32195.329999999998,
+          "median_diff_ci_hi_b_minus_a": -26923.07,
+          "cliffs_ci_lo": 1.0,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.0017482517482517483
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.0005827505827505828,
+          "cliffs_delta_a_vs_b": 1.0,
+          "median_diff_ci_lo_b_minus_a": -11437.34,
+          "median_diff_ci_hi_b_minus_a": -9414.1,
+          "cliffs_ci_lo": 1.0,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.0017482517482517483
+        }
+      ]
     },
     "throughput": {
-      "lo": 0.016055864083218678,
-      "hi": 0.01907193567205743
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.0005827505827505828,
+          "cliffs_delta_a_vs_b": -1.0,
+          "median_diff_ci_lo_b_minus_a": 0.016055864083218678,
+          "median_diff_ci_hi_b_minus_a": 0.01907193567205743,
+          "cliffs_ci_lo": -1.0,
+          "cliffs_ci_hi": -1.0,
+          "p_holm": 0.0017482517482517483
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.0005827505827505828,
+          "cliffs_delta_a_vs_b": -1.0,
+          "median_diff_ci_lo_b_minus_a": 0.04241637137444125,
+          "median_diff_ci_hi_b_minus_a": 0.05192748627613291,
+          "cliffs_ci_lo": -1.0,
+          "cliffs_ci_hi": -1.0,
+          "p_holm": 0.0017482517482517483
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.0005827505827505828,
+          "cliffs_delta_a_vs_b": -1.0,
+          "median_diff_ci_lo_b_minus_a": 0.025823985172191102,
+          "median_diff_ci_hi_b_minus_a": 0.03384199573816526,
+          "cliffs_ci_lo": -1.0,
+          "cliffs_ci_hi": -1.0,
+          "p_holm": 0.0017482517482517483
+        }
+      ]
+    },
+    "qmax": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.7491276096399462,
+          "cliffs_delta_a_vs_b": -0.12244897959183673,
+          "median_diff_ci_lo_b_minus_a": -0.056999999999999995,
+          "median_diff_ci_hi_b_minus_a": 0.0645,
+          "cliffs_ci_lo": -0.7551020408163265,
+          "cliffs_ci_hi": 0.5102040816326531,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.8478409541795124,
+          "cliffs_delta_a_vs_b": -0.08163265306122448,
+          "median_diff_ci_lo_b_minus_a": -0.06969999999999998,
+          "median_diff_ci_hi_b_minus_a": 0.0978,
+          "cliffs_ci_lo": -0.7346938775510204,
+          "cliffs_ci_hi": 0.5510204081632653,
+          "p_holm": 1.0
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "cliffs_delta_a_vs_b": 0.02040816326530612,
+          "median_diff_ci_lo_b_minus_a": -0.06609999999999999,
+          "median_diff_ci_hi_b_minus_a": 0.0867,
+          "cliffs_ci_lo": -0.6326530612244898,
+          "cliffs_ci_hi": 0.6326530612244898,
+          "p_holm": 1.0
+        }
+      ]
+    },
+    "auc_best_vs_eval": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.05303030303030303,
+          "cliffs_delta_a_vs_b": -0.6326530612244898,
+          "median_diff_ci_lo_b_minus_a": 13.614549999999952,
+          "median_diff_ci_hi_b_minus_a": 145.51594999999998,
+          "cliffs_ci_lo": -1.0,
+          "cliffs_ci_hi": -0.061224489795918366,
+          "p_holm": 0.11363636363636365
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.03787878787878788,
+          "cliffs_delta_a_vs_b": -0.673469387755102,
+          "median_diff_ci_lo_b_minus_a": 20.2641000000001,
+          "median_diff_ci_hi_b_minus_a": 183.00735000000006,
+          "cliffs_ci_lo": -1.0,
+          "cliffs_ci_hi": -0.10204081632653061,
+          "p_holm": 0.11363636363636365
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.534965034965035,
+          "cliffs_delta_a_vs_b": -0.22448979591836735,
+          "median_diff_ci_lo_b_minus_a": -79.83299999999991,
+          "median_diff_ci_hi_b_minus_a": 111.52355000000011,
+          "cliffs_ci_lo": -0.7959183673469388,
+          "cliffs_ci_hi": 0.42857142857142855,
+          "p_holm": 0.534965034965035
+        }
+      ]
+    },
+    "final_inter_species_diversity": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.026223776223776224,
+          "cliffs_delta_a_vs_b": 0.7142857142857143,
+          "median_diff_ci_lo_b_minus_a": -0.029700000000000004,
+          "median_diff_ci_hi_b_minus_a": 0.005800000000000027,
+          "cliffs_ci_lo": 0.22448979591836735,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.07867132867132867
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.45571095571095577,
+          "cliffs_delta_a_vs_b": 0.2653061224489796,
+          "median_diff_ci_lo_b_minus_a": -0.013200000000000045,
+          "median_diff_ci_hi_b_minus_a": 0.009599999999999997,
+          "cliffs_ci_lo": -0.42857142857142855,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.45571095571095577
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.09731934731934733,
+          "cliffs_delta_a_vs_b": -0.5510204081632653,
+          "median_diff_ci_lo_b_minus_a": -0.0047000000000000375,
+          "median_diff_ci_hi_b_minus_a": 0.02510000000000001,
+          "cliffs_ci_lo": -1.0,
+          "cliffs_ci_hi": 0.02040816326530612,
+          "p_holm": 0.19463869463869465
+        }
+      ]
+    },
+    "final_intra_species_diversity": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 1.0,
+          "cliffs_delta_a_vs_b": -0.02040816326530612,
+          "median_diff_ci_lo_b_minus_a": -0.008899999999999991,
+          "median_diff_ci_hi_b_minus_a": 0.017600000000000005,
+          "cliffs_ci_lo": -0.673469387755102,
+          "cliffs_ci_hi": 0.6326530612244898,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.16491841491841494,
+          "cliffs_delta_a_vs_b": 0.46938775510204084,
+          "median_diff_ci_lo_b_minus_a": -0.014399999999999996,
+          "median_diff_ci_hi_b_minus_a": 0.006699999999999984,
+          "cliffs_ci_lo": -0.14285714285714285,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.3846153846153847
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.12820512820512822,
+          "cliffs_delta_a_vs_b": 0.5102040816326531,
+          "median_diff_ci_lo_b_minus_a": -0.0179,
+          "median_diff_ci_hi_b_minus_a": 0.0010999999999999899,
+          "cliffs_ci_lo": -0.10204081632653061,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.3846153846153847
+        }
+      ]
+    },
+    "final_silhouette": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.6200466200466201,
+          "cliffs_delta_a_vs_b": 0.1836734693877551,
+          "median_diff_ci_lo_b_minus_a": -0.10769999999999999,
+          "median_diff_ci_hi_b_minus_a": 0.06589999999999999,
+          "cliffs_ci_lo": -0.46938775510204084,
+          "cliffs_ci_hi": 0.7551020408163265,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "cliffs_delta_a_vs_b": 0.02040816326530612,
+          "median_diff_ci_lo_b_minus_a": -0.09190000000000001,
+          "median_diff_ci_hi_b_minus_a": 0.04340000000000002,
+          "cliffs_ci_lo": -0.6326530612244898,
+          "cliffs_ci_hi": 0.673469387755102,
+          "p_holm": 1.0
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "cliffs_delta_a_vs_b": -0.02040816326530612,
+          "median_diff_ci_lo_b_minus_a": -0.07399999999999998,
+          "median_diff_ci_hi_b_minus_a": 0.062100000000000016,
+          "cliffs_ci_lo": -0.6326530612244898,
+          "cliffs_ci_hi": 0.6326530612244898,
+          "p_holm": 1.0
+        }
+      ]
+    },
+    "final_davies_bouldin": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.8047785547785549,
+          "cliffs_delta_a_vs_b": -0.10204081632653061,
+          "median_diff_ci_lo_b_minus_a": -0.34730000000000016,
+          "median_diff_ci_hi_b_minus_a": 0.4341999999999999,
+          "cliffs_ci_lo": -0.7142857142857143,
+          "cliffs_ci_hi": 0.5102040816326531,
+          "p_holm": 1.0
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.9015151515151516,
+          "cliffs_delta_a_vs_b": -0.061224489795918366,
+          "median_diff_ci_lo_b_minus_a": -0.3088000000000002,
+          "median_diff_ci_hi_b_minus_a": 0.16609999999999991,
+          "cliffs_ci_lo": -0.7142857142857143,
+          "cliffs_ci_hi": 0.6326530612244898,
+          "p_holm": 1.0
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 1.0,
+          "cliffs_delta_a_vs_b": 0.02040816326530612,
+          "median_diff_ci_lo_b_minus_a": -0.383,
+          "median_diff_ci_hi_b_minus_a": 0.1177999999999999,
+          "cliffs_ci_lo": -0.673469387755102,
+          "cliffs_ci_hi": 0.673469387755102,
+          "p_holm": 1.0
+        }
+      ]
+    },
+    "final_calinski_harabasz": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "p_mwu": 0.09731934731934733,
+          "cliffs_delta_a_vs_b": 0.5510204081632653,
+          "median_diff_ci_lo_b_minus_a": -12.437600000000002,
+          "median_diff_ci_hi_b_minus_a": 2.930900000000001,
+          "cliffs_ci_lo": -0.02040816326530612,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.291958041958042
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "p_mwu": 0.09731934731934733,
+          "cliffs_delta_a_vs_b": 0.5510204081632653,
+          "median_diff_ci_lo_b_minus_a": -9.046000000000001,
+          "median_diff_ci_hi_b_minus_a": 1.7048000000000005,
+          "cliffs_ci_lo": -0.061224489795918366,
+          "cliffs_ci_hi": 1.0,
+          "p_holm": 0.291958041958042
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "p_mwu": 0.8047785547785549,
+          "cliffs_delta_a_vs_b": -0.10204081632653061,
+          "median_diff_ci_lo_b_minus_a": -4.177100000000001,
+          "median_diff_ci_hi_b_minus_a": 4.885400000000001,
+          "cliffs_ci_lo": -0.7142857142857143,
+          "cliffs_ci_hi": 0.5510204081632653,
+          "p_holm": 0.8047785547785549
+        }
+      ]
     }
   },
-  "bootstrap_cliffs_delta": {
+  "paired_by_execution_index": {
     "wall_s": {
-      "lo": 1.0,
-      "hi": 1.0
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.015625,
+          "median_diff_b_minus_a": -17706.249999999996
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.015625,
+          "median_diff_b_minus_a": -31713.03
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.015625,
+          "median_diff_b_minus_a": -10786.310000000001
+        }
+      ]
     },
     "throughput": {
-      "lo": -1.0,
-      "hi": -1.0
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.015625,
+          "median_diff_b_minus_a": 0.0176714766444021
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.015625,
+          "median_diff_b_minus_a": 0.049358328364976806
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.015625,
+          "median_diff_b_minus_a": 0.03117153666312899
+        }
+      ]
+    },
+    "qmax": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.9375,
+          "median_diff_b_minus_a": 0.026499999999999968
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.578125,
+          "median_diff_b_minus_a": 0.02030000000000004
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.8125,
+          "median_diff_b_minus_a": -0.012699999999999989
+        }
+      ]
+    },
+    "auc_best_vs_eval": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.078125,
+          "median_diff_b_minus_a": 64.44800000000001
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.15625,
+          "median_diff_b_minus_a": 106.61935000000011
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.578125,
+          "median_diff_b_minus_a": 32.35055
+        }
+      ]
+    },
+    "final_inter_species_diversity": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.078125,
+          "median_diff_b_minus_a": -0.019000000000000017
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.6875,
+          "median_diff_b_minus_a": -0.005599999999999994
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.046875,
+          "median_diff_b_minus_a": 0.008400000000000019
+        }
+      ]
+    },
+    "final_intra_species_diversity": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.578125,
+          "median_diff_b_minus_a": 0.006399999999999989
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.296875,
+          "median_diff_b_minus_a": -0.006100000000000022
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.09375,
+          "median_diff_b_minus_a": -0.00839999999999999
+        }
+      ]
+    },
+    "final_silhouette": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.6875,
+          "median_diff_b_minus_a": -0.016100000000000003
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.8125,
+          "median_diff_b_minus_a": 0.01200000000000001
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.8125,
+          "median_diff_b_minus_a": 0.037900000000000045
+        }
+      ]
+    },
+    "final_davies_bouldin": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.6875,
+          "median_diff_b_minus_a": 0.016699999999999937
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.9375,
+          "median_diff_b_minus_a": 0.058599999999999985
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.6875,
+          "median_diff_b_minus_a": -0.011400000000000077
+        }
+      ]
+    },
+    "final_calinski_harabasz": {
+      "comparisons": [
+        {
+          "a": "sequential",
+          "b": "parallel_2w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.078125,
+          "median_diff_b_minus_a": -6.603900000000001
+        },
+        {
+          "a": "sequential",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.15625,
+          "median_diff_b_minus_a": -5.188500000000001
+        },
+        {
+          "a": "parallel_2w",
+          "b": "parallel_4w",
+          "n_pairs": 7,
+          "p_wilcoxon": 0.6875,
+          "median_diff_b_minus_a": 1.4154
+        }
+      ]
     }
   },
-  "note": "Positive Cliff's delta means sequential tends to be larger than parallel for that metric."
+  "note": "Cliff's delta is reported as delta(a,b): positive means a tends to be larger than b for that metric."
 }
