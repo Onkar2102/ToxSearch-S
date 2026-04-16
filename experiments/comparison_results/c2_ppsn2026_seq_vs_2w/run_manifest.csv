@@ -1,0 +1,15 @@
+mode,run_id,run_path,wall_s,num_workers_expected
+sequential,20260406_0115,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260406_0115,42388.42,1
+sequential,20260407_0142,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260407_0142,46005.64,1
+sequential,20260407_1428,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260407_1428,41818.56,1
+sequential,20260408_0206,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260408_0206,45947.43,1
+sequential,20260409_0354,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260409_0354,47577.89,1
+sequential,20260409_1707,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260409_1707,45991.78,1
+sequential,20260410_1929,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s/20260410_1929,42091.92,1
+parallel_2w,20260407_0817,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260407_0817,25233.79,2
+parallel_2w,20260407_1721,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260407_1721,32289.13,2
+parallel_2w,20260409_0120,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260409_0120,24112.31,2
+parallel_2w,20260410_1709,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260410_1709,25034.73,2
+parallel_2w,20260411_0006,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260411_0006,24582.95,2
+parallel_2w,20260411_2027,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260411_2027,25056.4,2
+parallel_2w,20260412_1345,/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/ppsn2026/toxsearch_s_2w/20260412_1345,25363.85,2

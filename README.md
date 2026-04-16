@@ -8,7 +8,7 @@ ToxSearch-S is a **research framework** for automated red-teaming of large langu
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+ recommended (matches pinned dependencies in `requirements.txt`; use 3.12 if mirroring CI or cluster images)
 - CUDA-capable GPU (recommended for embeddings and models)
 - Google Perspective API key
 
@@ -72,7 +72,6 @@ python src/main.py \
 - **Parallel**: `mpiexec` / `srun` with **≥2 ranks** (1 master + ≥1 worker); optional `--output-dir` per experiment; omit `--batch-size` for K=24/39 parity when `--operators all`.
 - **Models**: GGUF paths exist; rank 0 updates `RGConfig.yaml` / `PGConfig.yaml` before workers load them (parallel).
 - **Post-run (parallel)**: `scripts/aggregate_worker_metrics.py <run_dir>` for `worker_metrics.json` if you need load-balance / API-wait summaries.
-- **Per-file `src/` review tracker**: [`docs/SRC_FINAL_REVIEW_CHECKLIST.md`](docs/SRC_FINAL_REVIEW_CHECKLIST.md) (line-chunk checklists for large modules).
 
 ### Metrics and outputs (EvolutionTracker, workers, C1–C3)
 
@@ -235,7 +234,7 @@ From the project root, with `PYTHONPATH=src`:
 PYTHONPATH=src python -m pytest tests/ -v
 ```
 
-See `tests/README.md` for details. Tests include refusal-detector unit tests and config-loading smoke tests.
+Tests live under `tests/` (refusal detector, config load, speciation phases, parallel merge K, MPI gen0, tracker metrics); extend `tests/` as you add behavior.
 
 ### Running on HPC Clusters
 
@@ -334,12 +333,16 @@ To reproduce or compare experimental results, the following should be fixed or r
 - Each run writes to an output directory (e.g. under `data/outputs/`) containing: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, and optionally figures in `figures/`. Parallel runs also produce one log file per rank. See [ARCHITECTURE.md](ARCHITECTURE.md) for a full list of artifacts and their role in the method.
 
 **Example minimal reproducible run (sequential)**
+
+`--max-total-genomes` is required (primary termination in both sequential and parallel modes).
+
 ```bash
 export PYTHONPATH=src
-python src/main.py --generations 10 --seed-file data/prompt.csv \
+python src/main.py --max-total-genomes 500 --seed-file data/prompt.csv \
   --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf
 ```
-Document the seed file, model path, and any non-default flags.
+
+`--generations` is optional and does not terminate the run by itself. Document the seed file, model path, `--max-total-genomes`, and any non-default flags.
 
 ---
 
@@ -349,7 +352,7 @@ Document the seed file, model path, and any non-default flags.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `--generations` | None | Max evolution generations |
+| `--generations` | None | Optional ceiling on generation count (not used as primary termination; use `--max-total-genomes`) |
 | `--max-total-genomes` | None | Total genomes cap (elites + reserves + archive). **Required for parallel.** |
 | `--stagnation-limit` | 5 | Generations without improvement before EXPLORE mode |
 | `--max-variants` | 1 | Max variants per evolution cycle |

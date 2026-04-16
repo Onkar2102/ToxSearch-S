@@ -1,0 +1,37 @@
+{
+  "n_sequential": 7,
+  "n_parallel_2w": 7,
+  "mann_whitney_p": {
+    "wall_s": 0.0005827505827505828,
+    "throughput": 0.0005827505827505828
+  },
+  "holm_p_adj": {
+    "wall_s": 0.0011655011655011655,
+    "throughput": 0.0011655011655011655
+  },
+  "cliffs_delta_sequential_vs_parallel": {
+    "wall_s": 1.0,
+    "throughput": -1.0
+  },
+  "bootstrap_median_diff_parallel_minus_sequential": {
+    "wall_s": {
+      "lo": -21422.69,
+      "hi": -16783.288250000005
+    },
+    "throughput": {
+      "lo": 0.016055864083218678,
+      "hi": 0.01907193567205743
+    }
+  },
+  "bootstrap_cliffs_delta": {
+    "wall_s": {
+      "lo": 1.0,
+      "hi": 1.0
+    },
+    "throughput": {
+      "lo": -1.0,
+      "hi": -1.0
+    }
+  },
+  "note": "Positive Cliff's delta means sequential tends to be larger than parallel for that metric."
+}

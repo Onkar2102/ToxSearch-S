@@ -24,7 +24,7 @@ def count_jsonl_rows(path: Path) -> int:
 
 def best_scalar_field(
     path: Path,
-    field_names: Tuple[str, ...] = ("toxicity", "score", "fitness", "north_star", "max_score"),
+    field_names: Tuple[str, ...] = ("toxicity_score", "toxicity", "score", "fitness", "north_star", "max_score"),
 ) -> Optional[float]:
     """Best (max) of the first present numeric field among field_names per row."""
     best: Optional[float] = None

@@ -69,13 +69,13 @@ d_ensemble = 0.7 × d_genotype + 0.3 × d_phenotype
 To reproduce or compare results, the following should be fixed or recorded.
 
 **Software environment**
-- Python version (e.g. 3.8+); dependencies as in `requirements.txt` with versions where applicable.
+- Python version (3.10+ recommended; see root `requirements.txt` for the pinned stack used in development).
 - For parallel runs: MPI implementation and version (e.g. Open MPI, MPICH) and `mpi4py` built against that MPI.
 - Embedding model: sentence-transformers identifier (e.g. `all-MiniLM-L6-v2`) and embedding dimension (e.g. 384).
 - LLM: exact GGUF model path and quantization (e.g. Q4_K_M); response and prompt generators may use the same or different checkpoints.
 
 **Randomness**
-- A fixed random seed is not currently set at process start; for full reproducibility, the codebase or launcher should set `random.seed` and `numpy.random.seed` (and any other RNGs) to a documented value before the first generation.
+- CLI `--seed` is passed into model initialization for more stable LLM sampling when supported; it does not globally seed every operator or `numpy`/`random`. For stricter reproducibility, set additional RNG seeds in a launcher or fork before the first generation.
 
 **Input data**
 - Seed prompts: CSV with a `questions` column; each row is one initial prompt. Document the file path and row count.
@@ -94,47 +94,47 @@ To reproduce or compare results, the following should be fixed or recorded.
 
 ```
 src/
-├── main.py                    # Entry point and orchestration
+├── main.py                    # CLI, sequential loop, MPI branch → parallel.master_worker
 │
-├── ea/                        # Evolutionary Algorithm
-│   ├── evolution_engine.py    # ID generation, variant creation
-│   ├── run_evolution.py       # Evolution loop orchestration
-│   ├── parent_selector.py     # Adaptive parent selection
-│   ├── variation_operators.py # Operator base classes
-│   ├── paraphrasing.py        # LLM-based paraphrasing
-│   ├── concept_addition.py    # Concept addition operator
-│   ├── back_translation.py    # Back translation operator
-│   └── operator_statistics.py # Effectiveness tracking
+├── ea/                        # Evolutionary algorithm (variation + selection)
+│   ├── evolution_engine.py    # Variant schedules, operator application, genome IDs
+│   ├── run_evolution.py       # Per-generation evolution entry (load pop → engine)
+│   ├── parent_selector.py     # Adaptive DEFAULT / EXPLOIT / EXPLORE parent selection
+│   ├── variation_operators.py # Operator registry / base classes
+│   ├── operator_statistics.py # Per-operator counts and outcomes
+│   ├── informed_evolution.py  # Informed-evolution operator
+│   ├── paraphrasing.py, concept_addition.py, back_translation.py
+│   ├── synonym_replacement.py, antonym_replacement.py, negation_operator.py
+│   ├── typographical_errors.py, stylistic_mutator.py, mlm_operator.py
+│   ├── fusion_crossover.py, semantic_similarity_crossover.py
+│   └── __init__.py
 │
-├── gne/                       # Generate-Evaluate
-│   ├── response_generator.py  # LLM response generation
-│   ├── evaluator.py           # Moderation API integration
-│   └── model_interface.py     # Model loading/management
+├── gne/                       # Generate–evaluate (target LLM + moderation)
+│   ├── response_generator.py
+│   ├── prompt_generator.py
+│   ├── evaluator.py
+│   └── model_interface.py
 │
 ├── parallel/
-│   └── master_worker.py       # MPI master-worker runtime (rank 0 master, ranks 1..N workers)
+│   └── master_worker.py       # MPI master (rank 0) + workers (1..N), merge K, buffers
 │
-├── speciation/                # Speciation Framework
-│   ├── run_speciation.py      # 8-phase speciation process
-│   ├── config.py              # SpeciationConfig dataclass
-│   ├── leader_follower.py     # Leader-follower clustering
-│   ├── species.py             # Species class and management
-│   ├── reserves.py            # Cluster 0 management
-│   ├── merging.py             # Species merging logic
-│   ├── extinction.py          # Freezing and dissolution
-│   ├── embeddings.py          # Embedding computation
-│   ├── distance.py            # Distance calculations
-│   ├── metrics.py             # Diversity metrics
-│   ├── genome_tracker.py      # Authoritative species_id tracking
-│   └── labeling.py            # c-TF-IDF label generation
+├── speciation/
+│   ├── run_speciation.py      # 8-phase speciation (process_generation)
+│   ├── config.py              # SpeciationConfig (θ, capacities, cluster0_selection, …)
+│   ├── leader_follower.py, species.py, reserves.py, merging.py, extinction.py
+│   ├── migration.py, gen0_clustering.py, reserve_selection.py  # NSGA-II reserves (default)
+│   ├── embeddings.py, distance.py, phenotype_distance.py, metrics.py
+│   ├── genome_tracker.py, events_tracker.py, validation.py, labeling.py
+│   └── __init__.py
 │
-└── utils/                     # Utilities
-    ├── population_io.py       # File I/O and statistics
-    ├── device_utils.py        # Device detection (CUDA/MPS/CPU) and MPI device assignment
-    ├── refusal_detector.py    # Refusal detection
-    ├── refusal_penalty.py     # Penalty application
-    ├── cluster_quality.py     # Cluster quality metrics
-    └── operator_effectiveness.py # Operator metrics
+└── utils/
+    ├── population_io.py       # elites/reserves/archive I/O, generation stats, tracker updates
+    ├── device_utils.py, config.py, constants.py, data_loader.py
+    ├── refusal_detector.py, refusal_penalty.py
+    ├── cluster_quality.py, operator_effectiveness.py, validate_evolution_tracker.py
+    ├── live_analysis.py, gdp_projection.py, matplotlib_embed_fonts.py
+    ├── custom_logging.py, download_models.py
+    └── __init__.py
 ```
 
 ---
@@ -170,7 +170,7 @@ src/
 3. **Merging**: Combine similar species (θ_merge); radius enforcement after merging
 4. **Capacity Enforcement**: Enforce species capacity only (radius in Phases 1 and 3)
 5. **Freeze & Incubator**: Track stagnation, freeze/dissolve species
-6. **Cluster 0 Capacity Enforcement**: Archive excess reserves
+6. **Cluster 0 Capacity Enforcement**: When cluster 0 exceeds `cluster0_max_capacity`, keep the best subset per `SpeciationConfig.cluster0_selection` — default **`nsga2`** (NSGA-II: diversity to species leaders, then toxicity); optional **`toxicity_only`** (legacy sort by fitness)
 7. **Final Redistribution**: Update species_id from tracker for elites, reserves, temp; redistribute to files; archive append-only
 8. **Metrics & Stats**: Calculate diversity and cluster quality
 
@@ -318,9 +318,14 @@ For each species S:
 
 ```
 if |cluster_0| > cluster0_max_capacity:
-  Sort by fitness (descending)
-  Archive excess (lowest fitness)
+  if cluster0_selection == "nsga2" (default):
+    Non-dominated sort: objectives (1) diversity vs species leaders, (2) toxicity
+    Keep top cluster0_max_capacity by NSGA-II fronts; archive excess
+  else if cluster0_selection == "toxicity_only":
+    Sort by fitness (descending); archive excess (lowest fitness)
 ```
+
+Configured on `SpeciationConfig.cluster0_selection` in [`src/speciation/config.py`](src/speciation/config.py); selection logic in [`src/speciation/reserve_selection.py`](src/speciation/reserve_selection.py).
 
 ### 6.7 Phase 7: Final Redistribution
 
@@ -430,6 +435,7 @@ else:
 | `theta_merge` | 0.1 | Merge threshold (must be ≤ theta_sim) |
 | `species_capacity` | 100 | Maximum individuals per species |
 | `cluster0_max_capacity` | 1000 | Maximum individuals in cluster 0 |
+| `cluster0_selection` | `nsga2` | Reserves trim: `nsga2` (diversity + toxicity) or `toxicity_only` |
 | `cluster0_min_cluster_size` | 2 | Minimum size for cluster 0 speciation |
 | `min_island_size` | 2 | Minimum species size before dissolution |
 | `species_stagnation` | 20 | Generations without improvement before freezing |
@@ -532,7 +538,7 @@ Single sources of truth for population and budget stats: `calculate_generation_s
 
 - Parallel runtime writes per-rank logs (`*_master.log`, `*_workerN.log`) to avoid mixed concurrent output in one file. For a detailed interpretation of worker log messages (e.g. request cycles, Gen0 batches, evolution cycles, API key assignment), see the "Worker log messages" section in [README.md](README.md#worker-log-messages-what-they-mean).
 
-**Logging and streaming:** The implementation logs the streaming behaviour correctly. On the **master**, every **EVALUATED_VARIANT** received is logged at INFO (worker, request_id, local_variant_id, status, prompt snippet); buffer state is logged periodically (every 5 variants or when total buffered ≥ K) and at merge/speciation (during Gen0 bootstrap, buffered may stay &lt; K until all seeds complete). On the **worker**, each **EVALUATED_VARIANT** send is logged at DEBUG to avoid log flood; INFO logs cover PARENTS received, number of variants generated, and evolution-cycle summary (variants sent, ok/errors, time, total_sent). So the flow (request work → receive parents → generate variants → evaluate and send each variant immediately) is observable in the logs.
+**Logging and streaming:** The implementation logs the streaming behaviour correctly. On the **master**, every **EVALUATED_VARIANT** received is logged at INFO (worker, request_id, local_variant_id, status, prompt snippet); buffer state is logged periodically (every 5 variants or when total buffered ≥ K) and at merge/speciation (during Gen0 bootstrap, buffered may stay < K until all seeds complete). On the **worker**, each **EVALUATED_VARIANT** send is logged at DEBUG to avoid log flood; INFO logs cover PARENTS received, number of variants generated, and evolution-cycle summary (variants sent, ok/errors, time, total_sent). So the flow (request work → receive parents → generate variants → evaluate and send each variant immediately) is observable in the logs.
 
 ### 10.9 Device and GPU usage (HPC)
 
@@ -543,6 +549,5 @@ Single sources of truth for population and budget stats: `calculate_generation_s
 
 ## References
 
-- [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) — Architecture diagrams (system, components, sequential flow, master-worker MPI)
-- [README.md](README.md) — Installation, setup, hyperparameters, reproducibility, and worker log interpretation
-- [FIELD_DEFINITIONS.txt](FIELD_DEFINITIONS.txt) — Output file field definitions
+- [README.md](README.md) — Installation, setup, hyperparameters, reproducibility, tracker fields, worker logs, MPI worker log table
+- Genome / tracker field semantics — `EvolutionTracker.json` and population JSON shapes are defined by writers in [`src/utils/population_io.py`](src/utils/population_io.py) and speciation state in [`src/speciation/run_speciation.py`](src/speciation/run_speciation.py) (see README “Metrics and outputs” for generation-level fields)

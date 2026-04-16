@@ -1,7 +1,9 @@
 # 🌈 RainbowPlus
 
+This tree is a **vendored fork** inside the parent **ToxSearch-S** repository: paths below are relative to **`rainbowplus-main/`** (run `pip install -e .` from this directory). Comparison and reproduction notes for joint experiments are at the repo root (`README.md`, `ARCHITECTURE.md`, `experiments/EXPERIMENT_PLAN.md`).
+
 ## 📋 Overview
-This repository contains the implementation of the methods described in our research paper **"[RainbowPlus: Enhancing Adversarial Prompt Generation via Evolutionary Quality-Diversity Search](https://arxiv.org/abs/2504.15047)"**. Building upon the foundational insights of Rainbow Teaming and the MAP-Elites algorithm, **RainbowPlus** introduces key enhancements to the evolutionary quality-diversity (QD) paradigm. 
+This package implements the methods described in **"[RainbowPlus: Enhancing Adversarial Prompt Generation via Evolutionary Quality-Diversity Search](https://arxiv.org/abs/2504.15047)"**. Building upon the foundational insights of Rainbow Teaming and the MAP-Elites algorithm, **RainbowPlus** introduces key enhancements to the evolutionary quality-diversity (QD) paradigm. 
 
 Specifically, **RainbowPlus** reimagines the archive as a dynamic, multi-individual container that stores diverse high-fitness prompts per cell, analogous to maintaining a population of elite solutions across behavioral niches. This enriched archive enables a broader evolutionary exploration of adversarial strategies. 
 
@@ -46,6 +48,7 @@ Furthermore, **RainbowPlus** employs a comprehensive fitness function that evalu
 │   ├── rainbowplus.py        # Main implementation
 │   └── utils.py              # Utility functions
 │
+├── sbatch_rainbowplus.sh     # Slurm array launcher (used from ToxSearch-S `experiments/EXPERIMENT_PLAN.md`)
 ├── sh/                       # Shell scripts
 │   └── run.sh                # All-in-one execution script
 │
