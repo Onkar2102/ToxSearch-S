@@ -6,7 +6,11 @@ Writes:
   experiments/comparison_results/c2_ppsn2026_seq_vs_2w/
     run_manifest.csv, metrics_per_run.csv, execution_throughput_table.csv,
     stats_summary.json, stats_table.csv
-    figures/wall_time_from0.pdf, throughput_per_execution.pdf
+    figures/throughput_wall_vs_evaluated_genomes.pdf (two panels: wall time left, throughput right;
+      LNCS/PPSN: width = Springer text width ~122 mm; x-axis 0--1000, major ticks every 200 genomes, no grid)
+    figures/best_so_far_vs_wall_time.pdf (median + IQR vs cumulative wall time; no grid; vertical tick
+      where each median reaches its final plateau)
+    figures/toxicity_diversity_vs_evaluated_genomes.pdf (2x2: top inter/intra diversity; bottom toxicity + species; x ticks every 200)
 
 execution_throughput_table.csv: per run, total_genomes (sum of per-generation integrated
 counts in EvolutionTracker) / run_metadata.run_duration_seconds.
@@ -125,6 +129,25 @@ def stepwise_at(xs: Sequence[float], ys: Sequence[float], xq: float) -> float:
     return cur
 
 
+def cumulative_wall_linear_at(xs: Sequence[float], ys: Sequence[float], g: float) -> float:
+    """Piecewise-linear cumulative wall time (s) at cumulative evaluated genomes g."""
+    if g <= 0:
+        return 0.0
+    xsa = np.asarray(xs, dtype=float)
+    ysa = np.asarray(ys, dtype=float)
+    if xsa.size < 2:
+        return 0.0
+    if g >= float(xsa[-1]):
+        return float(ysa[-1])
+    j = int(np.searchsorted(xsa, g, side="right"))
+    j = max(1, min(j, xsa.size - 1))
+    x0, x1 = float(xsa[j - 1]), float(xsa[j])
+    y0, y1 = float(ysa[j - 1]), float(ysa[j])
+    if x1 <= x0:
+        return y1
+    return y0 + (g - x0) * (y1 - y0) / (x1 - x0)
+
+
 def cumulative_wall_vs_evaluations(tracker: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray]:
     """
     Cumulative wall-clock time (sum of generation_duration_seconds) vs cumulative evaluated genomes.
@@ -146,6 +169,49 @@ def cumulative_wall_vs_evaluations(tracker: Dict[str, Any]) -> Tuple[np.ndarray,
         xe.append(xe[-1] + max(0.0, ev))
         yw.append(yw[-1] + wall)
     return np.asarray(xe, dtype=float), np.asarray(yw, dtype=float)
+
+
+def speciation_metric_from_generation(gen: Dict[str, Any], key: str) -> Optional[float]:
+    """Read a numeric field from generation['speciation'], if present."""
+    sp = gen.get("speciation")
+    if not isinstance(sp, dict):
+        return None
+    v = sp.get(key)
+    if v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    if math.isnan(f):
+        return None
+    return f
+
+
+def cumulative_speciation_metric_vs_evaluations(
+    tracker: Dict[str, Any],
+    spec_key: str,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Cumulative evaluated genomes vs end-of-generation speciation metric (stepwise held).
+    Same x-axis construction as cumulative_best_vs_evaluations; y carries the last observed
+    value for spec_key after each generation (missing generations repeat the previous value).
+    """
+    gens = sorted(tracker.get("generations") or [], key=lambda g: int(g.get("generation_number", 0) or 0))
+    xe = [0.0]
+    yv = [float("nan")]
+    last: Optional[float] = None
+    for g in gens:
+        ev = g.get("evaluated_this_generation")
+        if ev is None:
+            ev = population_integrated_count(g)
+        ev = float(ev) if isinstance(ev, (int, float)) else 0.0
+        raw = speciation_metric_from_generation(g, spec_key)
+        if raw is not None:
+            last = raw
+        xe.append(xe[-1] + max(0.0, ev))
+        yv.append(last if last is not None else float("nan"))
+    return np.asarray(xe, dtype=float), np.asarray(yv, dtype=float)
 
 
 def cumulative_best_vs_evaluations(tracker: Dict[str, Any]) -> Tuple[np.ndarray, np.ndarray]:
@@ -419,153 +485,170 @@ def collect_metrics(runs_by_mode: Dict[str, List[Tuple[str, Path]]]) -> List[Run
     return rows
 
 
-def plot_throughput_per_execution(rows: Sequence["RunRow"], out_path: Path) -> None:
-    """
-    Per-execution dot plot (no pairing implied).
-    Shows genomes/s for each execution index, split by mode.
-    """
-    seq = sorted([r for r in rows if r.mode == "sequential"], key=lambda r: r.run_id)
-    par2 = sorted([r for r in rows if r.mode == "parallel_2w"], key=lambda r: r.run_id)
-    par4 = sorted([r for r in rows if r.mode == "parallel_4w"], key=lambda r: r.run_id)
-
-    n = max(len(seq), len(par2), len(par4))
-    y = np.arange(1, n + 1, dtype=float)
-    ylabels = [f"#{i}" for i in range(1, n + 1)]
-
-    # Narrow width so the small throughput range is not stretched across a wide figure.
-    plt.figure(figsize=(2.6, 4.2), constrained_layout=True)
-    ax = plt.gca()
-
-    # Small vertical dodge so series don't overlap.
-    dodge = 0.16
-    c_seq = "#1f77b4"
-    c_par2 = "#ff7f0e"
-    c_par4 = "#2ca02c"
-
-    if seq:
-        x_seq = np.asarray([r.throughput for r in seq], dtype=float)
-        ax.scatter(
-            x_seq,
-            y[: len(x_seq)] - dodge,
-            s=48,
-            c=c_seq,
-            alpha=0.95,
-            edgecolors="white",
-            linewidths=0.7,
-            zorder=3,
-            label="Sequential",
-        )
-    if par2:
-        x_par = np.asarray([r.throughput for r in par2], dtype=float)
-        ax.scatter(
-            x_par,
-            y[: len(x_par)] + 0.0,
-            s=48,
-            c=c_par2,
-            alpha=0.95,
-            edgecolors="white",
-            linewidths=0.7,
-            zorder=3,
-            label="Parallel (2w)",
-        )
-    if par4:
-        x_par = np.asarray([r.throughput for r in par4], dtype=float)
-        ax.scatter(
-            x_par,
-            y[: len(x_par)] + dodge,
-            s=48,
-            c=c_par4,
-            alpha=0.95,
-            edgecolors="white",
-            linewidths=0.7,
-            zorder=3,
-            label="Parallel (4w)",
-        )
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(ylabels)
-    ax.set_xlabel("Throughput")
-    ax.set_ylabel("Execution IDs")
-    ax.grid(True, axis="x", alpha=0.35)
-
-    ax.set_xlim(0.0, 0.08)
-    ax.set_xticks([0.0, 0.02, 0.04, 0.06, 0.08])
-    ax.set_xticklabels(["0.00", "0.02", "0.04", "0.06", "0.08"])
-    ax.set_ylim(0.5, n + 0.5)
-    ax.legend(frameon=False, loc="lower right", fontsize=7.5)
-
-    plt.savefig(out_path, format="pdf")
-    plt.close()
-
-
-def plot_wall_vs_evaluated_genomes_from0_median_iqr(
+def plot_throughput_wall_vs_evaluated_genomes_panels(
     dirs_by_mode: Dict[str, List[Path]],
     out_path: Path,
-    milestones: Sequence[int] = tuple(range(0, 1100, 100)),
+    wall_milestones: Sequence[int] = tuple(range(0, 1100, 100)),
+    throughput_milestones: Sequence[int] = tuple(range(100, 1025, 25)),
 ) -> None:
     """
-    Cumulative wall time (s) vs cumulative evaluated genomes: median + IQR per mode,
-    using a zero-friendly y scale (symlog) so the curve starts at (0, 0).
+    Single figure, two panels: cumulative wall time (left) and cumulative throughput (right)
+    vs evaluated genomes. Both axes span 0--1000 with major ticks every 200 genomes (no grid).
+    Throughput curve uses 25-genome milestones from 100--1000; wall time uses 100-genome steps from 0.
+    Per mode: mean across runs with min--max band; solid lines only (no markers). Legend on the
+    throughput panel (upper right), labels match the toxicity--diversity figure: Sequential,
+    Parallel (2w), Parallel (4w).
+    Figure size matches Springer LNCS full text width (~122 mm) for PPSN-style papers.
     """
-    def series_for_run(run_dir: Path) -> List[float]:
+    def wall_series_for_run(run_dir: Path) -> List[float]:
         t = load_json(run_dir / "EvolutionTracker.json")
         xe, yw = cumulative_wall_vs_evaluations(t)
         pairs = sorted(zip(xe.tolist(), yw.tolist()), key=lambda z: float(z[0]))
         xs2 = [float(p[0]) for p in pairs]
         ys2 = [float(p[1]) for p in pairs]
-        return [stepwise_at(xs2, ys2, float(m)) for m in milestones]
+        return [stepwise_at(xs2, ys2, float(m)) for m in wall_milestones]
 
-    s_rows = [series_for_run(d) for d in dirs_by_mode.get("sequential", [])]
-    p2_rows = [series_for_run(d) for d in dirs_by_mode.get("parallel_2w", [])]
-    p4_rows = [series_for_run(d) for d in dirs_by_mode.get("parallel_4w", [])]
-    if not s_rows or not p2_rows or not p4_rows:
+    def throughput_series_for_run(run_dir: Path) -> List[float]:
+        t = load_json(run_dir / "EvolutionTracker.json")
+        xe, yw = cumulative_wall_vs_evaluations(t)
+        pairs = sorted(zip(xe.tolist(), yw.tolist()), key=lambda z: float(z[0]))
+        xs2 = [float(p[0]) for p in pairs]
+        ys2 = [float(p[1]) for p in pairs]
+        out: List[float] = []
+        for m in throughput_milestones:
+            w = cumulative_wall_linear_at(xs2, ys2, float(m))
+            if m > 0 and w > 1e-9:
+                out.append(m / w)
+            else:
+                out.append(float("nan"))
+        return out
+
+    s_w = [wall_series_for_run(d) for d in dirs_by_mode.get("sequential", [])]
+    p2_w = [wall_series_for_run(d) for d in dirs_by_mode.get("parallel_2w", [])]
+    p4_w = [wall_series_for_run(d) for d in dirs_by_mode.get("parallel_4w", [])]
+    s_t = [throughput_series_for_run(d) for d in dirs_by_mode.get("sequential", [])]
+    p2_t = [throughput_series_for_run(d) for d in dirs_by_mode.get("parallel_2w", [])]
+    p4_t = [throughput_series_for_run(d) for d in dirs_by_mode.get("parallel_4w", [])]
+    if not s_w or not p2_w or not p4_w or not s_t or not p2_t or not p4_t:
         return
 
-    S = np.asarray(s_rows, dtype=float)
-    P2 = np.asarray(p2_rows, dtype=float)
-    P4 = np.asarray(p4_rows, dtype=float)
-    med_s = np.median(S, axis=0)
-    med_p2 = np.median(P2, axis=0)
-    med_p4 = np.median(P4, axis=0)
-    q1_s, q3_s = np.quantile(S, 0.25, axis=0), np.quantile(S, 0.75, axis=0)
-    q1_p2, q3_p2 = np.quantile(P2, 0.25, axis=0), np.quantile(P2, 0.75, axis=0)
-    q1_p4, q3_p4 = np.quantile(P4, 0.25, axis=0), np.quantile(P4, 0.75, axis=0)
+    Sw = np.asarray(s_w, dtype=float)
+    P2w = np.asarray(p2_w, dtype=float)
+    P4w = np.asarray(p4_w, dtype=float)
+    xw = np.asarray(list(wall_milestones), dtype=float)
+    mean_sw = np.nanmean(Sw, axis=0)
+    mean_p2w = np.nanmean(P2w, axis=0)
+    mean_p4w = np.nanmean(P4w, axis=0)
+    min_sw, max_sw = np.nanmin(Sw, axis=0), np.nanmax(Sw, axis=0)
+    min_p2w, max_p2w = np.nanmin(P2w, axis=0), np.nanmax(P2w, axis=0)
+    min_p4w, max_p4w = np.nanmin(P4w, axis=0), np.nanmax(P4w, axis=0)
 
-    x = np.asarray(list(milestones), dtype=float)
+    St = np.asarray(s_t, dtype=float)
+    P2t = np.asarray(p2_t, dtype=float)
+    P4t = np.asarray(p4_t, dtype=float)
+    xt = np.asarray(list(throughput_milestones), dtype=float)
+    mean_st = np.nanmean(St, axis=0)
+    mean_p2t = np.nanmean(P2t, axis=0)
+    mean_p4t = np.nanmean(P4t, axis=0)
+    min_st, max_st = np.nanmin(St, axis=0), np.nanmax(St, axis=0)
+    min_p2t, max_p2t = np.nanmin(P2t, axis=0), np.nanmax(P2t, axis=0)
+    min_p4t, max_p4t = np.nanmin(P4t, axis=0), np.nanmax(P4t, axis=0)
 
-    plt.figure(figsize=(7.0, 4.2))
-    ax = plt.gca()
-    plt.plot(x, med_s, linewidth=2.5, label="Sequential", color="#1f77b4")
-    plt.fill_between(x, q1_s, q3_s, alpha=0.2, color="#1f77b4")
-    plt.plot(x, med_p2, linewidth=2.5, label="Parallel (2w)", color="#ff7f0e")
-    plt.fill_between(x, q1_p2, q3_p2, alpha=0.2, color="#ff7f0e")
-    plt.plot(x, med_p4, linewidth=2.5, label="Parallel (4w)", color="#2ca02c")
-    plt.fill_between(x, q1_p4, q3_p4, alpha=0.2, color="#2ca02c")
+    series_cfg: List[
+        Tuple[str, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, str]
+    ] = [
+        ("Sequential", mean_st, min_st, max_st, mean_sw, min_sw, max_sw, "#1f77b4"),
+        ("Parallel (2w)", mean_p2t, min_p2t, max_p2t, mean_p2w, min_p2w, max_p2w, "#ff7f0e"),
+        ("Parallel (4w)", mean_p4t, min_p4t, max_p4t, mean_p4w, min_p4w, max_p4w, "#2ca02c"),
+    ]
 
-    # symlog: supports 0 while still compressing the large tail like log.
-    ax.set_yscale("symlog", linthresh=1.0, linscale=1.0, base=10)
-    plt.xlabel("Evaluated genomes")
-    plt.ylabel("Wall-clock time (s)")
-    plt.xlim(0, 1000)
-    plt.xticks(list(range(0, 1100, 100)))
-    plt.ylim(bottom=0.0)
-    plt.grid(True, which="major", alpha=0.35)
-    plt.legend(frameon=False)
-    plt.tight_layout()
-    plt.savefig(out_path, format="pdf")
-    plt.close()
+    # Springer LNCS (llncs.cls): \textwidth ≈ 122 mm — use that as figure width for \linewidth inclusion.
+    _ln_mm = 122.0
+    fig_w_in = _ln_mm / 25.4
+    fig_h_in = fig_w_in * 0.48
+    fig, (ax_wall, ax_thr) = plt.subplots(
+        1,
+        2,
+        figsize=(fig_w_in, fig_h_in),
+        sharey=False,
+        constrained_layout=False,
+    )
+
+    for label, mnt, lot, hit, mnw, low, hiw, color in series_cfg:
+        ax_wall.fill_between(xw, low, hiw, color=color, alpha=0.22, linewidth=0.0, zorder=1)
+        ax_wall.plot(
+            xw,
+            mnw,
+            color=color,
+            linestyle="-",
+            linewidth=1.35,
+            zorder=3,
+        )
+        ax_thr.fill_between(xt, lot, hit, color=color, alpha=0.22, linewidth=0.0, zorder=1)
+        ax_thr.plot(
+            xt,
+            mnt,
+            color=color,
+            linestyle="-",
+            linewidth=1.35,
+            label=label,
+            zorder=3,
+        )
+
+    x_ticks_major = list(range(0, 1001, 200))
+    x_lim = (0.0, 1000.0)
+
+    ax_wall.set_xlabel("Evaluated genomes", fontsize=7.5)
+    ax_wall.set_ylabel("Wall-clock time (s)", fontsize=7.5)
+    ax_wall.set_xlim(*x_lim)
+    ax_wall.set_xticks(x_ticks_major)
+    ymax_w = float(np.nanmax(np.concatenate([max_sw, max_p2w, max_p4w, mean_sw, mean_p2w, mean_p4w])))
+    ax_wall.set_ylim(0.0, ymax_w * 1.05 if np.isfinite(ymax_w) and ymax_w > 0 else 1.0)
+    ax_wall.tick_params(axis="both", which="major", labelsize=6.75, length=3.6, width=0.8)
+    ax_wall.yaxis.get_offset_text().set_fontsize(6.75)
+    ax_wall.minorticks_off()
+
+    ax_thr.set_xlabel("Evaluated genomes", fontsize=7.5)
+    ax_thr.set_ylabel("Throughput (genomes / s)", fontsize=7.5)
+    ax_thr.set_xlim(*x_lim)
+    ax_thr.set_xticks(x_ticks_major)
+    ymax_t = float(np.nanmax(np.concatenate([max_st, max_p2t, max_p4t, mean_st, mean_p2t, mean_p4t])))
+    ax_thr.set_ylim(0.0, ymax_t * 1.06 if np.isfinite(ymax_t) and ymax_t > 0 else 0.1)
+    ax_thr.tick_params(axis="both", which="major", labelsize=6.75, length=3.6, width=0.8)
+    ax_thr.yaxis.get_offset_text().set_fontsize(6.75)
+    ax_thr.minorticks_off()
+
+    leg = ax_thr.legend(
+        frameon=False,
+        fontsize=6.25,
+        loc="upper right",
+        bbox_to_anchor=(1.0, 1.0),
+        bbox_transform=ax_thr.transAxes,
+        borderaxespad=0.08,
+        handlelength=2.0,
+        labelspacing=0.3,
+    )
+    for leg_line in leg.get_lines():
+        leg_line.set_linewidth(1.0)
+
+    fig.subplots_adjust(left=0.12, right=0.99, top=0.96, bottom=0.16, wspace=0.42)
+    fig.savefig(out_path, format="pdf", dpi=300)
+    plt.close(fig)
 
 
-def plot_best_vs_evaluated_genomes_median_iqr(
+def plot_toxicity_diversity_vs_evaluated_genomes(
     dirs_by_mode: Dict[str, List[Path]],
     out_path: Path,
     milestones: Sequence[int] = tuple(range(0, 1100, 100)),
+    diversity_milestones: Sequence[int] = tuple(range(100, 1100, 100)),
 ) -> None:
     """
-    Cumulative best fitness/toxicity vs evaluated genomes: median + IQR per mode.
+    Four-panel 2x2 grid (LNCS text width): row 1---inter- and intra-species diversity (legend
+    on intra, upper right); row 2---best-so-far toxicity and species count. All panels use
+    x in [0,1000] with major ticks every 200 genomes; diversity curves still sampled every
+    100 genomes from the tracker.
     """
-
-    def series_for_run(run_dir: Path) -> List[float]:
+    def toxicity_series(run_dir: Path) -> List[float]:
         t = load_json(run_dir / "EvolutionTracker.json")
         xe, yb = cumulative_best_vs_evaluations(t)
         pairs = sorted(zip(xe.tolist(), yb.tolist()), key=lambda z: float(z[0]))
@@ -573,38 +656,165 @@ def plot_best_vs_evaluated_genomes_median_iqr(
         ys2 = [float(p[1]) for p in pairs]
         return [stepwise_at(xs2, ys2, float(m)) for m in milestones]
 
-    rows_s = [series_for_run(d) for d in dirs_by_mode.get("sequential", [])]
-    rows_p2 = [series_for_run(d) for d in dirs_by_mode.get("parallel_2w", [])]
-    rows_p4 = [series_for_run(d) for d in dirs_by_mode.get("parallel_4w", [])]
-    if not rows_s or not rows_p2 or not rows_p4:
+    def diversity_series(run_dir: Path, spec_key: str) -> List[float]:
+        t = load_json(run_dir / "EvolutionTracker.json")
+        xe, yv = cumulative_speciation_metric_vs_evaluations(t, spec_key)
+        pairs = sorted(zip(xe.tolist(), yv.tolist()), key=lambda z: float(z[0]))
+        xs2 = [float(p[0]) for p in pairs]
+        ys_raw = [float(p[1]) for p in pairs]
+        ys2: List[float] = []
+        carry = float("nan")
+        for y in ys_raw:
+            if math.isfinite(y):
+                carry = y
+            ys2.append(carry)
+        return [stepwise_at(xs2, ys2, float(m)) for m in diversity_milestones]
+
+    def collect_matrix(mode_key: str, fn, n_m: int) -> np.ndarray:
+        rows = [fn(d) for d in dirs_by_mode.get(mode_key, [])]
+        return np.asarray(rows, dtype=float) if rows else np.zeros((0, n_m))
+
+    S = collect_matrix("sequential", toxicity_series, len(milestones))
+    P2 = collect_matrix("parallel_2w", toxicity_series, len(milestones))
+    P4 = collect_matrix("parallel_4w", toxicity_series, len(milestones))
+    if S.size == 0 or P2.size == 0 or P4.size == 0:
         return
 
-    S = np.asarray(rows_s, dtype=float)
-    P2 = np.asarray(rows_p2, dtype=float)
-    P4 = np.asarray(rows_p4, dtype=float)
-
     x = np.asarray(list(milestones), dtype=float)
-    med_s, q1_s, q3_s = np.median(S, axis=0), np.quantile(S, 0.25, axis=0), np.quantile(S, 0.75, axis=0)
-    med_p2, q1_p2, q3_p2 = np.median(P2, axis=0), np.quantile(P2, 0.25, axis=0), np.quantile(P2, 0.75, axis=0)
-    med_p4, q1_p4, q3_p4 = np.median(P4, axis=0), np.quantile(P4, 0.25, axis=0), np.quantile(P4, 0.75, axis=0)
+    x_div = np.asarray(list(diversity_milestones), dtype=float)
 
-    plt.figure(figsize=(7.0, 4.2))
-    plt.plot(x, med_s, linewidth=2.5, label="Sequential", color="#1f77b4")
-    plt.fill_between(x, q1_s, q3_s, alpha=0.2, color="#1f77b4")
-    plt.plot(x, med_p2, linewidth=2.5, label="Parallel (2w)", color="#ff7f0e")
-    plt.fill_between(x, q1_p2, q3_p2, alpha=0.2, color="#ff7f0e")
-    plt.plot(x, med_p4, linewidth=2.5, label="Parallel (4w)", color="#2ca02c")
-    plt.fill_between(x, q1_p4, q3_p4, alpha=0.2, color="#2ca02c")
-    plt.xlabel("Evaluated genomes")
-    plt.ylabel("Best-so-far toxicity (Perspective)")
-    plt.xlim(0, 1000)
-    plt.xticks(list(range(0, 1100, 100)))
-    plt.ylim(bottom=0.0)
-    plt.grid(True, which="major", alpha=0.35)
-    plt.legend(frameon=False)
-    plt.tight_layout()
-    plt.savefig(out_path, format="pdf")
-    plt.close()
+    def med_iqr(M: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        return (
+            np.nanmedian(M, axis=0),
+            np.nanquantile(M, 0.25, axis=0),
+            np.nanquantile(M, 0.75, axis=0),
+        )
+
+    med_s, q1_s, q3_s = med_iqr(S)
+    med_p2, q1_p2, q3_p2 = med_iqr(P2)
+    med_p4, q1_p4, q3_p4 = med_iqr(P4)
+
+    _ln_mm = 122.0
+    fig_w = _ln_mm / 25.4
+    fig_h = fig_w * 0.98
+    fig, axes = plt.subplots(2, 2, figsize=(fig_w, fig_h), squeeze=False)
+    # Top: diversity trajectories; bottom: toxicity + species count.
+    ax_inter = axes[0, 0]
+    ax_intra = axes[0, 1]
+    ax_tox = axes[1, 0]
+    ax_sp = axes[1, 1]
+
+    x_ticks_200 = list(range(0, 1001, 200))
+
+    def plot_diversity_ax(
+        dax: Any,
+        spec_key: str,
+        ylab: str,
+        *,
+        hide_xticklabels: bool,
+        set_xlabel: bool,
+        add_legend: bool,
+    ) -> None:
+        n_div = len(diversity_milestones)
+        Sd = collect_matrix("sequential", lambda rd, k=spec_key: diversity_series(rd, k), n_div)
+        P2d = collect_matrix("parallel_2w", lambda rd, k=spec_key: diversity_series(rd, k), n_div)
+        P4d = collect_matrix("parallel_4w", lambda rd, k=spec_key: diversity_series(rd, k), n_div)
+        if Sd.size == 0 or P2d.size == 0 or P4d.size == 0:
+            return
+        m1, a1, b1 = med_iqr(Sd)
+        m2, a2, b2 = med_iqr(P2d)
+        m3, a3, b3 = med_iqr(P4d)
+        kw1: Dict[str, Any] = {"linewidth": 1.35, "color": "#1f77b4"}
+        kw2: Dict[str, Any] = {"linewidth": 1.35, "color": "#ff7f0e"}
+        kw3: Dict[str, Any] = {"linewidth": 1.35, "color": "#2ca02c"}
+        if add_legend:
+            kw1["label"] = "Sequential"
+            kw2["label"] = "Parallel (2w)"
+            kw3["label"] = "Parallel (4w)"
+        dax.plot(x_div, m1, **kw1)
+        dax.fill_between(x_div, a1, b1, alpha=0.2, color="#1f77b4", linewidth=0)
+        dax.plot(x_div, m2, **kw2)
+        dax.fill_between(x_div, a2, b2, alpha=0.2, color="#ff7f0e", linewidth=0)
+        dax.plot(x_div, m3, **kw3)
+        dax.fill_between(x_div, a3, b3, alpha=0.2, color="#2ca02c", linewidth=0)
+        dax.set_ylabel(ylab, fontsize=7.5)
+        dax.set_xlim(0.0, 1000.0)
+        dax.set_xticks(x_ticks_200)
+        dax.tick_params(axis="both", which="major", labelsize=6.75)
+        dax.minorticks_off()
+        if hide_xticklabels:
+            plt.setp(dax.get_xticklabels(), visible=False)
+        if set_xlabel:
+            dax.set_xlabel("Evaluated genomes", fontsize=7.5)
+        if add_legend:
+            leg = dax.legend(
+                frameon=False,
+                fontsize=6.25,
+                loc="upper right",
+                bbox_to_anchor=(1.0, 1.0),
+                bbox_transform=dax.transAxes,
+                borderaxespad=0.08,
+                handlelength=2.0,
+                labelspacing=0.3,
+            )
+            for leg_line in leg.get_lines():
+                leg_line.set_linewidth(1.0)
+
+    plot_diversity_ax(
+        ax_inter,
+        "inter_species_diversity",
+        "Inter-species diversity",
+        hide_xticklabels=True,
+        set_xlabel=False,
+        add_legend=False,
+    )
+    plot_diversity_ax(
+        ax_intra,
+        "intra_species_diversity",
+        "Intra-species diversity",
+        hide_xticklabels=True,
+        set_xlabel=False,
+        add_legend=True,
+    )
+
+    ax_tox.plot(x, med_s, linewidth=1.35, color="#1f77b4")
+    ax_tox.fill_between(x, q1_s, q3_s, alpha=0.2, color="#1f77b4", linewidth=0)
+    ax_tox.plot(x, med_p2, linewidth=1.35, color="#ff7f0e")
+    ax_tox.fill_between(x, q1_p2, q3_p2, alpha=0.2, color="#ff7f0e", linewidth=0)
+    ax_tox.plot(x, med_p4, linewidth=1.35, color="#2ca02c")
+    ax_tox.fill_between(x, q1_p4, q3_p4, alpha=0.2, color="#2ca02c", linewidth=0)
+    ax_tox.set_ylabel("Best-so-far toxicity", fontsize=7.5)
+    ax_tox.set_xlim(0, 1000)
+    ax_tox.set_xticks(x_ticks_200)
+    ax_tox.set_ylim(bottom=0.0)
+    ax_tox.tick_params(axis="both", which="major", labelsize=6.75)
+    ax_tox.minorticks_off()
+    ax_tox.set_xlabel("Evaluated genomes", fontsize=7.5)
+
+    plot_diversity_ax(
+        ax_sp,
+        "species_count",
+        "Species count",
+        hide_xticklabels=False,
+        set_xlabel=True,
+        add_legend=False,
+    )
+
+    fig.subplots_adjust(left=0.10, right=0.98, top=0.96, bottom=0.14, hspace=0.35, wspace=0.36)
+    fig.savefig(out_path, format="pdf", dpi=300)
+    plt.close(fig)
+
+
+def _plateau_onset_index(y: np.ndarray, *, rtol: float = 1e-9, atol: float = 1e-12) -> Optional[int]:
+    """Smallest i > 0 such that y[i:] is flat at the terminal value; None if not applicable."""
+    yf = np.asarray(y, dtype=float)
+    if yf.size < 2:
+        return None
+    tail = float(yf[-1])
+    for i in range(yf.size):
+        if bool(np.all(np.isclose(yf[i:], tail, rtol=rtol, atol=atol))):
+            return int(i) if i > 0 else None
+    return None
 
 
 def plot_best_vs_wall_time_median_iqr(
@@ -613,7 +823,9 @@ def plot_best_vs_wall_time_median_iqr(
     milestones_s: Sequence[int] = (0, 3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000, 30000, 36000, 42000, 48000),
 ) -> None:
     """
-    Cumulative best fitness/toxicity vs cumulative wall time (s): median + IQR per mode.
+    Cumulative best-so-far toxicity vs cumulative wall time (s): median + IQR per mode.
+    LNCS text width, no grid, typography aligned with other C2 figures; dashed vertical line
+    at the first wall-time milestone where the median has reached its final (flat) value.
     """
 
     def series_for_run(run_dir: Path) -> List[float]:
@@ -651,121 +863,54 @@ def plot_best_vs_wall_time_median_iqr(
     med_p2, q1_p2, q3_p2 = np.median(P2, axis=0), np.quantile(P2, 0.25, axis=0), np.quantile(P2, 0.75, axis=0)
     med_p4, q1_p4, q3_p4 = np.median(P4, axis=0), np.quantile(P4, 0.25, axis=0), np.quantile(P4, 0.75, axis=0)
 
-    plt.figure(figsize=(7.0, 4.2))
-    plt.plot(x, med_s, linewidth=2.5, label="Sequential", color="#1f77b4")
-    plt.fill_between(x, q1_s, q3_s, alpha=0.2, color="#1f77b4")
-    plt.plot(x, med_p2, linewidth=2.5, label="Parallel (2w)", color="#ff7f0e")
-    plt.fill_between(x, q1_p2, q3_p2, alpha=0.2, color="#ff7f0e")
-    plt.plot(x, med_p4, linewidth=2.5, label="Parallel (4w)", color="#2ca02c")
-    plt.fill_between(x, q1_p4, q3_p4, alpha=0.2, color="#2ca02c")
-    plt.xlabel("Wall-clock time (s, cumulative)")
-    plt.ylabel("Best-so-far toxicity (Perspective)")
-    plt.xlim(left=0.0)
-    plt.ylim(bottom=0.0)
-    plt.grid(True, which="major", alpha=0.35)
-    plt.legend(frameon=False)
-    plt.tight_layout()
-    plt.savefig(out_path, format="pdf")
-    plt.close()
+    _ln_mm = 122.0
+    fig_w_in = _ln_mm / 25.4
+    fig_h_in = fig_w_in * 0.52
+    fig, ax = plt.subplots(1, 1, figsize=(fig_w_in, fig_h_in))
 
-
-def plot_diversity_outcomes(rows: Sequence["RunRow"], out_path: Path) -> None:
-    """
-    Diversity/speciation outcomes (final generation): raincloud (half-violin + box + points).
-    """
-    modes = ["sequential", "parallel_2w", "parallel_4w"]
-
-    def vals(metric: str, mode: str) -> List[float]:
-        out = []
-        for r in rows:
-            if r.mode != mode:
-                continue
-            v = getattr(r, metric)
-            if v is None:
-                continue
-            out.append(float(v))
-        return out
-
-    metrics = [
-        ("final_species_count", "Final species\ncount"),
-        ("final_inter_species_diversity", "Inter-species\ndiversity"),
-        ("final_intra_species_diversity", "Intra-species\ndiversity"),
+    series_plot: List[Tuple[str, np.ndarray, np.ndarray, np.ndarray, str]] = [
+        ("Sequential", med_s, q1_s, q3_s, "#1f77b4"),
+        ("Parallel (2w)", med_p2, q1_p2, q3_p2, "#ff7f0e"),
+        ("Parallel (4w)", med_p4, q1_p4, q3_p4, "#2ca02c"),
     ]
-    tick = ["S", "2w", "4w"]
-    colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
-
-    def half_violin(ax: Any, data: List[List[float]], positions: List[float]) -> None:
-        vp = ax.violinplot(
-            data,
-            positions=positions,
-            widths=0.86,
-            showmeans=False,
-            showextrema=False,
-            showmedians=False,
-        )
-        for i, body in enumerate(vp["bodies"]):
-            body.set_facecolor(colors[i])
-            body.set_edgecolor("none")
-            body.set_alpha(0.28)
-            # Keep only the left half of the violin.
-            path = body.get_paths()[0]
-            verts = path.vertices
-            c = positions[i]
-            verts[:, 0] = np.minimum(verts[:, 0], c)
-
-    def jittered_points(ax: Any, data: List[List[float]], positions: List[float]) -> None:
-        rng = np.random.default_rng(12345)
-        for i, ys in enumerate(data):
-            if not ys:
-                continue
-            x0 = positions[i]
-            # Jitter points slightly to the right of center (cloud).
-            xs = x0 + 0.12 + rng.uniform(0.0, 0.22, size=len(ys))
-            ax.scatter(
-                xs,
-                ys,
-                s=22,
-                c=colors[i],
-                alpha=0.85,
-                edgecolors="white",
-                linewidths=0.5,
-                zorder=3,
+    for label, med, q1, q3, color in series_plot:
+        ax.fill_between(x, q1, q3, alpha=0.22, color=color, linewidth=0.0, zorder=1)
+        ax.plot(x, med, linewidth=1.35, color=color, label=label, zorder=3)
+        pi = _plateau_onset_index(med)
+        if pi is not None:
+            ax.axvline(
+                float(x[pi]),
+                color=color,
+                linestyle=(0, (4, 3)),
+                linewidth=0.9,
+                alpha=0.55,
+                zorder=2,
             )
 
-    def box_overlay(ax: Any, data: List[List[float]], positions: List[float]) -> None:
-        bp = ax.boxplot(
-            data,
-            positions=positions,
-            widths=0.18,
-            showfliers=False,
-            patch_artist=True,
-            medianprops={"color": "black", "linewidth": 1.3},
-            boxprops={"linewidth": 0.9, "edgecolor": "black"},
-            whiskerprops={"linewidth": 0.9, "color": "black"},
-            capprops={"linewidth": 0.9, "color": "black"},
-        )
-        for i, patch in enumerate(bp["boxes"]):
-            patch.set_facecolor("white")
-            patch.set_alpha(0.9)
+    ax.set_xlabel("Wall-clock time (s, cumulative)", fontsize=7.5)
+    ax.set_ylabel("Best-so-far toxicity", fontsize=7.5)
+    ax.set_xlim(left=0.0)
+    ax.set_ylim(bottom=0.0)
+    ax.tick_params(axis="both", which="major", labelsize=6.75, length=3.6, width=0.8)
+    ax.yaxis.get_offset_text().set_fontsize(6.75)
+    ax.minorticks_off()
 
-    plt.figure(figsize=(8.4, 4.2))
-    for j, (metric, title) in enumerate(metrics, start=1):
-        ax = plt.subplot(1, 3, j)
-        data = [vals(metric, m) for m in modes]
-        pos = [1.0, 2.0, 3.0]
-        half_violin(ax, data, pos)
-        box_overlay(ax, data, pos)
-        jittered_points(ax, data, pos)
+    leg = ax.legend(
+        frameon=False,
+        fontsize=6.25,
+        loc="lower right",
+        bbox_to_anchor=(1.0, 0.0),
+        bbox_transform=ax.transAxes,
+        borderaxespad=0.08,
+        handlelength=2.0,
+        labelspacing=0.3,
+    )
+    for leg_line in leg.get_lines():
+        leg_line.set_linewidth(1.0)
 
-        ax.set_title(title)
-        ax.set_xticks(pos)
-        ax.set_xticklabels(tick)
-        ax.grid(True, axis="y", alpha=0.25)
-        ax.set_xlim(0.5, 3.5)
-
-    plt.tight_layout()
-    plt.savefig(out_path, format="pdf")
-    plt.close()
+    fig.subplots_adjust(left=0.11, right=0.99, top=0.96, bottom=0.16)
+    fig.savefig(out_path, format="pdf", dpi=300)
+    plt.close(fig)
 
 
 def main() -> int:
@@ -1062,22 +1207,21 @@ def main() -> int:
                 )
 
     # Figures
-    plot_wall_vs_evaluated_genomes_from0_median_iqr(
+    plot_throughput_wall_vs_evaluated_genomes_panels(
         {
             "sequential": [p for _, p in seq_runs],
             "parallel_2w": [p for _, p in par_runs],
             "parallel_4w": [p for _, p in par4_runs],
         },
-        FIG / "wall_time_from0.pdf",
+        FIG / "throughput_wall_vs_evaluated_genomes.pdf",
     )
-    plot_throughput_per_execution(rows, FIG / "throughput_per_execution.pdf")
-    plot_best_vs_evaluated_genomes_median_iqr(
+    plot_toxicity_diversity_vs_evaluated_genomes(
         {
             "sequential": [p for _, p in seq_runs],
             "parallel_2w": [p for _, p in par_runs],
             "parallel_4w": [p for _, p in par4_runs],
         },
-        FIG / "best_so_far_vs_evaluated_genomes.pdf",
+        FIG / "toxicity_diversity_vs_evaluated_genomes.pdf",
     )
     plot_best_vs_wall_time_median_iqr(
         {
@@ -1087,8 +1231,6 @@ def main() -> int:
         },
         FIG / "best_so_far_vs_wall_time.pdf",
     )
-    plot_diversity_outcomes(rows, FIG / "diversity_outcomes_final_generation.pdf")
-
     print(f"Wrote {OUT}")
     print(
         f"  sequential runs: {len(seq_runs)}, parallel 2w runs: {len(par_runs)}, parallel 4w runs: {len(par4_runs)}"

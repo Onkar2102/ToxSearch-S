@@ -3,9 +3,8 @@
 PPSN2026: operator effectiveness as mean (child score − parent score) per operator,
 aggregated across runs for three execution settings:
 
-  - ToxSearch (non-speciated): toxsearch runs from c1_ppsn2026_two_way manifest
+  - ToxSearch (non-speciated): toxsearch runs from c1_ppsn2026_three_way manifest
   - ToxSearch-S (sequential): toxsearch_s from the same manifest
-  - ToxSearch-S parallel (2 workers): runs under data/outputs/ppsn2026/toxsearch_s_2w
 
 Child score = north-star metric (default toxicity) via population_io._extract_north_star_score.
 Parent score = genome.parent_score when set; otherwise parents[0].score (MPI parallel runs).
@@ -48,8 +47,7 @@ from utils.population_io import _extract_north_star_score  # noqa: E402
 configure_matplotlib_embedded_fonts()
 
 DATA = PROJ / "data" / "outputs" / "ppsn2026"
-PAR_ROOT = DATA / "toxsearch_s_2w"
-C1_MANIFEST = PROJ / "experiments" / "comparison_results" / "c1_ppsn2026_two_way" / "run_manifest.csv"
+C1_MANIFEST = PROJ / "experiments" / "comparison_results" / "c1_ppsn2026_three_way" / "run_manifest.csv"
 
 OUT = PROJ / "experiments" / "comparison_results" / "ppsn2026_operator_delta"
 FIG = OUT / "figures"
@@ -87,31 +85,10 @@ def load_manifest_methods(method: str) -> List[Tuple[str, Path]]:
     return out
 
 
-def discover_parallel_2w() -> List[Tuple[str, Path]]:
-    out: List[Tuple[str, Path]] = []
-    if not PAR_ROOT.exists():
-        return out
-    for p in sorted([x for x in PAR_ROOT.iterdir() if x.is_dir()]):
-        tpath = p / "EvolutionTracker.json"
-        if not tpath.exists():
-            continue
-        t = load_json(tpath)
-        st = (t.get("status") or "").lower()
-        if st and st != "complete":
-            continue
-        rm = t.get("run_metadata") or {}
-        if str(rm.get("run_mode") or "") != "parallel":
-            continue
-        if int(rm.get("num_workers") or 0) != 2:
-            continue
-        out.append((p.name, p))
-    return out
-
-
 def iter_genomes(method: str, run_dir: Path) -> Sequence[Dict[str, Any]]:
     if method == "toxsearch":
         fnames = ("elites.json", "non_elites.json", "under_performing.json")
-    elif method in ("toxsearch_s", "toxsearch_s_2w"):
+    elif method == "toxsearch_s":
         fnames = ("elites.json", "reserves.json", "archive.json")
     else:
         raise ValueError(f"Unknown method: {method}")
@@ -193,12 +170,10 @@ def mean_sd_str(vals: List[float]) -> str:
 def main() -> int:
     tox_runs = load_manifest_methods("toxsearch")
     ts_runs = load_manifest_methods("toxsearch_s")
-    par_runs = discover_parallel_2w()
 
     pools = {
         "ToxSearch": pool_by_operator("toxsearch", tox_runs),
         "ToxSearch-S (seq.)": pool_by_operator("toxsearch_s", ts_runs),
-        "ToxSearch-S (2w)": pool_by_operator("toxsearch_s_2w", par_runs),
     }
 
     all_ops = sorted(set().union(*(p.keys() for p in pools.values())))
@@ -211,7 +186,6 @@ def main() -> int:
         for label, key in [
             ("ToxSearch", "toxsearch"),
             ("ToxSearch-S (seq.)", "toxsearch_s_seq"),
-            ("ToxSearch-S (2w)", "toxsearch_s_2w"),
         ]:
             vals = pools[label].get(op, [])
             row[f"{key}_mean"] = float(np.mean(vals)) if vals else ""
@@ -229,9 +203,6 @@ def main() -> int:
         "toxsearch_s_seq_mean",
         "toxsearch_s_seq_std",
         "toxsearch_s_seq_n",
-        "toxsearch_s_2w_mean",
-        "toxsearch_s_2w_std",
-        "toxsearch_s_2w_n",
     ]
     with (OUT / "operator_delta_summary.csv").open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
@@ -271,7 +242,7 @@ def main() -> int:
     plt.close()
 
     print(f"Wrote {OUT}")
-    print(f"  runs: toxsearch={len(tox_runs)}, toxsearch_s={len(ts_runs)}, 2w={len(par_runs)}")
+    print(f"  runs: toxsearch={len(tox_runs)}, toxsearch_s={len(ts_runs)}")
     print(f"  operators: {len(all_ops)}")
     return 0
 

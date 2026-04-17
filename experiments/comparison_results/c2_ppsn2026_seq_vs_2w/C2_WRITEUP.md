@@ -99,11 +99,10 @@ Key medians with IQR (Q1–Q3), extracted from `metrics_per_run.csv`:
 
 Recommended figures to cite in the paper (all PDFs under `figures/`):
 
-- `wall_time.pdf`, `wall_time_from0.pdf`
-- `throughput_per_execution.pdf`, `throughput_scaling_workers.pdf`
+- `throughput_wall_vs_evaluated_genomes.pdf` (two panels: wall time left, throughput right; common $x\in[0,1000]$; mean and min–max band per mode)
 - `time_breakdown_mean_fractions.pdf`
-- `best_so_far_vs_evaluated_genomes.pdf`, `best_so_far_vs_wall_time.pdf`
-- `diversity_outcomes_final_generation.pdf`
+- `toxicity_diversity_vs_evaluated_genomes.pdf` (2$\times$2: top inter/intra diversity with legend on intra; bottom toxicity + species count; $x$ ticks every 200 genomes; median + IQR)
+- `best_so_far_vs_wall_time.pdf`
 
 ## Limitations / reporting notes
 

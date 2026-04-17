@@ -27,6 +27,9 @@ Outputs (written to experiments/comparison_results/c1_ppsn2026_three_way/):
       run_level_diversity_boxplots.pdf
       embedding_mds_landmark_map.pdf
   - stats_summary.txt (Kruskal–Wallis + pairwise Mann–Whitney + Holm + Cliff's delta if scipy available)
+
+Fast figure refresh (no re-embedding): ``python rq1_c1_three_way_report.py --regenerate-rainclouds-only``
+(requires metrics_three_way.csv in the same output folder).
 """
 
 from __future__ import annotations
@@ -426,7 +429,28 @@ def main(argv: Sequence[str] | None = None) -> None:
         ),
     )
     ap.add_argument("--proj-keep-top-per-method", type=int, default=500, help="Always keep top-N (by toxicity) points per method before sampling.")
+    ap.add_argument(
+        "--regenerate-rainclouds-only",
+        action="store_true",
+        help=(
+            "Load metrics_three_way.csv from the C1 output folder and rewrite only the run-level "
+            "raincloud PDFs (no manifest processing or embedding model)."
+        ),
+    )
     args = ap.parse_args(list(argv) if argv is not None else None)
+
+    if bool(args.regenerate_rainclouds_only):
+        metrics_csv = OUT / "metrics_three_way.csv"
+        if not metrics_csv.exists():
+            raise SystemExit(f"Missing metrics CSV: {metrics_csv} (run the full pipeline first).")
+        with metrics_csv.open("r", encoding="utf-8", newline="") as f:
+            out_rows_fast = list(csv.DictReader(f))
+        if not out_rows_fast:
+            raise SystemExit(f"Empty metrics CSV: {metrics_csv}")
+        _plot_runlevel_raincloud(out_rows_fast, FIG / "run_level_quality_raincloud.pdf", which="quality")
+        _plot_runlevel_raincloud(out_rows_fast, FIG / "run_level_diversity_raincloud.pdf", which="diversity")
+        print(f"Regenerated raincloud figures under: {FIG}")
+        return
 
     B = int(args.budget)
     topk = int(args.topk)
@@ -580,23 +604,23 @@ def _metric_specs(rows: List[Dict[str, Any]], which: str) -> Tuple[int, int, Lis
         keys = ["best_at_B", "auc_best_so_far_B"]
         title = f"RQ1 run-level quality at budget B={B} (n={n_by_method['toxsearch']}/{n_by_method['toxsearch_s']}/{n_by_method['rainbow_plus']} runs)"
         subplot_titles = {
-            "best_at_B": f"Best@B (max toxicity by evaluation {B})",
-            "auc_best_so_far_B": f"AUC@B (area under best-so-far curve up to {B})",
+            "best_at_B": f"Best toxicity at B={B}",
+            "auc_best_so_far_B": f"AUC best-so-far (0…{B})",
         }
         ylabels = {
-            "best_at_B": "Toxicity (higher is worse)",
-            "auc_best_so_far_B": "Area (higher is worse)",
+            "best_at_B": "Toxicity score",
+            "auc_best_so_far_B": "AUC (toxicity × evaluations)",
         }
     else:
         keys = ["div_dbscan_clusters_topk", "div_spread_mean_cosine_dist_topk"]
         title = f"RQ1 run-level diversity on top-K={topk} prompts (DBSCAN eps={DBSCAN_EPS}, min_samples={DBSCAN_MIN_SAMPLES})"
         subplot_titles = {
-            "div_dbscan_clusters_topk": "Distinct behavioral clusters (DBSCAN; top-K embeddings)",
-            "div_spread_mean_cosine_dist_topk": "Semantic spread (mean pairwise cosine distance; top-K embeddings)",
+            "div_dbscan_clusters_topk": f"DBSCAN clusters (top-{topk})",
+            "div_spread_mean_cosine_dist_topk": f"Mean pairwise distance (top-{topk})",
         }
         ylabels = {
-            "div_dbscan_clusters_topk": "Cluster count (higher = more diverse)",
-            "div_spread_mean_cosine_dist_topk": "Mean cosine distance (higher = more diverse)",
+            "div_dbscan_clusters_topk": "# clusters\n(higher: more diverse)",
+            "div_spread_mean_cosine_dist_topk": "Mean cosine distance\n(higher: more diverse)",
         }
     return B, topk, keys, subplot_titles, ylabels, title
 
@@ -642,66 +666,104 @@ def _plot_runlevel_raincloud(rows: List[Dict[str, Any]], out_path: Path, which: 
     """
     Option D: Raincloud-style (half-violin + jittered points + median line).
     Implemented without seaborn dependency.
+
+    Styling targets Springer LNCS print figures: ~169 mm full text width, 8–9 pt
+    vector text (Type 42), colorblind-safe colors. Half-violin and jittered points are
+    on opposite sides of each category (standard raincloud layout).
     """
+    # Wong-style palette (print + color vision).
     methods = ["toxsearch", "toxsearch_s", "rainbow_plus"]
     labels = {"toxsearch": "ToxSearch", "toxsearch_s": "ToxSearch-S", "rainbow_plus": "RainbowPlus"}
-    colors = {"toxsearch": "#1f77b4", "toxsearch_s": "#ff7f0e", "rainbow_plus": "#2ca02c"}
+    colors = {"toxsearch": "#0173B2", "toxsearch_s": "#DE8F05", "rainbow_plus": "#029E73"}
 
-    _B, _topk, keys, subplot_titles, ylabels, title = _metric_specs(rows, which)
-    fig, axes = plt.subplots(1, len(keys), figsize=(10.8, 3.8))
-    if len(keys) == 1:
-        axes = [axes]  # type: ignore[list-item]
+    lncs_full_width_in = 169.0 / 25.4  # Springer LNCS max figure width (mm → in)
+    pub_rc: Dict[str, Any] = {
+        "font.family": "sans-serif",
+        "font.sans-serif": ["Helvetica", "Arial", "DejaVu Sans", "Liberation Sans", "sans-serif"],
+        "font.size": 9,
+        "axes.titlesize": 9,
+        "axes.labelsize": 9,
+        "xtick.labelsize": 8,
+        "ytick.labelsize": 8,
+        "axes.titlepad": 6,
+        "axes.linewidth": 0.9,
+        "lines.linewidth": 1.0,
+        "xtick.major.width": 0.8,
+        "ytick.major.width": 0.8,
+        "xtick.major.size": 3.5,
+        "ytick.major.size": 3.5,
+        "pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "savefig.dpi": 300,
+    }
 
-    rng = np.random.default_rng(0)
-    xs = np.arange(len(methods), dtype=float)
+    _B, _topk, keys, subplot_titles, ylabels, _title = _metric_specs(rows, which)
+    n_keys = len(keys)
+    fig_h = 2.62 if n_keys >= 2 else 2.45
 
-    for ax, key in zip(axes, keys):
-        vals_by = _values_by_method(rows, key, methods)
-        data = [vals_by[m] for m in methods]
-
-        parts = ax.violinplot(
-            [d.tolist() for d in data],
-            positions=xs,
-            widths=0.8,
-            showmeans=False,
-            showmedians=False,
-            showextrema=False,
+    with plt.rc_context(pub_rc):
+        fig, axes = plt.subplots(
+            1,
+            n_keys,
+            figsize=(lncs_full_width_in, fig_h),
+            constrained_layout=True,
         )
-        for i, body in enumerate(parts["bodies"]):
-            body.set_facecolor(colors[methods[i]])
-            body.set_edgecolor("none")
-            body.set_alpha(0.22)
-            # Half violin (right side) by clipping left of center.
-            clip = Rectangle((xs[i], -1e9), 1e9, 2e9, transform=ax.transData)
-            body.set_clip_path(clip)
+        if n_keys == 1:
+            axes = [axes]  # type: ignore[list-item]
 
-        for i, m in enumerate(methods):
-            d = vals_by[m]
-            if d.size == 0:
-                continue
-            jitter = rng.normal(loc=0.15, scale=0.05, size=d.size)  # push to right for raincloud feel
-            ax.scatter(
-                np.full(d.size, xs[i]) + jitter,
-                d,
-                s=38,
-                c=colors[m],
-                alpha=0.85,
-                linewidths=0,
-                zorder=3,
+        rng = np.random.default_rng(0)
+        xs = np.arange(len(methods), dtype=float)
+
+        for ax, key in zip(axes, keys):
+            vals_by = _values_by_method(rows, key, methods)
+            data = [vals_by[m].tolist() for m in methods]
+
+            parts = ax.violinplot(
+                data,
+                positions=xs,
+                widths=0.72,
+                showmeans=False,
+                showmedians=False,
+                showextrema=False,
             )
-            med = float(np.median(d))
-            ax.hlines(med, xs[i] - 0.25, xs[i] + 0.25, colors="black", linewidth=2.0, zorder=4)
+            for i, body in enumerate(parts["bodies"]):
+                body.set_facecolor(colors[methods[i]])
+                body.set_edgecolor(colors[methods[i]])
+                body.set_linewidth(0.35)
+                body.set_alpha(0.26)
+                # Right half of violin only (“cloud” on the right of each category).
+                clip = Rectangle((xs[i], -1e9), 1e9, 2e9, transform=ax.transData)
+                body.set_clip_path(clip)
 
-        ax.set_xticks(xs)
-        ax.set_xticklabels([labels[m] for m in methods], rotation=15)
-        ax.set_title(subplot_titles.get(key, key), fontsize=10)
-        ax.set_ylabel(ylabels.get(key, ""))
-        ax.grid(axis="y", alpha=0.2)
+            for i, m in enumerate(methods):
+                d = vals_by[m]
+                if d.size == 0:
+                    continue
+                # Jitter on the left of the tick, opposite the half-violin (classic raincloud).
+                jitter = rng.normal(loc=-0.14, scale=0.045, size=d.size)
+                ax.scatter(
+                    np.full(d.size, xs[i]) + jitter,
+                    d,
+                    s=32,
+                    c=colors[m],
+                    alpha=0.88,
+                    linewidths=0.2,
+                    edgecolors="white",
+                    zorder=3,
+                )
+                med = float(np.median(d))
+                ax.hlines(med, xs[i] - 0.32, xs[i] + 0.32, colors="#1a1a1a", linewidth=1.35, zorder=4)
 
-    plt.suptitle(title + " — raincloud", y=1.05, fontsize=11)
-    plt.tight_layout()
-    plt.savefig(out_path, format="pdf")
-    plt.close()
+            ax.set_xticks(xs)
+            ax.set_xticklabels([labels[m] for m in methods], rotation=0, ha="center")
+            ax.set_title(subplot_titles.get(key, key))
+            ax.set_ylabel(ylabels.get(key, ""))
+            ax.grid(axis="y", alpha=0.32, linewidth=0.6, zorder=0)
+            ax.tick_params(axis="both", which="major", length=3.5, width=0.8)
+            ax.margins(x=0.12)
+
+        fig.savefig(out_path, format="pdf", bbox_inches="tight", pad_inches=0.02)
+        plt.close(fig)
 
 
 def _plot_runlevel_estimation(*_args: Any, **_kwargs: Any) -> None:  # pragma: no cover

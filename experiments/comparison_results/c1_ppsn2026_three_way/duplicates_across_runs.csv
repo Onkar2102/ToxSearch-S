@@ -1,4 +1,0 @@
-method,n_runs,budget_B_for_jsonl,seed_prompts_excluded,total_unique_prompts,duplicate_prompts_across_runs,duplicate_rate
-rainbow_plus,7,1000,100,3500,0,0.0
-toxsearch,7,1000,100,6654,21,0.0031559963931469793
-toxsearch_s,7,1000,100,6189,128,0.02068185490386169

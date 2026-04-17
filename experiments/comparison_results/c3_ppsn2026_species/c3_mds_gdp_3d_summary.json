@@ -1,0 +1,14 @@
+{
+  "figure": "figures/c3_mds_gdp_3d_by_cohort.pdf",
+  "figure_interactive": "figures/c3_mds_gdp_3d_by_cohort_interactive.html",
+  "csv": "c3_mds_gdp_3d_points.csv",
+  "n_points": 12546,
+  "n_by_cohort": {
+    "seq": 4347,
+    "par2": 4094,
+    "par4": 4105
+  },
+  "dropped_no_embedding": 0,
+  "dropped_no_generation": 0,
+  "method": "cosine-MDS (landmark+KNN for n>3000)"
+}
