@@ -1,6 +1,4 @@
-"""
-config.py
-"""
+
 
 import yaml
 import os
@@ -10,7 +8,7 @@ from utils import get_custom_logging
 import logging
 
 def load_config(config_path: str, log_file: Optional[str] = None) -> Dict[str, Any]:
-    """Load configuration from YAML file with comprehensive logging"""
+    
     get_logger, _, _, PerformanceLogger = get_custom_logging()
     logger = get_logger("config", log_file)
     
@@ -68,7 +66,7 @@ def load_config(config_path: str, log_file: Optional[str] = None) -> Dict[str, A
             raise
 
 def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate configuration structure and values with detailed logging"""
+    
     get_logger, _, _, PerformanceLogger = get_custom_logging()
     logger = get_logger("config_validation")
     
@@ -125,7 +123,7 @@ def validate_config(config: Dict[str, Any]) -> Dict[str, Any]:
             }
 
 def validate_model_config(model_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate model configuration section"""
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("model_config_validation")
     
@@ -172,7 +170,7 @@ def validate_model_config(model_config: Dict[str, Any]) -> Dict[str, Any]:
     return validation_result
 
 def validate_evolution_config(evolution_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate evolution configuration section"""
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("evolution_config_validation")
     
@@ -218,7 +216,7 @@ def validate_evolution_config(evolution_config: Dict[str, Any]) -> Dict[str, Any
     return validation_result
 
 def validate_evaluation_config(evaluation_config: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate evaluation configuration section"""
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("evaluation_config_validation")
     
@@ -257,7 +255,7 @@ def validate_evaluation_config(evaluation_config: Dict[str, Any]) -> Dict[str, A
     return validation_result
 
 def save_config(config: Dict[str, Any], config_path: str, log_file: Optional[str] = None) -> None:
-    """Save configuration to YAML file with comprehensive logging"""
+    
     get_logger, _, _, PerformanceLogger = get_custom_logging()
     logger = get_logger("config", log_file)
     
@@ -292,7 +290,7 @@ def save_config(config: Dict[str, Any], config_path: str, log_file: Optional[str
             raise
 
 def get_config_value(config: Dict[str, Any], key_path: str, default: Any = None) -> Any:
-    """Get configuration value using dot notation with comprehensive logging"""
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("config_getter")
     
@@ -315,7 +313,7 @@ def get_config_value(config: Dict[str, Any], key_path: str, default: Any = None)
         return default
 
 def set_config_value(config: Dict[str, Any], key_path: str, value: Any) -> bool:
-    """Set configuration value using dot notation with comprehensive logging"""
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("config_setter")
     

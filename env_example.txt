@@ -1,10 +1,20 @@
 # ------------------------------------------------------------------------------
 # REQUIRED: Google Perspective API Key
 # ------------------------------------------------------------------------------
-# This is MANDATORY - the system won't work without it.
-# Get your API key from: https://developers.perspectiveapi.com/
-# ------------------------------------------------------------------------------
+# At least one key is MANDATORY. Get keys from: https://developers.perspectiveapi.com/
+#
+# Single key:
 PERSPECTIVE_API_KEY=your_google_perspective_api_key_here
+#
+# Multiple keys (for parallel runs / rate-limit distribution):
+#   Option A - comma-separated (no spaces):
+#   PERSPECTIVE_API_KEYS=key1,key2,key3
+#
+#   Option B - indexed (consecutive from 0):
+#   PERSPECTIVE_API_KEY_0=key1
+#   PERSPECTIVE_API_KEY_1=key2
+#   PERSPECTIVE_API_KEY_2=key3
+# ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
 # OPTIONAL: HuggingFace Hub Token  

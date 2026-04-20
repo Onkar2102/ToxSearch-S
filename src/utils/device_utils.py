@@ -1,10 +1,6 @@
-"""
-device_utils.py
 
-Device detection and configuration utilities for CUDA, MPS, and CPU support.
-Provides centralized device detection and configuration for all components.
-"""
 
+import re
 import torch
 import yaml
 from typing import Optional, Dict, Any
@@ -14,16 +10,13 @@ get_logger, _, _, _ = get_custom_logging()
 
 
 class DeviceManager:
-    """
-    Centralized device management for CUDA, MPS, and CPU support.
-    
-    Provides device detection, configuration, and fallback mechanisms
-    for all components in the project.
-    """
+    """Centralized device management for CUDA, MPS, and CPU support. Provides device detection, configuration, and fallback mechanisms for all components in the project. When running under MPI, use set_mpi_device(rank, size) so rank 0 uses CPU and workers use one GPU each (rank 1 -> cuda:0, rank 2 -> cuda:1, ...)."""
     
     _instance = None
     _device_cache = None
     _config_cache = None
+    _mpi_rank = None
+    _mpi_size = None
     
     def __new__(cls):
         if cls._instance is None:
@@ -36,31 +29,87 @@ class DeviceManager:
             self.initialized = True
             self._load_config()
     
+    def set_mpi_device(self, rank: int, size: int) -> None:
+        
+        self._mpi_rank = rank
+        self._mpi_size = size
+        self._device_cache = None
+        if rank == 0:
+            self._device_cache = "cpu"
+            self.logger.info("MPI rank 0 (master): using CPU")
+        else:
+            worker_id = rank - 1
+            try:
+                if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
+                    self._device_cache = f"cuda:{worker_id}"
+                    self.logger.info("MPI rank %d (worker): using cuda:%d", rank, worker_id)
+                else:
+                    import platform
+                    has_mps = hasattr(torch.backends, "mps") and torch.backends.mps.is_built() and torch.backends.mps.is_available()
+                    if platform.system() == "Darwin" and has_mps:
+                        self._device_cache = "mps"
+                        self.logger.info("MPI rank %d (worker): using MPS (Apple Silicon)", rank)
+                    else:
+                        self._device_cache = "cpu"
+                        self.logger.warning(
+                            "MPI rank %d: no CUDA/MPS; using CPU",
+                            rank)
+            except Exception as e:
+                self.logger.warning("MPI rank %d: GPU check failed (%s), using CPU", rank, e)
+                self._device_cache = "cpu"
+    
     def _load_config(self):
-        """Load device configuration from RGConfig.yaml"""
+        
         try:
-            with open("config/RGConfig.yaml", 'r') as f:
-                config = yaml.safe_load(f)
-            self._config_cache = config.get("device_config", {})
+            from pathlib import Path
+            config_path = Path(__file__).resolve().parents[2] / "config" / "RGConfig.yaml"
+            text = config_path.read_text(encoding="utf-8")
+            try:
+                config = yaml.safe_load(text)
+            except yaml.YAMLError:
+                head_lines = []
+                for line in text.splitlines(keepends=True):
+                    stripped = line.strip()
+                    if re.match(r"response_generator\s*:", stripped):
+                        break
+                    head_lines.append(line)
+                head = "".join(head_lines)
+                try:
+                    config = yaml.safe_load(head) if head.strip() else {}
+                except yaml.YAMLError as exc_head:
+                    self.logger.warning(
+                        "RGConfig.yaml: header-only parse failed (%s); using empty device_config.",
+                        exc_head,
+                    )
+                    config = {}
+                if config:
+                    self.logger.warning(
+                        "RGConfig.yaml: full parse failed; loaded device_config from header only. "
+                        "Restore config/RGConfig.yaml from the repo or fix YAML below response_generator."
+                    )
+            self._config_cache = (config or {}).get("device_config", {})
             self.logger.debug("Device configuration loaded successfully")
         except Exception as e:
             self.logger.warning(f"Failed to load device config, using defaults: {e}")
             self._config_cache = {}
     
     def get_optimal_device(self) -> str:
-        """
-        Get the best available device with comprehensive error handling.
         
-        Priority order:
-        1. MPS (Apple Silicon)
-        2. CUDA (NVIDIA GPUs)
-        3. CPU (fallback)
-        
-        Returns:
-            str: Device name ('mps', 'cuda', or 'cpu')
-        """
         if self._device_cache is not None:
             return self._device_cache
+        if self._mpi_rank is not None:
+            if self._mpi_rank == 0:
+                return "cpu"
+            worker_id = self._mpi_rank - 1
+            try:
+                if torch.cuda.is_available() and worker_id < torch.cuda.device_count():
+                    return f"cuda:{worker_id}"
+                import platform
+                if platform.system() == "Darwin" and hasattr(torch.backends, "mps") and torch.backends.mps.is_built() and torch.backends.mps.is_available():
+                    return "mps"
+            except Exception:
+                pass
+            return "cpu"
         
         preferred_device = self._config_cache.get("preferred_device")
         if preferred_device and self._is_device_available(preferred_device):
@@ -109,7 +158,7 @@ class DeviceManager:
         return self._device_cache
     
     def _is_device_available(self, device: str) -> bool:
-        """Check if a specific device is available"""
+        
         try:
             if device == "mps":
                 import platform
@@ -128,7 +177,7 @@ class DeviceManager:
             return False
     
     def _apply_device_optimizations(self, device: str):
-        """Apply device-specific optimizations"""
+        
         try:
             if device == "cuda":
                 cuda_config = self._config_cache.get("cuda", {})
@@ -156,12 +205,7 @@ class DeviceManager:
             self.logger.warning(f"Failed to apply {device} optimizations: {e}")
     
     def get_device_info(self) -> Dict[str, Any]:
-        """
-        Get comprehensive device information.
         
-        Returns:
-            Dict containing device information and capabilities
-        """
         device = self.get_optimal_device()
         info = {
             "device": device,
@@ -199,16 +243,7 @@ class DeviceManager:
         return info
     
     def move_to_device(self, tensor_or_model, device: Optional[str] = None) -> Any:
-        """
-        Move tensor or model to specified device with fallback handling.
         
-        Args:
-            tensor_or_model: PyTorch tensor or model to move
-            device: Target device (if None, uses optimal device)
-            
-        Returns:
-            Moved tensor or model
-        """
         if device is None:
             device = self.get_optimal_device()
         
@@ -231,15 +266,7 @@ class DeviceManager:
                 raise RuntimeError(f"Unable to move object to any device: {cpu_e}")
     
     def get_generation_kwargs(self, device: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Get generation kwargs optimized for the specified device.
         
-        Args:
-            device: Target device (if None, uses optimal device)
-            
-        Returns:
-            Dict containing device-optimized generation parameters
-        """
         if device is None:
             device = self.get_optimal_device()
         
@@ -274,7 +301,7 @@ class DeviceManager:
         return kwargs
     
     def clear_cache(self):
-        """Clear device cache to force re-detection."""
+        
         self._device_cache = None
         self.logger.info("Device cache cleared")
 
@@ -283,20 +310,20 @@ device_manager = DeviceManager()
 
 
 def get_optimal_device() -> str:
-    """Convenience function to get optimal device."""
+    
     return device_manager.get_optimal_device()
 
 
 def get_device_info() -> Dict[str, Any]:
-    """Convenience function to get device information."""
+    
     return device_manager.get_device_info()
 
 
 def move_to_device(tensor_or_model, device: Optional[str] = None) -> Any:
-    """Convenience function to move tensor/model to device."""
+    
     return device_manager.move_to_device(tensor_or_model, device)
 
 
 def get_generation_kwargs(device: Optional[str] = None) -> Dict[str, Any]:
-    """Convenience function to get device-optimized generation kwargs."""
+    
     return device_manager.get_generation_kwargs(device)

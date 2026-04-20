@@ -1,6 +1,4 @@
-"""
-PromptGenerator: Text generator for prompt generation using task-specific templates.
-"""
+
 
 import os
 import json
@@ -15,14 +13,17 @@ from .model_interface import LlamaCppChatInterface
 get_logger, _, _, _ = get_custom_logging()
 
 class PromptGenerator:
-    """
-    Prompt generator using v1/chat/completions interface for prompt generation and modification.
-    """
+    """Prompt generator using v1/chat/completions interface for prompt generation and modification."""
     
-    def __init__(self, model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file: Optional[str] = None):
+    def __init__(self, model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file: Optional[str] = None, seed: Optional[int] = None):
         self.log_file = log_file
         self.logger = get_logger("PromptGenerator", self.log_file)
         self.logger.debug(f"Logger correctly initialized with log_file: {self.log_file}")
+
+        from pathlib import Path
+        if config_path and not Path(config_path).is_absolute():
+            _project_root = Path(__file__).resolve().parents[2]
+            config_path = str(_project_root / config_path)
 
         try:
             with open(config_path, "r") as f:
@@ -31,8 +32,11 @@ class PromptGenerator:
                 raise ValueError(f"Configuration file is empty: {config_path}")
             if model_key not in config:
                 raise ValueError(f"Model '{model_key}' not found in configuration. Available keys: {list(config.keys())}")
-            self.model_cfg = config[model_key]
-            
+            self.model_cfg = dict(config[model_key])
+            if config.get("device_config"):
+                self.model_cfg["device_config"] = config["device_config"]
+            if seed is not None:
+                self.model_cfg.setdefault("generation_args", {})["seed"] = seed
             if not self.model_cfg.get("name"):
                 raise ValueError(f"Model configuration missing 'name' field for {model_key}")
                 
@@ -40,21 +44,25 @@ class PromptGenerator:
             self.logger.error(f"Configuration file not found: {config_path}")
             raise
         except yaml.YAMLError as e:
-            self.logger.error(f"Failed to parse YAML configuration: {e}")
+            self.logger.error(
+                "Failed to parse YAML configuration (%s): %s. "
+                "Restore a valid file from the repository (e.g. `git checkout -- config/PGConfig.yaml`) "
+                "if an older build rewrote this file with `yaml.dump`.",
+                config_path,
+                e,
+            )
             raise
         except Exception as e:
             self.logger.error(f"Failed to load model configuration: {e}")
             raise
 
         try:
-            self.model_interface = LlamaCppChatInterface(self.model_cfg, log_file)
+            self.model_interface = LlamaCppChatInterface(
+                self.model_cfg, log_file, cache_key_suffix="prompt_generator"
+            )
         except Exception as e:
             self.logger.error(f"Failed to initialize model interface: {e}")
             raise
-        
-        self.task_templates = config.get("task_templates", {})
-        self.llm_config = config.get("llm_config", {})
-        self.operator_config = config.get("operator_config", {})
 
         self.generation_count = 0
         self.total_tokens_generated = 0
@@ -62,30 +70,14 @@ class PromptGenerator:
 
 
     def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        """Direct access to chat completions for operators.
-
-        Args:
-            messages: List of dicts with 'role' and 'content' (e.g. [{"role": "user", "content": "..."}]).
-            **kwargs: Optional arguments passed through to model_interface.chat_completion.
-
-        Returns:
-            str: Model reply text, or empty string on failure.
-        """
+        
         return self.model_interface.chat_completion(messages, **kwargs)
 
 
 
     
     def _extract_content_from_xml_tags(self, response: str, tag_name: str) -> str:
-        """Extract content from XML tags with robust error handling and validation.
-
-        Args:
-            response: Raw LLM response string that may contain <tag_name>...</tag_name>.
-            tag_name: Name of the XML tag to extract (e.g. 'paraphrase', 'variant').
-
-        Returns:
-            str: Extracted content between tags, or empty string if not found or validation fails.
-        """
+        
         try:
             import re
             
@@ -133,7 +125,7 @@ class PromptGenerator:
                             self.logger.debug(f"Successfully extracted {tag_name} content (malformed XML): {content[:50]}...")
                             return content
             
-            self.logger.warning(f"Failed to extract valid {tag_name} content from response: {response[:200]}...")
+            self.logger.debug("Failed to extract valid %s content from response: %.200s...", tag_name, response)
             return ""
             
         except Exception as e:
@@ -141,15 +133,7 @@ class PromptGenerator:
             return ""
     
     def _validate_extracted_content(self, content: str, tag_name: str) -> bool:
-        """Validate extracted content based on tag type.
-
-        Args:
-            content: Extracted string to validate.
-            tag_name: Tag name used for tag-specific rules (e.g. question-mark requirement for variant/paraphrase).
-
-        Returns:
-            bool: True if content is valid, False otherwise.
-        """
+        
         if not content or len(content.strip()) < 2:
             return False
             

@@ -1,8 +1,4 @@
-"""
-metrics.py
 
-Validation metrics for speciation.
-"""
 
 import json
 import numpy as np
@@ -32,7 +28,7 @@ class GenerationMetrics:
     extinction_events: int = 0
     inter_species_diversity: float = 0.0
     intra_species_diversity: float = 0.0
-    cluster_quality: Optional[Dict[str, Any]] = None  # Optional cluster quality metrics
+    cluster_quality: Optional[Dict[str, Any]] = None
     
     def to_dict(self) -> Dict:
         result = {
@@ -45,7 +41,6 @@ class GenerationMetrics:
             "inter_species_diversity": round(self.inter_species_diversity, 4),
             "intra_species_diversity": round(self.intra_species_diversity, 4)
         }
-        # Add cluster quality if available
         if self.cluster_quality:
             result["cluster_quality"] = self.cluster_quality
         return result
@@ -65,36 +60,19 @@ class SpeciationMetricsTracker:
                           speciation_events: int = 0, merge_events: int = 0,
                           extinction_events: int = 0, cluster0=None, 
                           elites_path: Optional[str] = None, reserves_path: Optional[str] = None) -> GenerationMetrics:
-        """Record metrics for a generation.
         
-        Args:
-            generation: Current generation number
-            species: Dict of all species in this generation (active + frozen). Used for
-                inter_species_diversity and intra_species_diversity over all species.
-            reserves_size: Size of reserves (cluster 0) - should match reserves.json
-            speciation_events: Number of speciation events
-            merge_events: Number of merge events
-            extinction_events: Number of extinction events
-            cluster0: Optional Cluster0 object (not used, kept for API compatibility)
-            elites_path: Optional path to elites.json (for accurate population count)
-            reserves_path: Optional path to reserves.json (for accurate reserves count)
-        """
         from pathlib import Path
         import json
         
-        # Calculate species_count and total_population from files (elites.json) - more accurate than in-memory
-        # In-memory only has current generation's active species, but files have all species with genomes
-        species_count = len(species)  # Default to in-memory (fallback)
+        species_count = len(species)
         total_pop = 0
         all_fitness = []
-        elites_genomes = []  # Store for reuse
+        elites_genomes = []
         
-        # Read from files (required for accurate metrics)
         if elites_path and Path(elites_path).exists():
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites_genomes = json.load(f)
             
-            # Calculate species_count from files (count unique species_id values)
             unique_species_ids = set()
             for genome in elites_genomes:
                 species_id = genome.get("species_id")
@@ -103,40 +81,33 @@ class SpeciationMetricsTracker:
             species_count = len(unique_species_ids)
             self.logger.debug(f"Calculated species_count from elites.json: {species_count} species (in-memory had {len(species)})")
             
-            # Calculate total_population from files
             total_pop += len(elites_genomes)
-            # Extract fitness from elites using standardized method
             from utils.population_io import _extract_north_star_score
             for genome in elites_genomes:
                 fitness = _extract_north_star_score(genome, "toxicity")
                 if fitness > 0:
                     all_fitness.append(float(fitness))
         else:
-            # elites.json is required for accurate metrics
             if elites_path:
                 self.logger.error(f"elites.json not found at {elites_path} - metrics will be inaccurate")
             total_pop = sum(sp.size for sp in species.values())
             all_fitness = [m.fitness for sp in species.values() for m in sp.members]
         
-        # Add reserves from file (required for accurate metrics)
         actual_reserves_size = reserves_size
         if reserves_path and Path(reserves_path).exists():
             with open(reserves_path, 'r', encoding='utf-8') as f:
                 reserves_genomes = json.load(f)
             actual_reserves_size = len(reserves_genomes)
             total_pop += actual_reserves_size
-            # Extract fitness from reserves using standardized method
             from utils.population_io import _extract_north_star_score
             for genome in reserves_genomes:
                 fitness = _extract_north_star_score(genome, "toxicity")
                 if fitness > 0:
                     all_fitness.append(float(fitness))
         else:
-            # If reserves_path not provided, use parameter value
             if reserves_path:
                 self.logger.warning(f"reserves.json not found at {reserves_path}, using parameter value (metrics may be inaccurate)")
             total_pop += reserves_size
-            # Include cluster0 fitness if provided
             if cluster0 is not None and hasattr(cluster0, 'individuals'):
                 all_fitness.extend([ind.fitness for ind in cluster0.individuals])
         
@@ -146,28 +117,23 @@ class SpeciationMetricsTracker:
         
         inter_div, intra_div = compute_diversity_metrics(species, w_genotype=0.7, w_phenotype=0.3, elites_path=elites_path)
         
-        # Calculate cluster quality metrics if we have enough species
         cluster_quality = None
         if species_count > 1 and total_pop >= 4:
             try:
                 from utils.cluster_quality import calculate_cluster_quality_metrics
-                # Use elites_path parent directory as outputs_path
                 if elites_path:
                     from pathlib import Path
                     outputs_path = str(Path(elites_path).parent)
-                    # Try to use temp.json if available (has embeddings before removal)
                     temp_path = str(Path(outputs_path) / "temp.json")
                     temp_path_obj = Path(temp_path)
-                    # Only use temp.json if it exists and has embeddings
                     use_temp = temp_path_obj.exists()
                     if use_temp:
                         try:
                             with open(temp_path_obj, 'r', encoding='utf-8') as f:
                                 temp_genomes = json.load(f)
-                            # Check if temp.json has embeddings
                             has_embeddings = any(g.get("prompt_embedding") is not None for g in temp_genomes)
                             if not has_embeddings:
-                                use_temp = False  # temp.json doesn't have embeddings, use elites.json/reserves.json
+                                use_temp = False
                         except Exception:
                             use_temp = False
                     cluster_quality = calculate_cluster_quality_metrics(
@@ -177,7 +143,6 @@ class SpeciationMetricsTracker:
                         logger=self.logger
                     )
             except Exception as e:
-                # Cluster quality calculation is optional, don't fail if it errors
                 self.logger.debug(f"Failed to calculate cluster quality metrics: {e}")
         
         self.total_speciation += speciation_events
@@ -194,7 +159,7 @@ class SpeciationMetricsTracker:
             merge_events=merge_events, extinction_events=extinction_events,
             inter_species_diversity=round(float(inter_div), 4), 
             intra_species_diversity=round(float(intra_div), 4),
-            cluster_quality=cluster_quality  # Include cluster quality in constructor
+            cluster_quality=cluster_quality
         )
         
         self.history.append(metrics)
@@ -217,22 +182,11 @@ class SpeciationMetricsTracker:
     
     @classmethod
     def from_dict(cls, metrics_dict: Dict, logger=None) -> "SpeciationMetricsTracker":
-        """
-        Create SpeciationMetricsTracker from dictionary (loaded from speciation_state.json).
         
-        Args:
-            metrics_dict: Dictionary with "history" and "summary" keys
-            logger: Optional logger instance
-        
-        Returns:
-            SpeciationMetricsTracker instance with restored history and totals
-        """
         tracker = cls(logger=logger)
         
-        # Restore history
         if "history" in metrics_dict:
             for gen_dict in metrics_dict["history"]:
-                # Reconstruct GenerationMetrics from dict
                 metrics = GenerationMetrics(
                     generation=gen_dict.get("generation", 0),
                     species_count=gen_dict.get("species_count", 0),
@@ -246,18 +200,16 @@ class SpeciationMetricsTracker:
                     extinction_events=gen_dict.get("extinction_events", 0),
                     inter_species_diversity=gen_dict.get("inter_species_diversity", 0.0),
                     intra_species_diversity=gen_dict.get("intra_species_diversity", 0.0),
-                    cluster_quality=gen_dict.get("cluster_quality")  # Optional
+                    cluster_quality=gen_dict.get("cluster_quality")
                 )
                 tracker.history.append(metrics)
         
-        # Restore totals from summary if available
         if "summary" in metrics_dict:
             summary = metrics_dict["summary"]
             tracker.total_speciation = summary.get("total_speciation_events", 0)
             tracker.total_merges = summary.get("total_merge_events", 0)
             tracker.total_extinctions = summary.get("total_extinction_events", 0)
         else:
-            # Fallback: calculate totals from history
             tracker.total_speciation = sum(m.speciation_events for m in tracker.history)
             tracker.total_merges = sum(m.merge_events for m in tracker.history)
             tracker.total_extinctions = sum(m.extinction_events for m in tracker.history)
@@ -267,41 +219,18 @@ class SpeciationMetricsTracker:
 
 def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0.7, w_phenotype: float = 0.3,
                                elites_path: Optional[str] = None) -> tuple:
-    """
-    Compute inter-species and intra-species diversity metrics.
     
-    Diversity is based on all species in that generation: active and frozen.
-    (Incubator and extinct species are not in the species dict when this is called.)
-    
-    - Inter-species diversity: Mean pairwise ensemble distance between species leaders
-      (high = species are diverse, low = species are similar/redundant). Used for
-      Pareto quality-vs-diversity and in speciation block.
-    - Intra-species diversity: Mean, over species, of mean pairwise distance within
-      each species (high = members are diverse, low = members are homogeneous).
-    
-    Args:
-        species: Dict of all current species (active + frozen). Typically state["species"].
-        w_genotype: Weight for genotype (embedding) distance component
-        w_phenotype: Weight for phenotype (toxicity scores) distance component
-        elites_path: Optional path to elites.json to load actual members (if species.members is incomplete)
-    
-    Returns:
-        Tuple of (inter_species_diversity, intra_species_diversity)
-    """
     from pathlib import Path
     import json
     
     if not species:
         return 0.0, 0.0
     
-    # Filter out species without valid leaders (should not happen, but safeguard)
     species_list = [sp for sp in species.values() if sp.leader is not None]
     
     if not species_list:
         return 0.0, 0.0
     
-    # Load actual members from elites.json if path provided and species.members is incomplete
-    # This fixes the issue where loaded species only have the leader in members list
     elites_genomes_by_species = {}
     logger = get_logger("DiversityMetrics")
     if elites_path and Path(elites_path).exists():
@@ -309,7 +238,6 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites_genomes = json.load(f)
             
-            # Group genomes by species_id
             for genome in elites_genomes:
                 species_id = genome.get("species_id")
                 if species_id is not None and species_id > 0:
@@ -319,20 +247,16 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
             
             logger.debug(f"Loaded {len(elites_genomes_by_species)} species from elites.json for diversity calculation")
         except Exception as e:
-            # If file read fails, continue with in-memory members
             logger.warning(f"Failed to load elites.json for diversity metrics: {e}")
             pass
     else:
         logger.debug("No elites_path provided, using in-memory species members for diversity calculation")
     
-    # Compute inter-species diversity (distance between leaders)
     inter = []
     for i, sp1 in enumerate(species_list):
         for sp2 in species_list[i + 1:]:
-            # Only compare if both leaders have embeddings
             if sp1.leader.embedding is not None and sp2.leader.embedding is not None:
                 try:
-                    # Normalize embeddings if needed (required for ensemble_distance)
                     e1 = sp1.leader.embedding.copy()
                     e2 = sp2.leader.embedding.copy()
                     norm1 = np.linalg.norm(e1)
@@ -342,7 +266,6 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
                     if not np.isclose(norm2, 1.0, atol=1e-5):
                         e2 = e2 / norm2
                     
-                    # Handle None phenotypes by passing them as-is (ensemble_distance handles None)
                     dist = ensemble_distance(
                         e1, e2,
                         sp1.leader.phenotype, sp2.leader.phenotype,
@@ -350,25 +273,20 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
                     )
                     inter.append(dist)
                 except Exception as e:
-                    # Skip this pair if distance calculation fails
                     get_logger("DiversityMetrics").debug(f"Failed to compute inter-species distance: {e}")
                     pass
     
     inter_div = np.mean(inter) if inter else 0.0
     
-    # Compute intra-species diversity (distances within each species)
     intra_divs = []
     for sp in species_list:
-        # Get members: prefer actual members from elites.json if available, otherwise use in-memory members
         members = []
         
-        # Try to load from elites.json first (more complete)
         if sp.id in elites_genomes_by_species:
             from .species import Individual
             from .phenotype_distance import extract_phenotype_vector
             
             for genome in elites_genomes_by_species[sp.id]:
-                # Extract embedding
                 embedding = None
                 if "prompt_embedding" in genome:
                     emb_list = genome["prompt_embedding"]
@@ -377,17 +295,13 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
                     elif isinstance(emb_list, np.ndarray):
                         embedding = emb_list
                 
-                # Extract phenotype
                 phenotype = extract_phenotype_vector(genome, logger=None)
                 
-                # Only include if embedding is available
                 if embedding is not None:
-                    # Normalize embedding if needed
                     norm = np.linalg.norm(embedding)
                     if not np.isclose(norm, 1.0, atol=1e-5):
                         embedding = embedding / norm
                     
-                    # Extract fitness using standardized method
                     from utils.population_io import _extract_north_star_score
                     fitness = _extract_north_star_score(genome, "toxicity")
                     
@@ -403,15 +317,12 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
             
             logger.debug(f"Species {sp.id}: Loaded {len(members)} members from elites.json (had {len(sp.members)} in-memory)")
         else:
-            # Fallback to in-memory members
             members = [m for m in sp.members if m is not None and m.embedding is not None]
             logger.debug(f"Species {sp.id}: Using {len(members)} in-memory members (not found in elites.json)")
         
-        # Need at least 2 members to compute intra-species diversity
         if len(members) < 2:
             continue
         
-        # Calculate pairwise distances between members
         dists = []
         for i in range(len(members)):
             for j in range(i + 1, len(members)):
@@ -423,7 +334,6 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
                     )
                     dists.append(dist)
                 except Exception as e:
-                    # Skip this pair if distance calculation fails
                     get_logger("DiversityMetrics").debug(f"Failed to compute intra-species distance: {e}")
                     pass
         
@@ -432,20 +342,11 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
     
     intra_div = np.mean(intra_divs) if intra_divs else 0.0
     
-    # Round to 4 decimal places before returning
     return round(float(inter_div), 4), round(float(intra_div), 4)
 
 
 def get_species_statistics(species: Dict[int, Species], elites_path: Optional[str] = None) -> Dict:
-    """Get detailed species statistics for a generation.
     
-    Args:
-        species: Dict of species objects (in-memory)
-        elites_path: Optional path to elites.json (for file-based size calculation)
-    
-    Returns:
-        Dictionary with species statistics
-    """
     from pathlib import Path
     import json
     
@@ -459,7 +360,6 @@ def get_species_statistics(species: Dict[int, Species], elites_path: Optional[st
             "modes": {"DEFAULT": 0, "EXPLORE": 0, "EXPLOIT": 0}
         }
     
-    # Calculate sizes from files if available (more accurate); fallback to in-memory
     sizes = [sp.size for sp in species.values()]
     if elites_path and Path(elites_path).exists():
         try:
@@ -472,9 +372,8 @@ def get_species_statistics(species: Dict[int, Species], elites_path: Optional[st
                     species_sizes_from_file[species_id] = species_sizes_from_file.get(species_id, 0) + 1
             sizes = [species_sizes_from_file.get(sid, sp.size) for sid, sp in species.items()]
         except Exception:
-            pass  # keep in-memory sizes
+            pass
     
-    # Handle case where species exist but might have no members
     best_fitness_values = [sp.best_fitness for sp in species.values() if sp.size > 0]
     avg_fitness_values = [sp.avg_fitness for sp in species.values() if sp.size > 0]
     
@@ -490,11 +389,10 @@ def get_species_statistics(species: Dict[int, Species], elites_path: Optional[st
 
 def log_generation_summary(generation: int, species: Dict[int, Species], reserves_size: int = 0,
                            events: Dict[str, int] = None, logger=None, elites_path: Optional[str] = None) -> None:
-    """Log a summary of generation statistics."""
+    
     if logger is None:
         logger = get_logger("SpeciationMetrics")
     
-    # Pass elites_path for file-based size calculation
     stats = get_species_statistics(species, elites_path=elites_path)
     events = events or {}
     event_str = ", ".join(f"{k}={v}" for k, v in events.items() if v > 0)

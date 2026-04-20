@@ -1,0 +1,20 @@
+{
+  "figure": "figures/c3_prompt_embeddings_mds_by_species.pdf",
+  "n_points": 19298,
+  "encoder_used": true,
+  "toxsearch_prompts_no_embedding": 0,
+  "genomes_with_toxicity_by_cohort": {
+    "toxsearch": 7387,
+    "toxsearch_s_seq": 4651,
+    "toxsearch_s_2w": 4408,
+    "toxsearch_s_4w": 4421
+  },
+  "note": "n_by_cohort = distinct canonical prompts per configuration (max toxicity across runs); genomes_with_toxicity_by_cohort = all genome rows with a toxicity score (includes repeats).",
+  "n_by_cohort": {
+    "toxsearch": 6752,
+    "toxsearch_s_seq": 4347,
+    "toxsearch_s_2w": 4094,
+    "toxsearch_s_4w": 4105
+  },
+  "n_toxsearch_runs": 7
+}

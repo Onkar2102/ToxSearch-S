@@ -1,13 +1,9 @@
-"""
-Evolution entry point. Reads elites and reserves via population_io; writes variants
-to temp.json. Species assignment and file distribution (elites/reserves/archive) are
-done by speciation Phase 7, not by this module.
-"""
+
 
 import json
 from typing import Dict, Any, List, Optional
 def get_EvolutionEngine():
-    """Lazy import of EvolutionEngine to avoid torch dependency issues"""
+    
     from ea.evolution_engine import EvolutionEngine
     return EvolutionEngine
 from utils import get_population_io, get_custom_logging
@@ -15,15 +11,15 @@ from utils.population_io import update_population_index_single_file
 
 from pathlib import Path
 
-get_logger, _, _, _ = get_custom_logging()
+get_logger, _, _, PerformanceLogger = get_custom_logging()
 
 from utils import get_system_utils
-get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system = get_system_utils()
+get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system, _ = get_system_utils()
 
 project_root = Path(__file__).resolve().parents[2]
 
 def _reset_temp_json(logger):
-    """Reset temp.json to empty list at the start of variant generation."""
+    
     try:
         temp_path = get_outputs_path() / "temp.json"
         with open(temp_path, 'w', encoding='utf-8') as f:
@@ -34,22 +30,12 @@ def _reset_temp_json(logger):
         raise
 
 def _deduplicate_variants_in_temp(logger, operator_stats=None):
-    """
-    Deduplicate variants in temp.json by comparing against existing genomes in all files.
-    This function ONLY performs deduplication and does NOT distribute genomes.
-
-    Args:
-        logger: Logger instance
-        operator_stats: Optional OperatorStatistics instance to track duplicates
-
-    Returns:
-        int: Number of duplicates removed
-    """
+    
     try:
         outputs_path = get_outputs_path()
         temp_path = outputs_path / "temp.json"
         elites_path = outputs_path / "elites.json"
-        reserves_path = outputs_path / "reserves.json"  # Formerly non_elites.json
+        reserves_path = outputs_path / "reserves.json"
 
         if not temp_path.exists():
             logger.warning("temp.json not found for deduplication")
@@ -70,7 +56,7 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
                 elites = json.load(f)
                 for genome in elites:
                     if genome and genome.get("prompt"):
-                        existing_prompts.add(genome["prompt"])  # Exact match, no normalization
+                        existing_prompts.add(genome["prompt"])
                         existing_ids.add(genome.get("id"))
 
         if reserves_path.exists():
@@ -78,7 +64,7 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
                 cluster0_genomes = json.load(f)
                 for genome in cluster0_genomes:
                     if genome and genome.get("prompt"):
-                        existing_prompts.add(genome["prompt"])  # Exact match, no normalization
+                        existing_prompts.add(genome["prompt"])
                         existing_ids.add(genome.get("id"))
 
         unique_variants = []
@@ -89,7 +75,7 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
                 duplicates_removed += 1
                 continue
 
-            prompt = variant["prompt"]  # Exact match, no normalization
+            prompt = variant["prompt"]
             genome_id = variant.get("id")
 
             if prompt in existing_prompts or genome_id in existing_ids:
@@ -114,19 +100,14 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
         raise
 
 
-# Distribution logic has been moved to speciation module
-# Use SpeciationModule.distribute_genomes() instead
-
 
 population_path = None
 evolution_tracker_path = None
 parent_selection_tracker_path = None
 
 
-def check_threshold_and_update_tracker(population, north_star_metric, log_file=None, threshold=0.99):
-    """Check whether the population has reached the north-star threshold and update EvolutionTracker.json.
-    Global version: uses the full population (elites + reserves) and tracker scope 'global', as opposed to
-    per-species or per-run thresholds."""
+def check_threshold_and_update_tracker(population, north_star_metric, log_file=None):
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("RunEvolution", log_file)
     try:
@@ -165,13 +146,8 @@ def check_threshold_and_update_tracker(population, north_star_metric, log_file=N
         if completed_genomes:
             best_genome = max(completed_genomes, key=lambda g: _extract_north_star_score(g, north_star_metric))
             best_score = _extract_north_star_score(best_genome, north_star_metric)
-            best_genome_id = best_genome["id"]
-            if isinstance(best_score, (int, float)) and best_score >= threshold:
-                evolution_tracker["status"] = "not_complete"
-                logger.debug("Threshold achieved (%.4f), continuing for higher scores", best_score)
-            else:
-                evolution_tracker["status"] = "not_complete"
-                logger.debug("Best score: %.4f, threshold not reached", best_score)
+            evolution_tracker["status"] = "not_complete"
+            logger.debug("Best score: %.4f", best_score)
         else:
             evolution_tracker["status"] = "not_complete"
             logger.debug("No completed genomes found")
@@ -219,7 +195,7 @@ def check_threshold_and_update_tracker(population, north_star_metric, log_file=N
         }
 
 def get_pending_status(evolution_tracker, logger):
-    """Get status of global evolution tracker"""
+    
     try:
         status = evolution_tracker.get("status", "not_complete")
         logger.debug("Evolution status: %s", status)
@@ -229,7 +205,7 @@ def get_pending_status(evolution_tracker, logger):
         raise
 
 def update_evolution_tracker_with_generation_global(generation_data, evolution_tracker, logger, population=None, north_star_metric=None):
-    """Update evolution tracker with generation data for global population"""
+    
     _logger = logger or get_logger("update_evolution_tracker", log_file=None)
     try:
         gen_number = generation_data.get("generation_number")
@@ -287,11 +263,9 @@ def update_evolution_tracker_with_generation_global(generation_data, evolution_t
 
         selection_mode = evolution_tracker.get("selection_mode", "default")
         
-        # Import helper functions
         from utils.population_io import _get_standard_generation_entry_template, _ensure_generation_entry_has_all_fields
         
         if existing_gen:
-            # Ensure existing entry has all fields
             existing_gen = _ensure_generation_entry_has_all_fields(existing_gen, gen_number, selection_mode)
             
             variants_created = generation_data.get("variants_created", 0)
@@ -300,7 +274,6 @@ def update_evolution_tracker_with_generation_global(generation_data, evolution_t
 
             _logger.info(f"Updating generation {gen_number} with variant counts: created={variants_created}, mutation={mutation_variants}, crossover={crossover_variants}")
 
-            # Preserve existing speciation data if present
             existing_speciation = existing_gen.get("speciation")
             
             existing_gen.update({
@@ -313,7 +286,6 @@ def update_evolution_tracker_with_generation_global(generation_data, evolution_t
                 "selection_mode": selection_mode
             })
             
-            # Restore speciation data if it was present
             if existing_speciation is not None:
                 existing_gen["speciation"] = existing_speciation
             
@@ -324,7 +296,6 @@ def update_evolution_tracker_with_generation_global(generation_data, evolution_t
             mutation_variants = generation_data.get("mutation_variants", 0)
             crossover_variants = generation_data.get("crossover_variants", 0)
 
-            # Create new entry with all standard fields
             new_gen = _get_standard_generation_entry_template(gen_number, selection_mode)
             new_gen.update({
                 "genome_id": best_genome_id,
@@ -359,29 +330,7 @@ def update_evolution_tracker_with_generation_global(generation_data, evolution_t
 def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_star_metric: str,
                                        execution_time: float, generations_completed: int,
                                        *, logger=None, log_file: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Create comprehensive final statistics using tracker information
-
-    Parameters
-    ----------
-    evolution_tracker : List[dict]
-        The evolution tracker containing all evolution data
-    north_star_metric : str
-        The north star metric used for optimization
-    execution_time : float
-        Total execution time in seconds
-    generations_completed : int
-        Number of generations completed
-    logger : logging.Logger | None
-        Existing logger to reuse; if *None* a new one is created
-    log_file : str | None
-        Optional log-file path when a new logger is created
-
-    Returns
-    -------
-    Dict[str, Any]
-        Comprehensive final statistics
-    """
+    
     _logger = logger or get_logger("create_final_statistics", log_file)
 
     try:
@@ -393,7 +342,7 @@ def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_st
         all_scores = []
         best_scores = []
         for gen_entry in evolution_tracker.get("generations", []):
-            score = gen_entry.get("max_score_variants", 0.0001)
+            score = gen_entry.get("best_fitness", gen_entry.get("max_score_variants", 0.0001))
             all_scores.append(score)
             if gen_entry.get("generation_number") == total_generations - 1:
                 best_scores.append(score)
@@ -477,12 +426,9 @@ def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_st
             "generations_completed": generations_completed
         }
 
-def run_evolution(north_star_metric, log_file=None, threshold=0.99, current_cycle=None, max_variants=1, max_num_parents=4, operators="all"):
-    """Run one evolution generation with comprehensive logging.
-    Steady-state support: population is loaded from reserves.json or elites.json each time; each call runs a single
-    generation and can be invoked repeatedly (e.g. by an external scheduler) without an in-process loop."""
+def run_evolution(north_star_metric, log_file=None, current_cycle=None, max_variants=1, max_num_parents=4, operators="all"):
+    
     outputs_path = get_outputs_path()
-    # Check for population files - use reserves.json (cluster 0) or elites.json
     reserves_path = outputs_path / "reserves.json"
     elites_path = outputs_path / "elites.json"
     evolution_tracker_path = outputs_path / "EvolutionTracker.json"
@@ -490,25 +436,26 @@ def run_evolution(north_star_metric, log_file=None, threshold=0.99, current_cycl
     logger = get_logger("RunEvolution", log_file)
     logger.info("Starting evolution: cycle=%s, metric=%s", current_cycle, north_star_metric)
 
-    # Check if any population file exists
     if not reserves_path.exists() and not elites_path.exists():
         logger.error("No population file found: checked reserves.json and elites.json")
         raise FileNotFoundError(f"No population file found in {outputs_path}")
 
     try:
-        _, _, load_population, _, _, _, _, _, _, _, _, _ = get_population_io()
-        population = load_population(str(outputs_path), logger=logger)
-        logger.debug("Loaded %d genomes", len(population))
+        with PerformanceLogger(logger, "Evolution: Load population"):
+            load_population = get_population_io()[2]
+            population = load_population(str(outputs_path), logger=logger)
+            logger.debug("Loaded %d genomes", len(population))
     except Exception as e:
         logger.error("Unexpected error loading population: %s", e, exc_info=True)
         raise
 
-    evolution_tracker = check_threshold_and_update_tracker(population, north_star_metric, log_file, threshold)
+    with PerformanceLogger(logger, "Evolution: Check tracker and update"):
+        evolution_tracker = check_threshold_and_update_tracker(population, north_star_metric, log_file)
 
     evolution_status = get_pending_status(evolution_tracker, logger)
 
     if evolution_status == "complete":
-        logger.info("Evolution completed - threshold achieved globally")
+        logger.info("Evolution completed (tracker marked complete)")
         return
 
     try:
@@ -521,80 +468,79 @@ def run_evolution(north_star_metric, log_file=None, threshold=0.99, current_cycl
         raise
 
     try:
-        logger.info("Processing global evolution")
-        logger.debug("Calling generate_variants_global()")
-        _reset_temp_json(logger)
-        engine.generate_variants_global(evolution_tracker=evolution_tracker)
+        with PerformanceLogger(logger, "Evolution: Generate variants global"):
+            logger.info("Processing global evolution")
+            logger.debug("Calling generate_variants_global()")
+            _reset_temp_json(logger)
+            engine.generate_variants_global(evolution_tracker=evolution_tracker)
 
-        operator_stats_dict = engine.operator_stats.to_dict()
-        logger.debug(f"Operator statistics: {operator_stats_dict}")
+            operator_stats_dict = engine.operator_stats.to_dict()
+            logger.debug(f"Operator statistics: {operator_stats_dict}")
 
-        temp_path = outputs_path / "temp.json"
-        variant_count = 0
-        if temp_path.exists():
-            with open(temp_path, 'r', encoding='utf-8') as f:
-                temp_variants = json.load(f)
-                variant_count = len(temp_variants)
-        try:
-            update_population_index_single_file(str(outputs_path), len(engine.genomes), logger=logger)
-            logger.debug("Updated population index after evolution")
-        except Exception as e:
-            logger.error("Failed to update population index: %s", e, exc_info=True)
+            temp_path = outputs_path / "temp.json"
+            variant_count = 0
+            if temp_path.exists():
+                with open(temp_path, 'r', encoding='utf-8') as f:
+                    temp_variants = json.load(f)
+                    variant_count = len(temp_variants)
+            try:
+                update_population_index_single_file(str(outputs_path), len(engine.genomes), logger=logger)
+                logger.debug("Updated population index after evolution")
+            except Exception as e:
+                logger.error("Failed to update population index: %s", e, exc_info=True)
     except Exception as e:
         logger.error("Failed to process global evolution: %s", e, exc_info=True)
         raise
     logger.debug("Evolution processing completed")
 
-    # Step 1: Remove duplicates within temp.json itself (intra-temp deduplication)
-    # This removes duplicates generated by different operators or multiple calls to the same operator
     try:
-        temp_path_before = outputs_path / "temp.json"
-        variants_before = 0
-        if temp_path_before.exists():
-            with open(temp_path_before, 'r', encoding='utf-8') as f:
-                variants_before = len(json.load(f))
-        
-        intra_temp_duplicates = engine._deduplicate_temp_json()
-        
-        if intra_temp_duplicates > 0:
-            logger.info(f"Step 1 (intra-temp): Removed {intra_temp_duplicates} duplicates within temp.json ({variants_before} → {variants_before - intra_temp_duplicates})")
-        else:
-            logger.debug(f"Step 1 (intra-temp): No duplicates found within temp.json ({variants_before} variants)")
+        with PerformanceLogger(logger, "Evolution: Intra-temp deduplication"):
+            temp_path_before = outputs_path / "temp.json"
+            variants_before = 0
+            if temp_path_before.exists():
+                with open(temp_path_before, 'r', encoding='utf-8') as f:
+                    variants_before = len(json.load(f))
+            
+            intra_temp_duplicates = engine._deduplicate_temp_json()
+            
+            if intra_temp_duplicates > 0:
+                logger.info(f"Step 1 (intra-temp): Removed {intra_temp_duplicates} duplicates within temp.json ({variants_before} → {variants_before - intra_temp_duplicates})")
+            else:
+                logger.debug(f"Step 1 (intra-temp): No duplicates found within temp.json ({variants_before} variants)")
     except Exception as e:
         logger.warning(f"Failed to deduplicate within temp.json: {e}, continuing with population deduplication")
 
-    # Step 2: Remove duplicates that already exist in the population (elites.json, reserves.json)
     try:
-        temp_path_before = outputs_path / "temp.json"
-        variants_before = 0
-        if temp_path_before.exists():
-            with open(temp_path_before, 'r', encoding='utf-8') as f:
-                variants_before = len(json.load(f))
-        
-        duplicates_removed = _deduplicate_variants_in_temp(logger, engine.operator_stats)
-        
-        if duplicates_removed > 0:
-            logger.info(f"Step 2 (population): Removed {duplicates_removed} duplicates against existing population ({variants_before} → {variants_before - duplicates_removed})")
-        else:
-            logger.debug(f"Step 2 (population): No duplicates found against population ({variants_before} variants)")
+        with PerformanceLogger(logger, "Evolution: Population deduplication"):
+            temp_path_before = outputs_path / "temp.json"
+            variants_before = 0
+            if temp_path_before.exists():
+                with open(temp_path_before, 'r', encoding='utf-8') as f:
+                    variants_before = len(json.load(f))
+            
+            duplicates_removed = _deduplicate_variants_in_temp(logger, engine.operator_stats)
+            
+            if duplicates_removed > 0:
+                logger.info(f"Step 2 (population): Removed {duplicates_removed} duplicates against existing population ({variants_before} → {variants_before - duplicates_removed})")
+            else:
+                logger.debug(f"Step 2 (population): No duplicates found against population ({variants_before} variants)")
     except Exception as e:
         logger.error("Failed to deduplicate variants in temp.json: %s", e, exc_info=True)
         raise
 
     try:
-        current_generation = current_cycle
-        if current_generation is None:
-            logger.error("current_cycle is None - cannot determine generation number")
-            return
-        new_generation_data = {
-            "generation_number": current_generation,
-            "genome_id": None,
-            "max_score_variants": 0.0,
-            "parents": [],
-            "operator_statistics": operator_stats_dict
-        }
-
-
+        with PerformanceLogger(logger, "Evolution: Prepare EvolutionTracker data"):
+            current_generation = current_cycle
+            if current_generation is None:
+                logger.error("current_cycle is None - cannot determine generation number")
+                return
+            new_generation_data = {
+                "generation_number": current_generation,
+                "genome_id": None,
+                "max_score_variants": 0.0,
+                "parents": [],
+                "operator_statistics": operator_stats_dict
+            }
     except Exception as e:
         logger.error("Failed to prepare EvolutionTracker data: %s", e, exc_info=True)
 

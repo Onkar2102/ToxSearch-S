@@ -1,9 +1,4 @@
-"""
-Model Interface Abstraction Layer
 
-Provides OpenAI-compatible v1/chat/completions interface for model-agnostic architecture.
-Currently implements llama_cpp provider with chat completions support.
-"""
 
 import os
 import time
@@ -23,16 +18,7 @@ class ModelInterface(ABC):
     
     @abstractmethod
     def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        """
-        Generate a chat completion response.
         
-        Args:
-            messages: List of message dictionaries with 'role' and 'content' keys
-            **kwargs: Additional generation parameters
-            
-        Returns:
-            Generated text response
-        """
         pass
 
 
@@ -43,19 +29,10 @@ class LlamaCppChatInterface(ModelInterface):
     _MODEL_CACHE_ACCESS_COUNT = {}
     _MODEL_CACHE_LOCK = None
     
-    def __init__(self, model_cfg: Dict[str, Any], log_file: Optional[str] = None):
-        """
-        Initialize the LlamaCpp chat interface.
+    def __init__(self, model_cfg: Dict[str, Any], log_file: Optional[str] = None, cache_key_suffix: Optional[str] = None):
         
-        Args:
-            model_cfg: Model configuration dictionary
-            log_file: Optional log file path
-        """
         self.logger = get_logger("LlamaCppChatInterface", log_file)
         self.model_cfg = model_cfg
-        
-        self.enable_memory_cleanup = model_cfg.get("enable_memory_cleanup", True)
-        self.max_memory_usage_gb = model_cfg.get("max_memory_usage_gb", 12.0)
         
         self.generation_count = 0
         self.total_tokens_generated = 0
@@ -74,10 +51,10 @@ class LlamaCppChatInterface(ModelInterface):
         if self._MODEL_CACHE_LOCK is None:
             self._MODEL_CACHE_LOCK = threading.Lock()
         
-        self._model_cache_key = absolute_model_path
+        self._model_cache_key = f"{absolute_model_path}|{cache_key_suffix}" if cache_key_suffix else absolute_model_path
 
-        self.logger.info(f"Loading llama.cpp model: {absolute_model_path}")
-        self._load_model(absolute_model_path)
+        self.logger.info(f"Loading llama.cpp model: {absolute_model_path}" + (f" (role={cache_key_suffix})" if cache_key_suffix else ""))
+        self._load_model(absolute_model_path, cache_key=self._model_cache_key)
         self.model = self._MODEL_CACHE[self._model_cache_key]
         self.generation_args = model_cfg.get("generation_args", {})
         
@@ -86,21 +63,41 @@ class LlamaCppChatInterface(ModelInterface):
     
     @classmethod
     def clear_model_cache(cls):
-        """Clear the entire model cache to force fresh model loading."""
+        
         logger = get_logger("LlamaCppChatInterface")
         with cls._MODEL_CACHE_LOCK:
             cls._MODEL_CACHE.clear()
             cls._MODEL_CACHE_ACCESS_COUNT.clear()
             logger.info("Model cache cleared - all models will be reloaded")
+
+    @classmethod
+    def close_and_clear_model_cache(cls):
+        
+        logger = get_logger("LlamaCppChatInterface")
+        with cls._MODEL_CACHE_LOCK:
+            for cache_key, model in list(cls._MODEL_CACHE.items()):
+                try:
+                    if hasattr(model, "close"):
+                        model.close()
+                except AttributeError as e:
+                    logger.debug(
+                        "Ignoring AttributeError when closing model %s (known llama-cpp-python teardown): %s",
+                        cache_key[:80], e,
+                    )
+                except Exception as e:
+                    logger.warning("Error closing model %s: %s", cache_key[:80], e)
+            cls._MODEL_CACHE.clear()
+            cls._MODEL_CACHE_ACCESS_COUNT.clear()
+            logger.info("Model cache closed and cleared")
     
     def _cleanup_model_cache_if_needed(self):
-        """Clean up unused models from cache, but preserve main RG/PG models."""
+        
         max_cache_size = 5
         
         if len(self._MODEL_CACHE) > max_cache_size:
             main_models = set()
             for model_path in self._MODEL_CACHE.keys():
-                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s']):
+                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s', 'q8_0', 'q8_k']):
                     main_models.add(model_path)
             
             models_to_remove = []
@@ -117,20 +114,19 @@ class LlamaCppChatInterface(ModelInterface):
                 del self._MODEL_CACHE_ACCESS_COUNT[model_path]
                 self.logger.info(f"Removed model {model_path} from cache (access count: {access_count})")
     
-    def _load_model(self, model_path: str):
-        """Load model using llama.cpp with device-specific optimizations."""
+    def _load_model(self, model_path: str, cache_key: Optional[str] = None):
+        
+        if cache_key is None:
+            cache_key = model_path
         try:
             if not os.path.isabs(model_path):
                 from pathlib import Path
                 project_root = Path(__file__).resolve().parents[2]
                 model_path = str(project_root / model_path)
 
-            self._model_cache_key = model_path
-
-            if model_path in self._MODEL_CACHE:
-                # Reuse cached model and bump access count
-                self._MODEL_CACHE_ACCESS_COUNT[model_path] = self._MODEL_CACHE_ACCESS_COUNT.get(model_path, 0) + 1
-                self.logger.debug(f"Reusing cached model: {model_path} (accesses={self._MODEL_CACHE_ACCESS_COUNT[model_path]})")
+            if cache_key in self._MODEL_CACHE:
+                self._MODEL_CACHE_ACCESS_COUNT[cache_key] = self._MODEL_CACHE_ACCESS_COUNT.get(cache_key, 0) + 1
+                self.logger.debug("Reusing cached model: %s (accesses=%d)", cache_key, self._MODEL_CACHE_ACCESS_COUNT[cache_key])
                 self._cleanup_model_cache_if_needed()
                 return
             
@@ -138,7 +134,6 @@ class LlamaCppChatInterface(ModelInterface):
                 gguf_path = f"{model_path}.gguf"
                 if os.path.exists(gguf_path):
                     model_path = gguf_path
-                    self._model_cache_key = model_path
                 else:
                     raise FileNotFoundError(f"Model file not found: {model_path}")
             
@@ -147,6 +142,7 @@ class LlamaCppChatInterface(ModelInterface):
             llama_params = {
                 "model_path": model_path,
                 "n_ctx": device_config.get("context_length", 4096),
+                "n_batch": device_config.get("n_batch", 1024),
                 "n_threads": device_config.get("num_threads", None),
                 "n_gpu_layers": device_config.get("gpu_layers", 0),
                 "verbose": False,
@@ -160,16 +156,17 @@ class LlamaCppChatInterface(ModelInterface):
                 "use_mlock": device_config.get("use_mlock", False),
             }
             
-            if device_config.get("device") == "mps":
+            device_name = device_config.get("device", "cpu")
+            if device_name == "mps":
                 llama_params.update({
                     "n_gpu_layers": device_config.get("gpu_layers", 20),
                     "main_gpu": 0,
                     "tensor_split": None,
                 })
-            elif device_config.get("device") == "cuda":
+            elif device_name == "cuda" or (isinstance(device_name, str) and device_name.startswith("cuda:")):
                 llama_params.update({
                     "n_gpu_layers": device_config.get("gpu_layers", -1),
-                    "main_gpu": 0,
+                    "main_gpu": device_config.get("main_gpu", 0),
                     "tensor_split": device_config.get("tensor_split", None),
                 })
             else:
@@ -182,8 +179,8 @@ class LlamaCppChatInterface(ModelInterface):
             self.logger.debug(f"Llama.cpp parameters: {llama_params}")
             model = Llama(**llama_params)
             
-            self._MODEL_CACHE[model_path] = model
-            self._MODEL_CACHE_ACCESS_COUNT[model_path] = 1
+            self._MODEL_CACHE[cache_key] = model
+            self._MODEL_CACHE_ACCESS_COUNT[cache_key] = 1
             self.logger.info(f"Model loaded successfully: {model_path}")
             self._cleanup_model_cache_if_needed()
             
@@ -192,7 +189,7 @@ class LlamaCppChatInterface(ModelInterface):
             raise
     
     def _get_device_specific_config(self) -> Dict[str, Any]:
-        """Get device-specific configuration for llama.cpp."""
+        
         from utils.device_utils import device_manager
         
         device = device_manager.get_optimal_device()
@@ -201,6 +198,7 @@ class LlamaCppChatInterface(ModelInterface):
         device_config = {
             "device": device,
             "context_length": 4096,
+            "n_batch": 1024,
             "num_threads": None,
             "use_mmap": True,
             "use_mlock": False,
@@ -216,8 +214,14 @@ class LlamaCppChatInterface(ModelInterface):
                 "low_vram": False,
                 "f16_kv": True,
             })
-        elif device == "cuda":
+        elif device == "cuda" or (isinstance(device, str) and device.startswith("cuda:")):
             cuda_config = config.get("cuda", {})
+            main_gpu = 0
+            if isinstance(device, str) and device.startswith("cuda:"):
+                try:
+                    main_gpu = int(device.split(":", 1)[1])
+                except (IndexError, ValueError):
+                    main_gpu = 0
             device_config.update({
                 "gpu_layers": cuda_config.get("gpu_layers", -1),
                 "use_mmap": True,
@@ -225,6 +229,7 @@ class LlamaCppChatInterface(ModelInterface):
                 "low_vram": cuda_config.get("low_vram", False),
                 "f16_kv": True,
                 "tensor_split": cuda_config.get("tensor_split", None),
+                "main_gpu": main_gpu,
             })
         else:
             cpu_config = config.get("cpu", {})
@@ -236,12 +241,13 @@ class LlamaCppChatInterface(ModelInterface):
                 "low_vram": False,
                 "f16_kv": False,
             })
-        
+        if config.get("n_batch") is not None:
+            device_config["n_batch"] = config["n_batch"]
         return device_config
     
     @classmethod
     def get_cache_stats(cls) -> Dict[str, Any]:
-        """Get model cache statistics."""
+        
         return {
             "cached_models": len(cls._MODEL_CACHE),
             "model_paths": list(cls._MODEL_CACHE.keys()),
@@ -251,12 +257,12 @@ class LlamaCppChatInterface(ModelInterface):
     
     @classmethod
     def clear_cache(cls, preserve_main_models: bool = True):
-        """Clear model cache, optionally preserving main RG/PG models."""
+        
         if preserve_main_models:
             main_models = {}
             main_access_counts = {}
             for model_path in cls._MODEL_CACHE.keys():
-                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s']):
+                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s', 'q8_0', 'q8_k']):
                     main_models[model_path] = cls._MODEL_CACHE[model_path]
                     main_access_counts[model_path] = cls._MODEL_CACHE_ACCESS_COUNT.get(model_path, 0)
             
@@ -270,7 +276,7 @@ class LlamaCppChatInterface(ModelInterface):
             cls._MODEL_CACHE_ACCESS_COUNT.clear()
     
     def _check_memory_usage(self):
-        """Check memory usage and perform cleanup if needed."""
+        
         current_time = time.time()
         if current_time - self.last_memory_check > self.memory_check_interval:
             try:
@@ -290,7 +296,7 @@ class LlamaCppChatInterface(ModelInterface):
                 self.logger.warning(f"Memory check failed: {e}")
     
     def _perform_memory_cleanup(self):
-        """Perform memory cleanup."""
+        
         try:
             import gc
             gc.collect()
@@ -299,15 +305,7 @@ class LlamaCppChatInterface(ModelInterface):
             self.logger.warning(f"Memory cleanup failed: {e}")
     
     def _convert_messages_to_prompt(self, messages: List[Dict[str, str]]) -> str:
-        """
-        Convert chat messages to appropriate prompt format for GGUF models.
         
-        Args:
-            messages: List of message dictionaries with 'role' and 'content' keys
-            
-        Returns:
-            Formatted prompt string
-        """
         prompt_parts = []
         
         for message in messages:
@@ -335,16 +333,7 @@ class LlamaCppChatInterface(ModelInterface):
         return formatted_prompt
     
     def _estimate_token_count(self, text: str) -> int:
-        """
-        Estimate token count for text using a simple heuristic.
-        This is a rough approximation - actual tokenization may vary.
         
-        Args:
-            text: Input text to count tokens for
-            
-        Returns:
-            Estimated token count
-        """
         if not text:
             return 0
         
@@ -362,17 +351,7 @@ class LlamaCppChatInterface(ModelInterface):
         return estimated_tokens + overhead
     
     def _validate_context_window(self, formatted_prompt: str, max_new_tokens: int, context_length: int = 4096) -> tuple[str, int]:
-        """
-        Validate and adjust prompt/tokens to fit within context window.
         
-        Args:
-            formatted_prompt: The formatted prompt text
-            max_new_tokens: Requested maximum new tokens to generate
-            context_length: Total context window length
-            
-        Returns:
-            Tuple of (adjusted_prompt, adjusted_max_tokens)
-        """
         prompt_tokens = self._estimate_token_count(formatted_prompt)
         total_requested = prompt_tokens + max_new_tokens
         
@@ -399,17 +378,7 @@ class LlamaCppChatInterface(ModelInterface):
         return formatted_prompt, max_new_tokens
     
     def _truncate_prompt(self, prompt: str, max_tokens: int) -> str:
-        """
-        Truncate prompt to fit within token limit.
-        Prioritizes keeping the end of the prompt (user input).
         
-        Args:
-            prompt: Original prompt text
-            max_tokens: Maximum tokens allowed
-            
-        Returns:
-            Truncated prompt text
-        """
         if not prompt:
             return prompt
         
@@ -436,16 +405,7 @@ class LlamaCppChatInterface(ModelInterface):
             return prompt[:max_chars]
     
     def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        """
-        Generate a chat completion response using llama.cpp.
         
-        Args:
-            messages: List of message dictionaries with 'role' and 'content' keys
-            **kwargs: Additional generation parameters
-            
-        Returns:
-            Generated text response
-        """
         start_time = time.time()
         
         try:
@@ -479,7 +439,7 @@ class LlamaCppChatInterface(ModelInterface):
                 top_k=generation_kwargs.get("top_k", 40),
                 repeat_penalty=generation_kwargs.get("repetition_penalty", 1.1),
                 stop=["</s>", "<|endoftext|>", "User:", "System:"],
-                seed=random.randint(0, 2**31 - 1),
+                seed=generation_kwargs["seed"] if "seed" in generation_kwargs else random.randint(0, 2**31 - 1),
                 echo=False,
             )
             
@@ -508,7 +468,7 @@ class LlamaCppChatInterface(ModelInterface):
             self.total_generation_time += generation_time
     
     def get_performance_stats(self) -> Dict[str, Any]:
-        """Get performance statistics for the model interface."""
+        
         return {
             "generation_count": self.generation_count,
             "total_tokens_generated": self.total_tokens_generated,

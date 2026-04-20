@@ -1,7 +1,4 @@
-"""
-Data loading utilities for HuggingFace datasets and CSV sources.
-Used for extracting and preparing prompt/question data for evolution.
-"""
+
 
 from datasets import load_dataset
 import pandas as pd
@@ -13,13 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def extract_english_questions(ds, source_name, split_name):
-    """
-    Extract 'question' column from a HuggingFace datasets.Dataset object.
-    - ds: HuggingFace Dataset object (already restricted to an English split)
-    - source_name: Name of the source dataset.
-    - split_name: Name of the split ('train', 'en', etc.)
-    Returns: DataFrame with ['questions']
-    """
+    
     try:
         col = 'question'
         if col not in ds.column_names:
@@ -38,33 +29,26 @@ def extract_english_questions(ds, source_name, split_name):
             q_list = list(q_col)
 
         df = pd.DataFrame({"questions": pd.Series(q_list, dtype="string")})
-        # Aggressively remove all types of quotes from questions during extraction
         def strip_all_quotes(text):
-            """Remove all surrounding quotes (double, single, backticks, double single) from text"""
+            
             if not isinstance(text, str):
                 return text
             text = text.strip()
-            # Remove quotes in multiple passes to handle nested quotes
             while True:
                 original = text
-                # Remove double quotes
                 if text.startswith('"') and text.endswith('"'):
                     text = text.strip('"').strip()
-                # Remove single quotes
                 if text.startswith("'") and text.endswith("'"):
                     text = text.strip("'").strip()
-                # Remove backticks
                 if text.startswith('`') and text.endswith('`'):
                     text = text.strip('`').strip()
-                # Remove double single quotes
                 if text.startswith("''") and text.endswith("''"):
                     text = text.strip("''").strip()
-                # Stop if no more quotes to remove
                 if text == original:
                     break
             return text
         df['questions'] = df['questions'].apply(strip_all_quotes)
-        logger.info(f"Extracted {len(df)} questions from {source_name} ({split_name})")
+        logger.debug(f"Extracted {len(df)} questions from {source_name} ({split_name})")
         return df
 
     except Exception as e:
@@ -72,11 +56,7 @@ def extract_english_questions(ds, source_name, split_name):
         return pd.DataFrame(columns=['questions'])
 
 def extract_harmfulqa_questions(ds, source_name, split_name):
-    """
-    Extract English questions from the HarmfulQA dataset format:
-    The dataset has a "contexts" column which is a list of lists of questions,
-    and "contexts_language" which includes a "en" split.
-    """
+    
     try:
         if "contexts" in ds.column_names:
             context_lists = ds["contexts"]
@@ -85,33 +65,26 @@ def extract_harmfulqa_questions(ds, source_name, split_name):
                 if isinstance(context_entry, (list, tuple)):
                     all_questions.extend([q for q in context_entry if isinstance(q, str)])
             df = pd.DataFrame({"questions": pd.Series(all_questions, dtype="string")})
-            # Aggressively remove all types of quotes from questions during extraction
             def strip_all_quotes(text):
-                """Remove all surrounding quotes (double, single, backticks, double single) from text"""
+                
                 if not isinstance(text, str):
                     return text
                 text = text.strip()
-                # Remove quotes in multiple passes to handle nested quotes
                 while True:
                     original = text
-                    # Remove double quotes
                     if text.startswith('"') and text.endswith('"'):
                         text = text.strip('"').strip()
-                    # Remove single quotes
                     if text.startswith("'") and text.endswith("'"):
                         text = text.strip("'").strip()
-                    # Remove backticks
                     if text.startswith('`') and text.endswith('`'):
                         text = text.strip('`').strip()
-                    # Remove double single quotes
                     if text.startswith("''") and text.endswith("''"):
                         text = text.strip("''").strip()
-                    # Stop if no more quotes to remove
                     if text == original:
                         break
                 return text
             df['questions'] = df['questions'].apply(strip_all_quotes)
-            logger.info(f"Extracted {len(df)} questions from 'contexts' in {source_name} ({split_name})")
+            logger.debug(f"Extracted {len(df)} questions from 'contexts' in {source_name} ({split_name})")
             return df
         elif "question" in ds.column_names:
             return extract_english_questions(ds, source_name, split_name)
@@ -123,11 +96,7 @@ def extract_harmfulqa_questions(ds, source_name, split_name):
         return pd.DataFrame(columns=['questions'])
 
 def load_harmful_datasets():
-    """
-    Load and combine harmful question datasets from HuggingFace.
-    Uses CategoricalHarmfulQA and HarmfulQA.
-    Returns: DataFrame with unique questions from all datasets.
-    """
+    
     all_questions = []
 
     try:
@@ -173,28 +142,21 @@ def load_harmful_datasets():
 
     logger.info("Cleaning data...")
     combined_df['questions'] = combined_df['questions'].astype(str).str.strip()
-    # Aggressively remove all types of quotes (double, single, backticks, double single)
     def strip_all_quotes(text):
-        """Remove all surrounding quotes (double, single, backticks, double single) from text"""
+        
         if not isinstance(text, str):
             return text
         text = text.strip()
-        # Remove quotes in multiple passes to handle nested quotes
         while True:
             original = text
-            # Remove double quotes
             if text.startswith('"') and text.endswith('"'):
                 text = text.strip('"').strip()
-            # Remove single quotes
             if text.startswith("'") and text.endswith("'"):
                 text = text.strip("'").strip()
-            # Remove backticks
             if text.startswith('`') and text.endswith('`'):
                 text = text.strip('`').strip()
-            # Remove double single quotes
             if text.startswith("''") and text.endswith("''"):
                 text = text.strip("''").strip()
-            # Stop if no more quotes to remove
             if text == original:
                 break
         return text
@@ -206,22 +168,16 @@ def load_harmful_datasets():
     return combined_df
 
 def load_harmful_datasets_separate():
-    """
-    Load harmful question datasets separately (for stratified sampling).
-    Returns: Tuple of (categorical_questions_df, harmfulqa_questions_df)
-    """
+    
     categorical_questions = pd.DataFrame(columns=['questions'])
     harmfulqa_questions = pd.DataFrame(columns=['questions'])
 
     try:
-        logger.info("Loading CategoricalHarmfulQA dataset...")
         try:
             categorical_ds = load_dataset("declare-lab/CategoricalHarmfulQA", split="en")
-            logger.info("CategoricalHarmfulQA: using 'en' split")
         except Exception as e_en:
             logger.warning(f"CategoricalHarmfulQA 'en' split failed: {e_en}; falling back to 'train'")
             categorical_ds = load_dataset("declare-lab/CategoricalHarmfulQA", split="train")
-            logger.info("CategoricalHarmfulQA: using 'train' split")
         categorical_questions = extract_english_questions(categorical_ds, "CategoricalHarmfulQA", "en_or_train")
         if categorical_questions.empty:
             logger.warning("CategoricalHarmfulQA produced 0 questions after extraction.")
@@ -229,71 +185,53 @@ def load_harmful_datasets_separate():
         logger.error(f"Failed to load CategoricalHarmfulQA dataset: {e}")
 
     try:
-        logger.info("Loading HarmfulQA dataset (prefer 'en' split)...")
         try:
             harmfulqa_ds = load_dataset("declare-lab/HarmfulQA", split="en")
-            logger.info("HarmfulQA: using 'en' split")
         except Exception as e_en:
             logger.warning(f"HarmfulQA 'en' split failed: {e_en}; falling back to 'train'")
             harmfulqa_ds = load_dataset("declare-lab/HarmfulQA", split="train")
-            logger.info("HarmfulQA: using 'train' split")
         harmfulqa_questions = extract_harmfulqa_questions(harmfulqa_ds, "HarmfulQA", "en_or_train")
         if harmfulqa_questions.empty:
             logger.warning("HarmfulQA produced 0 questions after extraction.")
     except Exception as e:
         logger.error(f"Failed to load HarmfulQA dataset: {e}")
 
-    # Helper function to aggressively remove all types of quotes
     def strip_all_quotes(text):
-        """Remove all surrounding quotes (double, single, backticks, double single) from text"""
+        
         if not isinstance(text, str):
             return text
         text = text.strip()
-        # Remove quotes in multiple passes to handle nested quotes
         while True:
             original = text
-            # Remove double quotes
             if text.startswith('"') and text.endswith('"'):
                 text = text.strip('"').strip()
-            # Remove single quotes
             if text.startswith("'") and text.endswith("'"):
                 text = text.strip("'").strip()
-            # Remove backticks
             if text.startswith('`') and text.endswith('`'):
                 text = text.strip('`').strip()
-            # Remove double single quotes
             if text.startswith("''") and text.endswith("''"):
                 text = text.strip("''").strip()
-            # Stop if no more quotes to remove
             if text == original:
                 break
         return text
     
-    # Clean each dataset separately
     if not categorical_questions.empty:
         categorical_questions['questions'] = categorical_questions['questions'].astype(str).str.strip()
         categorical_questions['questions'] = categorical_questions['questions'].apply(strip_all_quotes)
         categorical_questions = categorical_questions.dropna(subset=['questions'])
         categorical_questions = categorical_questions.drop_duplicates(subset=['questions'])
-        logger.info(f"CategoricalHarmfulQA: {len(categorical_questions)} unique questions after cleaning")
 
     if not harmfulqa_questions.empty:
         harmfulqa_questions['questions'] = harmfulqa_questions['questions'].astype(str).str.strip()
         harmfulqa_questions['questions'] = harmfulqa_questions['questions'].apply(strip_all_quotes)
         harmfulqa_questions = harmfulqa_questions.dropna(subset=['questions'])
         harmfulqa_questions = harmfulqa_questions.drop_duplicates(subset=['questions'])
-        logger.info(f"HarmfulQA: {len(harmfulqa_questions)} unique questions after cleaning")
 
+    logger.info(f"Loaded: CategoricalHarmfulQA {len(categorical_questions)} unique, HarmfulQA {len(harmfulqa_questions)} unique")
     return categorical_questions, harmfulqa_questions
 
 def save_questions_to_file(questions_df, filename=os.path.join("data", "harmful_questions.csv")):
-    """
-    Save questions DataFrame to CSV files.
-
-    Args:
-        questions_df: DataFrame with questions (should already be UNIQUE for prompt_extended.csv!)
-        filename: Output filename (default: "data/harmful_questions.csv")
-    """
+    
     outdir = os.path.dirname(filename)
     if outdir and not os.path.exists(outdir):
         os.makedirs(outdir, exist_ok=True)
@@ -301,28 +239,21 @@ def save_questions_to_file(questions_df, filename=os.path.join("data", "harmful_
     success = True
 
     try:
-        # Aggressively remove all types of quotes before saving
         def strip_all_quotes(text):
-            """Remove all surrounding quotes (double, single, backticks, double single) from text"""
+            
             if not isinstance(text, str):
                 return text
             text = text.strip()
-            # Remove quotes in multiple passes to handle nested quotes
             while True:
                 original = text
-                # Remove double quotes
                 if text.startswith('"') and text.endswith('"'):
                     text = text.strip('"').strip()
-                # Remove single quotes
                 if text.startswith("'") and text.endswith("'"):
                     text = text.strip("'").strip()
-                # Remove backticks
                 if text.startswith('`') and text.endswith('`'):
                     text = text.strip('`').strip()
-                # Remove double single quotes
                 if text.startswith("''") and text.endswith("''"):
                     text = text.strip("''").strip()
-                # Stop if no more quotes to remove
                 if text == original:
                     break
             return text
@@ -336,9 +267,8 @@ def save_questions_to_file(questions_df, filename=os.path.join("data", "harmful_
 
     extended_filename = "data/prompt_extended.csv"
     try:
-        # Aggressively remove all quotes before saving
         def strip_all_quotes(text):
-            """Remove all surrounding quotes from text"""
+            
             if not isinstance(text, str):
                 return text
             text = text.strip()
@@ -353,117 +283,150 @@ def save_questions_to_file(questions_df, filename=os.path.join("data", "harmful_
         logger.error(f"Failed to save questions to {extended_filename}: {e}")
         success = False
 
-    # Note: prompt.csv is now handled separately by save_prompt_csv_stratified()
-    # to ensure 250 questions from each dataset
 
     return success
 
-def save_prompt_csv_stratified(categorical_questions_df, harmfulqa_questions_df, 
-                                n_per_dataset=250, random_state=48, filename="data/prompt.csv"):
-    """
-    Create prompt.csv by sampling n_per_dataset questions from each dataset separately.
+def _strip_quotes_for_save(text):
     
-    Args:
-        categorical_questions_df: DataFrame with questions from CategoricalHarmfulQA
-        harmfulqa_questions_df: DataFrame with questions from HarmfulQA
-        n_per_dataset: Number of questions to sample from each dataset (default: 250)
-        random_state: Random seed for reproducibility (default: 48)
-        filename: Output filename (default: "data/prompt.csv")
+    if not isinstance(text, str):
+        return text
+    text = text.strip()
+    while (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+        text = text.strip('"').strip("'").strip()
+    return text
+
+
+def select_prompts(categorical_questions_df, harmfulqa_questions_df, n_total=500,
+                   strategy="stratified", random_state=48):
     
-    Returns:
-        bool: True if successful, False otherwise
-    """
+    cat_df = categorical_questions_df.dropna(subset=['questions']).drop_duplicates(subset=['questions']) if not categorical_questions_df.empty else pd.DataFrame(columns=['questions'])
+    harm_df = harmfulqa_questions_df.dropna(subset=['questions']).drop_duplicates(subset=['questions']) if not harmfulqa_questions_df.empty else pd.DataFrame(columns=['questions'])
+    n_cat, n_harm = len(cat_df), len(harm_df)
+
+    if strategy == "union_sample":
+        combined = pd.concat([cat_df, harm_df], ignore_index=True)
+        combined = combined.drop_duplicates(subset=['questions'])
+        n_avail = len(combined)
+        n_take = min(n_total, n_avail)
+        out = combined.sample(n=n_take, random_state=random_state)
+        logger.info(f"Selected {n_take} from union ({n_avail} unique after dedup; target was {n_total})")
+        return out
+
+    if strategy == "proportional":
+        total_size = n_cat + n_harm
+        if total_size == 0:
+            return pd.DataFrame(columns=['questions'])
+        n_cat_take = min(n_cat, max(0, int(round(n_total * n_cat / total_size))))
+        n_harm_take = min(n_harm, n_total - n_cat_take)
+        if n_harm_take < 0:
+            n_harm_take = 0
+            n_cat_take = min(n_cat, n_total)
+        cat_sample = cat_df.sample(n=min(n_cat_take, n_cat), random_state=random_state) if n_cat else pd.DataFrame(columns=['questions'])
+        harm_sample = harm_df.sample(n=min(n_harm_take, n_harm), random_state=random_state) if n_harm else pd.DataFrame(columns=['questions'])
+        out = pd.concat([cat_sample, harm_sample], ignore_index=True)
+        logger.info(f"Selected {len(cat_sample)} from CategoricalHarmfulQA, {len(harm_sample)} from HarmfulQA → {len(out)} total (target {n_total})")
+        return out
+
+    half = n_total // 2
+    n_cat_take = min(half, n_cat)
+    n_harm_take = min(half, n_harm)
+    shortfall = n_total - (n_cat_take + n_harm_take)
+    if shortfall > 0 and n_cat_take < n_cat:
+        extra_cat = min(shortfall, n_cat - n_cat_take)
+        n_cat_take += extra_cat
+        shortfall -= extra_cat
+    if shortfall > 0 and n_harm_take < n_harm:
+        n_harm_take += min(shortfall, n_harm - n_harm_take)
+    cat_sample = cat_df.sample(n=n_cat_take, random_state=random_state) if n_cat_take and n_cat else pd.DataFrame(columns=['questions'])
+    harm_sample = harm_df.sample(n=n_harm_take, random_state=random_state) if n_harm_take and n_harm else pd.DataFrame(columns=['questions'])
+    out = pd.concat([cat_sample, harm_sample], ignore_index=True)
+    logger.info(
+        f"Selected {len(cat_sample)} from CategoricalHarmfulQA ({n_cat} available), "
+        f"{len(harm_sample)} from HarmfulQA ({n_harm} available) → {len(out)} total (target {n_total})"
+    )
+    return out
+
+
+def save_prompt_csv_stratified(categorical_questions_df, harmfulqa_questions_df,
+                                n_total=500, strategy="stratified", random_state=48,
+                                filename="data/prompt.csv", selected_df=None):
+    
     outdir = os.path.dirname(filename)
     if outdir and not os.path.exists(outdir):
         os.makedirs(outdir, exist_ok=True)
-
     try:
-        # Sample from each dataset separately
-        categorical_sample = categorical_questions_df.sample(
-            n=min(n_per_dataset, len(categorical_questions_df)), 
-            random_state=random_state
-        ) if not categorical_questions_df.empty else pd.DataFrame(columns=['questions'])
-        
-        harmfulqa_sample = harmfulqa_questions_df.sample(
-            n=min(n_per_dataset, len(harmfulqa_questions_df)), 
-            random_state=random_state
-        ) if not harmfulqa_questions_df.empty else pd.DataFrame(columns=['questions'])
-        
-        # Combine samples
-        combined_sample = pd.concat([categorical_sample, harmfulqa_sample], ignore_index=True)
-        
-        # Aggressively remove all quotes before saving
-        def strip_all_quotes(text):
-            """Remove all surrounding quotes from text"""
-            if not isinstance(text, str):
-                return text
-            text = text.strip()
-            while (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
-                text = text.strip('"').strip("'").strip()
-            return text
-        combined_sample['questions'] = combined_sample['questions'].apply(strip_all_quotes)
-        
-        # Save to file (QUOTE_MINIMAL only quotes when necessary, but we've already stripped quotes from text)
-        combined_sample[['questions']].to_csv(filename, index=False, header=True, quoting=csv.QUOTE_MINIMAL)
-        logger.info(f"Saved {len(combined_sample)} questions to {filename} "
-                   f"({len(categorical_sample)} from CategoricalHarmfulQA, "
-                   f"{len(harmfulqa_sample)} from HarmfulQA)")
+        if selected_df is not None:
+            selected = selected_df
+        else:
+            selected = select_prompts(
+                categorical_questions_df, harmfulqa_questions_df,
+                n_total=n_total, strategy=strategy, random_state=random_state
+            )
+        selected = selected.copy()
+        selected['questions'] = selected['questions'].astype(str).str.strip().apply(_strip_quotes_for_save)
+        selected[['questions']].to_csv(filename, index=False, header=True, quoting=csv.QUOTE_MINIMAL)
+        logger.info(f"Saved {len(selected)} questions to {filename}")
         return True
     except Exception as e:
-        logger.error(f"Failed to save stratified prompt.csv: {e}")
+        logger.error(f"Failed to save prompt CSV: {e}")
         return False
 
-    return success
-
 def get_questions_as_list(questions_df):
-    """
-    Extract questions as a simple list for easy use in other modules.
-
-    Args:
-        questions_df: DataFrame with questions
-
-    Returns:
-        List of question strings
-    """
+    
     return questions_df['questions'].tolist()
 
-if __name__ == "__main__":
-    # Load datasets separately for stratified sampling
-    categorical_questions, harmfulqa_questions = load_harmful_datasets_separate()
-    
-    # Also load combined for harmful_questions.csv and prompt_extended.csv
-    all_questions = load_harmful_datasets()
 
-    if not all_questions.empty:
-        logger.info(f"Number of unique questions (combined): {len(all_questions)}")
-        
-        # Save full datasets (harmful_questions.csv and prompt_extended.csv)
-        saved = save_questions_to_file(all_questions)
-        
-        # Save stratified prompt.csv (250 from each dataset)
-        prompt_saved = save_prompt_csv_stratified(
-            categorical_questions, 
-            harmfulqa_questions, 
-            n_per_dataset=250, 
-            random_state=48
-        )
-        
-        if saved and prompt_saved:
-            print("="*50)
-            print("Saved questions to:")
-            print("  - data/harmful_questions.csv (all unique questions)")
-            print("  - data/prompt_extended.csv (all unique questions)")
-            print("  - data/prompt.csv (250 from each dataset = 500 total)")
-            print("="*50)
-            print("SAMPLE QUESTIONS:")
-            print("="*50)
-            print(all_questions.sample(min(5, len(all_questions))))
-            print("="*50)
-            print(f"TOTAL UNIQUE QUESTIONS: {len(all_questions)}")
-            print(f"CategoricalHarmfulQA: {len(categorical_questions)} unique questions")
-            print(f"HarmfulQA: {len(harmfulqa_questions)} unique questions")
-            print("="*50)
-        else:
-            logger.error("Failed to save some files.")
+def build_prompt_csv(n_total=500, strategy="stratified", random_state=48,
+                     filename="data/prompt.csv", save_full_combined=False):
+    
+    categorical_questions, harmfulqa_questions = load_harmful_datasets_separate()
+    if categorical_questions.empty and harmfulqa_questions.empty:
+        logger.error("No questions loaded from either dataset.")
+        return False, pd.DataFrame(columns=['questions'])
+    selected = select_prompts(
+        categorical_questions, harmfulqa_questions,
+        n_total=n_total, strategy=strategy, random_state=random_state
+    )
+    if selected.empty:
+        logger.error("Selection produced 0 questions.")
+        return False, selected
+    success = save_prompt_csv_stratified(
+        categorical_questions, harmfulqa_questions,
+        n_total=n_total, strategy=strategy, random_state=random_state,
+        filename=filename, selected_df=selected
+    )
+    if save_full_combined:
+        all_questions = load_harmful_datasets()
+        if not all_questions.empty:
+            save_questions_to_file(all_questions)
+    return success, selected
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Build prompt.csv with selected prompts from harmful QA datasets.")
+    parser.add_argument("--n-total", type=int, default=500, help="Number of prompts to select (default: 500)")
+    parser.add_argument("--strategy", choices=["stratified", "proportional", "union_sample"], default="stratified",
+                        help="Selection strategy: stratified=half per dataset, proportional=by size, union_sample=dedupe then sample (default: stratified)")
+    parser.add_argument("--seed", type=int, default=48, help="Random seed (default: 48)")
+    parser.add_argument("--output", type=str, default="data/prompt.csv", help="Output CSV path (default: data/prompt.csv)")
+    parser.add_argument("--save-full", action="store_true", help="Also save full combined datasets to harmful_questions.csv and prompt_extended.csv")
+    args = parser.parse_args()
+
+    success, selected = build_prompt_csv(
+        n_total=args.n_total,
+        strategy=args.strategy,
+        random_state=args.seed,
+        filename=args.output,
+        save_full_combined=args.save_full,
+    )
+    if success:
+        print("=" * 50)
+        print(f"Saved {len(selected)} questions to {args.output}")
+        print(f"Strategy: {args.strategy}, n_total: {args.n_total}")
+        print("=" * 50)
+        print("Sample questions:")
+        print(selected.sample(min(5, len(selected)), random_state=args.seed)[['questions']])
+        print("=" * 50)
     else:
-        logger.error("No questions were loaded!")
+        logger.error("Failed to build prompt CSV.")

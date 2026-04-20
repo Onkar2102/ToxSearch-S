@@ -1,113 +1,78 @@
-# Speciated ToxSearch
+# ToxSearch-S
 
-A quality-diversity evolutionary framework for LLM red-teaming with semantic speciation. Evolves prompts to elicit toxic responses from target models while maintaining diverse semantic niches.
+Research code for **adversarial prompt search** against LLMs: a quality–diversity evolutionary loop with **semantic speciation** (embedding-space niches). Fitness uses an external moderation API (e.g. Google Perspective) on model responses.
 
 ---
 
-## Installation
+## SETUP
 
-### Prerequisites
+**Prerequisites:** Python 3.10+ (see `requirements.txt`), GPU recommended, [Google Perspective API](https://perspectiveapi.com/) key.
 
-- Python 3.8+
-- CUDA-capable GPU (recommended for embeddings and models)
-- Google Perspective API key
-
-### Setup
+**Clone and environment**
 
 ```bash
-# Clone repository
 git clone <repository-url>
-cd eost-cam-llm
-
-# Create virtual environment
+cd ToxSearch-S
 python -m venv venv
-source venv/bin/activate   # macOS/Linux
-# or: .\venv\Scripts\activate   # Windows
-
-# Install dependencies
+source venv/bin/activate          # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Configure environment
-cp env_example.txt .env
-# Edit .env: add PERSPECTIVE_API_KEY=your_api_key_here
+cp env_example.txt .env             # add PERSPECTIVE_API_KEY=...
 ```
 
-### Model Setup
-
-Place GGUF models in the `models/` directory. Example structure:
+**Models:** Put GGUF weights under `models/` (paths must match `--rg` / `--pg`). Example:
 
 ```
-models/
-└── llama3.2-3b-instruct-gguf/
-    └── Llama-3.2-3B-Instruct-Q4_K_M.gguf
+models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf
 ```
+
+**Run from repo root** with `PYTHONPATH=src` so `config/`, `data/`, and `.env` resolve.
+
+**Dataset:** Shared / external data notes — [`data/dataset.md`](data/dataset.md).
+
+**Parallel (MPI, optional):** Install an MPI stack and `mpi4py` (build `mpi4py` against the same MPI you use for `mpiexec` / `srun`). Keys: same `.env`; `--max-total-genomes` required; see `src/main.py --help` for `--parallel`, `--batch-size`, etc.
 
 ---
 
-## How to Start
-
-### Option 1: Run experiments script
+## Quick start
 
 ```bash
+export PYTHONPATH=src
 bash run_experiments_local.sh
 ```
 
-Edit the `EXPERIMENTS` array in the script to configure your runs.
-
-### Option 2: Run directly
+Minimal sequential run:
 
 ```bash
-python src/main.py \
-    --generations 50 \
-    --threshold 0.99 \
-    --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf \
-    --seed-file data/prompt.csv
+export PYTHONPATH=src
+python src/main.py --max-total-genomes 500 --seed-file data/prompt.csv \
+  --rg models/llama3.2-3b-instruct-gguf/Llama-3.2-3B-Instruct-Q4_K_M.gguf
+```
+
+MPI example (1 master + 4 workers):
+
+```bash
+export PYTHONPATH=src
+mpiexec -n 5 python src/main.py --parallel --max-total-genomes 5000 \
+  --seed-file data/prompt.csv
+```
+
+Tests:
+
+```bash
+PYTHONPATH=src python -m pytest tests/ -v
 ```
 
 ---
 
-## Hyperparameters
+## Documentation
 
-### Evolution
+| Topic | Location |
+|--------|----------|
+| C1 three-way (ToxSearch / ToxSearch-S / RainbowPlus) | `python experiments/comparison_results/c1_ppsn2026_three_way/rq1_c1_three_way_report.py` |
+| C2 sequential vs parallel (PPSN cohorts) | `python experiments/comparison_results/c2_ppsn2026_seq_vs_2w/c2_seq_vs_2w_report.py` |
+| C3 species / speciation post-hoc | `python experiments/comparison_results/c3_ppsn2026_species/c3_species_report.py` |
+| CLI flags and defaults | `python src/main.py --help` |
+| Post-run throughput / thresholds | `python scripts/experiment_metrics.py <run_dir>` |
+| RainbowPlus fork (separate venv) | [`rainbowplus-main/README.md`](rainbowplus-main/README.md) |
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--generations` | None | Max evolution generations (runs until threshold if not set) |
-| `--threshold` | 0.99 | North-star toxicity threshold for stopping |
-| `--stagnation-limit` | 5 | Generations without improvement before EXPLORE mode |
-| `--max-variants` | 1 | Max variants per evolution cycle |
-| `--operators` | all | Operators: `ie`, `cm`, or `all` |
-| `--seed-file` | data/prompt.csv | Seed prompts CSV (requires `questions` column) |
-
-### Speciation
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--theta-sim` | 0.2 | Similarity threshold for species assignment |
-| `--theta-merge` | 0.1 | Merge threshold (≤ theta-sim) |
-| `--species-capacity` | 100 | Max individuals per species |
-| `--cluster0-max-capacity` | 1000 | Max individuals in reserves (cluster 0) |
-| `--cluster0-min-cluster-size` | 2 | Min cluster size for new species formation |
-| `--min-island-size` | 2 | Min species size before dissolution |
-| `--species-stagnation` | 20 | Generations without improvement before freezing |
-
-### Embedding
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--embedding-model` | all-MiniLM-L6-v2 | Sentence-transformer model |
-| `--embedding-dim` | 384 | Embedding dimensionality |
-| `--embedding-batch-size` | 64 | Embedding batch size |
-
-### Models
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--rg` | llama3.2-3b (Q4_K_M) | Response generator GGUF path |
-| `--pg` | llama3.2-3b (Q4_K_M) | Prompt generator GGUF path |
-
-### Moderation
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `--moderation-methods` | google | Moderation API: `google` or `all` |
+Run artifacts (e.g. `EvolutionTracker.json`, `elites.json`, per-rank logs in parallel) are written under `--output-dir` (default `data/outputs/<timestamp>`).

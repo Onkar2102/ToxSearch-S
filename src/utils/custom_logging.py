@@ -1,6 +1,4 @@
-"""
-custom_logging.py
-"""
+
 
 import os
 import logging
@@ -16,12 +14,11 @@ from typing import Optional
 _CURRENT_LOG_FILE = None
 
 def get_run_id():
-    """Generate a unique run ID for the current day"""
+    
     log_index_file = "logs/log_index.json"
     today = datetime.datetime.now().strftime("%Y%m%d")
 
-    if not os.path.exists("logs"):
-        os.makedirs("logs")
+    os.makedirs("logs", exist_ok=True)
 
     if os.path.exists(log_index_file):
         try:
@@ -41,7 +38,7 @@ def get_run_id():
     return today_run_id
 
 def get_log_filename():
-    """Generate a detailed log filename with timestamp and system info"""
+    
     global _CURRENT_LOG_FILE
     
     if _CURRENT_LOG_FILE is not None:
@@ -60,21 +57,21 @@ def get_log_filename():
     return _CURRENT_LOG_FILE
 
 def get_detailed_formatter() -> logging.Formatter:
-    """Create a detailed formatter with additional context"""
+    
     return logging.Formatter(
         "[%(asctime)s] [%(levelname)-8s] [%(name)-20s] [%(filename)s:%(lineno)d] [%(funcName)s()]: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S.%f"[:-3]
     )
 
 def get_simple_formatter() -> logging.Formatter:
-    """Create a simple formatter for console output"""
+    
     return logging.Formatter(
         "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
         datefmt="%H:%M:%S"
     )
 
 def setup_exception_logging(logger: logging.Logger):
-    """Setup exception logging to capture unhandled exceptions"""
+    
     def handle_exception(exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
@@ -85,7 +82,7 @@ def setup_exception_logging(logger: logging.Logger):
     sys.excepthook = handle_exception
 
 def get_logger(name: str = "default_logger", log_file: Optional[str] = None) -> logging.Logger:
-    """Get a configured logger with detailed formatting and exception handling"""
+    
     logger = logging.getLogger(name)
     
     if logger.hasHandlers():
@@ -128,7 +125,7 @@ def get_logger(name: str = "default_logger", log_file: Optional[str] = None) -> 
     return logger
 
 def log_system_info(logger: logging.Logger):
-    """Log system information for debugging"""
+    
     logger.info("=== System Information ===")
     logger.info("Platform: %s", platform.platform())
     logger.info("Python Version: %s", sys.version)
@@ -146,7 +143,7 @@ def log_system_info(logger: logging.Logger):
 
 def log_performance_metrics(logger: logging.Logger, operation: str, start_time: float, 
                           end_time: Optional[float] = None, **kwargs):
-    """Log performance metrics for operations"""
+    
     if end_time is None:
         end_time = datetime.datetime.now().timestamp()
     

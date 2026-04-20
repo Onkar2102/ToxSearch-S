@@ -1,88 +1,147 @@
 #!/bin/bash
-# Multiple Experiment Runner
-# 
-# This script runs multiple experiment executions sequentially.
-# Each experiment gets its own output directory: data/outputs/YYYYMMDD_HHMM/
+# Local experiment runner: sequential sweeps over theta_sim (and matching theta_merge).
+# Parallel (MPI) block is commented out below; uncomment to run mpiexec after sequential.
 #
 # Usage:
-#   1. Add your experiments to the EXPERIMENTS array below
-#   2. Each experiment is a single string with the full command
-#   3. Run: bash run_experiments_local.sh
+#   From project root: bash run_experiments_local.sh
 #
-# Features:
-#   - Runs experiments one at a time (sequential execution)
-#   - 5-second delay between experiments
-#   - Shows progress (Experiment X/Total)
-#   - Continues even if one experiment fails
-#   - Each experiment creates its own timestamped output directory
+# Options:
+#   - RUN_SEQUENTIAL=0   Skip sequential runs (default: 1).
+#   - PYTHON=python3     Python interpreter (default: python3).
+#   - THETA_VALUES="0.25 0.30 0.35"  Override similarity sweep (space-separated).
 #
-# Tips:
-#   - Use comments to label experiments (e.g., "# Experiment 1: Default params")
-#   - Vary parameters systematically (theta-sim, theta-merge, generations, etc.)
-#   - Each experiment must be a single quoted string (use \ for line continuation)
-#   - Make sure all model paths and file paths are correct
+# Parallel (disabled by default):
+#   - RUN_PARALLEL=0     Skip parallel run (default: 0).
+#   - MPI_RANKS=2        mpiexec -n value (default: 2 → 1 master + 1 worker).
+#
+# Environment:
+#   - .env is loaded if present (PERSPECTIVE_API_KEY, etc.).
+#   - PYTHONPATH is set to src for the run so imports and config resolve.
+#
+# Profiling (cProfile):
+#   Add --profile to enable; profile is saved in the run's output directory as profile_main.prof.
+#   Inspect with: python -m pstats <path> or snakeviz <path>.
+#
+# Parallel requires: Open MPI or compatible `mpiexec` on PATH.
+#
+# Research questions and full experiment matrix:
+#   See README.md (Documentation) for C1–C3 comparison report entrypoints.
 
 set -Eeuo pipefail
 
-# Activate your local virtual environment
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Activate virtual environment if present
 if [ -d "venv" ]; then
     source venv/bin/activate
 elif [ -d ".venv" ]; then
     source .venv/bin/activate
+elif [ -d ".spvenv" ]; then
+    source .spvenv/bin/activate
 fi
 
-# Define your experiments here (one per line)
-# Each experiment runs sequentially with a 5-second delay between them
-# Add as many experiments as you want - they will all run automatically
-EXPERIMENTS=(
-    "python src/main.py \
-        --generations 50 \
-        --threshold 0.99 \
-        --moderation-methods google \
-        --stagnation-limit 5 \
-        --theta-sim 0.25 \
-        --theta-merge 0.25 \
-        --species-capacity 7 \
-        --cluster0-max-capacity 20 \
-        --cluster0-min-cluster-size 1 \
-        --min-island-size 3 \
-        --species-stagnation 4 \
-        --embedding-model all-MiniLM-L6-v2 \
-        --embedding-dim 384 \
-        --embedding-batch-size 64 \
-        --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
-        --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q4_K_M.gguf \
-        --operators all \
-        --max-variants 1 \
-        --seed-file data/prompt.csv"
+# Load .env for API keys (e.g. PERSPECTIVE_API_KEY)
+if [ -f ".env" ]; then
+    set +u
+    set -a
+    source .env
+    set +a
+    set -u
+fi
+
+PYTHON="${PYTHON:-python3}"
+export PYTHONPATH="${SCRIPT_DIR}/src"
+
+RUN_TS="$(date +%Y%m%d_%H%M%S)"
+MPI_RANKS="${MPI_RANKS:-2}"
+
+# Shared ToxSearch-S CLI (sequential and parallel use the same knobs for comparability).
+# theta_sim / theta_merge are passed per run (see THETA_VALUES).
+# Termination: --max-total-genomes only.
+ARGS_ARR=(
+    --moderation-methods google
+    --stagnation-limit 5
+    --min-stability-gens 5
+    --species-capacity 100
+    --cluster0-max-capacity 1000
+    --cluster0-min-cluster-size 1
+    --min-island-size 3
+    --species-stagnation 20
+    --embedding-model all-MiniLM-L6-v2
+    --embedding-dim 384
+    --embedding-batch-size 64
+    --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf
+    --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf
+    --operators all
+    --max-variants 1
+    --seed-file data/prompt_100.csv
+    --seed 42
+    --max-total-genomes 100
 )
 
-echo "Starting ${#EXPERIMENTS[@]} experiments..."
-echo ""
+run_with_python() {
+    ( export PYTHONPATH="${SCRIPT_DIR}/src"; exec "$PYTHON" src/main.py "$@" )
+}
 
-for i in "${!EXPERIMENTS[@]}"; do
-    NUM=$((i+1))
-    TOTAL=${#EXPERIMENTS[@]}
-    
+# theta_sim sweep (similarity); theta_merge set to the same value each run.
+THETA_VALUES="${THETA_VALUES:-0.25 0.30 0.35}"
+
+run_sequential() {
+    local theta="${1:?run_sequential: theta required}"
+    local out_tag
+    out_tag="$(echo "$theta" | tr '.' 'p')"
     echo "=========================================="
-    echo "Experiment $NUM/$TOTAL"
+    echo "Sequential (single process)  theta_sim=${theta}  theta_merge=${theta}"
+    echo "Output: data/outputs/local_${RUN_TS}_sequential_theta${out_tag}"
     echo "=========================================="
-    echo "Command: ${EXPERIMENTS[$i]}"
-    echo ""
-    
-    bash -lc "${EXPERIMENTS[$i]}"
-    
-    if [ $? -eq 0 ]; then
-        echo "Experiment $NUM completed successfully"
-    else
-        echo "Experiment $NUM failed"
-    fi
-    
-    echo ""
-    echo "Waiting 5 seconds..."
-    sleep 5
-    echo ""
-done
+    run_with_python "${ARGS_ARR[@]}" \
+        --theta-sim "$theta" \
+        --theta-merge "$theta" \
+        --output-dir "data/outputs/local_${RUN_TS}_sequential_theta${out_tag}"
+}
 
-echo "All experiments completed!"
+# Parallel (MPI): uncomment function body and the RUN_PARALLEL block below to enable.
+# run_parallel() {
+#     if ! command -v mpiexec >/dev/null 2>&1; then
+#         echo "ERROR: mpiexec not found; install Open MPI or set RUN_PARALLEL=0." >&2
+#         return 1
+#     fi
+#     local theta="${1:?run_parallel: theta required}"
+#     local out_tag
+#     out_tag="$(echo "$theta" | tr '.' 'p')"
+#     echo "=========================================="
+#     echo "Parallel (mpiexec -n ${MPI_RANKS}, --parallel)  theta_sim=${theta}"
+#     echo "Output: data/outputs/local_${RUN_TS}_parallel_theta${out_tag}"
+#     echo "=========================================="
+#     ( export PYTHONPATH="${SCRIPT_DIR}/src"
+#       exec mpiexec -n "${MPI_RANKS}" "$PYTHON" src/main.py --parallel "${ARGS_ARR[@]}" \
+#         --theta-sim "$theta" --theta-merge "$theta" \
+#         --output-dir "data/outputs/local_${RUN_TS}_parallel_theta${out_tag}" )
+# }
 
+RUN_SEQUENTIAL="${RUN_SEQUENTIAL:-1}"
+RUN_PARALLEL="${RUN_PARALLEL:-0}"
+
+if [ "$RUN_SEQUENTIAL" = "1" ]; then
+    for theta in $THETA_VALUES; do
+        run_sequential "$theta"
+        echo ""
+    done
+fi
+
+# if [ "$RUN_PARALLEL" = "1" ]; then
+#     if ! command -v mpiexec >/dev/null 2>&1; then
+#         echo "ERROR: mpiexec not found; set RUN_PARALLEL=0 or install Open MPI." >&2
+#         exit 1
+#     fi
+#     for theta in $THETA_VALUES; do
+#         [ "$RUN_SEQUENTIAL" = "1" ] && { echo "Waiting 5 seconds before parallel theta=${theta}..."; sleep 5; echo ""; }
+#         run_parallel "$theta"
+#         echo ""
+#     done
+# fi
+
+echo "All requested experiments completed!"
+echo "RUN_TS=${RUN_TS}"
+echo "Sequential outputs: data/outputs/local_${RUN_TS}_sequential_theta0p25|0p30|0p35"

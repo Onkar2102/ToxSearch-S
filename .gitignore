@@ -193,7 +193,9 @@ requirements_spack.txt
 project_script.sh
 
 # Data directory (outputs, archives, CSVs) — not in repo
-data/
+data/outputs/
+data/*.CSV
+
 
 .cursor/
 
@@ -201,5 +203,15 @@ experiments/*.json
 .spvenv/
 
 exaqc-main/
+
+genetic-distance-projection-main/
+
+*.txt
+
+rainbowplus-main/
+
+rc_script.sh
+
+dependency_parallel.sh
 
 

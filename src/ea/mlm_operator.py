@@ -1,16 +1,4 @@
-"""
-mlm_operator.py
 
-Masked Language Model operator for text mutation.
-
-This operator implements a mask-and-fill approach using a local LLaMA model.
-It randomly masks words in the input text and uses the LLM to generate
-appropriate replacements, creating contextually coherent text variants.
-
-Process:
-1. Randomly mask one word with a placeholder token and record the original word
-2. Generate replacement suggestions using LLaMA for each masked position, then apply replacements to produce the completed text variant
-"""
 
 import random
 from typing import List, Optional, Dict, Any, Tuple
@@ -61,15 +49,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
             self.logger.debug(f"{self.name}: LLM generator initialized successfully")
 
     def _mask_once(self, text: str) -> Tuple[str, Dict[int, str]]:
-        """
-        Step 1: Mask words with numbered tokens and track original words.
-
-        Args:
-            text: Input text to mask
-
-        Returns:
-            Tuple of (masked_text, mask_mapping) where mask_mapping maps mask_number -> original_word
-        """
+        
         words = text.split()
         if not words:
             return text, {}
@@ -105,16 +85,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
 
 
     def _get_llm_replacements_sequentially(self, masked_text: str, mask_mapping: Dict[int, str]) -> str:
-        """
-        Generate LLM replacements for each masked token individually.
-
-        Args:
-            masked_text: Text with numbered mask tokens
-            mask_mapping: Mapping of mask numbers to original words
-
-        Returns:
-            Completed text with masks replaced, or original masked text if failed
-        """
+        
         if not self.generator:
             self.logger.warning(f"{self.name}: No generator; returning masked text")
             return masked_text
@@ -159,7 +130,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
             if response:
                 replacement = self.generator._extract_content_from_xml_tags(response, "replacement")
                 if not replacement:
-                    self.logger.error(f"{self.name}: Failed to parse replacement from LLM response for {mask_token}")
+                    self.logger.warning(f"{self.name}: Failed to parse replacement from LLM response for {mask_token}")
                     continue
 
                 if (replacement and
@@ -173,7 +144,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
                     self.logger.error(f"{self.name}: Invalid replacement for {mask_token}: '{replacement}'")
                     continue
             else:
-                self.logger.error(f"{self.name}: Empty response for {mask_token}")
+                self.logger.warning(f"{self.name}: Empty response for {mask_token}")
                 continue
 
         self._last_structured_prompt = f"One-by-one prompts for {len(mask_mapping)} masks"
@@ -190,27 +161,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
         return completed_text
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """
-        Apply the mask-and-fill MLM process to generate text variants.
-
-        This method:
-        1. Validates input format and extracts parent data
-        2. Masks one word, gets LLM replacements for masked positions, then applies them to complete the text
-        3. Returns MLM-generated variant if different from original
-        4. Falls back to original text if MLM fails
-
-        Args:
-            operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': Enriched parent genome dictionary containing:
-                    - 'prompt': Original prompt text to process with MLM
-                    - 'generated_text': Generated output from the prompt (optional)
-                    - 'scores': Moderation scores dictionary
-                    - 'north_star_score': Primary optimization metric score
-                - 'max_variants': Maximum number of variants to generate
-
-        Returns:
-            List[str]: List containing MLM-generated prompt variants (or original if failed)
-        """
+        
         try:
             import time
             start_time = time.time()
@@ -254,7 +205,7 @@ Return only: <replacement>THE_REPLACEMENT_WORD</replacement>"""
                 self.logger.info(f"{self.name}: Generated {len(variants)} variants successfully")
                 return variants
             else:
-                self.logger.error(f"{self.name}: No variants generated - LLM may have refused all requests")
+                self.logger.warning(f"{self.name}: No variants generated - LLM may have refused all requests")
                 return []
 
         except Exception as e:
