@@ -1,12 +1,4 @@
-"""
-semantic_similarity_crossover.py
 
-Semantic similarity-based crossover operator for prompt recombination.
-
-This module implements a crossover operator that combines two parent prompts
-by analyzing semantic similarity between their sentences and creating hybrid
-variants that preserve meaningful content from both parents.
-"""
 
 from typing import List, Any, Dict
 import traceback
@@ -22,7 +14,7 @@ class SemanticSimilarityCrossover(VariationOperator):
     """Semantic similarity crossover operator for prompt recombination."""
 
     def __init__(self, log_file=None):
-        """Initialize the semantic similarity crossover operator."""
+        
         super().__init__("SemanticSimilarityCrossover", "crossover", "Combines semantically similar sentences from two parents.")
         self.logger = get_logger(self.name, log_file)
         self.logger.debug(f"Initialized operator: {self.name}")
@@ -33,7 +25,7 @@ class SemanticSimilarityCrossover(VariationOperator):
         self.model = self._load_model_with_device_support()
 
     def _load_model_with_device_support(self):
-        """Load sentence transformer model with device compatibility"""
+        
         try:
             from sentence_transformers import SentenceTransformer
 
@@ -49,42 +41,7 @@ class SemanticSimilarityCrossover(VariationOperator):
             raise RuntimeError(f"Unable to load sentence transformer model: {e}")
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """
-        Generate crossover variants using semantic sentence similarity.
-
-        This method:
-        1. Validates input format and parent count
-        2. Extracts parent data from operator input
-        3. Splits parent texts into sentences
-        4. Generates sentence embeddings using SentenceTransformer
-        5. Matches sentences based on cosine similarity (>0.5 threshold)
-        6. Combines matched sentences into a single variant
-        7. Returns list with semantic crossover results
-
-        Args:
-            operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': List of parent dicts; each needs at least 'prompt' (original prompt text for crossover)
-                - 'max_variants': Maximum number of variants to generate
-
-        Returns:
-            List[str]: List containing semantic crossover variants
-
-        Raises:
-            Warning: If insufficient parents provided, logs warning and returns single parent
-
-        Example:
-            >>> operator = SemanticSimilarityCrossover()
-            >>> input_data = {
-            ...     "parent_data": [
-            ...         {"prompt": "Write a story about a brave knight"},
-            ...         {"prompt": "Create a tale about a courageous warrior"}
-            ...     ],
-            ...     "max_variants": 2
-            ... }
-            >>> variants = operator.apply(input_data)
-            >>> print(variants)
-            ['Write a tale about a brave knight']
-        """
+        
         try:
             import time
             start_time = time.time()

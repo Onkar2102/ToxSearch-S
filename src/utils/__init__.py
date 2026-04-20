@@ -1,11 +1,11 @@
 
 def get_custom_logging():
-    """Lazy import of custom_logging functions"""
+    
     from .custom_logging import get_logger, get_log_filename, log_system_info, PerformanceLogger
     return get_logger, get_log_filename, log_system_info, PerformanceLogger
 
 def get_population_io():
-    """Lazy import of population_io functions to avoid circular imports"""
+    
     from .population_io import (
         load_and_initialize_population, 
         get_population_files_info, 
@@ -36,7 +36,7 @@ def get_population_io():
     )
 
 def get_system_utils():
-    """Lazy import of system utility functions"""
+    
     from .population_io import (
         get_project_root,
         get_config_path,
@@ -57,7 +57,7 @@ def get_system_utils():
     )
 
 def get_cluster_quality():
-    """Lazy import of cluster quality functions"""
+    
     from .cluster_quality import (
         calculate_silhouette_score,
         calculate_davies_bouldin_index,

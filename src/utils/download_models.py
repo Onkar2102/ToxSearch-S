@@ -1,20 +1,4 @@
-"""
-download_models.py
 
-
-Idempotent multi-model downloader & local loader for Hugging Face models.
-- Downloads into a project-local folder (default: ./models)
-- Supports aliases, --all / --only selection
-- Always loads from disk after download
-
-Usage (run from repo root; cwd is set to project root automatically):
-    python src/utils/download_models.py --all
-    python src/utils/download_models.py --only llama3.1-8b-instruct-gguf --gguf --gguf-file Meta-Llama-3.1-8B-Instruct-f32.gguf
-
-Env token: set HUGGINGFACE_HUB_TOKEN (preferred) or HF_TOKEN / HF_API_TOKEN to access gated/private repos.
-Note: The official Meta LLaMA 3.2 text-only sizes are 1B and 3B; 8B is available in LLaMA 3/3.1 series.
-Also available (transformers): Llama-3.3-70B-Instruct; plus recent families like Mistral-7B-Instruct-v0.3, Qwen2.5-7B(-1M)-Instruct, Gemma-2-9B-IT, Phi-3.5-mini-instruct, and DeepSeek-Coder-V2-Instruct.
-"""
 
 import argparse
 import json
@@ -82,12 +66,7 @@ class ModelManager:
         self.REGISTRY_FILE = registry_file or Path("models/models_registry.json")
 
     def get_env_token(self) -> Optional[str]:
-        """
-        Returns token from environment in priority order:
-        1) HUGGINGFACE_HUB_TOKEN (preferred by huggingface_hub)
-        2) HF_TOKEN
-        3) HF_API_TOKEN
-        """
+        
         return (
             os.getenv("HUGGINGFACE_HUB_TOKEN")
             or os.getenv("HF_TOKEN")
@@ -95,25 +74,25 @@ class ModelManager:
         )
 
     def ensure_dir(self, path: Path) -> None:
-        """Create directory and parents if they do not exist."""
+        
         path.mkdir(parents=True, exist_ok=True)
 
     def local_model_dir(self, target_dir: Path, alias: str) -> Path:
-        """Return the path where a model with the given alias is stored (target_dir / alias)."""
+        
         return target_dir / alias
 
     def model_already_present(self, path: Path) -> bool:
-        """Return True if path exists and contains required transformers files (config, tokenizer)."""
+        
         required = ["config.json", "tokenizer.json", "tokenizer_config.json"]
         return path.exists() and any((path / r).exists() for r in required)
 
     def gguf_model_already_present(self, path: Path) -> bool:
-        """Return True if path exists and contains at least one .gguf file."""
+        
         gguf_files = list(path.glob("*.gguf"))
         return path.exists() and len(gguf_files) > 0
 
     def repo_exists(self, repo_id: str, revision: Optional[str] = None) -> bool:
-        """Return True if the Hugging Face repo exists and is accessible; False on not found or error."""
+        
         api = HfApi(token=self.get_env_token())
         try:
             api.model_info(repo_id, revision=revision)
@@ -185,7 +164,7 @@ class ModelManager:
         return out_dir
 
     def write_registry(self, registry_path: Path, mapping: Dict[str, str]) -> None:
-        """Merge mapping into the JSON registry file at registry_path (atomic write)."""
+        
         existing = {}
         if registry_path.exists():
             try:
@@ -199,7 +178,7 @@ class ModelManager:
         print(f"[registry] Updated {registry_path}")
 
     def maybe_login(self, do_login: bool) -> None:
-        """Log in to Hugging Face Hub using env token if set, else interactive login if do_login is True."""
+        
         token = self.get_env_token()
         if token:
             try:
@@ -265,16 +244,13 @@ class ModelManager:
             print(f"  - {k}: {v}")
 
     def _read_registry(self) -> Dict[str, str]:
-        """Load and return the local models registry JSON; returns {} if file missing or empty."""
+        
         if self.REGISTRY_FILE.exists():
             return json.loads(self.REGISTRY_FILE.read_text())
         return {}
 
     def load_local_model(self, alias: str, device_map: str = "auto") -> Tuple[AutoTokenizer, AutoModelForCausalLM]:
-        """
-        Load a model previously downloaded by this script.
-        Always uses local disk (no network).
-        """
+        
         reg = self._read_registry()
         if alias not in reg:
             raise ValueError(
@@ -342,8 +318,7 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
-    # Ensure project root is cwd and src is on path (run from anywhere: python src/utils/download_models.py ...)
-    _src_dir = Path(__file__).resolve().parent.parent  # src
+    _src_dir = Path(__file__).resolve().parent.parent
     _project_root = _src_dir.parent
     if str(_src_dir) not in sys.path:
         sys.path.insert(0, str(_src_dir))

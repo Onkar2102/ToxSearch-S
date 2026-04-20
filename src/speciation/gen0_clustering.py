@@ -1,12 +1,4 @@
-"""
-gen0_clustering.py
 
-Two-phase Generation 0 clustering: (1) process entire population to build all
-leader–follower groups; (2) create species only for groups that satisfy
-min_island_size.
-
-Used in Phase 1, Step 2 (leader_follower_clustering) when is_generation_0.
-"""
 
 import numpy as np
 from typing import List, Dict, Tuple, Set
@@ -17,17 +9,7 @@ from .reserves import CLUSTER_0_ID
 
 
 class Gen0Clustering:
-    """
-    Generation 0 clustering: build all (leader, followers) groups over the
-    entire population, then promote to species only groups with
-    |{leader} ∪ followers| >= min_island_size.
-    
-    Flow 2: Two-phase approach with no leader update and no radius enforcement.
-    - Phase 1: Collect all potential leader groups
-    - Phase 2: Form species if group size >= min_island_size (keep all members, no filtering)
-    """
-
-    @staticmethod
+    """Generation 0 clustering: build all (leader, followers) groups over the entire population, then promote to species only groups with |{leader} ∪ followers| >= min_island_size. Flow 2: Two-phase approach with no leader update and no radius enforcement. - Phase 1: Collect all potential leader groups - Phase 2: Form species if group size >= min_island_size (keep all members, no filtering)"""    @staticmethod
     def run(
         individuals: List[Individual],
         theta_sim: float,
@@ -37,18 +19,10 @@ class Gen0Clustering:
         current_generation: int,
         logger,
     ) -> Tuple[Dict[int, Species], Set[int]]:
-        """
-        Phase 1: Process entire population → build all (potential_leader, followers) groups.
-        Phase 2: For each group with |leader ∪ followers| >= min_island_size:
-                 create Species with original potential leader (NO update), keep ALL members (NO radius filtering).
-                 Groups below min_island_size → all to reserves.
-
-        Sets species_id on every individual. Returns (species dict, species_with_new_members).
-        """
+        
         if not individuals:
             return {}, set()
 
-        # --- Phase 1: build all (potential_leader, followers) groups ---
         sorted_ind = sorted(individuals, key=lambda x: x.fitness, reverse=True)
         groups: List[Tuple[Individual, List[Individual]]] = [(sorted_ind[0], [])]
 
@@ -75,8 +49,6 @@ class Gen0Clustering:
             else:
                 groups.append((ind, []))
 
-        # --- Phase 2: create species only for groups satisfying min_island_size ---
-        # Flow 2: No leader update, no radius filtering - keep all members
         species: Dict[int, Species] = {}
         species_with_new_members: Set[int] = set()
 
@@ -84,13 +56,11 @@ class Gen0Clustering:
             all_members = [pl_ind] + followers
 
             if len(all_members) >= min_island_size:
-                # Create species with original potential leader (NO update)
-                # Keep ALL members (NO radius filtering)
                 new_species_id = generate_species_id()
                 new_species = Species(
                     id=new_species_id,
-                    leader=pl_ind,  # Original potential leader, NO update
-                    members=all_members,  # ALL members, NO filtering
+                    leader=pl_ind,
+                    members=all_members,
                     radius=theta_sim,
                     created_at=current_generation,
                     last_improvement=current_generation,
@@ -108,7 +78,6 @@ class Gen0Clustering:
                     min_island_size,
                 )
             else:
-                # Below min_island_size → all to reserves
                 for m in all_members:
                     m.species_id = CLUSTER_0_ID
                 logger.debug(

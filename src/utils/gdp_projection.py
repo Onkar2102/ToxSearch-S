@@ -1,13 +1,4 @@
-"""
-gdp_projection.py
 
-Genetic Distance Projection (GDP) integration for ToxSearch-S.
-Maps elites/reserves (+ optional archive) to GDP's GenomeData format.
-- MDS-GDP: cosine-MDS reduction (cosine distance in embedding space).
-- NN-GDP: neural-network reduction (Euclidean distance in embedding space; requires torch).
-- UMAP-GDP: UMAP reduction (cosine metric in embedding space; requires umap-learn).
-Generates 2D/3D figures for MDS, NN, and UMAP. Does not modify core evolution or speciation.
-"""
 
 import json
 import os
@@ -17,8 +8,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
-# Add genetic-distance-projection-main to path so we can import gdp (without modifying core project)
 _project_root = Path(__file__).resolve().parents[2]
 _gdp_root = _project_root / "genetic-distance-projection-main"
 if _gdp_root.exists() and str(_gdp_root) not in sys.path:
@@ -34,8 +23,6 @@ except ImportError as e:
     ReducedGenomeData = None
     GenomeVisualizer = None
     _GDP_IMPORT_ERROR = str(e)
-
-# For cosine-MDS we use sklearn (already used in experiments)
 from sklearn.manifold import MDS
 from sklearn.metrics.pairwise import cosine_distances
 
@@ -50,12 +37,8 @@ except ImportError:
 
 
 def _reduce_using_cosine_mds(genes_matrix: np.ndarray, reduced_size: int = 2, random_state: int = 42) -> np.ndarray:
-    """
-    Reduce embedding matrix to 2D/3D using MDS with precomputed cosine distances.
-    Signature matches GDP's dim_reduction_function: (genes_matrix) -> (n, reduced_size).
-    """
+    
     if genes_matrix.shape[0] < 2:
-        # MDS needs at least 2 points; return zeros
         return np.zeros((genes_matrix.shape[0], reduced_size), dtype=np.float32)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", category=RuntimeWarning)
@@ -76,10 +59,7 @@ def _reduce_using_umap(
     n_neighbors: int = 15,
     min_dist: float = 0.1,
 ) -> np.ndarray:
-    """
-    Reduce embedding matrix to 2D using UMAP with cosine metric.
-    Signature matches GDP's dim_reduction_function: (genes_matrix) -> (n, reduced_size).
-    """
+    
     n = genes_matrix.shape[0]
     if n < 2 or not _UMAP_AVAILABLE:
         return np.zeros((n, reduced_size), dtype=np.float32)
@@ -98,7 +78,7 @@ def _reduce_using_umap(
 
 
 def _load_genomes_from_json(path: Path) -> List[Dict[str, Any]]:
-    """Load a list of genome dicts from elites.json, reserves.json, or archive.json."""
+    
     if not path.exists():
         return []
     with open(path, "r", encoding="utf-8") as f:
@@ -110,11 +90,7 @@ def _genomes_to_genome_data(
     genomes: List[Dict[str, Any]],
     alive_ids: Optional[set] = None,
 ) -> Tuple[Optional[Any], List[int]]:
-    """
-    Build GDP GenomeData from a list of genome dicts (each with id, prompt_embedding, etc.).
-    If alive_ids is provided, adds "alive": 1 for ids in alive_ids (elites+reserves), 0 for archive.
-    Returns (GenomeData or None if GDP unavailable, list of genome ids in order).
-    """
+    
     if not genomes:
         return None, []
     if not _GDP_AVAILABLE:
@@ -135,7 +111,6 @@ def _genomes_to_genome_data(
                 parent_ids.append(int(p["id"]))
             elif isinstance(p, (int, float)):
                 parent_ids.append(int(p))
-        # Use project-standard toxicity (0–1); fallback to "fitness" if extract returns minimum
         toxicity = _extract_north_star_score(g, "toxicity")
         if toxicity <= 0.0001 and "fitness" in g:
             toxicity = float(g["fitness"])
@@ -160,20 +135,12 @@ def build_genome_data_from_elites_reserves(
     reserves_path: Path,
     archive_path: Optional[Path] = None,
 ) -> Tuple[Optional[Any], List[Dict], List[int]]:
-    """
-    Build GDP GenomeData from elites.json, reserves.json, and optionally archive.json.
-    When archive_path is provided, merges all three so the dataset spans generation 0 through
-    the final generation (current elites/reserves plus all ever archived).
-    Deduped by genome id; only genomes with prompt_embedding are included.
-    Returns (GenomeData or None if GDP unavailable, list of genome dicts used, list of genome ids in order).
-    """
+    
     elites = _load_genomes_from_json(Path(elites_path))
     reserves = _load_genomes_from_json(Path(reserves_path))
-    # Order: elites, reserves, then archive so current population overwrites if id reappears
     all_raw = list(elites) + list(reserves)
     if archive_path and Path(archive_path).exists():
         all_raw = all_raw + _load_genomes_from_json(Path(archive_path))
-    # Dedupe by id (keep first = prefer elites/reserves over archive)
     seen: Dict[int, Dict[str, Any]] = {}
     for g in all_raw:
         gid = g.get("id")
@@ -201,13 +168,7 @@ def run_gdp_projection(
     save_json: bool = True,
     random_state: int = 42,
 ) -> Tuple[Optional[Dict], Optional[Any]]:
-    """
-    Run GDP projection: load elites + reserves and optionally archive (generation 0 to final).
-    Build GenomeData, run cosine-MDS, optionally save gdp_projection.json.
-    When archive_path is provided, the diagram includes all genomes from the full run (gen 0 through final generation).
-    Returns (payload for gdp_projection.json, ReducedGenomeData or None).
-    Does not generate the figure; use generate_gdp_figure for that.
-    """
+    
     genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
         elites_path, reserves_path, archive_path=archive_path
     )
@@ -248,15 +209,7 @@ def run_gdp_projection_nn(
     save_json: bool = True,
     model_save_fname: str = "gdp_nn_model.pt",
 ) -> Tuple[Optional[Dict], Optional[Any]]:
-    """
-    Run GDP projection using NN (neural network) reduction.
-    Same data as MDS (elites + reserves + optional archive). Uses GDP's
-    perform_reduction_nn: a small NN is trained so 2D Euclidean distances
-    approximate Euclidean distances in embedding space (GDP uses Euclidean;
-    our MDS uses cosine). Output is 2D only. Model is saved under
-    output_dir/saved_models/<model_save_fname>.
-    Returns (payload for gdp_projection_nn.json, ReducedGenomeData or None).
-    """
+    
     genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
         elites_path, reserves_path, archive_path=archive_path
     )
@@ -305,10 +258,7 @@ def run_gdp_projection_umap(
     n_neighbors: int = 15,
     min_dist: float = 0.1,
 ) -> Tuple[Optional[Dict], Optional[Any]]:
-    """
-    Run GDP projection using UMAP (cosine metric in embedding space).
-    Same data as MDS. Requires umap-learn. Returns (payload for gdp_projection_umap.json, ReducedGenomeData or None).
-    """
+    
     genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
         elites_path, reserves_path, archive_path=archive_path
     )
@@ -345,10 +295,7 @@ def run_gdp_projection_umap(
 
 
 def load_gdp_projection(projection_path: Path) -> Optional[Dict[str, Any]]:
-    """
-    Load cached gdp_projection.json for use in experiments (e.g. rq1, rq2).
-    Returns dict with genome_ids, positions_2d, method, or None if file missing/invalid.
-    """
+    
     path = Path(projection_path)
     if path.is_dir():
         path = path / "gdp_projection.json"
@@ -362,10 +309,7 @@ def load_gdp_projection(projection_path: Path) -> Optional[Dict[str, Any]]:
 
 
 def load_gdp_projection_nn(projection_path: Path) -> Optional[Dict[str, Any]]:
-    """
-    Load cached gdp_projection_nn.json (NN-GDP output).
-    Returns dict with genome_ids, positions_2d, method "nn", or None if missing/invalid.
-    """
+    
     path = Path(projection_path)
     if path.is_dir():
         path = path / "gdp_projection_nn.json"
@@ -379,10 +323,7 @@ def load_gdp_projection_nn(projection_path: Path) -> Optional[Dict[str, Any]]:
 
 
 def load_gdp_projection_umap(projection_path: Path) -> Optional[Dict[str, Any]]:
-    """
-    Load cached gdp_projection_umap.json (UMAP-GDP output).
-    Returns dict with genome_ids, positions_2d, method "umap", or None if missing/invalid.
-    """
+    
     path = Path(projection_path)
     if path.is_dir():
         path = path / "gdp_projection_umap.json"
@@ -401,11 +342,7 @@ def generate_gdp_figure(
     color_by: str = "alive",
     **kwargs: Any,
 ) -> bool:
-    """
-    Build GenomeVisualizer from reduced data, set colors, and save 2D figure.
-    color_by: "alive" (elites+reserves vs archived), "species_id", or "fitness".
-    Returns True on success, False if GDP unavailable or visualization fails.
-    """
+    
     if not _GDP_AVAILABLE or reduced_genome_data is None:
         return False
     try:
@@ -428,15 +365,11 @@ def generate_gdp_figure(
     except Exception:
         return False
 
-
-# Default MDS-GDP 3D viewing angles: same scene from 3 viewpoints, 120° apart in azimuth
-# (matches GDP repo pattern: fixed elevation, vary azimuth for orbital views; see
-# genetic-distance-projection-main/gdp/_visualization_/visualize_genomes3D.py).
-ELEV_DEFAULT = 15.0  # elevation (deg) above xy-plane, as in GDP visualize_genomes3D
+ELEV_DEFAULT = 15.0
 DEFAULT_VIEW_ANGLES: List[Tuple[float, float]] = [
-    (ELEV_DEFAULT, 30.0),    # elev, azim: first view
-    (ELEV_DEFAULT, 150.0),  # 120° rotation
-    (ELEV_DEFAULT, 270.0),  # 240° rotation
+    (ELEV_DEFAULT, 30.0),
+    (ELEV_DEFAULT, 150.0),
+    (ELEV_DEFAULT, 270.0),
 ]
 
 
@@ -447,14 +380,7 @@ def generate_gdp_3d_toxicity_figure(
     publication_style: bool = False,
     view_angles: Optional[List[Tuple[float, float]]] = None,
 ) -> bool:
-    """
-    Save a 3D figure: X = MDS1, Y = MDS2, Z = toxicity (fitness).
-    color_by: "alive", "species_id", "generation", "species_archive", or "fitness".
-    species_archive: archive = very small dark blue dots; alive = colored by species_id.
-    publication_style: serif fonts, larger labels, high dpi, clean layout (used for species_archive).
-    view_angles: for species_archive, list of (elev, azim) to render multiple panels in one figure.
-                 None = single view; use DEFAULT_VIEW_ANGLES for two panels (minimum diagrams, max clarity).
-    """
+    
     if reduced_genome_data is None:
         return False
     try:
@@ -491,7 +417,6 @@ def generate_gdp_3d_toxicity_figure(
             })
 
         if color_by == "species_archive":
-            # Archive: very small dark blue dots; Alive: color by species_id
             alive = np.array([population_info.get(i, {}).get("alive", "archived") == "alive" for i in ids])
             species_ids = np.array([population_info.get(i, {}).get("species_id", 0) for i in ids])
             dark_blue = (0.05, 0.05, 0.35)
@@ -583,10 +508,7 @@ def generate_gdp_3d_generation_axis_toxicity_color(
     reduced_genome_data: Any,
     save_fpath: str,
     view_angles: Optional[List[Tuple[float, float]]] = None,) -> bool:
-    """
-    Save a 3D figure: X = MDS1, Y = MDS2, Z = generation (time); color = toxicity (fitness).
-    Uses same multi-view layout as the species_archive figure when view_angles is provided.
-    """
+    
     if reduced_genome_data is None:
         return False
     try:
@@ -652,12 +574,8 @@ def generate_gdp_3d_generation_axis_toxicity_color(
         return False
 
 
-# ============================================================================
-# PLOTLY INTERACTIVE 3D VISUALIZATION (NEW)
-# ============================================================================
-
 def _gdp_reduced_population_info(reduced_genome_data: Any) -> Any:
-    """GDP ReducedGenomeData stores metadata on `_population_info` (see matplotlib GDP paths)."""
+    
     info = getattr(reduced_genome_data, "_population_info", None)
     if info is not None:
         return info
@@ -671,19 +589,7 @@ def generate_gdp_3d_plotly_toxicity_figure(
     color_by: str = "species_id",
     use_pub_style: bool = False,
 ) -> bool:
-    """
-    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2, Z=Toxicity.
     
-    Args:
-        reduced_genome_data: ReducedGenomeData object with reduced_positions and population_info
-        genomes: List of genome dicts (with 'id', 'toxicity', 'species_id', 'generation', etc.)
-        save_fpath: Path to save the interactive HTML file
-        color_by: "species_id", "alive", "generation", or "toxicity"
-        use_pub_style: If True, use publication styling
-    
-    Returns:
-        True on success, False otherwise
-    """
     try:
         import plotly.graph_objects as go
         from plotly.subplots import make_subplots
@@ -706,10 +612,8 @@ def generate_gdp_3d_plotly_toxicity_figure(
         x = np.array([positions_2d[i][0] for i in ids])
         y = np.array([positions_2d[i][1] for i in ids])
 
-        # Get Z values (toxicity)
         z = np.array([population_info.get(i, {}).get("fitness", 0.5) for i in ids])
 
-        # Determine colors based on color_by
         if color_by == "alive":
             source = [population_info.get(i, {}).get("alive", "archived") for i in ids]
             color_map = {"alive": "green", "archived": "red"}
@@ -723,18 +627,16 @@ def generate_gdp_3d_plotly_toxicity_figure(
             gens = [int(population_info.get(i, {}).get("generation", 0)) for i in ids]
             colors = gens
             color_label = "Generation"
-        else:  # toxicity
+        else:
             colors = z
             color_label = "Toxicity (Z-axis)"
 
-        # alive: discrete HTML color strings — omit colorscale/colorbar (Plotly rejects colorscale=None)
         marker_kw: Dict[str, Any] = dict(size=4, color=colors, opacity=0.8)
         if color_by != "alive":
             marker_kw["colorscale"] = "Viridis"
             marker_kw["colorbar"] = dict(title=color_label)
             marker_kw["line"] = dict(width=0)
 
-        # Create interactive scatter plot
         fig = go.Figure(data=[
             go.Scatter3d(
                 x=x, y=y, z=z,
@@ -745,7 +647,6 @@ def generate_gdp_3d_plotly_toxicity_figure(
             )
         ])
         
-        # Update layout with better styling
         fig.update_layout(
             title=f"Genetic Distance Projection (MDS) + Toxicity [color = {color_by}]",
             scene=dict(
@@ -776,19 +677,7 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
     save_fpath: str,
     use_pub_style: bool = False,
 ) -> bool:
-    """
-    Generate an interactive 3D Plotly figure: X=MDS1, Y=MDS2, Z=Generation.
-    Default color = toxicity (Viridis); dropdown switches color: toxicity, species, generation, alive/archived.
     
-    Args:
-        reduced_genome_data: ReducedGenomeData object with reduced_positions and population_info
-        genomes: List of genome dicts
-        save_fpath: Path to save the interactive HTML file
-        use_pub_style: If True, use publication styling
-    
-    Returns:
-        True on success, False otherwise
-    """
     try:
         import plotly.graph_objects as go
         import plotly.express as px
@@ -833,7 +722,6 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
             for i in ids
         ]
 
-        # One trace; dropdown uses restyle to swap marker coloring mode
         fig = go.Figure(
             data=[
                 go.Scatter3d(
@@ -855,7 +743,6 @@ def generate_gdp_3d_plotly_generation_axis_toxicity_color(
             ]
         )
 
-        # Restyle presets: continuous scales vs discrete HTML colors (no colorscale)
         def _btn(label: str, m: Dict[str, Any]) -> Dict[str, Any]:
             return dict(label=label, method="restyle", args=[m])
 
@@ -970,13 +857,7 @@ def generate_gdp_3d_plotly_unified(
     save_fpath: str,
     use_pub_style: bool = False,
 ) -> bool:
-    """
-    Single interactive HTML: MDS1 (X), MDS2 (Y), Z = toxicity OR generation,
-    with dropdowns for view (Z + color), marker size, and opacity.
-
-    Z-axis: toxicity (fitness) or generation (time).
-    Color: toxicity (Viridis), species (discrete), generation (Plasma), or alive vs archived.
-    """
+    
     try:
         import plotly.graph_objects as go
         import plotly.express as px
@@ -1063,7 +944,6 @@ def generate_gdp_3d_plotly_unified(
             z_title = "Toxicity (fitness)" if z_is_toxicity else "Generation"
             trace_patch = {"z": [z_arr]}
             trace_patch.update(_marker_restyle(color_mode))
-            # Keep size/opacity in sync when switching view (matches defaults; user can restyle after).
             trace_patch["marker.size"] = default_marker_size
             trace_patch["marker.opacity"] = default_marker_opacity
             layout_patch = {
@@ -1073,7 +953,6 @@ def generate_gdp_3d_plotly_unified(
             }
             return trace_patch, layout_patch
 
-        # Order: all Toxicity-Z modes first, then Generation-Z (default = index 4: Gen Z + toxicity color)
         modes: List[Tuple[str, bool, str]] = [
             ("Toxicity (Z) · species", True, "species"),
             ("Toxicity (Z) · alive vs archived", True, "alive"),
@@ -1114,7 +993,6 @@ def generate_gdp_3d_plotly_unified(
             opacity_buttons.append(dict(label=lbl, method="restyle", args=[{"marker.opacity": o}, [0]]))
         opacity_active = opacities.index(default_marker_opacity)
 
-        # Initial trace matches "Generation (Z) · toxicity (color)" (index 4)
         fig = go.Figure(
             data=[
                 go.Scatter3d(
@@ -1136,11 +1014,9 @@ def generate_gdp_3d_plotly_unified(
             ]
         )
 
-        # Title on top; controls in a vertical stack on the left; 3D scene on the right
         _sidebar_x = 0.02
         _menu_pad = dict(r=4, t=4, b=4, l=4)
         _scene_x0 = 0.26
-        # Three rows: (label_y, menu_y) in paper coords, top to bottom
         _control_rows = (
             (0.82, 0.765),
             (0.54, 0.485),
@@ -1267,10 +1143,10 @@ def generate_gdp_3d_plotly_unified(
 
 
 def is_gdp_available() -> bool:
-    """Return True if the GDP package can be imported."""
+    
     return _GDP_AVAILABLE
 
 
 def get_gdp_import_error() -> Optional[str]:
-    """Return the ImportError message if GDP failed to load, else None."""
+    
     return _GDP_IMPORT_ERROR if not _GDP_AVAILABLE else None

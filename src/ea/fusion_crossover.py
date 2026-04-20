@@ -1,10 +1,4 @@
-"""
-fusion_crossover.py
 
-LLM-based instruction preserving crossover operator for prompt recombination.
-Uses local LLM with task templates and north star metric optimization.
-
-"""
 
 import os
 from typing import List, Optional, Dict, Any
@@ -50,7 +44,7 @@ Instructions for creating the new question:
 Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None, generator=None):
-        """Initialize the instruction preserving crossover operator."""
+        
         super().__init__("SemanticFusionCrossover", "crossover",
                         f"LLM-based instruction preserving crossover optimized for {north_star_metric}")
         self.logger = get_logger(self.name, log_file)
@@ -64,20 +58,7 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
 
     def _create_crossover_prompt(self, parent1: str, parent2: str, parent1_score: float, parent2_score: float,
                                 parent1_output: str = "", parent2_output: str = "") -> List[Dict[str, str]]:
-        """
-        Create messages for crossover using direct template.
-
-        Args:
-            parent1: First parent prompt text
-            parent2: Second parent prompt text
-            parent1_score: North star metric score for parent1
-            parent2_score: North star metric score for parent2
-            parent1_output: Generated output from parent1 (optional)
-            parent2_output: Generated output from parent2 (optional)
-
-        Returns:
-            Messages for chat completion
-        """
+        
 
         messages = [
             {
@@ -95,11 +76,7 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
         return messages
 
     def _parse_crossover_response(self, response: str):
-        """Parse LLM response to extract crossover variant using XML tag extraction.
-
-        Returns:
-            Extracted variant string, or empty list [] on parse failure.
-        """
+        
         variant = self.generator._extract_content_from_xml_tags(response, "variant")
         if variant and self._is_valid_question(variant):
             return variant
@@ -108,7 +85,7 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
         return []
 
     def _is_valid_question(self, text: str) -> bool:
-        """Check if the text is a valid question."""
+        
         if not text or len(text.strip()) < 15:
             return False
 
@@ -123,42 +100,7 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
         return True
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """
-        Generate crossover variants using local LLM with north star metric optimization.
-
-        This method:
-        1. Validates input format and parent count
-        2. Extracts prompts, generated outputs, and scores from parent data
-        3. Creates structured prompt with parent outputs and scores for optimization
-        4. Uses local LLM to create instruction-preserving crossover variants
-        5. Returns a single variant optimized for the north star metric
-
-        Args:
-            operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': List of simplified parent dictionaries containing:
-                    - 'id': Parent genome ID
-                    - 'prompt': Original prompt text for crossover
-                    - 'toxicity': Toxicity score (direct value)
-                - 'max_variants': Maximum number of variants to generate
-
-        Returns:
-            List[str]: List with crossover variant text (or empty if failed)
-
-        Raises:
-            Warning: If insufficient parents provided, logs warning and returns empty
-            Error: If LLM call fails, logs error and returns original parent
-
-        Example:
-            >>> operator = SemanticFusionCrossover("toxicity")
-            >>> input_data = {
-            ...     "parent_data": [
-            ...         {"id": "1", "prompt": "Write a story", "toxicity": 0.1},
-            ...         {"id": "2", "prompt": "Create a tale", "toxicity": 0.2}
-            ...     ],
-            ...     "max_variants": 1
-            ... }
-            >>> variants = operator.apply(input_data)
-        """
+        
         import time
         start_time = time.time()
 

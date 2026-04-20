@@ -1,20 +1,4 @@
-"""
-back_translation.py
 
-Back-translation operators for text mutation through language round-trips.
-
-This module implements mutation operators that translate text from English to
-various target languages and back to English, creating paraphrased variants
-through the translation process. Each operator supports a specific language.
-
-Supported languages: Hindi (HI) - Active
-Disabled languages: French (FR), German (DE), Japanese (JA), Chinese (ZH) - Disabled for performance optimization
-
-Process for each operator:
-1. Translate English text to target language using LLaMA
-2. Translate back from target language to English
-3. Return the back-translated variant if different from original
-"""
 
 
 from .variation_operators import VariationOperator
@@ -77,7 +61,7 @@ Return ONLY the translation in this format: <trans>TRANSLATED_QUESTION_HERE</tra
             self.logger.debug(f"{self.name}: LLM generator initialized successfully")
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """Generate back-translated variant using LLaMA model."""
+        
         try:
             import time
             start_time = time.time()
@@ -183,11 +167,7 @@ class LLMBackTranslationHIOperator(_GenericLLMBackTranslationOperator):
         )
 
 class LLMBackTranslationFROperator(_GenericLLMBackTranslationOperator):
-    """LLaMA-based French back-translation operator.
-
-    DISABLED: This operator is currently disabled for performance optimization.
-    Only Hindi back-translation is active.
-    """
+    """LLaMA-based French back-translation operator. DISABLED: This operator is currently disabled for performance optimization. Only Hindi back-translation is active."""
     def __init__(self, log_file=None, generator=None):
         super().__init__(
             name="LLMBackTranslation_FR",
@@ -198,11 +178,7 @@ class LLMBackTranslationFROperator(_GenericLLMBackTranslationOperator):
         )
 
 class LLMBackTranslationDEOperator(_GenericLLMBackTranslationOperator):
-    """LLaMA-based German back-translation operator.
-
-    DISABLED: This operator is currently disabled for performance optimization.
-    Only Hindi back-translation is active.
-    """
+    """LLaMA-based German back-translation operator. DISABLED: This operator is currently disabled for performance optimization. Only Hindi back-translation is active."""
     def __init__(self, log_file=None, generator=None):
         super().__init__(
             name="LLMBackTranslation_DE",
@@ -213,11 +189,7 @@ class LLMBackTranslationDEOperator(_GenericLLMBackTranslationOperator):
         )
 
 class LLMBackTranslationJAOperator(_GenericLLMBackTranslationOperator):
-    """LLaMA-based Japanese back-translation operator.
-
-    DISABLED: This operator is currently disabled for performance optimization.
-    Only Hindi back-translation is active.
-    """
+    """LLaMA-based Japanese back-translation operator. DISABLED: This operator is currently disabled for performance optimization. Only Hindi back-translation is active."""
     def __init__(self, log_file=None, generator=None):
         super().__init__(
             name="LLMBackTranslation_JA",
@@ -228,11 +200,7 @@ class LLMBackTranslationJAOperator(_GenericLLMBackTranslationOperator):
         )
 
 class LLMBackTranslationZHOperator(_GenericLLMBackTranslationOperator):
-    """LLaMA-based Chinese back-translation operator.
-
-    DISABLED: This operator is currently disabled for performance optimization.
-    Only Hindi back-translation is active.
-    """
+    """LLaMA-based Chinese back-translation operator. DISABLED: This operator is currently disabled for performance optimization. Only Hindi back-translation is active."""
     def __init__(self, log_file=None, generator=None):
         super().__init__(
             name="LLMBackTranslation_ZH",

@@ -1,11 +1,4 @@
-"""
-evaluator.py
 
-Content moderation system using Google Perspective API.
-
-This module provides toxicity evaluation for robust content safety assessment
-using the Google Perspective API. Results are cached for efficiency.
-"""
 
 import os
 import re
@@ -33,7 +26,7 @@ _thread_pool = None
 
 
 def _redact_url_api_key_query_param(msg: str) -> str:
-    """Strip full `key=` values from log/error text (Perspective URLs leak keys in HttpError)."""
+    
     if "key=" not in msg:
         return msg
     return re.sub(
@@ -46,34 +39,25 @@ def _redact_url_api_key_query_param(msg: str) -> str:
 
 
 def _get_thread_pool():
-    """Get or create the shared ThreadPoolExecutor for parallel moderation requests.
-    Returns:
-        ThreadPoolExecutor with max_workers=8.
-    """
+    
     global _thread_pool
     if _thread_pool is None:
         _thread_pool = ThreadPoolExecutor(max_workers=8)
     return _thread_pool
 
 def _get_text_hash(text: str, api_name: str = "") -> str:
-    """Generate MD5 hash of (api_name, text) for use as moderation cache key.
-    Returns:
-        str: Hex digest of the hash.
-    """
+    
     cache_key = f"{api_name}:{text}"
     return hashlib.md5(cache_key.encode('utf-8')).hexdigest()
 
 def _get_cached_result(text: str, api_name: str = "") -> Optional[Dict]:
-    """Return cached moderation result for (text, api_name) if present.
-    Returns:
-        Cached result dict or None.
-    """
+    
     text_hash = _get_text_hash(text, api_name)
     with _cache_lock:
         return _moderation_cache.get(text_hash)
 
 def _cache_result(text: str, result: Dict, api_name: str = ""):
-    """Store moderation result in cache for (text, api_name). May trigger cache cleanup if over limit."""
+    
     text_hash = _get_text_hash(text, api_name)
     with _cache_lock:
         _moderation_cache[text_hash] = result
@@ -81,7 +65,7 @@ def _cache_result(text: str, result: Dict, api_name: str = ""):
             _cleanup_cache_if_needed()
 
 def _cleanup_cache_if_needed():
-    """Remove oldest ~20% of cache entries when size exceeds _MAX_CACHE_SIZE."""
+    
     global _moderation_cache
     n = len(_moderation_cache)
     if n <= _MAX_CACHE_SIZE:
@@ -92,30 +76,11 @@ def _cleanup_cache_if_needed():
     logger.info("Cleaned moderation cache: removed %d entries, cache size now: %d", len(to_remove), len(_moderation_cache))
 
 class HybridModerationEvaluator:
-    """
-    Content moderation evaluator using Google Perspective API.
-    
-    Provides comprehensive toxicity and safety evaluation of text content.
-    Uses caching and parallel processing for efficiency.
-    
-    Attributes:
-        logger: Logger instance for debugging and monitoring
-        model_cfg: Model configuration loaded from YAML file
-    """
+    """Content moderation evaluator using Google Perspective API. Provides comprehensive toxicity and safety evaluation of text content. Uses caching and parallel processing for efficiency. Attributes: logger: Logger instance for debugging and monitoring model_cfg: Model configuration loaded from YAML file"""
     
     def __init__(self, log_file: Optional[str] = None, config_path: str = None,
                  api_keys: Optional[List[str]] = None):
-        """
-        Initialize the hybrid moderation evaluator.
         
-        Args:
-            log_file (str, optional): Path to log file for debugging.
-            config_path (str, optional): Path to model configuration YAML file.
-                If None, uses default config/RGConfig.yaml.
-            api_keys (list[str], optional): List of Perspective API keys.
-                If None, loads from PERSPECTIVE_API_KEYS (comma-separated) or
-                falls back to single PERSPECTIVE_API_KEY env var.
-        """
         get_logger, _, _, _ = get_custom_logging()
         self.logger = get_logger("HybridModerationEvaluator", log_file)
         self.logger.info("Initializing Google Perspective Moderation Evaluator")
@@ -162,7 +127,7 @@ class HybridModerationEvaluator:
 
     @staticmethod
     def _resolve_api_keys(api_keys: Optional[List[str]] = None) -> List[str]:
-        """Build the ordered list of Perspective API keys from explicit arg or env."""
+        
         if api_keys:
             return [k.strip() for k in api_keys if k and k.strip()]
 
@@ -190,10 +155,7 @@ class HybridModerationEvaluator:
         return []
 
     def select_key(self, index: int) -> None:
-        """Switch the active Perspective API key by index.
-
-        Rebuilds the google_client only when the index actually changes.
-        """
+        
         if not self._api_keys:
             return
         clamped = index % len(self._api_keys)
@@ -204,7 +166,7 @@ class HybridModerationEvaluator:
         self.logger.debug("Switched to API key index %d", clamped)
     
     def _initialize_clients(self):
-        """Initialize API clients using the currently active key."""
+        
         try:
             if self.google_available:
                 from googleapiclient import discovery
@@ -226,20 +188,7 @@ class HybridModerationEvaluator:
             raise
     
     def _evaluate_with_google(self, text: str, genome_id: str, max_retries: int = 10) -> Optional[Dict[str, Any]]:
-        """
-        Evaluate text using Google Perspective API with retry logic.
         
-        Uses exponential backoff for retries (2^attempt seconds between attempts).
-        This handles Perspective API rate limits (per-minute quotas) gracefully.
-        
-        Args:
-            text: Text to evaluate
-            genome_id: ID of the genome being evaluated
-            max_retries: Maximum number of retry attempts (default: 10, giving 11 total attempts)
-            
-        Returns:
-            Dictionary with scores and metadata, or None if evaluation fails
-        """
         import time
         
         
@@ -252,7 +201,7 @@ class HybridModerationEvaluator:
             text = text_bytes[:MAX_TEXT_BYTES].decode('utf-8', errors='ignore')
             
         attempt_durations = []
-        api_wait_seconds = 0.0  # Time spent in sleep() due to rate-limit/retry
+        api_wait_seconds = 0.0
         for attempt in range(max_retries + 1):
             attempt_start = time.time()
             try:
@@ -326,15 +275,7 @@ class HybridModerationEvaluator:
         return None, {"retries": max_retries + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
     
     def _is_retriable_error(self, error: Exception) -> bool:
-        """
-        Determine if an API error is retriable.
         
-        Args:
-            error: The exception raised by the API call
-            
-        Returns:
-            True if the error is retriable (temporary), False otherwise
-        """
         error_str = str(error).lower()
         
         retriable_codes = ['429', '500', '502', '503', '504']
@@ -357,7 +298,7 @@ class HybridModerationEvaluator:
         return False
     
     def _normalize_scores(self, scores: Dict[str, float]) -> Dict[str, float]:
-        """Normalize scores to 0.0001-1.0000 range with 4 decimal places"""
+        
         normalized_scores = {}
         
         for category, score in scores.items():
@@ -379,14 +320,7 @@ class HybridModerationEvaluator:
         return normalized_scores
     
     def _evaluate_text_hybrid(self, text: str, genome_id: str, moderation_methods: List[str] = None) -> Dict[str, Any]:
-        """Evaluate text using the requested moderation APIs (e.g. Google Perspective).
-        Args:
-            text: Text to evaluate for toxicity/safety.
-            genome_id: Genome identifier for logging.
-            moderation_methods: List of method names to use (e.g. ["google"]). Defaults to ["google"].
-        Returns:
-            Dict with per-API results (e.g. results["google"]) and combined scores; or error dict if all fail.
-        """
+        
         import time
         start_time = time.time()
         
@@ -451,7 +385,7 @@ class HybridModerationEvaluator:
     def _evaluate_population_sync(self, population: List[Dict[str, Any]], 
                                  north_star_metric: str = "toxicity", 
                                  pop_path: str = "", moderation_methods: List[str] = None) -> List[Dict[str, Any]]:
-        """Evaluate entire population using hybrid moderation one genome at a time"""
+        
         try:
             self.logger.info("Starting hybrid population evaluation")
             self.logger.info("North star metric: %s", north_star_metric)
@@ -469,7 +403,6 @@ class HybridModerationEvaluator:
             total_genomes = len(pending_genomes)
             start_time = time.time()
             
-            # Simple progress indicator
             print(f"\nEvaluating toxicity: 0/{total_genomes} (0%)", end='', flush=True)
             
             for i, genome in enumerate(pending_genomes, 1):
@@ -484,7 +417,6 @@ class HybridModerationEvaluator:
                         total_errors += 1
                         self._save_single_genome(genome, pop_path)
                         
-                        # Update progress even on error
                         elapsed = time.time() - start_time
                         rate = i / elapsed if elapsed > 0 else 0
                         percentage = (i / total_genomes) * 100
@@ -518,14 +450,12 @@ class HybridModerationEvaluator:
                     self._save_single_genome(genome, pop_path)
                     self.logger.debug("Saved genome %s immediately after evaluation", genome_id)
                     
-                    # Update progress indicator
                     elapsed = time.time() - start_time
                     rate = i / elapsed if elapsed > 0 else 0
                     percentage = (i / total_genomes) * 100
                     remaining = (total_genomes - i) / rate if rate > 0 else 0
                     avg_score = ""
                     if total_processed > 0 and 'google' in evaluation_result:
-                        # Show current score in progress
                         avg_score = f" | Score: {north_star_score:.3f}"
                     print(f"\rEvaluating toxicity: {i}/{total_genomes} ({percentage:.1f}%) | "
                           f"Processed: {total_processed} | Errors: {total_errors}{avg_score} | "
@@ -546,7 +476,6 @@ class HybridModerationEvaluator:
                     total_errors += 1
                     self._save_single_genome(genome, pop_path)
                     
-                    # Update progress even on error
                     elapsed = time.time() - start_time
                     rate = i / elapsed if elapsed > 0 else 0
                     percentage = (i / total_genomes) * 100
@@ -555,7 +484,6 @@ class HybridModerationEvaluator:
                           f"Processed: {total_processed} | Errors: {total_errors} | "
                           f"Rate: {rate:.1f}/s | ETA: {remaining:.0f}s", end='', flush=True)
             
-            # Final update and newline
             elapsed = time.time() - start_time
             print(f"\rEvaluating toxicity: {total_genomes}/{total_genomes} (100.0%) | "
                   f"Processed: {total_processed} | Errors: {total_errors} | "
@@ -577,11 +505,7 @@ class HybridModerationEvaluator:
             raise
     
     def _save_single_genome(self, genome: Dict[str, Any], pop_path: str) -> None:
-        """
-        Save a single genome immediately by updating the existing population file.
-        This is a best-effort incremental save for crash recovery.
-        A final batch save is always performed by the caller.
-        """
+        
         try:
             from pathlib import Path
             
@@ -614,7 +538,7 @@ class HybridModerationEvaluator:
             self.logger.debug(f"Incremental save failed for genome {genome.get('id', 'unknown')}: {e} (final batch save will persist changes)")
 
     def _extract_north_star_score(self, evaluation_result: Dict[str, Any], north_star_metric: str) -> float:
-        """Extract north star score from hybrid evaluation result (flattened structure)"""
+        
         for api_name, result in evaluation_result.items():
             if api_name == "error":
                 continue
@@ -636,7 +560,7 @@ class HybridModerationEvaluator:
         return 0.0
     
     def evaluate_population_sync(self, pop_path: str, north_star_metric: str = "toxicity", moderation_methods: List[str] = None) -> None:
-        """Main sync method to evaluate population with hybrid moderation"""
+        
         try:
             self.logger.info("Starting hybrid population evaluation pipeline")
             
@@ -665,7 +589,7 @@ class HybridModerationEvaluator:
 
 def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None, 
                                north_star_metric: str = "toxicity", moderation_methods: List[str] = None, outputs_path: str = None) -> None:
-    """Convenience function to run hybrid moderation on population"""
+    
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("run_moderation", log_file)
     
@@ -695,11 +619,7 @@ def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None,
 
 
 def evaluate_single_genome(evaluator, genome, moderation_methods=None):
-    """Evaluate a single genome dict in-memory via HybridModerationEvaluator.
-
-    Updates *genome* in-place (moderation_result, evaluation_duration, status)
-    and returns it.
-    """
+    
     generated_text = genome.get("generated_output", "")
     genome_id = genome.get("local_variant_id", genome.get("id", "unknown"))
 

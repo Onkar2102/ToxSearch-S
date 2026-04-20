@@ -1,8 +1,4 @@
-"""
-synonym_replacement.py
 
-POS-aware synonym replacement for text mutation.
-"""
 
 from typing import List, Optional, Dict, Any, Tuple
 import random
@@ -66,7 +62,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
     }
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None, num_POS_tags: int = 1, generator=None):
-        """Initialize the LLM POS-aware synonym replacement operator."""
+        
         super().__init__(
             "LLM_POSAwareSynonymReplacement",
             "mutation",
@@ -92,7 +88,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         self.logger.info(f"{self.name}: Configured with num_POS_tags={self.num_POS_tags}")
 
     def _validate_num_POS_tags(self, num_POS_tags: int) -> int:
-        """Ensure num_POS_tags is within valid range."""
+        
         val = max(1, int(num_POS_tags))
         max_available = len(self.POS_DESCRIPTIONS)
         if val > max_available:
@@ -101,15 +97,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return val
 
     def _detect_and_organize_pos(self, text: str) -> Dict[str, List[POSWord]]:
-        """
-        Detect POS tags and organize by type.
-
-        Args:
-            text: Input text to analyze
-
-        Returns:
-            Dict mapping POS_tag -> List[POSWord objects]
-        """
+        
         self.logger.debug(f"{self.name}: Starting POS detection for text: '{text[:50]}...'")
 
         doc = nlp(text)
@@ -139,15 +127,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return pos_words
 
     def _select_pos_types(self, detected_pos: Dict[str, List[POSWord]]) -> List[str]:
-        """
-        Randomly select POS types up to num_POS_tags limit.
-
-        Args:
-            detected_pos: POS words organized by type
-
-        Returns:
-            List of selected POS tag strings
-        """
+        
         available_pos = list(detected_pos.keys())
 
         if not available_pos:
@@ -161,7 +141,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return selected_pos
 
     def _create_synonym_prompt(self, pos_tag: str, pos_description: str, sample_words: List[str], context_text: str) -> List[Dict[str, str]]:
-        """Create messages for LLM to generate synonyms using direct template."""
+        
 
         sample_words_str = ", ".join(sample_words[:5])
 
@@ -179,7 +159,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return messages
 
     def _parse_synonyms_from_response(self, response: str, pos_tag: str) -> List[str]:
-        """Parse synonyms from LLM response using improved XML tag extraction."""
+        
         try:
             synonym_text = self.generator._extract_content_from_xml_tags(response, "synonyms")
             if synonym_text:
@@ -196,17 +176,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
             return []
 
     def _ask_llm_for_synonyms(self, pos_tag: str, pos_words: List[POSWord], text_context: str) -> List[str]:
-        """
-        Generate synonyms for a POS type using LLM.
-
-        Args:
-            pos_tag: The POS tag (e.g., "ADJ", "VERB")
-            pos_words: List of POSWord objects for this POS type
-            text_context: The original text for context
-
-        Returns:
-            List of synonym words with the same POS tag
-        """
+        
         if not self.generator:
             self.logger.warning(f"{self.name}: LLM generator unavailable, skipping synonym generation")
             return []
@@ -240,17 +210,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
             raise RuntimeError(f"{self.name} synonym generation failed for {pos_tag}: {e}") from e
 
     def _generate_synonyms_for_selected_pos(self, detected_pos: Dict[str, List[POSWord]], selected_pos: List[str], text: str) -> Dict[str, List[str]]:
-        """
-        Generate synonyms for all selected POS types.
-
-        Args:
-            detected_pos: POS words organized by type
-            selected_pos: List of selected POS types
-            text: Original text for context
-
-        Returns:
-            Dict mapping POS_tag -> List[synonyms]
-        """
+        
         synonyms_by_pos = {}
 
         self.logger.info(f"{self.name}: Generating synonyms for {len(selected_pos)} POS types")
@@ -272,18 +232,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return synonyms_by_pos
 
     def _create_single_variant(self, text: str, detected_pos: Dict[str, List[POSWord]], synonyms_by_pos: Dict[str, List[str]], variant_num: int) -> str:
-        """
-        Create a single text variant by substituting synonyms.
-
-        Args:
-            text: Original text
-            detected_pos: POS words organized by type
-            synonyms_by_pos: Synonyms for each POS type
-            variant_num: Variant number (for different substitution strategies)
-
-        Returns:
-            Single text variant
-        """
+        
         try:
             variant_text = text
 
@@ -307,18 +256,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
             return text
 
     def _substitute_pos_words(self, text: str, pos_words: List[POSWord], synonym: str, pos_tag: str) -> str:
-        """
-        Substitute ONE word of a specific POS type with a synonym.
-
-        Args:
-            text: Current text
-            pos_words: List of POSWord objects to potentially replace
-            synonym: Synonym to use for replacement
-            pos_tag: POS tag for context
-
-        Returns:
-            Text with ONE substitution applied
-        """
+        
         try:
             if not pos_words or not synonym:
                 return text
@@ -338,17 +276,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
             return text
 
     def _is_valid_word_boundary(self, text: str, start: int, end: int) -> bool:
-        """
-        Validate that the word boundaries are correct and safe for substitution.
-
-        Args:
-            text: Original text
-            start: Start position
-            end: End position
-
-        Returns:
-            True if boundaries are valid
-        """
+        
         if start < 0 or end > len(text) or start >= end:
             return False
 
@@ -364,18 +292,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return True
 
     def _safe_substitute(self, text: str, start: int, end: int, replacement: str) -> str:
-        """
-        Safely substitute text at given positions.
-
-        Args:
-            text: Original text
-            start: Start position
-            end: End position
-            replacement: Replacement text
-
-        Returns:
-            Text with substitution applied
-        """
+        
         if not isinstance(text, str) or not isinstance(replacement, str):
             return text
 
@@ -385,7 +302,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
         return text[:start] + replacement + text[end:]
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """Generate text variants using POS-aware synonym replacement."""
+        
         try:
             import time
             start_time = time.time()
@@ -434,7 +351,7 @@ Return only: <synonyms>synonym_word</synonyms>"""
                 pass
 
     def _generate_single_variant(self, text: str) -> str:
-        """Generate a single variant using POS-aware synonym replacement."""
+        
         try:
             detected_pos = self._detect_and_organize_pos(text)
 

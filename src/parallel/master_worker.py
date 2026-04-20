@@ -12,22 +12,17 @@ PARENTS_REQUEST     = 10
 PARENTS             = 11
 EVALUATED_VARIANT   = 12
 GEN0_BATCH          = 13
-STOP                = 14  # Master tells workers to stop (discard in-progress or remaining work per policy)
-WORKER_READY        = 20   # Worker finished init successfully
-WORKER_INIT_FAILED  = 21   # Worker failed to init (e.g. model load); payload {"rank": int, "error": str}
-
-# GEN0_BATCH payload: bootstrap_wait True means gen0 slice already handed out; worker sleeps and retries PARENTS_REQUEST.
+STOP                = 14
+WORKER_READY        = 20
+WORKER_INIT_FAILED  = 21
 BOOTSTRAP_WAIT_RETRY_SECONDS = 30
-
-# Sequential parity: EvolutionEngine operators="all", max_variants=1 (see ea/evolution_engine.py).
-K_PARALLEL_MERGE_ALL_DEFAULT = 24          # 2 parents: 2 crossover + 22 mutation applies
-K_PARALLEL_MERGE_ALL_EXPLORE_EXPLOIT = 39  # 3 parents: 6 crossover + 33 mutation applies
-# When operators_mode != "all", merge K is not tied to that grid; keep legacy default unless --batch-size is set.
+K_PARALLEL_MERGE_ALL_DEFAULT = 24
+K_PARALLEL_MERGE_ALL_EXPLORE_EXPLOIT = 39
 LEGACY_PARALLEL_MERGE_K_NON_ALL = 100
 
 
 def _read_tracker_selection_mode(outputs_path):
-    """Top-level selection_mode from EvolutionTracker.json ('default', 'explore', 'exploit', ...)."""
+    
     path = Path(outputs_path) / "EvolutionTracker.json"
     if not path.exists():
         return "default"
@@ -40,10 +35,7 @@ def _read_tracker_selection_mode(outputs_path):
 
 
 def resolve_parallel_merge_k(outputs_path, operators_mode, max_variants, batch_size_override):
-    """Batch threshold K for parallel merge: explicit override, else 24/39 for operators=all, else 100.
-
-    batch_size_override: None = use sequential parity (or legacy 100 for non-all operators_mode).
-    """
+    
     if batch_size_override is not None:
         return int(batch_size_override)
     om = (operators_mode or "all").lower()
@@ -59,14 +51,14 @@ def resolve_parallel_merge_k(outputs_path, operators_mode, max_variants, batch_s
 
 
 def send_payload(comm, dest, tag, payload, logger=None):
-    """Send a dict (or None) to dest with the given tag."""
+    
     if logger:
         logger.debug("send -> rank %d  tag=%d  payload_type=%s", dest, tag, type(payload).__name__)
     comm.send(payload, dest=dest, tag=tag)
 
 
 def recv_payload(comm, source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, logger=None):
-    """Recv from source/tag. Returns (data, tag_id, source_rank)."""
+    
     status = MPI.Status()
     data = comm.recv(source=source, tag=tag, status=status)
     tag_id = status.Get_tag()
@@ -77,7 +69,7 @@ def recv_payload(comm, source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, logger=None):
 
 
 def _check_stop(comm, logger=None):
-    """Non-blocking check for STOP from master (rank 0). If present, receive it and return True."""
+    
     if comm.Iprobe(source=0, tag=STOP):
         comm.recv(source=0, tag=STOP)
         if logger:
@@ -86,12 +78,8 @@ def _check_stop(comm, logger=None):
     return False
 
 
-# ---------------------------------------------------------------------------
-# Helpers: dedup, merge, parent selection, tracker
-# ---------------------------------------------------------------------------
-
 def _load_existing_prompts(outputs_path, logger):
-    """Load all prompts from elites, reserves, and archive for dedup."""
+    
     existing = set()
     for fname in ("elites.json", "reserves.json", "archive.json"):
         fpath = outputs_path / fname
@@ -112,10 +100,7 @@ def _load_existing_prompts(outputs_path, logger):
 def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
                         north_star_metric, speciation_config, log_file, logger,
                         run_speciation_fn=None):
-    """Drain up to K genomes from buffers (round-robin), dedup, write temp, run speciation.
-
-    Returns (accepted_count, discarded_count, new_next_genome_id, speciation_result, accepted_genomes).
-    """
+    
     merge_start = time.time()
     buffer_snapshot = {r: len(b) for r, b in buffers.items() if b}
     total_buffered = sum(buffer_snapshot.values())
@@ -214,7 +199,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
 
 
 def _stub_speciation(outputs_path, temp_path, logger):
-    """Fallback when real speciation is unavailable: move all temp genomes to reserves."""
+    
     try:
         with open(temp_path, "r", encoding="utf-8") as f:
             genomes = json.load(f)
@@ -252,7 +237,7 @@ def _stub_speciation(outputs_path, temp_path, logger):
 
 
 def _select_parents(outputs_path, north_star_metric, generation_id, logger):
-    """Run parent selection and return (parents_list, top_10_list)."""
+    
     from ea.parent_selector import ParentSelector
 
     op = str(outputs_path)
@@ -289,7 +274,7 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
 
 
 def _collect_operator_stats(accepted_genomes):
-    """Aggregate operator usage counts from accepted genomes. Returns {operator_name: count}."""
+    
     stats = {}
     for g in accepted_genomes:
         op_name = g.get("operator", "unknown")
@@ -298,18 +283,14 @@ def _collect_operator_stats(accepted_genomes):
 
 
 def _aggregate_parents_from_genomes(accepted_genomes):
-    """Build parents and top_10 for EvolutionTracker from creation_info of all genomes in this generation.
-    Each genome has 'parents' (list of {id, score}). We dedupe by id (normalized to str) and return
-    {id, toxicity} only (no prompt text in tracker). top_10 = top 10 parents by score.
-    Returns (parents_list, top_10_list).
-    """
+    
     by_id = {}
     for g in (accepted_genomes or []):
         for p in (g.get("parents") or []):
             pid = p.get("id")
             if pid is None:
                 continue
-            key = str(pid)  # normalize so int 4 and str "4" dedupe
+            key = str(pid)
             score = p.get("score") or p.get("toxicity") or 0
             if key not in by_id or (by_id[key].get("toxicity") or 0) < score:
                 by_id[key] = {"id": pid, "toxicity": score}
@@ -325,14 +306,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                     generation_duration_seconds=None, generation_wall_start=None, n_workers=None,
                     batch_size_K=None, speciation_config=None, config_dict=None,
                     evaluated_this_generation=None, discarded_this_generation=None):
-    """Update EvolutionTracker with full generation statistics after speciation.
-    sent_parents_top10: optional dict {"parents": [...], "top_10": [...]} captured when PARENTS were sent for this generation.
-    evaluated_this_generation / discarded_this_generation: per-merge deltas (MPI eval variants since last speciation).
-    batch_size_K, speciation_config, config_dict: optional, for run_metadata (RQ analysis).
-    generation_wall_start: if set, generation_duration_seconds is set immediately before the tracker write
-    as (now - generation_wall_start), matching sequential timing scope (through main tracker row).
-    generation_duration_seconds: optional explicit duration when generation_wall_start is None.
-    """
+    
     logger.debug("Updating EvolutionTracker (full): gen=%d  evaluated=%d  "
                  "integrated=%d  discarded=%d  accepted_genomes=%d",
                  generation_id, total_evaluated, total_integrated, total_discarded,
@@ -381,8 +355,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             log_file=log_file,
         )
 
-        # Parents and top_10: aggregate from accepted_genomes (all genomes in this generation)
-        # so we reflect every worker's parents; speciation does not wait for PARENTS_REQUEST.
         if accepted_genomes:
             parents_list, top10_list = _aggregate_parents_from_genomes(accepted_genomes)
             gen_stats["parents"] = parents_list
@@ -415,10 +387,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         if discarded_this_generation is not None:
             gen_stats["discarded_this_generation"] = int(discarded_this_generation)
 
-        # Do NOT merge speciation_result["archived_count"] into gen_stats: that field is the
-        # count archived *this speciation invocation only* (state reset each run). Overwriting
-        # calculate_generation_statistics()["archived_count"] (cumulative from archive.json)
-        # breaks max_total_genomes termination (elites+reserves+archived sum too small).
         _spec_keys = ("species_count", "active_species_count", "frozen_species_count",
                      "reserves_size", "largest_species_size", "average_species_size",
                      "speciation_events", "merge_events", "extinction_events",
@@ -438,7 +406,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["total_evaluation_api_wait_seconds"] = round(total_api_wait, 2)
 
         operator_statistics = None
-        # accepted_genomes = post-dedup set from buffer (same as temp.json): final set actually added to population
         gen_stats["variants_integrated"] = len(accepted_genomes) if accepted_genomes else 0
         if accepted_genomes:
             operator_statistics = _collect_operator_stats(accepted_genomes)
@@ -448,8 +415,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["mutation_variants"] = mutation_count
             gen_stats["crossover_variants"] = crossover_count
 
-            # Compute variant fitness stats from accepted_genomes directly
-            # (temp.json is already cleared by speciation when calculate_generation_statistics runs)
             from utils.population_io import _extract_north_star_score
             variant_scores = [
                 _extract_north_star_score(g, north_star_metric)
@@ -461,7 +426,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                 gen_stats["min_score_variants"] = round(min(valid_scores), 4)
                 gen_stats["avg_fitness_variants"] = round(sum(valid_scores) / len(valid_scores), 4)
 
-            # Find best genome ID from the current generation's variants
             best_score = 0
             best_id = None
             for g in accepted_genomes:
@@ -472,7 +436,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             if best_id is not None:
                 gen_stats["best_genome_id"] = best_id
 
-        # Read previous population_max_toxicity BEFORE update overwrites it
         prev_max = 0.0
         try:
             if tracker_path.exists():
@@ -492,7 +455,6 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             run_metadata_update=run_meta if run_meta else None,
         )
 
-        # Update adaptive selection logic (generations_since_improvement, avg_fitness_history, slope)
         try:
             from utils.population_io import update_adaptive_selection_logic
             current_max = gen_stats.get("population_max_toxicity", 0.0001)
@@ -536,7 +498,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
 
 
 def _run_live_analysis(outputs_path, logger):
-    """Generate live visualizations after speciation (best-effort)."""
+    
     try:
         from utils.live_analysis import run_live_analysis
         results = run_live_analysis(outputs_path=str(outputs_path), logger=logger)
@@ -554,7 +516,7 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
                           total_merge_speciation_seconds=None,
                           in_flight_at_stop=None,
                           merge_k_history=None):
-    """Generate final statistics and plots at the end of a parallel run."""
+    
     try:
         execution_time = time.time() - start_time
         logger.info("Generating final statistics: execution_time=%.1fs  "
@@ -580,7 +542,6 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
         logger.debug("Marked EvolutionTracker status='complete', execution_time_seconds=%.2f, run_mode=parallel",
                      execution_time)
 
-        # Optional master timing and per-worker accepted counts (for RQ1 / worker imbalance analysis)
         master_metrics = {
             "total_wait_for_results_seconds": round(total_wait_for_results_seconds, 2) if total_wait_for_results_seconds is not None else None,
             "total_merge_speciation_seconds": round(total_merge_speciation_seconds, 2) if total_merge_speciation_seconds is not None else None,
@@ -608,23 +569,15 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
         logger.warning("Final statistics generation failed (non-fatal): %s", e)
 
 
-# ---------------------------------------------------------------------------
-# Master
-# ---------------------------------------------------------------------------
-
 def master_main(comm, size, K, outputs_path, north_star_metric,
                 speciation_config, log_file, logger,
                 max_generations=None, run_speciation_fn=None,
                 config_dict=None):
-    """Master process (rank 0). Dispatch loop with per-worker buffers.
-
-    K: optional int override for merge batch threshold. If None, use sequential parity
-    (24 / 39 for operators=all from EvolutionTracker selection_mode) or 100 for other operator modes.
-    """
+    
     from utils.population_io import get_max_genome_id_from_all_files
 
     start_time = time.time()
-    gen_start = start_time  # Wall-clock start of current generation (for generation_duration_seconds)
+    gen_start = start_time
     n_workers = size - 1
     batch_size_override = K
     merge_k_history = []
@@ -685,11 +638,10 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     gen0_assignments = {}
     gen0_expected = 0
     gen0_returned = 0
-    # Master-level metrics (written at end to master_metrics.json; no change to dispatch/merge logic)
-    accepted_per_worker = defaultdict(int)  # Count of genomes accepted per worker_rank (from accepted_genomes)
-    total_wait_for_results_seconds = 0.0   # Time from previous gen_start to cycle_start when we speciate
-    total_merge_speciation_seconds = 0.0   # Time in _merge_and_speciate (cycle_elapsed) per speciation
-    in_flight_at_stop = None                # Buffered count when shutdown was set (termination metric)
+    accepted_per_worker = defaultdict(int)
+    total_wait_for_results_seconds = 0.0
+    total_merge_speciation_seconds = 0.0
+    in_flight_at_stop = None
     seed_file = (config_dict or {}).get("seed_file")
     if seed_file:
         try:
@@ -722,9 +674,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         return f"total={_total_buffered()} per_worker={per_worker}"
 
     recv_count = 0
-    # Store parents/top_10 when we send PARENTS so we can write them into EvolutionTracker for this generation
     sent_parents_top10_by_gen = {}
-    # Worker ready phase: wait for WORKER_READY from each worker (or WORKER_INIT_FAILED / timeout → abort)
     ready_workers = set()
     ready_timeout_sec = 900
     ready_start = time.time()
@@ -738,8 +688,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             logger.error("Workers did not all report ready within %d s (ready=%s). Aborting.",
                          ready_timeout_sec, ready_workers)
             comm.Abort(1)
-        # Only recv WORKER_READY / WORKER_INIT_FAILED. Do not use ANY_TAG: workers send
-        # PARENTS_REQUEST immediately after WORKER_READY; recv+drop would deadlock them.
         progressed = False
         if comm.Iprobe(source=MPI.ANY_SOURCE, tag=WORKER_INIT_FAILED):
             status = MPI.Status()
@@ -776,7 +724,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         logger.debug("recv #%d: source=worker%d  tag=%s  gen0_complete=%s  shutdown=%s",
                       recv_count, source, tag_name, gen0_complete, shutdown)
 
-        # ---- PARENTS_REQUEST ----
         if tag_id == PARENTS_REQUEST:
             req_id = data.get("request_id") if data else None
             logger.info("PARENTS_REQUEST from worker %d  request_id=%s", source, req_id)
@@ -786,7 +733,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     s, e = gen0_assignments.pop(source)
                     payload = {"request_id": req_id, "prompt_start": s, "prompt_end": e}
                 else:
-                    # Slice already handed out; other workers still in gen0 — do not send bare [0:0] (causes recv storms).
                     payload = {
                         "request_id": req_id,
                         "prompt_start": 0,
@@ -819,9 +765,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                                 n_prompts_batch, key_idx if key_idx is not None else "none", len(gen0_assignments))
 
             elif shutdown:
-                # Worker requested more work only after finishing and reporting current task(s);
-                # we send stop now so it does not start more genomes (aligns with: let workers
-                # report currently running tasks to finish up, then send stop).
                 send_payload(comm, source, PARENTS, None, logger=logger)
                 finished_workers += 1
                 logger.info("Shutdown sent to worker %d (worker stops immediately). (%d/%d workers finished). "
@@ -836,7 +779,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     parents, top_10 = _select_parents(
                         outputs_path, north_star_metric, generation_id, logger)
                     parent_sel_elapsed = time.time() - parent_sel_start
-                    # Store for EvolutionTracker (id + score only; full prompts stay in parents.json / MPI payload)
                     def _slim(g):
                         return {"id": g.get("id"), "toxicity": g.get("toxicity", 0)}
                     sent_parents_top10_by_gen[generation_id] = {
@@ -862,7 +804,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     send_payload(comm, source, PARENTS, None, logger=logger)
                     finished_workers += 1
 
-        # ---- EVALUATED_VARIANT ----
         elif tag_id == EVALUATED_VARIANT:
             req_id = data.get("request_id")
             local_id = data.get("local_variant_id")
@@ -891,8 +832,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     gen0_returned, gen0_expected, merge_k,
                 )
 
-            # Generation 0: single speciation after *all* seed evaluations are buffered (not K-batched).
-            # Post-bootstrap: steady-state speciation when buffered count reaches merge_K (sequential parity).
             should_speciate = False
             if not gen0_complete:
                 if (not gen0_assignments
@@ -904,7 +843,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 should_speciate = True
 
             if should_speciate:
-                wait_seconds = time.time() - gen_start  # Optional master timing: wait for results until merge
+                wait_seconds = time.time() - gen_start
                 total_wait_for_results_seconds += wait_seconds
                 cycle_start = time.time()
                 logger.info("-"*50)
@@ -939,7 +878,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 for g in (accepted_genomes or []):
                     r = g.get("worker_rank")
                     if r is not None:
-                        accepted_per_worker[r] += 1  # Per-worker accepted count for worker_metrics aggregation
+                        accepted_per_worker[r] += 1
                 total_integrated += accepted
                 total_discarded += discarded
 
@@ -959,7 +898,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 _run_live_analysis(outputs_path, logger)
 
                 cycle_elapsed = time.time() - cycle_start
-                total_merge_speciation_seconds += cycle_elapsed  # Optional master timing: merge + speciation
+                total_merge_speciation_seconds += cycle_elapsed
                 logger.info("Post-speciation summary: generation_id=%d  "
                             "total_evaluated=%d  total_integrated=%d  "
                             "total_discarded=%d  cycle_time=%.2fs",
@@ -971,8 +910,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 gen0_complete = True
                 generation_id += 1
 
-                # Termination: only max_total_genomes is used. (max_generations is kept but never set.)
-                # Send STOP to all workers so they can stop mid-cycle if needed.
                 max_total = (config_dict or {}).get("max_total_genomes")
                 if max_total is not None:
                     try:
@@ -991,20 +928,18 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         )
                         if total_genomes >= max_total:
                             shutdown = True
-                            in_flight_at_stop = _total_buffered()  # Termination: buffered genomes when STOP sent
+                            in_flight_at_stop = _total_buffered()
                             logger.info("SHUTDOWN REASON: total genomes limit reached (%d >= %d).",
                                         total_genomes, max_total)
                     except Exception as e:
                         logger.debug("Could not check max_total_genomes: %s", e)
                 if shutdown:
-                    # Send STOP to all workers immediately; do not wait for them to send PARENTS_REQUEST.
                     for w in range(1, size):
                         send_payload(comm, w, STOP, None, logger=logger)
                     logger.info("Sent STOP to all %d worker(s) (immediate broadcast).", size - 1)
 
     logger.info("All workers finished requesting. recv_count=%d", recv_count)
 
-    # Include all remaining buffered genomes (do not discard). Merge + speciation, then final tracker update.
     if _total_buffered() > 0:
         logger.info("="*50)
         logger.info("Drain phase: including %d genomes from buffers (not discarded). %s",
@@ -1019,7 +954,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         for g in (accepted_genomes or []):
             r = g.get("worker_rank")
             if r is not None:
-                accepted_per_worker[r] += 1  # Drain phase: include accepted counts for final master_metrics
+                accepted_per_worker[r] += 1
         total_integrated += accepted
         total_discarded += discarded
         drain_batch_k = len(accepted_genomes or [])
@@ -1056,7 +991,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         merge_k_history=merge_k_history,
     )
 
-    # Run GDP visualization once at end of execution (historic + current from elites/reserves/archive)
     try:
         from utils.live_analysis import generate_gdp_projection_plot
         gdp_path = generate_gdp_projection_plot(outputs_path=str(outputs_path), logger=logger)
@@ -1065,7 +999,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     except Exception as e:
         logger.warning("GDP diagram at end of run failed (non-fatal): %s", e)
 
-    # Read final best_fitness from tracker for the summary
     final_best = 0.0
     try:
         tracker_path = outputs_path / "EvolutionTracker.json"
@@ -1085,12 +1018,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     logger.info("="*60)
 
 
-# ---------------------------------------------------------------------------
-# Worker
-# ---------------------------------------------------------------------------
-
 def _load_seed_prompts(seed_file, start, end, logger):
-    """Load prompts from the seed CSV file for the given index range."""
+    
     try:
         df = pd.read_csv(seed_file, engine="python", on_bad_lines="skip",
                          sep=",", quotechar='"', skipinitialspace=True)
@@ -1106,11 +1035,7 @@ def _load_seed_prompts(seed_file, start, end, logger):
 
 def worker_main(comm, rank, size, logger, config_dict=None,
                 response_generator=None, prompt_generator=None, evaluator=None):
-    """Worker process (rank > 0).
-
-    Receives config via bcast, initialises LLM/evaluator (or uses injected
-    mocks), then loops: request work -> process -> send EVALUATED_VARIANTs.
-    """
+    
     config_dict = comm.bcast(None, root=0)
     logger.info("Worker %d received config: %s", rank, list((config_dict or {}).keys()))
 
@@ -1122,7 +1047,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     base_log_file = cfg.get("log_file")
     log_file = _rank_log_file(base_log_file, rank) or base_log_file
     outputs_path = cfg.get("outputs_path")
-    # Resolve config paths from project root when relative (workers may have different CWD)
     rg_config_path = cfg.get("rg_config_path") or "config/RGConfig.yaml"
     pg_config_path = cfg.get("pg_config_path") or "config/PGConfig.yaml"
 
@@ -1167,7 +1091,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
     send_payload(comm, 0, WORKER_READY, {"rank": rank}, logger=logger)
 
-    # ---- Worker-level metrics (written on exit to worker_<rank>_stats.json) ----
     seq = 0
     cycle = 0
     total_errors = 0
@@ -1193,12 +1116,11 @@ def worker_main(comm, rank, size, logger, config_dict=None,
         data, tag_id, _ = recv_payload(comm, source=0, logger=logger)
 
         if tag_id == STOP or (tag_id == PARENTS and data is None):
-            stop_signals_received += 1  # Termination metrics: count STOP (or PARENTS/None) received
+            stop_signals_received += 1
             logger.info("Received shutdown from master (tag=%s). Exiting request loop.",
                         "STOP" if tag_id == STOP else "PARENTS/None")
             break
 
-        # ---- GEN0_BATCH (evaluation-only) ----
         if tag_id == GEN0_BATCH:
             if data.get("bootstrap_wait"):
                 retry_sec = int(data.get("retry_after_seconds") or BOOTSTRAP_WAIT_RETRY_SECONDS)
@@ -1244,7 +1166,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             gen0_processed = []
             for i, p in enumerate(prompts):
                 if _check_stop(comm, logger):
-                    discarded_buffered_at_stop += len(prompts) - i  # Termination: count prompts not yet processed
+                    discarded_buffered_at_stop += len(prompts) - i
                     logger.info("Worker %d: STOP during GEN0_BATCH; discarding %d remaining prompts.",
                                 rank, len(prompts) - i)
                     break
@@ -1288,7 +1210,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     logger.info("Gen0 progress: %d/%d variants sent (%d ok, %d errors)",
                                  j + 1, n_sent, gen0_ok, gen0_err)
 
-            # Accumulate timing from genomes (for worker stats on exit)
             for g in gen0_processed:
                 total_response_time += float(g.get("response_duration", 0) or 0)
                 total_evaluation_time += float(g.get("evaluation_duration", 0) or 0)
@@ -1299,7 +1220,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                         "for request_id=%s in %.2fs",
                         n_sent, gen0_ok, gen0_err, req_id, gen0_batch_elapsed)
 
-        # ---- PARENTS (evolve + respond + evaluate) ----
         elif tag_id == PARENTS:
             cycle_start = time.time()
             parents = data.get("parents", [])
@@ -1330,7 +1250,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                          len(variants), evolve_elapsed)
 
             if _check_stop(comm, logger):
-                discarded_buffered_at_stop += len(variants)  # Termination: variants created but not sent
+                discarded_buffered_at_stop += len(variants)
                 logger.info("Worker %d: STOP after variant creation; discarding all %d variants (none sent).",
                             rank, len(variants))
                 cycle += 1
@@ -1341,7 +1261,7 @@ def worker_main(comm, rank, size, logger, config_dict=None,
             processed_variants = []
             for i, variant in enumerate(variants):
                 if _check_stop(comm, logger):
-                    discarded_buffered_at_stop += len(variants) - i  # Termination: variants not yet evaluated/sent
+                    discarded_buffered_at_stop += len(variants) - i
                     logger.info("Worker %d: STOP during evaluation; discarding %d remaining variant(s).",
                                 rank, len(variants) - i)
                     break
@@ -1378,7 +1298,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                 logger.debug("Sent EVALUATED_VARIANT  local_variant_id=%s  status=%s",
                              v.get("local_variant_id"), v.get("status"))
 
-            # Accumulate timing for worker stats (response, evaluation, API wait, variant creation)
             for v in processed_variants:
                 total_response_time += float(v.get("response_duration", 0) or 0)
                 total_evaluation_time += float(v.get("evaluation_duration", 0) or 0)
@@ -1392,9 +1311,8 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
     worker_stop_time = time.time()
     worker_elapsed = worker_stop_time - worker_start_time
-    tasks_received = (1 if did_gen0 else 0) + cycle  # GEN0 counts as one task; each PARENTS cycle counts as one
+    tasks_received = (1 if did_gen0 else 0) + cycle
     try:
-        # Write per-worker stats to run dir for post-run aggregation (aggregate_worker_metrics.py)
         out_path = Path(outputs_path) if outputs_path else None
         if out_path and out_path.is_dir():
             stats = {
@@ -1420,9 +1338,6 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     except Exception as e:
         logger.warning("Worker %d failed to write stats file: %s", rank, e)
 
-    # Release llama.cpp models before process exit to reduce chance of
-    # "AttributeError: 'LlamaModel' object has no attribute 'sampler'" during
-    # interpreter teardown (known llama-cpp-python bug in LlamaModel.__del__).
     try:
         from gne.model_interface import LlamaCppChatInterface
         LlamaCppChatInterface.close_and_clear_model_cache()
@@ -1436,12 +1351,8 @@ def worker_main(comm, rank, size, logger, config_dict=None,
     logger.info("="*50)
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
 def _load_perspective_api_keys():
-    """Load Perspective API keys from environment (same priority as evaluator)."""
+    
     import os
     multi = os.getenv("PERSPECTIVE_API_KEYS", "").strip()
     if multi:
@@ -1465,11 +1376,7 @@ def _load_perspective_api_keys():
 
 
 def _rank_log_file(base_log_file, rank):
-    """Derive a per-rank log filename from the base log file path.
-
-    Example: logs/20260227_run1.log -> logs/20260227_run1_master.log (rank 0)
-                                    -> logs/20260227_run1_worker1.log (rank 1)
-    """
+    
     if base_log_file is None:
         return None
     stem, ext = os.path.splitext(base_log_file)
@@ -1487,7 +1394,7 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
         max_variants=1,
         response_generator=None, prompt_generator=None, evaluator=None,
         perspective_api_keys=None):
-    """MPI entry point. Branch on rank. Primary termination is by total genomes (--max-total-genomes required)."""
+    
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
@@ -1497,7 +1404,6 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
     if max_total_genomes is None:
         raise ValueError("Parallel mode requires max_total_genomes (--max-total-genomes); primary termination is by total genomes.")
 
-    # Load .env from project root so PERSPECTIVE_API_KEY / PERSPECTIVE_API_KEYS are available (srun may have different CWD)
     try:
         from utils.population_io import get_project_root
         _project_root = get_project_root()
@@ -1508,7 +1414,6 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
     except Exception:
         pass
 
-    # Assign device by rank: rank 0 = CPU, rank 1 = cuda:0, rank 2 = cuda:1, ...
     from utils.device_utils import device_manager
     device_manager.set_mpi_device(rank, size)
 

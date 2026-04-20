@@ -1,8 +1,4 @@
-"""
-merging.py
 
-Island merging logic for speciation.
-"""
 
 from typing import Dict, List, Tuple, Optional
 
@@ -22,37 +18,10 @@ def merge_islands(
     w_phenotype: float = 0.3,
     logger=None
 ) -> Tuple[Species, List[Individual]]:
-    """
-    Merge two islands into a single species.
     
-    Merging combines two similar species into one:
-    - Members: All members from both species (deduplicated by ID) - NO radius/capacity filtering
-    - Leader: Highest-fitness individual from ALL combined members
-    - Radius: Constant theta_sim (same for all species)
-    - Stagnation: Reset to 0 (fresh start for merged species)
-    - Origin: "merge" with parent_ids = [sp1.id, sp2.id]
-    
-    NOTE: This function does NOT enforce radius or capacity. All combined members are kept.
-    Radius enforcement is done in Phase 3 (after merging) and capacity enforcement in Phase 4 of run_speciation.py.
-    
-    Note: Creates a NEW species ID (not reusing sp1.id or sp2.id) to avoid confusion.
-    
-    Args:
-        sp1: First species to merge
-        sp2: Second species to merge
-        current_generation: Current generation number
-        theta_sim: Constant radius for the merged species (default: 0.2, matches config.py)
-        logger: Optional logger instance
-    
-    Returns:
-        Tuple of (merged Species, empty list)
-        - merged: New merged Species with cluster_origin="merge" and parent_ids=[sp1.id, sp2.id]
-        - outliers: Empty list (no filtering during merge, will be done in Phase 4)
-    """
     if logger is None:
         logger = get_logger("IslandMerging")
     
-    # Combine members, deduplicating by ID
     seen = set()
     combined = []
     for m in sp1.members + sp2.members:
@@ -60,59 +29,46 @@ def merge_islands(
             combined.append(m)
             seen.add(m.id)
     
-    # Sort combined members by descending fitness
     combined.sort(key=lambda x: x.fitness, reverse=True)
     
-    # Select highest-fitness genome as leader
-    # Leader updates later only if a fitter genome appears
     if not combined:
-        # Fallback: use highest fitness leader from either species (both should exist)
         if not sp1.leader or not sp2.leader:
             logger.error(f"Cannot merge species {sp1.id} and {sp2.id}: both have no members and at least one has no leader")
             raise ValueError(f"Cannot merge species {sp1.id} and {sp2.id}: insufficient members and leaders")
         new_leader = max([sp1.leader, sp2.leader], key=lambda x: x.fitness)
     else:
-        new_leader = combined[0]  # Highest fitness (first after sorting)
+        new_leader = combined[0]
     
-    # Leader selection happens before post-merge pruning.
-    # Later radius/capacity checks may remove members, but do not re-elect the leader.
     
-    # Create merged species with all members (no radius/capacity filtering here)
     merged = Species(
-        id=generate_species_id(),  # New ID for clarity
+        id=generate_species_id(),
         leader=new_leader,
-        members=combined,  # ALL members, NO filtering
-        radius=theta_sim,  # Constant radius for all species
+        members=combined,
+        radius=theta_sim,
         stagnation=0,
         max_fitness=new_leader.fitness,
         species_state="active",
         created_at=current_generation,
         last_improvement=current_generation,
-        cluster_origin="merge",  # Created via merge
-        parent_ids=[sp1.id, sp2.id]  # Both parent IDs
+        cluster_origin="merge",
+        parent_ids=[sp1.id, sp2.id]
     )
     
-    # Update species assignments for all members
     for m in combined:
         m.species_id = merged.id
     
-    # Update genome tracker if available
     try:
         from .run_speciation import _get_state
         state = _get_state()
         genome_tracker = state.get("_genome_tracker")
         if genome_tracker:
-            # Update all tracker genomes assigned to parent species, not only in-memory members.
-            # In-memory members can be a subset (for example, when tracker has older entries).
             parent1_genome_ids = genome_tracker.get_all_genomes_by_species(sp1.id)
             parent2_genome_ids = genome_tracker.get_all_genomes_by_species(sp2.id)
             all_parent_genome_ids = set(parent1_genome_ids) | set(parent2_genome_ids)
             
-            # Include in-memory members too in case tracker has not seen them yet
             in_memory_ids = {str(m.id) for m in combined}
             all_genome_ids_to_update = all_parent_genome_ids | in_memory_ids
             
-            # Batch update: parent genomes -> merged species_id
             updates = {str(gid): merged.id for gid in all_genome_ids_to_update}
             
             if len(all_parent_genome_ids) > len(in_memory_ids):
@@ -130,7 +86,6 @@ def merge_islands(
                     f"({len(all_parent_genome_ids) - len(in_memory_ids)} additional from tracker beyond in-memory members)"
                 )
             
-            # Log archive-to-active reassignments if they occur (primarily defensive/future-proofing).
             reassigned_from_archive = result.get("reassigned_from_archive", [])
             if reassigned_from_archive:
                 events_tracker = state.get("_events_tracker")
@@ -152,7 +107,7 @@ def merge_islands(
         logger.debug(f"Could not update genome tracker during merge: {e}")
     
     logger.info(f"Merged species {sp1.id} + {sp2.id} -> {merged.id} ({merged.size} members, no filtering applied - enforced later)")
-    return merged, []  # Empty outliers list: merge step does not filter members
+    return merged, []
 
 
 def process_merges(
@@ -166,56 +121,16 @@ def process_merges(
     historical_species: Optional[Dict[int, Species]] = None,
     logger=None
 ) -> Tuple[Dict[int, Species], List[Dict], List[Individual], Dict[int, Species]]:
-    """
-    Process all species merges for a generation.
     
-    Merging combines similar species to prevent excessive fragmentation.
-    Two species merge if:
-    1. Leader distance < theta_merge (very similar)
-    2. Both species are stable (existed for min_stability_gens; default 5 = can merge only after 5 generations)
-    
-    Merged species:
-    - Combines all members (deduplicated)
-    - Keeps highest-fitness leader from all combined members
-    - Uses constant theta_sim radius
-    - Has cluster_origin="merge" and parent_ids=[id1, id2]
-    - NO radius/capacity enforcement (deferred to Phase 4 in run_speciation.py)
-    
-    Frozen species can merge with active or other frozen species.
-    When species merge, BOTH parent species become extinct (moved to historical_species).
-    The merged species is a new species with a new ID.
-    
-    Process iteratively until no more merge candidates are found.
-    All eligible merges happen in a single generation.
-    
-    Args:
-        species: Dict of active and frozen species (modified in-place)
-        theta_merge: Merge distance threshold (must be < theta_sim)
-        theta_sim: Constant radius for merged species
-        min_stability_gens: Minimum age (generations) for species to be mergeable (default 5)
-        current_gen: Current generation number
-        historical_species: Optional dict for storing extinct parent species
-        logger: Optional logger instance
-    
-    Returns:
-        Tuple of (updated_species, merge_events, outliers, extinct_parents)
-        - updated_species: Dict of species after merging (parents removed, merged species added)
-        - merge_events: List of merge event dictionaries
-        - outliers: Empty list (no filtering during merge, radius enforcement deferred to Phase 4)
-        - extinct_parents: Dict of parent species that became extinct via merging (to be moved to historical_species)
-    """
     if logger is None:
         logger = get_logger("IslandMerging")
     
     events = []
-    all_outliers = []  # Collect all outliers from merges
-    extinct_parents = {}  # Track parent species that became extinct via merging
+    all_outliers = []
+    extinct_parents = {}
     
-    # Build merge candidates from active/frozen species.
-    # Frozen species are still eligible to merge; incubator species are excluded.
     all_species_for_merging = {}
     for sid, sp in species.items():
-        # Include only species with a valid leader and non-incubator state
         if sp.leader is not None and sp.species_state != "incubator":
             all_species_for_merging[sid] = sp
         elif sp.species_state == "incubator":
@@ -223,14 +138,11 @@ def process_merges(
         elif sp.leader is None:
             logger.warning(f"Skipping species {sid} from merge candidates: no leader (state={sp.species_state})")
     
-    # Continue merging until no more candidates are found
     while True:
-        # Find merge candidates: pairs with leader distance < theta_merge and both stable
         merge_pairs = []
         species_list = list(all_species_for_merging.items())
         for i, (id1, sp1) in enumerate(species_list):
             for j, (id2, sp2) in enumerate(species_list[i + 1:], start=i + 1):
-                # Check if leaders exist and have embeddings before accessing
                 if not sp1.leader or not sp2.leader:
                     logger.debug(f"Skipping merge check for {id1}+{id2}: one or both species have no leader")
                     continue
@@ -252,7 +164,6 @@ def process_merges(
             break
         
         id1, id2, state1, state2 = merge_pairs[0]
-        # Resolve species objects from current merge candidate set
         sp1 = all_species_for_merging.get(id1)
         sp2 = all_species_for_merging.get(id2)
         
@@ -260,25 +171,20 @@ def process_merges(
             logger.warning(f"Skipping merge {id1}+{id2}: one or both species not found in all_species_for_merging")
             continue
         
-        # Validate that both species have leaders before merging
         if not sp1.leader or not sp2.leader:
             logger.warning(f"Skipping merge {id1}+{id2}: one or both species have no leader (sp1.leader={sp1.leader is not None}, sp2.leader={sp2.leader is not None})")
             continue
         
         merged, outliers = merge_islands(sp1, sp2, current_gen, theta_sim, w_genotype, w_phenotype, logger)
         
-        # Remove old species from active dict
         species.pop(id1, None)
         species.pop(id2, None)
-        # Remove from all_species_for_merging too
         all_species_for_merging.pop(id1, None)
         all_species_for_merging.pop(id2, None)
         
-        # Add merged species (always active after merge)
         species[merged.id] = merged
         all_species_for_merging[merged.id] = merged
         
-        # Mark both parent species as extinct (they will be moved to historical_species by caller)
         sp1.species_state = "extinct"
         sp2.species_state = "extinct"
         
@@ -286,7 +192,6 @@ def process_merges(
         extinct_parents[id2] = sp2
         logger.info(f"Parent species {id1} and {id2} became extinct via merge -> new species {merged.id}")
         
-        # Collect outliers for caller to handle
         if outliers:
             all_outliers.extend(outliers)
             logger.debug(f"Merge {id1}+{id2}->{merged.id}: {len(outliers)} outliers need to be moved to cluster 0")

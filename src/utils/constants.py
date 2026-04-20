@@ -1,7 +1,4 @@
-"""
-Constants for the ETG framework.
-Centralizes magic numbers and configuration values.
-"""
+
 
 class EvolutionConstants:
     """Constants related to evolutionary algorithms"""
@@ -24,13 +21,7 @@ class ModelConstants:
     pass
 
 class FileConstants:
-    """Constants related to file operations
-    
-    Note: Active population = elites.json + reserves.json
-    - elites.json: Genomes with species_id > 0 (assigned to species)
-    - reserves.json: Cluster 0 outliers (genomes that don't fit existing species)
-    - archive.json: Archived/removed genomes (excluded from active population)
-    """
+    """Constants related to file operations Note: Active population = elites.json + reserves.json - elites.json: Genomes with species_id > 0 (assigned to species) - reserves.json: Cluster 0 outliers (genomes that don't fit existing species) - archive.json: Archived/removed genomes (excluded from active population)"""
     DEFAULT_ELITES_FILE = "data/outputs/elites.json"
     DEFAULT_RESERVES_FILE = "data/outputs/reserves.json"
     DEFAULT_ARCHIVE_FILE = "data/outputs/archive.json"

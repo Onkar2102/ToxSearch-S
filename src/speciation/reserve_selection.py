@@ -1,28 +1,16 @@
-"""
-reserve_selection.py
 
-NSGA-II based selection for Cluster 0 (reserves) capacity enforcement.
-
-When cluster 0 exceeds max_capacity, this module selects which genomes to keep
-using NSGA-II with two objectives (both maximized):
-  1. Diversity (mean ensemble distance to species leaders) — primary priority
-  2. Toxicity (fitness / north-star score) — secondary priority
-
-Tie-break when trimming the last Pareto front:
-  crowding distance (desc) → diversity (desc) → toxicity (desc)
-"""
 
 import numpy as np
 from typing import List, Dict, Any, Tuple
 
 
 def _dominates(a_div: float, a_tox: float, b_div: float, b_tox: float) -> bool:
-    """Return True if (a_div, a_tox) Pareto-dominates (b_div, b_tox) (both maximised)."""
+    
     return (a_div >= b_div and a_tox >= b_tox) and (a_div > b_div or a_tox > b_tox)
 
 
 def _non_dominated_sort(diversity: np.ndarray, toxicity: np.ndarray) -> List[List[int]]:
-    """Partition indices into successive Pareto fronts (front 0 = non-dominated)."""
+    
     n = len(diversity)
     fronts: List[List[int]] = []
     remaining = list(range(n))
@@ -44,7 +32,7 @@ def _non_dominated_sort(diversity: np.ndarray, toxicity: np.ndarray) -> List[Lis
 
 
 def _crowding_distance(obj1: np.ndarray, obj2: np.ndarray) -> np.ndarray:
-    """Compute crowding distance for a set of points in 2-objective space."""
+    
     n = len(obj1)
     if n <= 2:
         return np.full(n, np.inf)
@@ -67,23 +55,7 @@ def select_reserves_nsga2(
     diversity_vals: np.ndarray,
     capacity: int,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
-    """
-    Select which cluster-0 genomes to keep using NSGA-II.
-
-    Objectives (both maximised): diversity (primary), toxicity (secondary).
-    Tie-break when trimming the last front:
-        crowding (desc) → diversity (desc) → toxicity (desc)
-
-    Args:
-        genomes: List of genome dicts (length N, N > capacity).
-        toxicity_vals: 1-D array of toxicity scores aligned with *genomes*.
-        diversity_vals: 1-D array of diversity scores aligned with *genomes*.
-                        NaN values are treated as 0.0.
-        capacity: Number of genomes to keep.
-
-    Returns:
-        (keep_genomes, excess_genomes) — two disjoint lists of genome dicts.
-    """
+    
     n = len(genomes)
     if n <= capacity:
         return list(genomes), []
@@ -102,7 +74,6 @@ def select_reserves_nsga2(
             need = capacity - len(selected_indices)
             front_arr = np.array(front)
             cd = _crowding_distance(div[front_arr], tox[front_arr])
-            # Tie-break: diversity first, then toxicity (lexsort keys are last-to-first)
             order = np.lexsort((-tox[front_arr], -div[front_arr], -cd))
             for k in order[:need]:
                 selected_indices.append(front_arr[k])

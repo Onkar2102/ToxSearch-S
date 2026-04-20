@@ -1,6 +1,4 @@
-"""
-PromptGenerator: Text generator for prompt generation using task-specific templates.
-"""
+
 
 import os
 import json
@@ -15,9 +13,7 @@ from .model_interface import LlamaCppChatInterface
 get_logger, _, _, _ = get_custom_logging()
 
 class PromptGenerator:
-    """
-    Prompt generator using v1/chat/completions interface for prompt generation and modification.
-    """
+    """Prompt generator using v1/chat/completions interface for prompt generation and modification."""
     
     def __init__(self, model_key="prompt_generator", config_path="config/PGConfig.yaml", log_file: Optional[str] = None, seed: Optional[int] = None):
         self.log_file = log_file
@@ -74,30 +70,14 @@ class PromptGenerator:
 
 
     def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> str:
-        """Direct access to chat completions for operators.
-
-        Args:
-            messages: List of dicts with 'role' and 'content' (e.g. [{"role": "user", "content": "..."}]).
-            **kwargs: Optional arguments passed through to model_interface.chat_completion.
-
-        Returns:
-            str: Model reply text, or empty string on failure.
-        """
+        
         return self.model_interface.chat_completion(messages, **kwargs)
 
 
 
     
     def _extract_content_from_xml_tags(self, response: str, tag_name: str) -> str:
-        """Extract content from XML tags with robust error handling and validation.
-
-        Args:
-            response: Raw LLM response string that may contain <tag_name>...</tag_name>.
-            tag_name: Name of the XML tag to extract (e.g. 'paraphrase', 'variant').
-
-        Returns:
-            str: Extracted content between tags, or empty string if not found or validation fails.
-        """
+        
         try:
             import re
             
@@ -153,15 +133,7 @@ class PromptGenerator:
             return ""
     
     def _validate_extracted_content(self, content: str, tag_name: str) -> bool:
-        """Validate extracted content based on tag type.
-
-        Args:
-            content: Extracted string to validate.
-            tag_name: Tag name used for tag-specific rules (e.g. question-mark requirement for variant/paraphrase).
-
-        Returns:
-            bool: True if content is valid, False otherwise.
-        """
+        
         if not content or len(content.strip()) < 2:
             return False
             

@@ -1,9 +1,4 @@
-"""
-migration.py
 
-Migration script to populate genome_tracker.json from existing elites.json, reserves.json, archive.json.
-This is used when migrating from the old architecture to the new genome tracker-based architecture.
-"""
 
 import json
 from pathlib import Path
@@ -24,26 +19,10 @@ def migrate_genome_tracker_from_files(
     load_archive: bool = True,
     logger=None
 ) -> Dict[str, Any]:
-    """
-    Populate genome_tracker.json from existing elites.json, reserves.json, archive.json.
     
-    This function reads all genomes from the existing files and populates the genome tracker
-    with their current species_id assignments.
-    
-    Args:
-        elites_path: Path to elites.json (defaults to outputs_path / "elites.json")
-        reserves_path: Path to reserves.json (defaults to outputs_path / "reserves.json")
-        archive_path: Path to archive.json (defaults to outputs_path / "archive.json")
-        load_archive: Whether to load archive.json (default: True)
-        logger: Optional logger instance
-        
-    Returns:
-        Dictionary with migration statistics
-    """
     if logger is None:
         logger = get_logger("Migration")
     
-    # Always get outputs_path (needed for tracker_path even if all paths are provided)
     outputs_path = get_outputs_path()
     
     if elites_path is None or reserves_path is None or archive_path is None:
@@ -54,10 +33,8 @@ def migrate_genome_tracker_from_files(
         if archive_path is None:
             archive_path = outputs_path / "archive.json"
     
-    # Initialize genome tracker
     genome_tracker = GenomeTracker(logger=logger)
     
-    # Check if tracker already exists
     tracker_path = outputs_path / "genome_tracker.json"
     if tracker_path.exists():
         logger.info("Genome tracker already exists, loading existing data...")
@@ -68,7 +45,6 @@ def migrate_genome_tracker_from_files(
         logger.info("Genome tracker does not exist, creating new one...")
         existing_count = 0
     
-    # Load genomes from files
     elites_genomes = []
     reserves_genomes = []
     archive_genomes = []
@@ -97,12 +73,10 @@ def migrate_genome_tracker_from_files(
         except Exception as e:
             logger.warning(f"Failed to load archive.json: {e}")
     
-    # Migrate genomes to tracker
     migrated_count = 0
     updated_count = 0
     skipped_count = 0
     
-    # Process elites.json (species_id > 0)
     for genome in elites_genomes:
         genome_id = genome.get("id")
         species_id = genome.get("species_id")
@@ -112,34 +86,29 @@ def migrate_genome_tracker_from_files(
             continue
         
         if species_id is None or species_id <= 0:
-            # Default to 0 (reserves) if species_id is invalid
             species_id = 0
         
         genome_id_str = str(genome_id)
         generation = genome.get("generation", 0)
         
         if genome_tracker.exists(genome_id_str):
-            # Update existing
             old_species_id = genome_tracker.get_species_id(genome_id_str)
             if old_species_id != species_id:
                 success, _ = genome_tracker.update_species_id(genome_id_str, species_id, generation, "migration_from_elites")
                 if success:
                     updated_count += 1
         else:
-            # Register new
             genome_tracker.register(genome_id_str, species_id, generation)
             migrated_count += 1
     
-    # Process reserves.json (species_id == 0)
     for genome in reserves_genomes:
         genome_id = genome.get("id")
-        species_id = genome.get("species_id", 0)  # Default to 0 for reserves
+        species_id = genome.get("species_id", 0)
         
         if not genome_id:
             skipped_count += 1
             continue
         
-        # Ensure species_id is 0 for reserves
         if species_id is None or species_id != 0:
             species_id = 0
         
@@ -147,21 +116,18 @@ def migrate_genome_tracker_from_files(
         generation = genome.get("generation", 0)
         
         if genome_tracker.exists(genome_id_str):
-            # Update existing (might have been in elites before)
             old_species_id = genome_tracker.get_species_id(genome_id_str)
             if old_species_id != species_id:
                 success, _ = genome_tracker.update_species_id(genome_id_str, species_id, generation, "migration_from_reserves")
                 if success:
                     updated_count += 1
         else:
-            # Register new
             genome_tracker.register(genome_id_str, species_id, generation)
             migrated_count += 1
     
-    # Process archive.json (species_id == -1)
     for genome in archive_genomes:
         genome_id = genome.get("id")
-        species_id = -1  # Always -1 for archived
+        species_id = -1
         
         if not genome_id:
             skipped_count += 1
@@ -171,25 +137,21 @@ def migrate_genome_tracker_from_files(
         generation = genome.get("generation", 0)
         
         if genome_tracker.exists(genome_id_str):
-            # Update existing (might have been in elites/reserves before)
             old_species_id = genome_tracker.get_species_id(genome_id_str)
             if old_species_id != species_id:
                 success, _ = genome_tracker.update_species_id(genome_id_str, species_id, generation, "migration_from_archive")
                 if success:
                     updated_count += 1
         else:
-            # Register new
             genome_tracker.register(genome_id_str, species_id, generation)
             migrated_count += 1
     
-    # Save tracker
     if migrated_count > 0 or updated_count > 0:
         genome_tracker.save()
         logger.info(f"Migration complete: {migrated_count} new genomes migrated, {updated_count} existing genomes updated")
     else:
         logger.info("Migration complete: no changes needed (all genomes already in tracker)")
     
-    # Validate consistency
     is_consistent, errors = genome_tracker.validate_consistency(
         elites_path, reserves_path, archive_path, load_archive=load_archive
     )
@@ -206,7 +168,7 @@ def migrate_genome_tracker_from_files(
     
     if not is_consistent:
         logger.warning(f"Migration validation found {len(errors)} inconsistencies:")
-        for error in errors[:10]:  # Log first 10 errors
+        for error in errors[:10]:
             logger.warning(f"  - {error}")
     else:
         logger.info("Migration validation passed - all genomes consistent")
@@ -215,22 +177,13 @@ def migrate_genome_tracker_from_files(
 
 
 def auto_migrate_if_needed(logger=None) -> bool:
-    """
-    Automatically migrate genome tracker if it doesn't exist or is empty.
     
-    Args:
-        logger: Optional logger instance
-        
-    Returns:
-        True if migration was performed, False otherwise
-    """
     if logger is None:
         logger = get_logger("Migration")
     
     outputs_path = get_outputs_path()
     tracker_path = outputs_path / "genome_tracker.json"
     
-    # Check if tracker exists and has data
     if tracker_path.exists():
         try:
             genome_tracker = GenomeTracker(logger=logger)
@@ -239,10 +192,8 @@ def auto_migrate_if_needed(logger=None) -> bool:
                 logger.debug("Genome tracker already exists with data, skipping migration")
                 return False
         except Exception:
-            # Tracker exists but might be corrupted, try migration
             pass
     
-    # Check if source files exist
     elites_path = outputs_path / "elites.json"
     reserves_path = outputs_path / "reserves.json"
     archive_path = outputs_path / "archive.json"
@@ -253,7 +204,6 @@ def auto_migrate_if_needed(logger=None) -> bool:
         logger.debug("No source files found for migration, starting with empty tracker")
         return False
     
-    # Perform migration
     logger.info("Auto-migrating genome tracker from existing files...")
     stats = migrate_genome_tracker_from_files(
         elites_path=elites_path,

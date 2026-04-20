@@ -1,10 +1,4 @@
-"""
-stylistic_mutator.py
 
-Stylistic mutation operator for the evolutionary algorithm.
-This mutation operator alters the style of text while preserving core semantic content,
-modifying attributes such as formality, politeness, sentiment, and arbitrary styles.
-"""
 
 import os
 import traceback
@@ -17,42 +11,7 @@ get_logger, _, _, _ = get_custom_logging()
 
 
 class StylisticMutator(VariationOperator):
-    """
-    Stylistic mutation operator that alters text style while preserving semantic content.
-
-    This operator systematically modifies stylistic attributes of text including:
-    - Formality level (formal/informal)
-    - Politeness (polite/impolite/neutral)
-    - Sentiment (positive/negative/neutral)
-    - Tone (authoritative/casual/academic)
-    - Voice (active/passive)
-    - Arbitrary styles (poetic, technical, conversational, etc.)
-
-    The operator creates stylistic variations by modifying presentation style
-    while preserving the core semantic meaning of the text.
-
-    Process:
-    1. Receive input text string for stylistic modification
-    2. Randomly select a stylistic attribute to modify
-    3. Use LLaMA model to generate stylistically modified version
-    4. Return list of stylistically varied text versions
-    5. Fallback to original text if mutation fails
-
-    Attributes:
-        logger: Logger instance for debugging and monitoring
-        generator: Local LLaMA generator for stylistic mutation
-        style_attributes: List of available stylistic attributes to modify
-
-    Methods:
-        apply(text): Generates stylistically modified variants of input text string
-
-    Example:
-        >>> operator = StylisticMutator()
-        >>> genome = {"prompt": "Write a story about a brave knight"}
-        >>> variants = operator.apply(genome)
-        >>> print(variants)
-        ['Compose an elegant narrative concerning a valiant warrior']
-    """
+    """Stylistic mutation operator that alters text style while preserving semantic content. This operator systematically modifies stylistic attributes of text including: - Formality level (formal/informal) - Politeness (polite/impolite/neutral) - Sentiment (positive/negative/neutral) - Tone (authoritative/casual/academic) - Voice (active/passive) - Arbitrary styles (poetic, technical, conversational, etc.) The operator creates stylistic variations by modifying presentation style while preserving the core semantic meaning of the text. Process: 1. Receive input text string for stylistic modification 2. Randomly select a stylistic attribute to modify 3. Use LLaMA model to generate stylistically modified version 4. Return list of stylistically varied text versions 5. Fallback to original text if mutation fails Attributes: logger: Logger instance for debugging and monitoring generator: Local LLaMA generator for stylistic mutation style_attributes: List of available stylistic attributes to modify Methods: apply(text): Generates stylistically modified variants of input text string Example: >>> operator = StylisticMutator() >>> genome = {"prompt": "Write a story about a brave knight"} >>> variants = operator.apply(genome) >>> print(variants) ['Compose an elegant narrative concerning a valiant warrior']"""
 
     STYLE_ATTRIBUTES = {
         "formality": ["formal", "informal", "casual", "professional"],
@@ -97,13 +56,7 @@ Instructions for stylistic modification:
 Return only: <modified>YOUR_STYLISTICALLY_MODIFIED_QUESTION_HERE</modified>"""
 
     def __init__(self, log_file: Optional[str] = None, generator=None):
-        """
-        Initialize the stylistic mutation operator.
-
-        Args:
-            log_file (str, optional): Path to log file for debugging. Defaults to None.
-            generator: LLaMA generator instance to use
-        """
+        
         super().__init__("StylisticMutator", "mutation",
                         "Alters text style while preserving semantic content.")
         self.logger = get_logger(self.name, log_file)
@@ -126,49 +79,14 @@ Return only: <modified>YOUR_STYLISTICALLY_MODIFIED_QUESTION_HERE</modified>"""
         self._last_stylistic_prompt = ""
 
     def _select_random_style(self) -> str:
-        """
-        Select a random stylistic attribute to modify.
-
-        Returns:
-            str: Selected stylistic attribute
-        """
+        
         available_styles = list(self.STYLE_ATTRIBUTES.keys())
         selected_style = random.choice(available_styles)
         self.logger.debug(f"{self.name}: Selected style attribute: {selected_style}")
         return selected_style
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """
-        Generate stylistically modified variant using the shared prompt generator's model (chat_completion + XML extraction).
-
-        This method:
-        1. Validates input format and extracts parent data
-        2. Selects a random stylistic attribute to modify
-        3. Calls generator.model_interface.chat_completion() with a style system prompt, then extracts content from XML tags
-        4. Returns stylistically modified prompt if different from original
-        5. Falls back to original prompt if mutation fails
-
-        Args:
-            operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': Parent genome dict with at least 'prompt'; optional 'generated_text', 'scores', 'north_star_score'
-                - 'max_variants': Ignored; this operator returns at most one variant.
-
-        Returns:
-            List[str]: List containing one stylistically modified prompt, or original if failed
-
-        Raises:
-            Warning: If LLM generation fails, logs warning and returns original prompt
-
-        Example:
-            >>> operator = StylisticMutator()
-            >>> input_data = {
-            ...     "parent_data": {"prompt": "Write a story about a brave knight"},
-            ...     "max_variants": 3
-            ... }
-            >>> variants = operator.apply(input_data)
-            >>> print(variants)
-            ['Compose an elegant narrative concerning a valiant warrior']
-        """
+        
         try:
             import time
             start_time = time.time()

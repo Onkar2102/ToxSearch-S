@@ -1,9 +1,4 @@
-"""
-paraphrasing.py
 
-LLM-based paraphrasing operator for the evolutionary algorithm.
-This mutation operator generates paraphrased variants using the local LLaMA model's paraphrase method.
-"""
 
 import os
 import traceback
@@ -45,7 +40,7 @@ Instructions for paraphrasing:
 Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None, generator=None):
-        """Initialize the LLM-based paraphrasing operator."""
+        
         super().__init__("LLMBasedParaphrasing", "mutation",
                         f"Uses local LLaMA model paraphrase method with {north_star_metric} optimization.")
         self.north_star_metric = north_star_metric
@@ -58,38 +53,7 @@ Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
             self.generator = get_prompt_generator()
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """
-        Generate paraphrased variant using the shared prompt generator's model (chat_completion + XML extraction).
-
-        This method:
-        1. Validates input format and extracts parent data
-        2. Calls generator.model_interface.chat_completion() with a paraphrase system prompt, then extracts content from XML tags
-        3. Returns paraphrased prompt if different from original
-        4. Falls back to original prompt if paraphrasing fails
-
-        Args:
-            operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': Simplified parent genome dictionary containing:
-                    - 'prompt': Original prompt text to paraphrase
-                    - 'toxicity': Toxicity score (used as current_score)
-                - 'max_variants': Ignored; this operator returns at most one variant.
-
-        Returns:
-            List[str]: List containing one paraphrased prompt, or original if failed
-
-        Raises:
-            Warning: If LLM generation fails, logs warning and returns original prompt
-
-        Example:
-            >>> operator = LLMBasedParaphrasingOperator("toxicity")
-            >>> input_data = {
-            ...     "parent_data": {"prompt": "Write a story", "toxicity": 0.8},
-            ...     "max_variants": 5
-            ... }
-            >>> variants = operator.apply(input_data)
-            >>> print(variants)
-            ['Craft an engaging narrative tale']
-        """
+        
         try:
             import time
             start_time = time.time()

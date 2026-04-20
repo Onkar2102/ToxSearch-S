@@ -1,9 +1,4 @@
-"""
-live_analysis.py
 
-Live analysis and visualization generation after each generation (or post-hoc on a run folder).
-Reads EvolutionTracker.json and writes figures under <outputs>/figures/.
-"""
 
 import json
 from pathlib import Path
@@ -25,13 +20,13 @@ _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 def _generations_chronological(tracker: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Return generations sorted by generation_number (required for sensible line/stack plots)."""
+    
     gens = tracker.get("generations") or []
     return sorted(gens, key=lambda g: int(g.get("generation_number", 0) or 0))
 
 
 def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]:
-    """Load EvolutionTracker.json."""
+    
     if outputs_path is None:
         outputs_path = str(get_outputs_path())
     
@@ -44,7 +39,7 @@ def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]
 
 
 def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """Generate fitness evolution plot showing per-generation max/min/avg and cumulative max."""
+    
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
@@ -59,13 +54,10 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
         
         gen_nums = [int(g.get("generation_number", 0) or 0) for g in generations]
 
-        # Per-generation stats (prefer explicit per-gen variant stats if available).
-        # max_score_variants / min_score_variants are computed from evaluated genomes for that generation.
         max_scores = [float(g.get("max_score_variants", g.get("best_fitness", 0.0)) or 0.0) for g in generations]
         min_scores = [float(g.get("min_score_variants", 0.0) or 0.0) for g in generations]
         avg_scores = [float(g.get("avg_fitness_generation", g.get("avg_fitness", 0.0)) or 0.0) for g in generations]
         
-        # Calculate cumulative best fitness (running maximum across all generations)
         cumulative_best = []
         current_max = 0.0
         for score in max_scores:
@@ -73,11 +65,6 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
             cumulative_best.append(current_max)
         
         plt.figure(figsize=(10, 6))
-        # Color/meaning convention (paper-ready):
-        # - Blue: per-generation max
-        # - Green: per-generation min
-        # - Orange: per-generation average (population)
-        # - Red dashed: cumulative max up to that generation
         plt.plot(gen_nums, max_scores, 'o-', label='Max Fitness', linewidth=2, markersize=6, color='#1f77b4')
         plt.plot(gen_nums, min_scores, '^-', label='Min Fitness', linewidth=2, markersize=6, color='#2ca02c')
         plt.plot(gen_nums, avg_scores, 's-', label='Avg Fitness', linewidth=2, markersize=6, color='#ff7f0e')
@@ -88,7 +75,6 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
         plt.title('Fitness Evolution Over Generations', fontsize=14, fontweight='bold')
         plt.legend(fontsize=10)
         plt.grid(True, alpha=0.3)
-        # Anchor axes at origin (0, 0); upper bounds follow data
         plt.xlim(left=0)
         plt.ylim(bottom=0)
         plt.tight_layout()
@@ -96,7 +82,6 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
         if outputs_path is None:
             outputs_path = str(get_outputs_path())
         
-        # Create figures directory
         figures_dir = Path(outputs_path) / "figures"
         figures_dir.mkdir(parents=True, exist_ok=True)
         
@@ -113,7 +98,7 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
 
 
 def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """Generate speciation plot showing species count and reserves size over generations."""
+    
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
@@ -158,7 +143,6 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
         if outputs_path is None:
             outputs_path = str(get_outputs_path())
         
-        # Create figures directory
         figures_dir = Path(outputs_path) / "figures"
         figures_dir.mkdir(parents=True, exist_ok=True)
         
@@ -175,7 +159,7 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
 
 
 def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """Generate operator statistics plot showing operator usage and rejections."""
+    
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
@@ -188,8 +172,6 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
         if not generations:
             return None
         
-        # Aggregate operator statistics across all generations.
-        # Supports both count-only format {op: count} and legacy {op: {count, mutation, crossover}}.
         operator_counts = defaultdict(int)
         
         for g in generations:
@@ -205,7 +187,6 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
             _logger.warning("No operator statistics found")
             return None
         
-        # Sort by count descending; single bar per operator
         operators = sorted(operator_counts.keys(), key=lambda o: operator_counts[o], reverse=True)
         counts = [operator_counts[op] for op in operators]
         
@@ -225,7 +206,6 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
         if outputs_path is None:
             outputs_path = str(get_outputs_path())
         
-        # Create figures directory
         figures_dir = Path(outputs_path) / "figures"
         figures_dir.mkdir(parents=True, exist_ok=True)
         
@@ -242,12 +222,7 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
 
 
 def generate_population_composition_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """Stacked area plot: cumulative genome counts in elites, reserves, and archive per generation.
-
-    Values come from EvolutionTracker (same semantics as calculate_generation_statistics: counts of
-    genomes in elites.json / reserves.json / archive.json with generation ≤ that generation).
-    Stacked height = elites + reserves + archive (total genomes tracked across pools).
-    """
+    
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
@@ -266,7 +241,6 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         archive_counts = [int(g.get("archived_count", 0) or 0) for g in generations]
         
         plt.figure(figsize=(10, 6))
-        # Bottom → top: elites, reserves, archive (stacked total = all three pools)
         plt.stackplot(
             gen_nums,
             elites_counts,
@@ -293,7 +267,6 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         if outputs_path is None:
             outputs_path = str(get_outputs_path())
         
-        # Create figures directory
         figures_dir = Path(outputs_path) / "figures"
         figures_dir.mkdir(parents=True, exist_ok=True)
         
@@ -310,14 +283,7 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
 
 
 def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
-    """
-    Generate Genetic Distance Projection (GDP) figures from generation 0 through final.
-    Loads elites.json, reserves.json, and archive.json (full run). Runs MDS-GDP (cosine),
-    saves gdp_projection.json, and generates only:
-    - genetic_distance_projection_3d_toxicity_by_generation.png (X=MDS1, Y=MDS2, Z=toxicity; color=species/archive)
-    - genetic_distance_projection_3d_generation_axis_toxicity_color.png (X=MDS1, Y=MDS2, Z=generation; color=toxicity)
-    Returns path to the 3D toxicity-by-generation figure or None if GDP unavailable.
-    """
+    
     _logger = logger or get_logger("LiveAnalysis")
     if outputs_path is None:
         outputs_path = str(get_outputs_path())
@@ -378,16 +344,7 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
 
 
 def run_live_analysis(outputs_path: Optional[str] = None, logger=None) -> Dict[str, Optional[str]]:
-    """
-    Run live analysis and generate all visualizations.
     
-    Args:
-        outputs_path: Path to outputs directory (defaults to get_outputs_path())
-        logger: Optional logger instance
-        
-    Returns:
-        Dict with paths to generated plots (None if generation failed)
-    """
     _logger = logger or get_logger("LiveAnalysis")
     
     _logger.info("Running live analysis and generating visualizations...")

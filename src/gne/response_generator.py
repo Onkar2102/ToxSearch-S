@@ -1,6 +1,4 @@
-"""
-ResponseGenerator: Text generator for response generation using prompt templates.
-"""
+
 
 import os
 import json
@@ -16,9 +14,7 @@ from .model_interface import LlamaCppChatInterface
 get_logger, _, _, _ = get_custom_logging()
 
 class ResponseGenerator:
-    """
-    Response generator using v1/chat/completions interface for efficient inference.
-    """
+    """Response generator using v1/chat/completions interface for efficient inference."""
     
     def __init__(self, model_key="response_generator", config_path="config/RGConfig.yaml", log_file: Optional[str] = None, seed: Optional[int] = None):
         self.log_file = log_file
@@ -77,7 +73,7 @@ class ResponseGenerator:
         self.total_generation_time = 0.0
 
     def _build_messages(self, raw_prompt: str) -> List[Dict[str, str]]:
-        """Build messages array from prompt template and user input."""
+        
         messages = []
         
         for msg_template in self.prompt_messages:
@@ -96,15 +92,7 @@ class ResponseGenerator:
         return messages
 
     def generate_response(self, prompt: str, **kwargs) -> tuple[str, float]:
-        """Generate a response to a prompt using chat completions interface.
-
-        Args:
-            prompt: Raw prompt text to send to the model.
-            **kwargs: Optional arguments passed through to model_interface.chat_completion (e.g. max_tokens, temperature).
-
-        Returns:
-            tuple: (response_text, duration_in_seconds). response_text is empty string on failure.
-        """
+        
         start_time = time.time()
         
         try:
@@ -125,7 +113,7 @@ class ResponseGenerator:
             return "", time.time() - start_time
 
     def process_population(self, pop_path: str = "data/outputs/temp.json") -> None:
-        """Process entire population for text generation one genome at a time."""
+        
         try:
             self.logger.info("Starting population processing for text generation with chat completions")
             
@@ -145,7 +133,6 @@ class ResponseGenerator:
             total_genomes = len(pending_genomes)
             start_time = time.time()
             
-            # Simple progress indicator
             print(f"\nGenerating responses: 0/{total_genomes} (0%)", end='', flush=True)
             
             for i, genome in enumerate(pending_genomes, 1):
@@ -170,7 +157,6 @@ class ResponseGenerator:
                     self._save_single_genome(genome, pop_path)
                     self.logger.debug("Saved genome %s immediately after generation", genome_id)
                     
-                    # Update progress indicator
                     elapsed = time.time() - start_time
                     rate = i / elapsed if elapsed > 0 else 0
                     percentage = (i / total_genomes) * 100
@@ -186,7 +172,6 @@ class ResponseGenerator:
                     self.logger.error("Error processing genome %s: %s", genome_id, e)
                     self._save_single_genome(genome, pop_path)
                     
-                    # Update progress even on error
                     elapsed = time.time() - start_time
                     rate = i / elapsed if elapsed > 0 else 0
                     percentage = (i / total_genomes) * 100
@@ -195,7 +180,6 @@ class ResponseGenerator:
                           f"Processed: {total_processed} | Errors: {total_errors} | "
                           f"Rate: {rate:.1f}/s | ETA: {remaining:.0f}s", end='', flush=True)
             
-            # Final update and newline
             elapsed = time.time() - start_time
             print(f"\rGenerating responses: {total_genomes}/{total_genomes} (100.0%) | "
                   f"Processed: {total_processed} | Errors: {total_errors} | "
@@ -218,11 +202,7 @@ class ResponseGenerator:
             raise
 
     def _save_single_genome(self, genome: Dict[str, Any], pop_path: str) -> None:
-        """
-        Save a single genome immediately by updating the existing population file.
-        This is a best-effort incremental save for crash recovery.
-        A final batch save is always performed at the end of processing.
-        """
+        
         try:
             from pathlib import Path
             
@@ -256,11 +236,7 @@ class ResponseGenerator:
 
 
 def process_single_genome(response_generator, genome):
-    """Generate an LLM response for a single genome dict in-memory.
-
-    Updates *genome* in-place (generated_output, model_name,
-    response_duration, status) and returns it.
-    """
+    
     prompt = genome.get("prompt", "")
     response_text, duration = response_generator.generate_response(prompt)
 

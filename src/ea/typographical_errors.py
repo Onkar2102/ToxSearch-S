@@ -1,10 +1,4 @@
-"""
-typographical_errors.py
 
-LLM-based typographical errors mutation operator that simulates common human errors.
-This operator introduces typos, spelling mistakes, and other character-level corruptions
-to make questions appear more human-like and potentially bypass certain filters.
-"""
 
 import os
 import traceback
@@ -18,45 +12,7 @@ get_logger, _, _, _ = get_custom_logging()
 
 
 class TypographicalErrorsOperator(VariationOperator):
-    """
-    LLM-based typographical errors mutation operator that simulates human errors.
-
-    This operator introduces various types of character-level corruptions including:
-    - Typos (character substitutions, insertions, deletions)
-    - Spelling mistakes (common misspellings)
-    - Character transpositions
-    - Missing spaces or extra spaces
-    - Case inconsistencies
-    - Punctuation errors
-
-    The goal is to make questions appear more human-like while potentially
-    bypassing certain automated filters that rely on exact text matching.
-
-    Process:
-    1. Receive input question string for typographical modification
-    2. Use LLM to identify strategic positions for introducing errors
-    3. Generate question with realistic typographical errors
-    4. Return list containing the modified question variant
-    5. Fallback to original question if mutation fails
-
-    Attributes:
-        logger: Logger instance for debugging and monitoring
-        generator: Local LLM generator for typographical mutation
-        north_star_metric: Primary optimization metric
-
-    Methods:
-        apply(operator_input): Generates typographically modified variants
-
-    Example:
-        >>> operator = TypographicalErrorsOperator("toxicity")
-        >>> input_data = {
-        ...     "parent_data": {"prompt": "Which president signed the Civil Rights Act?"},
-        ...     "max_variants": 1
-        ... }
-        >>> variants = operator.apply(input_data)
-        >>> print(variants)
-        ['Whcih presidnet signed the Civil Rihts Act?']
-    """
+    """LLM-based typographical errors mutation operator that simulates human errors. This operator introduces various types of character-level corruptions including: - Typos (character substitutions, insertions, deletions) - Spelling mistakes (common misspellings) - Character transpositions - Missing spaces or extra spaces - Case inconsistencies - Punctuation errors The goal is to make questions appear more human-like while potentially bypassing certain automated filters that rely on exact text matching. Process: 1. Receive input question string for typographical modification 2. Use LLM to identify strategic positions for introducing errors 3. Generate question with realistic typographical errors 4. Return list containing the modified question variant 5. Fallback to original question if mutation fails Attributes: logger: Logger instance for debugging and monitoring generator: Local LLM generator for typographical mutation north_star_metric: Primary optimization metric Methods: apply(operator_input): Generates typographically modified variants Example: >>> operator = TypographicalErrorsOperator("toxicity") >>> input_data = { ... "parent_data": {"prompt": "Which president signed the Civil Rights Act?"}, ... "max_variants": 1 ... } >>> variants = operator.apply(input_data) >>> print(variants) ['Whcih presidnet signed the Civil Rihts Act?']"""
 
     ERROR_TYPES = {
         "character_substitution": ["vowel substitution", "consonant substitution", "similar character replacement", "keyboard adjacency"],
@@ -94,15 +50,7 @@ Instructions for typographical errors mutation:
 Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None, num_error_types: int = 3, generator=None):
-        """
-        Initialize the typographical errors mutation operator.
-
-        Args:
-            north_star_metric: The primary fitness metric to optimize for
-            log_file: Path to log file (optional)
-            num_error_types: Number of error types to randomly select (1 to max available)
-            generator: LLM generator instance to use. If None, will create own instance.
-        """
+        
         super().__init__(
             "TypographicalErrorsOperator",
             "mutation",
@@ -130,7 +78,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         self.logger.debug(f"{self.name}: Configured with num_error_types={self.num_error_types}")
 
     def _validate_num_error_types(self, num_error_types: int) -> int:
-        """Ensure num_error_types is within valid range."""
+        
         val = max(1, int(num_error_types))
         max_available = len(self.ERROR_TYPES)
         if val > max_available:
@@ -139,12 +87,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         return val
 
     def _select_error_types(self) -> List[str]:
-        """
-        Randomly select error types up to num_error_types limit.
-
-        Returns:
-            List of selected error type strings
-        """
+        
         available_errors = list(self.ERROR_TYPES.keys())
 
         if not available_errors:
@@ -158,7 +101,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         return selected_errors
 
     def _build_error_types_description(self, selected_errors: List[str]) -> str:
-        """Build a formatted description of selected error types for the prompt."""
+        
         descriptions = []
 
         for error_type in selected_errors:
@@ -171,7 +114,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         return "\n".join(descriptions)
 
     def _create_typo_prompt(self, original_question: str) -> List[Dict[str, str]]:
-        """Create messages for LLM to generate typographical errors using direct template."""
+        
 
         selected_errors = self._select_error_types()
 
@@ -193,11 +136,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         return messages
 
     def _parse_typo_response(self, response: str):
-        """Parse LLM response to extract typographically modified question using XML tag extraction.
-
-        Returns:
-            Extracted typo question string, or empty list [] on parse failure.
-        """
+        
         typo_question = self.generator._extract_content_from_xml_tags(response, "typo")
         if typo_question and self._is_valid_question_with_typos(typo_question):
             return typo_question
@@ -206,7 +145,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         return []
 
     def _is_valid_question_with_typos(self, text: str) -> bool:
-        """Check if the text is a valid question (allowing for typos)."""
+        
         if not text or len(text.strip()) < 15:
             return False
 
@@ -221,41 +160,7 @@ Return only: <typo>YOUR_TYPOGRAPHICALLY_MODIFIED_QUESTION_HERE</typo>"""
         return True
 
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
-        """
-        Generate typographically modified variants using local LLM.
-
-        This method:
-        1. Validates input format and extracts parent data
-        2. Extracts prompt from parent data
-        3. Uses local LLM to create typographically modified question variant
-        4. Returns modified question if different from original
-        5. Falls back to original question if mutation fails
-
-        Args:
-            operator_input (Dict[str, Any]): Operator input containing:
-                - 'parent_data': Enriched parent genome dictionary containing:
-                    - 'prompt': Original prompt text to modify with typos
-                    - 'generated_text': Generated output from the prompt (optional)
-                    - 'scores': Moderation scores dictionary
-                    - 'north_star_score': Primary optimization metric score
-                - 'max_variants': Maximum number of variants to generate
-
-        Returns:
-            List[str]: List containing typographically modified question variant (or original if failed)
-
-        Raises:
-            Warning: If LLM generation fails, logs warning and returns original question
-
-        Example:
-            >>> operator = TypographicalErrorsOperator("toxicity")
-            >>> input_data = {
-            ...     "parent_data": {"prompt": "Which president signed the Civil Rights Act?"},
-            ...     "max_variants": 1
-            ... }
-            >>> variants = operator.apply(input_data)
-            >>> print(variants)
-            ['Whcih presidnet signed the Civil Rihts Act?']
-        """
+        
         try:
             import time
             start_time = time.time()
