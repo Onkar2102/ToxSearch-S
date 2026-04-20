@@ -4,7 +4,7 @@ ToxSearch-S is a **research framework** for automated red-teaming of large langu
 
 ---
 
-## Installation
+## Project setup (from GitHub)
 
 ### Prerequisites
 
@@ -12,10 +12,10 @@ ToxSearch-S is a **research framework** for automated red-teaming of large langu
 - CUDA-capable GPU (recommended for embeddings and models)
 - Google Perspective API key
 
-### Setup
+### Clone and install
 
 ```bash
-# Clone repository
+# Clone repository (replace URL with this repo’s GitHub URL)
 git clone <repository-url>
 cd ToxSearch-S
 
@@ -32,7 +32,7 @@ cp env_example.txt .env
 # Edit .env: add PERSPECTIVE_API_KEY=your_api_key_here
 ```
 
-### Model Setup
+### Model files
 
 Place GGUF models in the `models/` directory. Example structure:
 
@@ -41,6 +41,12 @@ models/
 └── llama3.2-3b-instruct-gguf/
     └── Llama-3.2-3B-Instruct-Q4_K_M.gguf
 ```
+
+---
+
+## Dataset
+
+Where to obtain shared datasets and how they are used in experiments is documented in [`data/dataset.md`](data/dataset.md).
 
 ---
 
@@ -330,7 +336,7 @@ To reproduce or compare experimental results, the following should be fixed or r
 - Record all command-line arguments (or config): `--generations`, `--max-total-genomes`, `--batch-size`, `--theta-sim`, `--theta-merge`, `--species-capacity`, `--seed-file`, `--seed`, model paths (`--rg`, `--pg`). For parallel runs, record the number of MPI ranks and GPU assignment (e.g. one GPU per worker). Config and seed paths are resolved from the project root.
 
 **Outputs**
-- Each run writes to an output directory (e.g. under `data/outputs/`) containing: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, and optionally figures in `figures/`. Parallel runs also produce one log file per rank. See [ARCHITECTURE.md](ARCHITECTURE.md) for a full list of artifacts and their role in the method.
+- Each run writes to an output directory (e.g. under `data/outputs/`) containing: `EvolutionTracker.json` (per-generation and cumulative metrics), `elites.json`, `reserves.json`, `archive.json`, `speciation_state.json`, `genome_tracker.json`, and optionally figures in `figures/`. Parallel runs also produce one log file per rank. See the **Metrics and outputs (EvolutionTracker, workers, C1–C3)** subsection under **How to Start** above for artifact summaries.
 
 **Example minimal reproducible run (sequential)**
 
