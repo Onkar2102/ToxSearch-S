@@ -5,7 +5,7 @@
 # theta_sim and theta_merge to 1.0 (max ensemble distance) makes leader–follower assignment
 # extremely permissive so the population collapses toward a single-species-style pool, which
 # is closer to non-island ToxSearch than default θ values. This is still not bit-identical to a
-# hypothetical no-speciation branch — see experiments/EXPERIMENT_PLAN.md.
+# hypothetical no-speciation branch — see README.md (Documentation).
 #
 # Usage (from repo root, after venv activate):
 #   bash scripts/run_c1_baseline_single_pool.sh --output-dir data/outputs/c1_pool_run01 --max-total-genomes 1000

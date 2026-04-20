@@ -25,7 +25,7 @@
 # Parallel requires: Open MPI or compatible `mpiexec` on PATH.
 #
 # Research questions and full experiment matrix:
-#   See experiments/EXPERIMENT_PLAN.md.
+#   See README.md (Documentation) for C1–C3 comparison report entrypoints.
 
 set -Eeuo pipefail
 

@@ -68,7 +68,9 @@ PYTHONPATH=src python -m pytest tests/ -v
 
 | Topic | Location |
 |--------|----------|
-| Study design, C1–C3, commands | [`experiments/EXPERIMENT_PLAN.md`](experiments/EXPERIMENT_PLAN.md) |
+| C1 three-way (ToxSearch / ToxSearch-S / RainbowPlus) | `python experiments/comparison_results/c1_ppsn2026_three_way/rq1_c1_three_way_report.py` |
+| C2 sequential vs parallel (PPSN cohorts) | `python experiments/comparison_results/c2_ppsn2026_seq_vs_2w/c2_seq_vs_2w_report.py` |
+| C3 species / speciation post-hoc | `python experiments/comparison_results/c3_ppsn2026_species/c3_species_report.py` |
 | CLI flags and defaults | `python src/main.py --help` |
 | Post-run throughput / thresholds | `python scripts/experiment_metrics.py <run_dir>` |
 | RainbowPlus fork (separate venv) | [`rainbowplus-main/README.md`](rainbowplus-main/README.md) |
