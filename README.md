@@ -1,9 +1,5 @@
 # ToxSearch-S
 
-Research code for **adversarial prompt search** against LLMs: a quality–diversity evolutionary loop with **semantic speciation** (embedding-space niches). Fitness uses an external moderation API (e.g. Google Perspective) on model responses.
-
----
-
 ## SETUP
 
 **Prerequisites:** Python 3.10+ (see `requirements.txt`), GPU recommended, [Google Perspective API](https://perspectiveapi.com/) key.
@@ -61,18 +57,3 @@ Tests:
 ```bash
 PYTHONPATH=src python -m pytest tests/ -v
 ```
-
----
-
-## Documentation
-
-| Topic | Location |
-|--------|----------|
-| C1 three-way (ToxSearch / ToxSearch-S / RainbowPlus) | `python experiments/comparison_results/c1_ppsn2026_three_way/rq1_c1_three_way_report.py` |
-| C2 sequential vs parallel (PPSN cohorts) | `python experiments/comparison_results/c2_ppsn2026_seq_vs_2w/c2_seq_vs_2w_report.py` |
-| C3 species / speciation post-hoc | `python experiments/comparison_results/c3_ppsn2026_species/c3_species_report.py` |
-| CLI flags and defaults | `python src/main.py --help` |
-| Post-run throughput / thresholds | `python scripts/experiment_metrics.py <run_dir>` |
-| RainbowPlus fork (separate venv) | [`rainbowplus-main/README.md`](rainbowplus-main/README.md) |
-
-Run artifacts (e.g. `EvolutionTracker.json`, `elites.json`, per-rank logs in parallel) are written under `--output-dir` (default `data/outputs/<timestamp>`).
