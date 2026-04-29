@@ -9,7 +9,9 @@ from .reserves import CLUSTER_0_ID
 
 
 class Gen0Clustering:
-    """Generation 0 clustering: build all (leader, followers) groups over the entire population, then promote to species only groups with |{leader} ∪ followers| >= min_island_size. Flow 2: Two-phase approach with no leader update and no radius enforcement. - Phase 1: Collect all potential leader groups - Phase 2: Form species if group size >= min_island_size (keep all members, no filtering)"""    @staticmethod
+    """Generation 0 clustering: build all (leader, followers) groups over the entire population, then promote to species only groups with |{leader} ∪ followers| >= min_island_size. Flow 2: Two-phase approach with no leader update and no radius enforcement. - Phase 1: Collect all potential leader groups - Phase 2: Form species if group size >= min_island_size (keep all members, no filtering)"""
+
+    @staticmethod
     def run(
         individuals: List[Individual],
         theta_sim: float,
