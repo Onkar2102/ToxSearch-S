@@ -130,6 +130,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.analysis_venv
 env/
 venv/
 ENV/
@@ -213,5 +214,11 @@ rainbowplus-main/
 rc_script.sh
 
 dependency_parallel.sh
+
+scripts/
+
+data/analysis/
+
+*.tex 
 
 
