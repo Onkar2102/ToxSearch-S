@@ -2,6 +2,16 @@
 
 Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The loop is quality–diversity style: fitness comes from an external moderation API (Google [Perspective](https://developers.perspectiveapi.com/)) applied to model outputs, and **semantic speciation** keeps diversity by clustering prompts in embedding space.
 
+**Index**
+
+- [What you need](#what-you-need)
+- [Installation](#installation)
+- [Models (GGUF)](#models-gguf)
+- [Project parameters](#project-parameters)
+- [How to run](#how-to-run)
+- [Where outputs go](#where-outputs-go)
+- [Dataset](#dataset)
+
 ---
 
 ## What you need
@@ -168,16 +178,3 @@ Typical files include `EvolutionTracker.json`, `elites.json`, population-related
 ## Dataset
 
 Paper or shared data details: [`data/dataset.md`](data/dataset.md).
-
----
-
-## More documentation
-
-| Topic | Where |
-|--------|--------|
-| C1 three-way comparison (ToxSearch / ToxSearch-S / RainbowPlus) | `python experiments/comparison_results/c1_ppsn2026_three_way/rq1_c1_three_way_report.py` |
-| C2 sequential vs parallel (PPSN cohorts) | `python experiments/comparison_results/c2_ppsn2026_seq_vs_2w/c2_seq_vs_2w_report.py` |
-| C3 species / speciation (post-hoc) | `python experiments/comparison_results/c3_ppsn2026_species/c3_species_report.py` |
-| CLI reference | `python src/main.py --help` |
-| API reference (Doxygen) | `doxygen Doxyfile` → HTML under `docs/` |
-| RainbowPlus fork (separate venv) | [`rainbowplus-main/README.md`](rainbowplus-main/README.md) |
