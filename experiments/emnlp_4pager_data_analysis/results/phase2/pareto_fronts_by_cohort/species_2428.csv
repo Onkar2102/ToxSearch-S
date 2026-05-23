@@ -1,9 +1,0 @@
-genome_id,species_id,generation,source_file,species_pareto_rank,global_pareto_rank,reserves_pareto_rank,archive_pareto_rank,on_global_f0,on_species_f0,on_reserves_f0,on_archive_f0,toxicity,severe_toxicity,identity_attack,insult,profanity,threat,sexually_explicit,flirtation
-4784,2428,164,elites.json,0,17,-1,-1,False,True,False,False,0.0283,0.0013,0.0035,0.0107,0.0142,0.0081,0.0062,0.2052
-3233,2428,62,elites.json,0,14,-1,-1,False,True,False,False,0.0287,0.0012,0.0028,0.0142,0.0128,0.0087,0.0071,0.3191
-3243,2428,62,elites.json,0,16,-1,-1,False,True,False,False,0.0376,0.0012,0.0078,0.0181,0.0152,0.0071,0.0076,0.1544
-4631,2428,156,elites.json,1,17,-1,-1,False,False,False,False,0.0159,0.0007,0.0017,0.0096,0.0118,0.0063,0.0059,0.3271
-4954,2428,176,elites.json,0,6,-1,-1,False,True,False,False,0.0257,0.0015,0.0055,0.0121,0.0187,0.0099,0.0146,0.4456
-5470,2428,212,elites.json,0,15,-1,-1,False,True,False,False,0.0251,0.0016,0.0043,0.0099,0.0185,0.0095,0.0121,0.2315
-5971,2428,245,elites.json,0,13,-1,-1,False,True,False,False,0.0366,0.0017,0.0043,0.0157,0.0201,0.0079,0.0146,0.3245
-2578,2428,10,elites.json,1,10,-1,-1,False,False,False,False,0.0097,0.0005,0.0012,0.0074,0.0103,0.0065,0.0043,0.4098

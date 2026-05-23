@@ -1,0 +1,230 @@
+{
+  "google": {
+    "n_topics_tested": 9,
+    "n_rejected_at_0p05": 9,
+    "rows": [
+      {
+        "evaluator": "google",
+        "species_id": 2415,
+        "n_topic_dominated": 25,
+        "n_f0_global": 100,
+        "obs_stat": 0.961605,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 1
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2421,
+        "n_topic_dominated": 114,
+        "n_f0_global": 100,
+        "obs_stat": 0.49922,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 2
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2422,
+        "n_topic_dominated": 86,
+        "n_f0_global": 100,
+        "obs_stat": 0.978009,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 3
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2423,
+        "n_topic_dominated": 41,
+        "n_f0_global": 100,
+        "obs_stat": 0.92834,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 4
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2424,
+        "n_topic_dominated": 54,
+        "n_f0_global": 100,
+        "obs_stat": 0.940093,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 5
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2425,
+        "n_topic_dominated": 23,
+        "n_f0_global": 100,
+        "obs_stat": 0.893109,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 6
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2426,
+        "n_topic_dominated": 61,
+        "n_f0_global": 100,
+        "obs_stat": 0.9764,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 7
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2427,
+        "n_topic_dominated": 6,
+        "n_f0_global": 100,
+        "obs_stat": 0.961832,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 8
+      },
+      {
+        "evaluator": "google",
+        "species_id": 2428,
+        "n_topic_dominated": 8,
+        "n_f0_global": 100,
+        "obs_stat": 0.9981,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 9
+      }
+    ]
+  },
+  "openai": {
+    "n_topics_tested": 9,
+    "n_rejected_at_0p05": 9,
+    "rows": [
+      {
+        "evaluator": "openai",
+        "species_id": 2415,
+        "n_topic_dominated": 25,
+        "n_f0_global": 144,
+        "obs_stat": 0.944807,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 1
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2421,
+        "n_topic_dominated": 136,
+        "n_f0_global": 144,
+        "obs_stat": 0.657547,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 2
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2422,
+        "n_topic_dominated": 84,
+        "n_f0_global": 144,
+        "obs_stat": 0.961737,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 3
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2423,
+        "n_topic_dominated": 43,
+        "n_f0_global": 144,
+        "obs_stat": 0.906656,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 4
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2424,
+        "n_topic_dominated": 50,
+        "n_f0_global": 144,
+        "obs_stat": 0.931196,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 5
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2425,
+        "n_topic_dominated": 24,
+        "n_f0_global": 144,
+        "obs_stat": 0.898572,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 6
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2426,
+        "n_topic_dominated": 59,
+        "n_f0_global": 144,
+        "obs_stat": 0.952447,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 7
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2427,
+        "n_topic_dominated": 6,
+        "n_f0_global": 144,
+        "obs_stat": 0.955097,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 8
+      },
+      {
+        "evaluator": "openai",
+        "species_id": 2428,
+        "n_topic_dominated": 8,
+        "n_f0_global": 144,
+        "obs_stat": 0.984202,
+        "p_raw": 0.0005,
+        "n_perm": 2000,
+        "p_holm": 0.0045,
+        "reject_at_0p05": true,
+        "holm_rank": 9
+      }
+    ]
+  }
+}

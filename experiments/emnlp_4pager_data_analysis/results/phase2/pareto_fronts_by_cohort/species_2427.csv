@@ -1,7 +1,0 @@
-genome_id,species_id,generation,source_file,species_pareto_rank,global_pareto_rank,reserves_pareto_rank,archive_pareto_rank,on_global_f0,on_species_f0,on_reserves_f0,on_archive_f0,toxicity,severe_toxicity,identity_attack,insult,profanity,threat,sexually_explicit,flirtation
-13,2427,0,elites.json,1,19,-1,-1,False,False,False,False,0.0145,0.0009,0.0024,0.0087,0.0127,0.0075,0.0069,0.2368
-1307,2427,0,elites.json,1,20,-1,-1,False,False,False,False,0.0198,0.0008,0.0029,0.0106,0.0105,0.007,0.0036,0.2211
-4967,2427,177,elites.json,0,14,-1,-1,False,True,False,False,0.0291,0.0014,0.0033,0.0127,0.0199,0.0083,0.0127,0.2862
-1176,2427,0,elites.json,0,11,-1,-1,False,True,False,False,0.0378,0.0024,0.0065,0.0136,0.0211,0.012,0.012,0.3239
-4030,2427,113,elites.json,0,16,-1,-1,False,True,False,False,0.0373,0.0012,0.0043,0.0203,0.0156,0.0066,0.0068,0.2594
-5920,2427,241,elites.json,0,15,-1,-1,False,True,False,False,0.0208,0.0017,0.0038,0.0094,0.0195,0.0092,0.0141,0.2671

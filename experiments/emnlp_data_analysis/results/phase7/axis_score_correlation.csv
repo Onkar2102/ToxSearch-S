@@ -1,0 +1,9 @@
+google_axis,openai_axis,n,spearman,pearson
+toxicity,harassment,5655,0.7599,0.8825
+severe_toxicity,harassment/threatening,5655,0.6174,0.1378
+identity_attack,hate,5655,0.6504,0.6883
+insult,harassment,5655,0.7683,0.896
+profanity,harassment,5655,0.686,0.9022
+threat,violence,5655,0.5949,0.0917
+sexually_explicit,sexual,5655,0.4421,0.5549
+flirtation,sexual,5655,0.3699,0.1524

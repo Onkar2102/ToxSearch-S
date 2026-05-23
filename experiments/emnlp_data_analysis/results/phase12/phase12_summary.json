@@ -1,0 +1,13 @@
+{
+  "n_topics": 9,
+  "n_label_cache_hits": 0,
+  "n_label_api_calls": 0,
+  "n_label_missing_key": 0,
+  "n_label_errors": 0,
+  "llm_enabled": false,
+  "llm_model": "gpt-4o-mini",
+  "llm_seed": 42,
+  "min_topic_size": 5,
+  "top_k_tokens": 8,
+  "top_k_exemplars": 3
+}

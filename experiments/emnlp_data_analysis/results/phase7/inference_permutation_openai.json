@@ -1,0 +1,9 @@
+{
+  "evaluator": "openai",
+  "p_value": 0.0005,
+  "obs_stat": 0.395186,
+  "n": 579,
+  "n_f0": 144,
+  "n_dominated_member": 435,
+  "skipped": false
+}
