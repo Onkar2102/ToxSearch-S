@@ -1,0 +1,46 @@
+{
+  "artifacts": {
+    "counterfactual_google_csv": "experiments/emnlp_data_analysis/results/phase5/counterfactual_survival_google.csv",
+    "counterfactual_openai_csv": "experiments/emnlp_data_analysis/results/phase5/counterfactual_survival_openai.csv",
+    "counterfactual_combined_csv": "experiments/emnlp_data_analysis/results/phase5/counterfactual_survival_combined.csv",
+    "counterfactual_comparison_json": "experiments/emnlp_data_analysis/results/phase5/counterfactual_evaluator_comparison.json",
+    "fig_counterfactual_google": "experiments/emnlp_data_analysis/results/phase5/figures/fig3_counterfactual_google.png",
+    "fig_counterfactual_openai": "experiments/emnlp_data_analysis/results/phase5/figures/fig3_counterfactual_openai.png",
+    "fig_counterfactual_dual": "experiments/emnlp_data_analysis/results/phase5/figures/fig3_counterfactual_dual_panel.png",
+    "figures_dir": "experiments/emnlp_data_analysis/results/phase5/figures"
+  },
+  "meta": {
+    "run_id": "20260211_2122",
+    "comparison": {
+      "policies": {
+        "scalar": {
+          "google_survival_rate": 0.1111,
+          "openai_survival_rate": 0.1111,
+          "google_extinction_rate": 0.8889,
+          "openai_extinction_rate": 0.8889,
+          "google_topics_survived": 1,
+          "openai_topics_survived": 1
+        },
+        "global_mo": {
+          "google_survival_rate": 0.4444,
+          "openai_survival_rate": 0.5556,
+          "google_extinction_rate": 0.5556,
+          "openai_extinction_rate": 0.4444,
+          "google_topics_survived": 4,
+          "openai_topics_survived": 5
+        },
+        "speciated_oracle": {
+          "google_survival_rate": 1.0,
+          "openai_survival_rate": 1.0,
+          "google_extinction_rate": 0.0,
+          "openai_extinction_rate": 0.0,
+          "google_topics_survived": 9,
+          "openai_topics_survived": 9
+        }
+      },
+      "hierarchy_google": true,
+      "hierarchy_openai": true
+    },
+    "bootstrap": "disabled for fast verification"
+  }
+}

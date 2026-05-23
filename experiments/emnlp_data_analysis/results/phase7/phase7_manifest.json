@@ -1,19 +1,19 @@
 {
   "artifacts": {
-    "inference_permutation_google_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/inference_permutation_google.json",
-    "inference_per_topic_google_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/inference_per_topic_google.csv",
-    "inference_permutation_openai_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/inference_permutation_openai.json",
-    "inference_per_topic_openai_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/inference_per_topic_openai.csv",
-    "inference_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/inference_summary.json",
-    "fig_rank_contingency": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/figures/rank_contingency_heatmap.png",
-    "axis_score_correlation_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase7/axis_score_correlation.csv"
+    "inference_permutation_google_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/inference_permutation_google.json",
+    "inference_per_topic_google_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/inference_per_topic_google.csv",
+    "inference_permutation_openai_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/inference_permutation_openai.json",
+    "inference_per_topic_openai_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/inference_per_topic_openai.csv",
+    "inference_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/inference_summary.json",
+    "fig_rank_contingency": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/figures/rank_contingency_heatmap.png",
+    "axis_score_correlation_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase7/axis_score_correlation.csv"
   },
   "meta": {
     "run_id": "20260211_2122",
     "inference": {
       "google": {
         "evaluator": "google",
-        "p_value": 0.863068,
+        "p_value": 0.867713,
         "obs_stat": 0.287541,
         "n": 518,
         "n_f0": 100,
@@ -22,7 +22,7 @@
       },
       "openai": {
         "evaluator": "openai",
-        "p_value": 0.0005,
+        "p_value": 0.0001,
         "obs_stat": 0.395186,
         "n": 579,
         "n_f0": 144,

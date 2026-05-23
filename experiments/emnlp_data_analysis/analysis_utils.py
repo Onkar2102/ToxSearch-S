@@ -54,6 +54,7 @@ __all__ = [
     "OPENAI_AXIS_ORDER",
     "get_axis_order",
     "load_unified_genomes",
+    "load_unified_from_artifacts",
     "score_column_name",
     "run_id_from_path",
     "rows_for_pymoo_viz",
@@ -2285,6 +2286,100 @@ def load_unified_genomes(
     stats["n_genomes"] = len(rows)
     stats["n_species"] = len({r["species_id"] for r in rows if r["species_id"] > 0})
     return rows, stats
+
+
+def load_unified_from_artifacts(
+    results_dir: Path,
+    run_id: str,
+    *,
+    unified_subdir: str = "unified",
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """Load row dicts from phase-1 unified CSV + embeddings (read-only, no API)."""
+    results_dir = Path(results_dir)
+    unified_dir = results_dir / unified_subdir
+    csv_path = unified_dir / f"{run_id}_genomes.csv"
+    emb_path = unified_dir / f"{run_id}_embeddings.npy"
+    ids_path = unified_dir / f"{run_id}_genome_ids.json"
+    if not csv_path.is_file():
+        raise FileNotFoundError(f"Missing unified CSV: {csv_path}")
+
+    manifest_path = results_dir / "phase1_manifest.json"
+    meta: Dict[str, Any] = {}
+    if manifest_path.is_file():
+        meta = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    embeddings = np.load(emb_path, allow_pickle=False) if emb_path.is_file() else None
+    ids = json.loads(ids_path.read_text(encoding="utf-8")) if ids_path.is_file() else []
+    id_to_emb_index = {str(g): k for k, g in enumerate(ids)}
+
+    google_axes = list(get_axis_order("google"))
+    openai_axes = list(get_axis_order("openai"))
+
+    rows: List[Dict[str, Any]] = []
+    with csv_path.open(newline="", encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            row: Dict[str, Any] = {
+                "run_id": r.get("run_id") or run_id,
+                "genome_id": int(r["genome_id"])
+                if str(r.get("genome_id") or "").isdigit()
+                else r.get("genome_id"),
+                "species_id": int(r.get("species_id") or 0),
+                "generation": int(r.get("generation") or 0),
+                "source_file": r.get("source_file") or "",
+                "prompt": str(r.get("prompt") or ""),
+                "has_embedding": str(r.get("has_embedding")).lower() == "true",
+            }
+
+            g_vec: List[float] = []
+            g_ok = True
+            for ax in google_axes:
+                col = score_column_name("google", ax)
+                v = r.get(col)
+                if v in (None, ""):
+                    g_ok = False
+                    break
+                try:
+                    g_vec.append(float(v))
+                except (TypeError, ValueError):
+                    g_ok = False
+                    break
+            if g_ok and len(g_vec) == len(google_axes):
+                row["objective_vector"] = np.asarray(g_vec, dtype=np.float64)
+
+            o_vec: List[float] = []
+            o_ok = True
+            for ax in openai_axes:
+                col = score_column_name("openai", ax)
+                v = r.get(col)
+                if v in (None, ""):
+                    o_ok = False
+                    break
+                try:
+                    o_vec.append(float(v))
+                except (TypeError, ValueError):
+                    o_ok = False
+                    break
+            if o_ok and len(o_vec) == len(openai_axes):
+                row["objective_vector_openai"] = np.asarray(o_vec, dtype=np.float64)
+
+            gid = str(r.get("genome_id") or "")
+            if embeddings is not None and gid in id_to_emb_index:
+                k = id_to_emb_index[gid]
+                if 0 <= k < embeddings.shape[0]:
+                    row["_embedding"] = np.asarray(embeddings[k], dtype=np.float64)
+
+            rows.append(row)
+
+    meta = {
+        **meta,
+        "run_id": run_id,
+        "csv": str(csv_path),
+        "n_genomes": len(rows),
+        "n_with_google_objectives": sum(1 for r in rows if "objective_vector" in r),
+        "n_with_openai_objectives": sum(1 for r in rows if "objective_vector_openai" in r),
+        "n_with_embedding": sum(1 for r in rows if "_embedding" in r),
+    }
+    return rows, meta
 
 
 def embedding_matrix(rows: Sequence[Dict[str, Any]]) -> Tuple[np.ndarray, List[int]]:

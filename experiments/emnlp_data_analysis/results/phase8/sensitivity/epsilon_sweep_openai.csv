@@ -1,0 +1,6 @@
+evaluator,epsilon,n_f0,n_fully_dominated_topics,global_mo_survival_rate
+openai,0.0,144,4,0.5556
+openai,0.01,5655,0,0.5556
+openai,0.02,5655,0,0.5556
+openai,0.05,5655,0,0.5556
+openai,0.1,5655,0,0.5556

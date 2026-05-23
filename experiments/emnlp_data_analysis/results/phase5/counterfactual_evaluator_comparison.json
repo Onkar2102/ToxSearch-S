@@ -1,0 +1,30 @@
+{
+  "policies": {
+    "scalar": {
+      "google_survival_rate": 0.1111,
+      "openai_survival_rate": 0.1111,
+      "google_extinction_rate": 0.8889,
+      "openai_extinction_rate": 0.8889,
+      "google_topics_survived": 1,
+      "openai_topics_survived": 1
+    },
+    "global_mo": {
+      "google_survival_rate": 0.4444,
+      "openai_survival_rate": 0.5556,
+      "google_extinction_rate": 0.5556,
+      "openai_extinction_rate": 0.4444,
+      "google_topics_survived": 4,
+      "openai_topics_survived": 5
+    },
+    "speciated_oracle": {
+      "google_survival_rate": 1.0,
+      "openai_survival_rate": 1.0,
+      "google_extinction_rate": 0.0,
+      "openai_extinction_rate": 0.0,
+      "google_topics_survived": 9,
+      "openai_topics_survived": 9
+    }
+  },
+  "hierarchy_google": true,
+  "hierarchy_openai": true
+}

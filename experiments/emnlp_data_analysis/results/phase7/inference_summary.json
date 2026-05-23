@@ -1,7 +1,7 @@
 {
   "google": {
     "evaluator": "google",
-    "p_value": 0.863068,
+    "p_value": 0.867713,
     "obs_stat": 0.287541,
     "n": 518,
     "n_f0": 100,
@@ -10,7 +10,7 @@
   },
   "openai": {
     "evaluator": "openai",
-    "p_value": 0.0005,
+    "p_value": 0.0001,
     "obs_stat": 0.395186,
     "n": 579,
     "n_f0": 144,

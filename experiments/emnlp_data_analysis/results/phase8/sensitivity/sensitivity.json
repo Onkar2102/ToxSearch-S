@@ -1,0 +1,350 @@
+{
+  "epsilon_google": [
+    {
+      "evaluator": "google",
+      "epsilon": 0.0,
+      "n_f0": 100,
+      "n_fully_dominated_topics": 5,
+      "global_mo_survival_rate": 0.4444
+    },
+    {
+      "evaluator": "google",
+      "epsilon": 0.01,
+      "n_f0": 218,
+      "n_fully_dominated_topics": 5,
+      "global_mo_survival_rate": 0.4444
+    },
+    {
+      "evaluator": "google",
+      "epsilon": 0.02,
+      "n_f0": 381,
+      "n_fully_dominated_topics": 5,
+      "global_mo_survival_rate": 0.4444
+    },
+    {
+      "evaluator": "google",
+      "epsilon": 0.05,
+      "n_f0": 577,
+      "n_fully_dominated_topics": 5,
+      "global_mo_survival_rate": 0.4444
+    },
+    {
+      "evaluator": "google",
+      "epsilon": 0.1,
+      "n_f0": 1036,
+      "n_fully_dominated_topics": 2,
+      "global_mo_survival_rate": 0.4444
+    }
+  ],
+  "epsilon_openai": [
+    {
+      "evaluator": "openai",
+      "epsilon": 0.0,
+      "n_f0": 144,
+      "n_fully_dominated_topics": 4,
+      "global_mo_survival_rate": 0.5556
+    },
+    {
+      "evaluator": "openai",
+      "epsilon": 0.01,
+      "n_f0": 5655,
+      "n_fully_dominated_topics": 0,
+      "global_mo_survival_rate": 0.5556
+    },
+    {
+      "evaluator": "openai",
+      "epsilon": 0.02,
+      "n_f0": 5655,
+      "n_fully_dominated_topics": 0,
+      "global_mo_survival_rate": 0.5556
+    },
+    {
+      "evaluator": "openai",
+      "epsilon": 0.05,
+      "n_f0": 5655,
+      "n_fully_dominated_topics": 0,
+      "global_mo_survival_rate": 0.5556
+    },
+    {
+      "evaluator": "openai",
+      "epsilon": 0.1,
+      "n_f0": 5655,
+      "n_fully_dominated_topics": 0,
+      "global_mo_survival_rate": 0.5556
+    }
+  ],
+  "threshold": [
+    {
+      "tau_intra": 0.8,
+      "tau_inter": 0.25,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.8,
+      "tau_inter": 0.35,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.8,
+      "tau_inter": 0.45,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.85,
+      "tau_inter": 0.25,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.85,
+      "tau_inter": 0.35,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.85,
+      "tau_inter": 0.45,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.9,
+      "tau_inter": 0.25,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.9,
+      "tau_inter": 0.35,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    },
+    {
+      "tau_intra": 0.9,
+      "tau_inter": 0.45,
+      "n_distinct_dominated": 0,
+      "n_axis_exclusive_dominated": 0
+    }
+  ],
+  "population_ablation": [
+    {
+      "topics_total": 9,
+      "topics_survived": 1,
+      "survival_rate": 0.1111,
+      "extinction_rate": 0.8889,
+      "evaluator": "google",
+      "policy": "scalar",
+      "kept_size": 100,
+      "k": 100,
+      "n_f0": 100,
+      "population": "full"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 4,
+      "survival_rate": 0.4444,
+      "extinction_rate": 0.5556,
+      "evaluator": "google",
+      "policy": "global_mo",
+      "kept_size": 100,
+      "k": 100,
+      "n_f0": 100,
+      "population": "full"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 9,
+      "survival_rate": 1.0,
+      "extinction_rate": 0.0,
+      "evaluator": "google",
+      "policy": "speciated_oracle",
+      "kept_size": 102,
+      "k": 100,
+      "n_f0": 100,
+      "population": "full"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 1,
+      "survival_rate": 0.1111,
+      "extinction_rate": 0.8889,
+      "evaluator": "openai",
+      "policy": "scalar",
+      "kept_size": 144,
+      "k": 144,
+      "n_f0": 144,
+      "population": "full"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 5,
+      "survival_rate": 0.5556,
+      "extinction_rate": 0.4444,
+      "evaluator": "openai",
+      "policy": "global_mo",
+      "kept_size": 144,
+      "k": 144,
+      "n_f0": 144,
+      "population": "full"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 9,
+      "survival_rate": 1.0,
+      "extinction_rate": 0.0,
+      "evaluator": "openai",
+      "policy": "speciated_oracle",
+      "kept_size": 72,
+      "k": 144,
+      "n_f0": 144,
+      "population": "full"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 1,
+      "survival_rate": 0.1111,
+      "extinction_rate": 0.8889,
+      "evaluator": "google",
+      "policy": "scalar",
+      "kept_size": 42,
+      "k": 42,
+      "n_f0": 42,
+      "population": "elites"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 4,
+      "survival_rate": 0.4444,
+      "extinction_rate": 0.5556,
+      "evaluator": "google",
+      "policy": "global_mo",
+      "kept_size": 42,
+      "k": 42,
+      "n_f0": 42,
+      "population": "elites"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 9,
+      "survival_rate": 1.0,
+      "extinction_rate": 0.0,
+      "evaluator": "google",
+      "policy": "speciated_oracle",
+      "kept_size": 102,
+      "k": 42,
+      "n_f0": 42,
+      "population": "elites"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 1,
+      "survival_rate": 0.1111,
+      "extinction_rate": 0.8889,
+      "evaluator": "openai",
+      "policy": "scalar",
+      "kept_size": 45,
+      "k": 45,
+      "n_f0": 45,
+      "population": "elites"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 6,
+      "survival_rate": 0.6667,
+      "extinction_rate": 0.3333,
+      "evaluator": "openai",
+      "policy": "global_mo",
+      "kept_size": 45,
+      "k": 45,
+      "n_f0": 45,
+      "population": "elites"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 9,
+      "survival_rate": 1.0,
+      "extinction_rate": 0.0,
+      "evaluator": "openai",
+      "policy": "speciated_oracle",
+      "kept_size": 72,
+      "k": 45,
+      "n_f0": 45,
+      "population": "elites"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 1,
+      "survival_rate": 0.1111,
+      "extinction_rate": 0.8889,
+      "evaluator": "google",
+      "policy": "scalar",
+      "kept_size": 100,
+      "k": 100,
+      "n_f0": 100,
+      "population": "no_reserves"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 4,
+      "survival_rate": 0.4444,
+      "extinction_rate": 0.5556,
+      "evaluator": "google",
+      "policy": "global_mo",
+      "kept_size": 100,
+      "k": 100,
+      "n_f0": 100,
+      "population": "no_reserves"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 9,
+      "survival_rate": 1.0,
+      "extinction_rate": 0.0,
+      "evaluator": "google",
+      "policy": "speciated_oracle",
+      "kept_size": 102,
+      "k": 100,
+      "n_f0": 100,
+      "population": "no_reserves"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 1,
+      "survival_rate": 0.1111,
+      "extinction_rate": 0.8889,
+      "evaluator": "openai",
+      "policy": "scalar",
+      "kept_size": 144,
+      "k": 144,
+      "n_f0": 144,
+      "population": "no_reserves"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 5,
+      "survival_rate": 0.5556,
+      "extinction_rate": 0.4444,
+      "evaluator": "openai",
+      "policy": "global_mo",
+      "kept_size": 144,
+      "k": 144,
+      "n_f0": 144,
+      "population": "no_reserves"
+    },
+    {
+      "topics_total": 9,
+      "topics_survived": 9,
+      "survival_rate": 1.0,
+      "extinction_rate": 0.0,
+      "evaluator": "openai",
+      "policy": "speciated_oracle",
+      "kept_size": 72,
+      "k": 144,
+      "n_f0": 144,
+      "population": "no_reserves"
+    }
+  ]
+}

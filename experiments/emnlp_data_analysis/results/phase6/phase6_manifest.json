@@ -1,0 +1,27 @@
+{
+  "artifacts": {
+    "cluster_quality_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/cluster_quality.json",
+    "appendix_fig_umap_google": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/appendix/fig1_umap_google.png",
+    "topic_axis_max_google_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/topic_axis_max_google.csv",
+    "appendix_fig_topic_axis_heatmap_google": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/appendix/topic_axis_heatmap_google.png",
+    "appendix_fig_dg_dp_google": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/appendix/dg_dp_google.png",
+    "appendix_fig_umap_openai": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/appendix/fig1_umap_openai.png",
+    "topic_axis_max_openai_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/topic_axis_max_openai.csv",
+    "appendix_fig_topic_axis_heatmap_openai": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/appendix/topic_axis_heatmap_openai.png",
+    "appendix_fig_dg_dp_openai": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/appendix/dg_dp_openai.png",
+    "fig_umap_dual": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/fig1_umap_dual.png",
+    "fig_topic_axis_heatmap_dual": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/topic_axis_heatmap_dual.png",
+    "fig_dg_dp_dual": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase6/figures/fig_dg_dp_dual.png"
+  },
+  "meta": {
+    "run_id": "20260211_2122",
+    "cluster_quality": {
+      "silhouette_score": 0.36392418358071466,
+      "davies_bouldin_index": 2.524588077334243,
+      "calinski_harabasz_index": 55.42765752120532,
+      "num_samples": 460,
+      "num_clusters": 9,
+      "skipped": false
+    }
+  }
+}

@@ -1,11 +1,11 @@
 {
   "artifacts": {
-    "topic_advanced_analytics_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase11/topic_advanced_analytics.csv",
-    "single_axis_counterfactual_survival_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase11/single_axis_counterfactual_survival.csv",
-    "phase11_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase11/phase11_summary.json",
-    "fig11_single_axis_survival": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase11/figures/fig11_single_axis_survival.png",
-    "fig11_topic_profile_vs_domination": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase11/figures/fig11_topic_profile_vs_domination.png",
-    "fig11_distinct_but_dominated": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/phase11/figures/fig11_distinct_but_dominated.png"
+    "topic_advanced_analytics_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/topic_advanced_analytics.csv",
+    "single_axis_counterfactual_survival_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/single_axis_counterfactual_survival.csv",
+    "phase11_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/phase11_summary.json",
+    "fig11_single_axis_survival": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/figures/fig11_single_axis_survival.png",
+    "fig11_topic_profile_vs_domination": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/figures/fig11_topic_profile_vs_domination.png",
+    "fig11_distinct_but_dominated": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/figures/fig11_distinct_but_dominated.png"
   },
   "meta": {
     "run_id": "20260211_2122",

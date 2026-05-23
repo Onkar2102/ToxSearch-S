@@ -1,0 +1,82 @@
+{
+  "anchors": {
+    "n_f0_google": 100,
+    "n_fully_dominated_topics_google": 5,
+    "n_topics": 9,
+    "n_generations_collapsed_to_one": 18,
+    "n_genomes": 5655,
+    "google_mo_topics_survived": 4,
+    "openai_mo_topics_survived": 5,
+    "speciated_oracle_topics_survived": 9,
+    "n_topics_no_single_axis_recovers_google": 3
+  },
+  "measured": {
+    "n_f0_google": 100,
+    "n_fully_dominated_topics_google": 5,
+    "n_topics": 9,
+    "n_topics_summarized": 9,
+    "n_generations_collapsed_to_one": 18,
+    "n_genomes": 5655,
+    "google_mo_topics_survived": 4,
+    "openai_mo_topics_survived": 5,
+    "speciated_oracle_topics_survived": 9,
+    "n_topics_no_single_axis_recovers_google": 3,
+    "n_topics_no_single_axis_recovers_openai": 1
+  },
+  "rows": [
+    {
+      "metric": "n_f0_google",
+      "anchor": 100,
+      "measured": 100,
+      "delta": 0
+    },
+    {
+      "metric": "n_fully_dominated_topics_google",
+      "anchor": 5,
+      "measured": 5,
+      "delta": 0
+    },
+    {
+      "metric": "n_topics",
+      "anchor": 9,
+      "measured": 9,
+      "delta": 0
+    },
+    {
+      "metric": "n_generations_collapsed_to_one",
+      "anchor": 18,
+      "measured": 18,
+      "delta": 0
+    },
+    {
+      "metric": "n_genomes",
+      "anchor": 5655,
+      "measured": 5655,
+      "delta": 0
+    },
+    {
+      "metric": "google_mo_topics_survived",
+      "anchor": 4,
+      "measured": 4,
+      "delta": 0
+    },
+    {
+      "metric": "openai_mo_topics_survived",
+      "anchor": 5,
+      "measured": 5,
+      "delta": 0
+    },
+    {
+      "metric": "speciated_oracle_topics_survived",
+      "anchor": 9,
+      "measured": 9,
+      "delta": 0
+    },
+    {
+      "metric": "n_topics_no_single_axis_recovers_google",
+      "anchor": 3,
+      "measured": 3,
+      "delta": 0
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+species_id,n_members,tdi_google,tdi_openai,tdi_delta_openai_minus_google,n_on_f0_google,n_on_f0_openai,frac_on_f0_google,frac_on_f0_openai,fully_dominated_google,fully_dominated_openai,fully_dominated_pattern,distinct_topic,intra_cosine_mean,inter_dg_min
+2415,25,1.0,1.0,0.0,0,0,0.0,0.0,True,True,both,False,0.3304,0.2716
+2421,150,0.76,0.9067,0.1467,36,14,0.24,0.09333333333333334,False,False,neither,True,0.948,0.4275
+2422,88,0.9773,0.9545,-0.0228,2,4,0.022727272727272728,0.045454545454545456,False,False,neither,False,0.5739,0.3699
+2423,44,0.9318,0.9773,0.0455,3,1,0.06818181818181818,0.022727272727272728,False,False,neither,False,0.4401,0.218
+2424,54,1.0,0.9259,-0.0741,0,4,0.0,0.07407407407407407,True,False,google_only,False,0.2815,0.3015
+2425,24,0.9583,1.0,0.0417,1,0,0.041666666666666664,0.0,False,True,openai_only,False,0.5148,0.4259
+2426,61,1.0,0.9672,-0.0328,0,2,0.0,0.03278688524590164,True,False,google_only,False,0.1938,0.218
+2427,6,1.0,1.0,0.0,0,0,0.0,0.0,True,True,both,False,0.1487,0.2871
+2428,8,1.0,1.0,0.0,0,0,0.0,0.0,True,True,both,False,0.3198,0.2998
