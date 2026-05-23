@@ -1,6 +1,6 @@
 # ToxSearch-S
 
-Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The loop is quality–diversity style: fitness comes from an external moderation API (Google [Perspective](https://developers.perspectiveapi.com/)) applied to model outputs, and **semantic speciation** keeps diversity by clustering prompts in embedding space.
+Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The loop is quality–diversity style: fitness comes from an external moderation API (Google [Perspective](https://developers.perspectiveapi.com/) or OpenAI omni-moderation) applied to model outputs, and **semantic speciation** keeps diversity by clustering prompts in embedding space.
 
 **Index**
 
@@ -21,7 +21,8 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
 | **Python** | 3.10 or newer |
 | **Dependencies** | `pip install -r requirements.txt` |
 | **GPU** | Recommended for GGUF inference |
-| **Perspective API** | At least one key in `.env` (see [Installation](#installation)) |
+| **Perspective API** | Required for `--evaluator google` (at least one key in `.env`) |
+| **OpenAI API** | Required for `--evaluator openai` (`OPENAI_API_KEY` in `.env`; optional org/project IDs) |
 | **MPI (optional)** | Only for `--parallel`; Open MPI (or compatible) plus `mpi4py` built against that MPI |
 
 ---
@@ -56,7 +57,7 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
    cp env_example.txt .env
    ```
 
-   Edit `.env` and set `PERSPECTIVE_API_KEY` (or multiple keys as described in `env_example.txt`).
+   Edit `.env` and set `PERSPECTIVE_API_KEY` for Google runs, or `OPENAI_API_KEY` (and optional `OPENAI_ORG_ID` / `OPENAI_PROJECT_ID`) for OpenAI runs (see `env_example.txt`).
 
 ---
 
@@ -106,7 +107,10 @@ Defaults follow `src/main.py` and `SpeciationConfig` unless you override them on
 | Parallel | Use MPI master–worker instead of a single process. Set with `--parallel`. |
 | Output directory | Run artifacts directory (default timestamped under `data/outputs/`). Set with `--output-dir`. |
 | Stagnation limit | Generations without improvement before switching explore/exploit behaviour. Set with `--stagnation-limit`. |
-| Moderation methods | Which scorer to use (`google` = Perspective; `all` is google-only here). Set with `--moderation-methods`. |
+| Moderation backend | Scorer backend for fitness (`google` = Perspective, `openai` = omni-moderation). Set with `--evaluator`. |
+| North-star metric | Score key driving fitness and selection; valid values depend on `--evaluator`. Set with `--north-star-metric`. |
+| OpenAI moderation model | Model name when `--evaluator openai` (default `omni-moderation-latest`). Set with `--openai-model`. |
+| Moderation methods | Deprecated alias for `--evaluator` (`google`/`perspective`/`all` → google; `openai`/`omni` → openai). Set with `--moderation-methods`. |
 | Generations | Legacy generation cap; termination is still only by the total genome cap (`--max-total-genomes`). Set with `--generations`. |
 | Profile | Write `cProfile` stats next to the run outputs. Set with `--profile`. |
 
@@ -138,6 +142,26 @@ bash run_experiments_local.sh
 See the header comments in `run_experiments_local.sh` for environment variables (`RUN_SEQUENTIAL`, `THETA_VALUES`, `RUN_PARALLEL`, etc.).
 
 ### Minimal single run
+
+```bash
+export PYTHONPATH=src
+python src/main.py --max-total-genomes 500 \
+  --evaluator openai \
+  --north-star-metric violence \
+  --seed-file data/prompt.csv
+```
+
+Perspective example:
+
+```bash
+export PYTHONPATH=src
+python src/main.py --max-total-genomes 500 \
+  --evaluator google \
+  --north-star-metric threat \
+  --seed-file data/prompt.csv
+```
+
+Default run (Perspective, toxicity metric):
 
 ```bash
 export PYTHONPATH=src

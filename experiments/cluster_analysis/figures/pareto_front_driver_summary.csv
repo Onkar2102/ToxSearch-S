@@ -1,0 +1,9 @@
+objective,mean_on_global_front,mean_off_front,delta_on_minus_off
+severe_toxicity,0.397774,0.112758,0.285015
+identity_attack,0.136298,0.034306,0.101992
+toxicity,0.804167,0.281435,0.522731
+flirtation,0.459817,0.322280,0.137537
+threat,0.059055,0.017563,0.041492
+sexually_explicit,0.192769,0.064432,0.128337
+profanity,0.454810,0.149503,0.305306
+insult,0.750719,0.245515,0.505204

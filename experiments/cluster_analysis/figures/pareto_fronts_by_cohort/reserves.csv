@@ -1,0 +1,4 @@
+id,generation,source_file,species_pareto_rank,global_pareto_rank,partly_global_pareto_front,severe_toxicity,identity_attack,toxicity,flirtation,threat,sexually_explicit,profanity,insult
+468,0,data/outputs/20260211_2122/reserves.json,0,12,5,0.001,0.0027,0.0138,0.2968,0.0076,0.0083,0.0129,0.0085
+4715,161,data/outputs/20260211_2122/reserves.json,1,14,6,0.0006,0.0022,0.0085,0.2039,0.0064,0.0077,0.0114,0.0067
+4725,161,data/outputs/20260211_2122/reserves.json,1,16,6,0.0004,0.0018,0.0094,0.1994,0.0061,0.0066,0.0102,0.0071

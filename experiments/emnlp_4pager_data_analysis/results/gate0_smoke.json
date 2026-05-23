@@ -1,0 +1,48 @@
+{
+  "pass": true,
+  "checks": {
+    "run_exists": true,
+    "required_files_present": true,
+    "min_genomes": true,
+    "min_large_topics": true,
+    "min_objective_frac": true
+  },
+  "missing_files": [],
+  "n_genomes": 5655,
+  "n_species": 9,
+  "n_large_topics": 9,
+  "frac_with_objectives": 1.0,
+  "n_with_embedding": 5655,
+  "n_duplicates_dropped": 0,
+  "files": {
+    "elites.json": 460,
+    "reserves.json": 3,
+    "archive.json": 5192,
+    "temp.json": 0
+  },
+  "files_present": {
+    "elites.json": true,
+    "reserves.json": true,
+    "archive.json": true,
+    "temp.json": true
+  },
+  "topic_sizes": {
+    "2421": 150,
+    "2422": 88,
+    "2426": 61,
+    "2424": 54,
+    "2423": 44,
+    "2415": 25,
+    "2425": 24,
+    "2428": 8,
+    "2427": 6
+  },
+  "thresholds": {
+    "min_genomes": 5000,
+    "min_topics": 5,
+    "min_topic_size": 5,
+    "min_objective_frac": 0.95
+  },
+  "run_id": "20260211_2122",
+  "run_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122"
+}

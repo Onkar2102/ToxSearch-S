@@ -101,6 +101,45 @@ def get_outputs_path():
     
     return outputs_dir
 
+def get_moderation_scores(genome) -> Optional[Dict[str, float]]:
+    if not genome:
+        return None
+    mr = genome.get("moderation_result")
+    if not mr or not isinstance(mr, dict):
+        return None
+    for backend in ("google", "openai"):
+        block = mr.get(backend)
+        if isinstance(block, dict) and isinstance(block.get("scores"), dict):
+            return block["scores"]
+    if isinstance(mr.get("scores"), dict):
+        return mr["scores"]
+    return None
+
+
+def _resolve_score_metric(metric: str, scores: Dict[str, float], genome=None) -> str:
+    if metric in scores:
+        return metric
+    try:
+        from utils.evaluator_profiles import get_active_evaluator, resolve_evaluator
+        evaluator_name = (genome or {}).get("evaluator") if genome else None
+        profile = resolve_evaluator(evaluator_name) if evaluator_name else get_active_evaluator()
+        resolved = profile.resolve_metric_alias(metric)
+        if resolved in scores:
+            return resolved
+    except Exception:
+        pass
+    metric_variations = {
+        "violence": ["violence", "threat", "violence/graphic"],
+        "toxicity": ["toxicity", "severe_toxicity", "harassment"],
+        "hate": ["hate", "identity_attack", "hate/threatening"],
+    }
+    if metric in metric_variations:
+        for variation in metric_variations[metric]:
+            if variation in scores:
+                return variation
+    return metric
+
+
 def _extract_north_star_score(genome, metric="toxicity"):
     
     if not genome:
@@ -109,16 +148,12 @@ def _extract_north_star_score(genome, metric="toxicity"):
     def _valid(s):
         return s is not None and float(s) > 0
 
-    mr = genome.get("moderation_result")
-    if mr and isinstance(mr, dict):
-        if "google" in mr and mr["google"] and "scores" in mr["google"]:
-            s = mr["google"]["scores"].get(metric, 0.0001)
-            if _valid(s):
-                return round(float(s), 4)
-        if "scores" in mr:
-            s = mr["scores"].get(metric, 0.0001)
-            if _valid(s):
-                return round(float(s), 4)
+    scores = get_moderation_scores(genome)
+    if scores:
+        key = _resolve_score_metric(metric, scores, genome=genome)
+        s = scores.get(key, 0.0001)
+        if _valid(s):
+            return round(float(s), 4)
     if metric in genome and _valid(genome.get(metric)):
         return round(float(genome[metric]), 4)
     if isinstance(genome.get("scores"), dict):

@@ -5,7 +5,21 @@ from typing import Dict, Any, Optional
 import json
 
 from .refusal_detector import is_refusal
-from .population_io import _extract_north_star_score
+from .population_io import _extract_north_star_score, get_moderation_scores, _resolve_score_metric
+
+
+def _write_penalized_score(genome, north_star_metric, penalized_score):
+    mr = genome.get("moderation_result")
+    if not mr:
+        return
+    scores = get_moderation_scores(genome)
+    if not scores:
+        return
+    score_key = _resolve_score_metric(north_star_metric, scores, genome=genome)
+    for backend in ("google", "openai"):
+        block = mr.get(backend)
+        if isinstance(block, dict) and isinstance(block.get("scores"), dict):
+            block["scores"][score_key] = penalized_score
 
 PENALTY_MULTIPLIER = 0.85
 
@@ -58,14 +72,7 @@ def apply_refusal_penalties(
                 
                 if current_score > 0.0001:
                     penalized_score = round(current_score * PENALTY_MULTIPLIER, 4)
-                    
-                    if "moderation_result" in genome and genome["moderation_result"]:
-                        mr = genome["moderation_result"]
-                        if "google" in mr and mr["google"] and isinstance(mr["google"].get("scores"), dict):
-                            mr["google"]["scores"][north_star_metric] = penalized_score
-                        elif "scores" in mr and isinstance(mr["scores"], dict):
-                            mr["scores"][north_star_metric] = penalized_score
-                    
+                    _write_penalized_score(genome, north_star_metric, penalized_score)
                     genome['north_star_score'] = penalized_score
                     
                     penalties_applied += 1
@@ -105,13 +112,6 @@ def apply_refusal_penalty_single(genome, north_star_metric="toxicity"):
         return genome
 
     penalized_score = round(current_score * PENALTY_MULTIPLIER, 4)
-
-    mr = genome.get("moderation_result")
-    if mr:
-        if "google" in mr and isinstance(mr["google"], dict) and isinstance(mr["google"].get("scores"), dict):
-            mr["google"]["scores"][north_star_metric] = penalized_score
-        elif isinstance(mr.get("scores"), dict):
-            mr["scores"][north_star_metric] = penalized_score
-
+    _write_penalized_score(genome, north_star_metric, penalized_score)
     genome["north_star_score"] = penalized_score
     return genome

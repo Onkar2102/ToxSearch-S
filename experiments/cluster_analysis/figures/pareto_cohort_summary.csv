@@ -1,0 +1,11 @@
+cohort,n_input,n_after_run,n_pareto_front,max_size,oversize_after_trim,n_global_pareto_front
+reserves,3,3,1,150,False,0
+species_2415,25,25,9,150,False,0
+species_2421,150,150,36,150,False,36
+species_2422,88,88,13,150,False,2
+species_2423,44,44,4,150,False,3
+species_2424,54,54,10,150,False,0
+species_2425,24,24,7,150,False,1
+species_2426,61,61,13,150,False,0
+species_2427,6,6,4,150,False,0
+species_2428,8,8,6,150,False,0

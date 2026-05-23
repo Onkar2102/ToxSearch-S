@@ -110,12 +110,12 @@ class EvolutionEngine:
         if variant_type == "mutation":
             if not parents:
                 return 0.0001
-            parent_score = _extract_north_star_score(parents[0], "toxicity")
+            parent_score = _extract_north_star_score(parents[0], self.north_star_metric)
             return max(round(parent_score, 4), 0.0001)
         elif variant_type == "crossover":
             if not parents:
                 return 0.0001
-            scores = [max(_extract_north_star_score(p, "toxicity"), 0.0001) for p in parents]
+            scores = [max(_extract_north_star_score(p, self.north_star_metric), 0.0001) for p in parents]
             avg_score = sum(scores) / len(scores)
             return round(avg_score, 4)
 
@@ -128,7 +128,7 @@ class EvolutionEngine:
         parents_info = []
         for p in parents:
             parent_id = p.get("id")
-            parent_toxicity = _extract_north_star_score(p, "toxicity")
+            parent_toxicity = _extract_north_star_score(p, self.north_star_metric)
             parents_info.append({
                 "id": parent_id,
                 "score": round(parent_toxicity, 4)

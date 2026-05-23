@@ -325,6 +325,12 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         run_meta["num_perspective_keys"] = len(keys_list) if isinstance(keys_list, list) else 0
         if config_dict.get("max_total_genomes") is not None:
             run_meta["max_total_genomes"] = config_dict["max_total_genomes"]
+        if config_dict.get("evaluator"):
+            run_meta["evaluator"] = config_dict["evaluator"]
+        if config_dict.get("north_star_metric"):
+            run_meta["north_star_metric"] = config_dict["north_star_metric"]
+        if config_dict.get("openai_model"):
+            run_meta["openai_model"] = config_dict["openai_model"]
 
     if not tracker_path.exists():
         logger.info("Creating new EvolutionTracker.json")
@@ -1072,11 +1078,21 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
         if evaluator is None:
             from gne.evaluator import HybridModerationEvaluator
+            from utils.evaluator_profiles import resolve_evaluator, moderation_methods_to_backend_list
             api_keys = cfg.get("perspective_api_keys")
+            evaluator_backend = cfg.get("evaluator", "google")
             evaluator = HybridModerationEvaluator(
-                config_path=rg_config_path, log_file=log_file,
-                api_keys=api_keys or None)
-            logger.info("Worker %d: HybridModerationEvaluator initialised", rank)
+                config_path=rg_config_path,
+                log_file=log_file,
+                api_keys=api_keys or None,
+                evaluator=evaluator_backend,
+                openai_model=cfg.get("openai_model", "omni-moderation-latest"),
+            )
+            if moderation_methods is None:
+                moderation_methods = moderation_methods_to_backend_list(resolve_evaluator(evaluator_backend))
+            else:
+                moderation_methods = [resolve_evaluator(evaluator_backend).backend_key]
+            logger.info("Worker %d: HybridModerationEvaluator initialised (evaluator=%s)", rank, evaluator_backend)
 
         from gne.response_generator import process_single_genome
         from gne.evaluator import evaluate_single_genome
@@ -1393,7 +1409,9 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
         stagnation_limit=5,
         max_variants=1,
         response_generator=None, prompt_generator=None, evaluator=None,
-        perspective_api_keys=None):
+        perspective_api_keys=None,
+        evaluator_backend="google",
+        openai_model="omni-moderation-latest"):
     
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
@@ -1454,6 +1472,8 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
 
     config_dict = {
         "north_star_metric": north_star_metric,
+        "evaluator": evaluator_backend,
+        "openai_model": openai_model,
         "operators_mode": operators_mode,
         "seed_file": seed_file_abs,
         "seed": seed,
