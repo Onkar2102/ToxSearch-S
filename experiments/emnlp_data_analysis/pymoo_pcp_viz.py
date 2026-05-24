@@ -16,62 +16,72 @@ _logger = logging.getLogger("emnlp.pymoo_viz")
 COLOR_COHORT_PF = "#1a1a1a"
 COLOR_GLOBAL_PF = "#C9A227"
 COLOR_PF_OVERLAY = "#7B61FF"  # per-cohort PCP only (not combined)
-LIGHTEN_PASTEL = 0.62
-N_SPECIES_HUES = 9  # hue = index / 9 (cluster_analysis table)
 
-# Fixed species index → pastel (peach, yellow-lime, … pink); see cluster_analysis pymoo_pcp_pareto
-SPECIES_HUE_INDEX: Dict[str, int] = {
-    "species_2415": 0,
-    "species_2421": 1,
-    "species_2422": 2,
-    "species_2423": 3,
-    "species_2424": 4,
-    "species_2425": 5,
-    "species_2426": 6,
-    "species_2427": 7,
-    "species_2428": 8,
+# Fixed cohort → colour (same on Google and OpenAI; hand-picked light pastels, hue-spread).
+# Chosen so adjacent legend entries are easy to tell apart (no clustered pinks).
+COHORT_LIGHT_HEX: Dict[str, str] = {
+    "species_2415": "#F5A0A0",  # coral
+    "species_2421": "#F5C070",  # orange
+    "species_2422": "#EDE060",  # yellow
+    "species_2423": "#90D890",  # green
+    "species_2424": "#70D0C8",  # teal
+    "species_2425": "#70A8E8",  # blue
+    "species_2426": "#9090E8",  # periwinkle
+    "species_2427": "#B888E8",  # violet
+    "species_2428": "#E888B8",  # rose
+    "reserves": "#C8B080",      # tan
+    "archive": "#88C898",       # sage
 }
 
-# Non-species cohorts: same pastel recipe, distinct hues (no grey/black)
-EXTRA_COHORT_HUE: Dict[str, float] = {
-    "reserves": 0.50,  # soft aqua
-    "archive": 0.72,   # soft lavender
-    "other": 0.38,     # soft mint
-}
+# Blend cohort hex toward white for plot/legend (hue unchanged; lighter appearance).
+COHORT_COLOR_LIGHTEN = 0.18
 
 _PASTEL_CACHE: Optional[Dict[str, Tuple[float, float, float, float]]] = None
 
 
-def _pastel_from_hue(hue: float) -> Tuple[float, float, float, float]:
-    """HSV (hue, 0.55, 0.95) blended 62% toward white — cluster_analysis rule."""
-    import matplotlib as mpl
+def _rgba_from_hex(
+    hex_color: str,
+    *,
+    lighten: float = COHORT_COLOR_LIGHTEN,
+) -> Tuple[float, float, float, float]:
+    import matplotlib.colors as mcolors
 
-    hsv = (float(hue) % 1.0, 0.55, 0.95)
-    r, g, b = mpl.colors.hsv_to_rgb(hsv)
-    lighten = LIGHTEN_PASTEL
-    r = r + (1.0 - r) * lighten
-    g = g + (1.0 - g) * lighten
-    b = b + (1.0 - b) * lighten
+    r, g, b = mcolors.to_rgb(hex_color)
+    if lighten > 0:
+        r = r + (1.0 - r) * lighten
+        g = g + (1.0 - g) * lighten
+        b = b + (1.0 - b) * lighten
     return (float(r), float(g), float(b), 1.0)
-
-
-def _pastel_from_hue_index(i: int) -> Tuple[float, float, float, float]:
-    return _pastel_from_hue(float(i) / float(N_SPECIES_HUES))
 
 
 def _cohort_pastel_table() -> Dict[str, Tuple[float, float, float, float]]:
     global _PASTEL_CACHE
     if _PASTEL_CACHE is None:
         _PASTEL_CACHE = {
-            cohort: _pastel_from_hue_index(i) for cohort, i in SPECIES_HUE_INDEX.items()
+            cohort: _rgba_from_hex(hex_color)
+            for cohort, hex_color in COHORT_LIGHT_HEX.items()
         }
-        for cohort, hue in EXTRA_COHORT_HUE.items():
-            _PASTEL_CACHE[cohort] = _pastel_from_hue(hue)
     return _PASTEL_CACHE
 
 
+def _cohort_legend_label(cohort: str) -> str:
+    if cohort.startswith("species_"):
+        return cohort.split("_", 1)[1]
+    return cohort
+
+
+def _cohort_sort_key(cohort: str) -> Tuple[int, Any]:
+    if cohort.startswith("species_"):
+        try:
+            return (0, int(cohort.split("_", 1)[1]))
+        except (IndexError, ValueError):
+            pass
+    fallback = {"archive": (1, 0), "reserves": (2, 0), "other": (3, 0)}
+    return fallback.get(cohort, (4, cohort))
+
+
 def cohort_pastel_color(cohort: str) -> Tuple[float, float, float, float]:
-    """Color for a viz cohort label (all cohorts use light pastels)."""
+    """Color for a viz cohort label (fixed across evaluators; all hues distinct)."""
     table = _cohort_pastel_table()
     if cohort in table:
         return table[cohort]
@@ -83,7 +93,8 @@ def cohort_pastel_color(cohort: str) -> Tuple[float, float, float, float]:
                 return table[key]
         except (IndexError, ValueError):
             pass
-    return table["other"]
+    # Fallback for unexpected cohort labels.
+    return _rgba_from_hex("#C0C0C0")
 
 
 def _safe_stem(name: str) -> str:
@@ -92,21 +103,58 @@ def _safe_stem(name: str) -> str:
 
 
 def _pcp_figsize(evaluator: str) -> Tuple[float, float]:
-    """Wider canvas when many axes (OpenAI 13-D) so slanted labels fit."""
+    """Canvas sized for slanted axis names at publication font sizes."""
     if evaluator == "openai":
-        return (22.0, 7.5)
-    return (14.0, 7.0)
+        return (26.0, 9.0)
+    return (16.0, 8.5)
 
 
-def _slant_pcp_axis_labels(ax: Any, *, rotation: float = 42.0) -> None:
-    """Rotate parallel-axis names so long moderation labels do not overlap."""
+# Publication export / typography (hero combined PCP).
+PCP_SAVE_DPI = 300
+PCP_AXIS_LABEL_SIZE = 12.0
+PCP_AXIS_LABEL_SIZE_OPENAI = 10.5
+PCP_YTICK_LABEL_SIZE = 10.5
+PCP_LEGEND_FONT_SIZE = 10.5
+PCP_LEGEND_TITLE_SIZE = 11.5
+
+
+def _apply_publication_rcparams() -> None:
+    import matplotlib as mpl
+
+    mpl.rcParams.update(
+        {
+            "font.family": "sans-serif",
+            "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+            "font.size": PCP_YTICK_LABEL_SIZE,
+            "axes.linewidth": 0.9,
+            "xtick.major.width": 0.7,
+            "ytick.major.width": 0.7,
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
+        }
+    )
+
+
+def _style_pcp_axes(ax: Any, *, evaluator: str, label_style: str) -> None:
+    """Rotate and enlarge parallel-axis attribute names for print readability."""
+    axis_fs = (
+        PCP_AXIS_LABEL_SIZE_OPENAI
+        if evaluator == "openai"
+        else PCP_AXIS_LABEL_SIZE
+    )
+    rotation = 48.0 if evaluator == "openai" and label_style == "full" else 40.0
     for label in ax.get_xticklabels():
         label.set_rotation(rotation)
         label.set_ha("right")
         label.set_rotation_mode("anchor")
-    # pymoo uses pad=25 when bounds are shown; keep room below slanted text
-    ax.tick_params(axis="x", which="major", pad=32)
-    ax.figure.subplots_adjust(bottom=0.22)
+        label.set_fontsize(axis_fs)
+        label.set_fontweight("medium")
+    for label in ax.get_yticklabels():
+        label.set_fontsize(PCP_YTICK_LABEL_SIZE)
+    ax.tick_params(axis="x", which="major", pad=38, length=3, width=0.7)
+    ax.tick_params(axis="y", which="major", length=3, width=0.7, labelsize=PCP_YTICK_LABEL_SIZE)
+    bottom = 0.26 if evaluator == "openai" else 0.24
+    ax.figure.subplots_adjust(bottom=bottom, left=0.06, right=0.82 if evaluator == "google" else 0.78)
 
 
 # Default PCP x-axis labels: "abbrev" (readable short) or "full" (API attribute names).
@@ -114,29 +162,29 @@ PCP_LABEL_STYLE: str = "abbrev"
 
 _GOOGLE_ABBREV: Dict[str, str] = {
     "toxicity": "Toxicity",
-    "severe_toxicity": "Sev. toxicity",
-    "identity_attack": "Identity attack",
+    "severe_toxicity": "Severe\ntoxicity",
+    "identity_attack": "Identity\nattack",
     "insult": "Insult",
     "profanity": "Profanity",
     "threat": "Threat",
-    "sexually_explicit": "Sex. explicit",
+    "sexually_explicit": "Sexual\nexplicit",
     "flirtation": "Flirtation",
 }
 
 _OPENAI_ABBREV: Dict[str, str] = {
     "harassment": "Harassment",
-    "harassment/threatening": "Har. threatening",
+    "harassment/threatening": "Harass.\nthreatening",
     "hate": "Hate",
-    "hate/threatening": "Hate threatening",
+    "hate/threatening": "Hate\nthreatening",
     "violence": "Violence",
-    "violence/graphic": "Viol. graphic",
+    "violence/graphic": "Violence\ngraphic",
     "sexual": "Sexual",
-    "sexual/minors": "Sexual minors",
+    "sexual/minors": "Sexual\nminors",
     "self-harm": "Self-harm",
-    "self-harm/intent": "Self-harm intent",
-    "self-harm/instructions": "Self-harm instruct.",
+    "self-harm/intent": "Self-harm\nintent",
+    "self-harm/instructions": "Self-harm\ninstruct.",
     "illicit": "Illicit",
-    "illicit/violent": "Illicit violent",
+    "illicit/violent": "Illicit\nviolent",
 }
 
 
@@ -272,6 +320,8 @@ def generate_pymoo_viz(
         _logger.warning("pymoo not available (%s); skipping pymoo MO figures.", e)
         return results
 
+    _apply_publication_rcparams()
+
     X = np.vstack([r["objectives"] for r in rows])
     if X.size == 0:
         return results
@@ -291,7 +341,6 @@ def generate_pymoo_viz(
     axis_short = _short_attr_labels(axis_order)
     eval_tag = evaluator.replace("/", "_")
     figsize = _pcp_figsize(evaluator)
-    slant_rotation = 50.0 if label_style == "full" and evaluator == "openai" else 42.0
 
     for c in range(n_cls):
         cohort = classes[c]
@@ -315,7 +364,7 @@ def generate_pymoo_viz(
         if np.any(pf_m):
             pcp.add(Xc[pf_m], color=COLOR_PF_OVERLAY, alpha=0.7, linewidth=1.6)
         pcp.do()
-        _slant_pcp_axis_labels(pcp.ax, rotation=slant_rotation)
+        _style_pcp_axes(pcp.ax, evaluator=evaluator, label_style=label_style)
         try:
             if np.any(pf_m):
                 pcp.ax.legend(
@@ -331,7 +380,7 @@ def generate_pymoo_viz(
         except Exception:
             pass
         path = appendix_dir / f"pymoo_pcp_{_safe_stem(cohort)}.png"
-        pcp.fig.savefig(str(path), dpi=160, bbox_inches="tight", pad_inches=0.35)
+        pcp.fig.savefig(str(path), dpi=PCP_SAVE_DPI, bbox_inches="tight", pad_inches=0.35)
         results[f"appendix_pcp_{cohort}"] = str(path)
 
     combined = PCP(
@@ -344,72 +393,57 @@ def generate_pymoo_viz(
         title="",
         tight_layout=False,
     )
-    cohort_to_counts: Dict[str, Any] = {}
+    cohorts_in_plot: List[str] = []
     for c in range(n_cls):
         cohort = classes[c]
         m = codes == c
         if not np.any(m):
-            continue
-        cohort_to_counts[cohort] = (int(np.sum(cohort_pf[m])), int(np.sum(global_pf[m])))
-    for c in range(n_cls):
-        cohort = classes[c]
-        m = codes == c
-        if not np.any(m):
-            continue
-        pf_m = cohort_pf[m]
-        if not np.any(pf_m):
             continue
         col = cohort_pastel_color(cohort)
-        combined.add(X[m][pf_m], color=col, alpha=0.9, linewidth=1.4, linestyle=":")
-    for c in range(n_cls):
-        cohort = classes[c]
-        m = codes == c
-        if not np.any(m):
-            continue
+        combined.add(X[m], color=col, alpha=0.14, linewidth=0.35)
         g_m = global_pf[m]
-        if not np.any(g_m):
-            continue
-        col = cohort_pastel_color(cohort)
-        combined.add(X[m][g_m], color=col, alpha=0.85, linewidth=2.2)
+        if np.any(g_m):
+            combined.add(X[m][g_m], color=col, alpha=0.72, linewidth=0.95)
+        cohorts_in_plot.append(cohort)
     combined_path = out_dir / f"pymoo_pcp_pareto_{eval_tag}.png"
     combined.do()
-    _slant_pcp_axis_labels(combined.ax, rotation=slant_rotation)
-    style_handles = [
-        mpl.lines.Line2D([0], [0], color="0.35", lw=2.0, linestyle=":", label="Cohort F0"),
-        mpl.lines.Line2D([0], [0], color="0.35", lw=2.4, linestyle="-", label="Global F0"),
-    ]
+    _style_pcp_axes(combined.ax, evaluator=evaluator, label_style=label_style)
     cohort_handles: List[Any] = []
-    for c in range(n_cls):
-        cohort = classes[c]
-        if cohort not in cohort_to_counts:
-            continue
-        nf, ng = cohort_to_counts[cohort]
+    for cohort in sorted(cohorts_in_plot, key=_cohort_sort_key):
         col = cohort_pastel_color(cohort)
         cohort_handles.append(
             mpl.lines.Line2D(
                 [0],
                 [0],
                 color=col,
-                lw=3.0,
-                label=f"{cohort}  (species F0={nf}, global F0={ng})",
+                lw=2.4,
+                label=_cohort_legend_label(cohort),
             )
         )
     try:
         combined.ax.legend(
-            handles=style_handles + cohort_handles,
+            handles=cohort_handles,
             loc="upper left",
-            bbox_to_anchor=(1.02, 1.0),
+            bbox_to_anchor=(1.01, 1.0),
             borderaxespad=0.0,
             frameon=True,
-            framealpha=0.92,
+            framealpha=0.95,
             facecolor="white",
-            edgecolor="0.7",
-            fontsize=7.6,
+            edgecolor="0.65",
+            fontsize=PCP_LEGEND_FONT_SIZE,
+            title_fontsize=PCP_LEGEND_TITLE_SIZE,
             ncol=1,
+            title="Species / cohort",
         )
     except Exception:
         pass
-    combined.fig.savefig(str(combined_path), dpi=160, bbox_inches="tight", pad_inches=0.35)
+    combined.fig.savefig(
+        str(combined_path),
+        dpi=PCP_SAVE_DPI,
+        bbox_inches="tight",
+        pad_inches=0.4,
+        facecolor="white",
+    )
     results["pcp_combined"] = str(combined_path)
 
     bulk = ~(cohort_pf | global_pf)
@@ -470,7 +504,7 @@ def generate_pymoo_viz(
 
 __all__ = [
     "PCP_LABEL_STYLE",
-    "SPECIES_HUE_INDEX",
+    "COHORT_LIGHT_HEX",
     "cohort_pastel_color",
     "generate_pymoo_viz",
     "global_pareto_mask",

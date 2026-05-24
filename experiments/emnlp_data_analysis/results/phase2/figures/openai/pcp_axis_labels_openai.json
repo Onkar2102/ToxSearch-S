@@ -2,17 +2,17 @@
   "label_style": "abbrev",
   "tick_to_full": {
     "Harassment": "harassment",
-    "Har. threatening": "harassment / threatening",
+    "Harass.\nthreatening": "harassment / threatening",
     "Hate": "hate",
-    "Hate threatening": "hate / threatening",
+    "Hate\nthreatening": "hate / threatening",
     "Violence": "violence",
-    "Viol. graphic": "violence / graphic",
+    "Violence\ngraphic": "violence / graphic",
     "Sexual": "sexual",
-    "Sexual minors": "sexual / minors",
+    "Sexual\nminors": "sexual / minors",
     "Self-harm": "self-harm",
-    "Self-harm intent": "self-harm / intent",
-    "Self-harm instruct.": "self-harm / instructions",
+    "Self-harm\nintent": "self-harm / intent",
+    "Self-harm\ninstruct.": "self-harm / instructions",
     "Illicit": "illicit",
-    "Illicit violent": "illicit / violent"
+    "Illicit\nviolent": "illicit / violent"
   }
 }
