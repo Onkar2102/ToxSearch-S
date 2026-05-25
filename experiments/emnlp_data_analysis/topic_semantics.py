@@ -1,27 +1,4 @@
-"""Semantic topic labels and redacted exemplars.
-
-For an NLP audience, a topic identifier alone (``species_id=2415``) is opaque.
-Per discovered topic this module produces:
-
-* ``top_tokens``     — discriminative TF-IDF unigrams/bigrams over redacted
-  prompts (vs the rest of the population as background).
-* ``exemplars``      — nearest-centroid prompts in sentence-embedding space.
-* ``fallback_label`` — deterministic short label built from top tokens
-  (used when no LLM is available).
-* ``llm_label``      — optional 2-4 word academic label produced by a cached
-  OpenAI Chat Completions call (deterministic seed).
-* ``label``          — the chosen short label (LLM if present, else fallback).
-
-Outputs (written into the corresponding results directory):
-
-* ``topic_semantic_labels.csv`` — one row per topic.
-* ``topic_exemplars.md``         — redacted exemplar prompts.
-* ``phase12_summary.json``       — diagnostics (cache hits, label sources).
-* ``phase12_manifest.json``      — artifact paths.
-* ``label_cache.json``           — cached LLM responses (incremental).
-
-The module is side-effect free on the input rows.
-"""
+"""Phase 12: TF-IDF tokens, exemplars, optional gpt-4o-mini labels (cached)."""
 
 from __future__ import annotations
 

@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Thin shim around `utils.post_hoc.pymoo_viz`.
-
-The canonical implementation now lives at
-[`src/utils/post_hoc/pymoo_viz.py`](../../src/utils/post_hoc/pymoo_viz.py).
-Invoking this script reuses the post-hoc loaders, axis order, and Pareto
-helpers from ``utils.objectives``. ``pymoo`` is a soft dependency: when it is
-not installed the script logs a warning and exits cleanly.
-"""
+"""Wrapper for ``src/utils/post_hoc/pymoo_viz.py`` (needs pymoo)."""
 
 from __future__ import annotations
 

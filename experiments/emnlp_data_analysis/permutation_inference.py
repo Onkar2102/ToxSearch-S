@@ -51,12 +51,7 @@ def holm_bonferroni(
     *,
     alpha: float = 0.05,
 ) -> List[Dict[str, Any]]:
-    """Holm-Bonferroni step-down adjustment.
-
-    Returns a list of ``{p_raw, p_holm, reject, rank}`` aligned with ``p_values``.
-    The adjusted p-value is monotone non-decreasing along the sorted order, so
-    rejection at ``alpha`` is equivalent to ``p_holm <= alpha``.
-    """
+    """Holm-Bonferroni; returns {p_raw, p_holm, reject_at_0p05, rank} per input."""
     n = len(p_values)
     if n == 0:
         return []
@@ -90,14 +85,7 @@ def per_topic_permutation_separation(
     min_topic_size: int = 5,
     max_pool_size: int = 200,
 ) -> List[Dict[str, Any]]:
-    """For each topic, permutation-test mean d_g(topic-dominated members vs F0_global).
-
-    The null shuffles which embeddings come from the topic vs the global F0
-    pool; the observed statistic is the mean pairwise distance between the two
-    groups (with sub-sampling for tractability). Returns one row per topic with
-    ``p_raw`` plus diagnostic counts. Holm-Bonferroni is applied separately to
-    avoid mixing concerns; call ``holm_bonferroni`` on the resulting p-values.
-    """
+    """Permutation test: mean d_g(TDI members) vs global F0 pool (per topic)."""
     f0_key = F0_FLAG[evaluator]
     rng = np.random.default_rng(seed)
     f0_pool: List[np.ndarray] = []

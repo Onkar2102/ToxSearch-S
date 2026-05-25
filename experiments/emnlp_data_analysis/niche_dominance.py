@@ -1,19 +1,4 @@
-"""Niche-vs-dominance analytics: why a single moderation metric erases real topics.
-
-The point is to show — on the frozen run — that collapsing to one moderation
-metric erases multi-metric niches, motivating speciation + multi-objective
-optimization for LLM red-teaming. We do not propose an algorithm here; we
-*prove the problem exists* on the frozen run.
-
-Outputs (per evaluator unless noted):
-
-* ``topic_advanced_analytics.csv`` — one row per topic with profile + TDI +
-  flips + per-axis single-policy survival + niche specialization index.
-* ``single_axis_counterfactual_survival.csv`` — long-format topic survival
-  under {8 single-axis top-k} ∪ {global-MO, speciated-oracle}, per evaluator.
-* ``phase11_summary.json`` — aggregate numbers for the §5 conclusion.
-* Three hero figures.
-"""
+"""Phase 11: NSI/TDI tables, single-axis survival, fig11_* plots."""
 
 from __future__ import annotations
 

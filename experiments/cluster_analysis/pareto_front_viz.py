@@ -1,19 +1,5 @@
 #!/usr/bin/env python3
-"""Thin shim around `utils.post_hoc` for backwards compatibility.
-
-The canonical implementation now lives at [`src/utils/post_hoc/`](../../src/utils/post_hoc/).
-Existing invocations like ``python experiments/cluster_analysis/pareto_front_viz.py
---run-dir data/outputs/<run>`` still work; they simply re-route into the
-package's CLI orchestrator.
-
-Differences vs the historical script:
-
-- Axis order is read from :data:`utils.objectives.PERSPECTIVE_AXIS_ORDER`
-  (matches production telemetry).
-- ``--leaders-only``, ``--full``, and ``--max-size`` are accepted but no longer
-  customize the post-hoc pipeline. All elites + reserves rows are used as-is;
-  cohort fronts are recomputed from the canonical objective vectors.
-"""
+"""Wrapper: delegates to ``src/utils/post_hoc/runner.py``."""
 
 from __future__ import annotations
 
@@ -30,12 +16,12 @@ if str(_SRC) not in sys.path:
 def main() -> None:
     from utils.post_hoc.runner import run_post_hoc_analysis
 
-    parser = argparse.ArgumentParser(description="Pareto post-hoc analysis (compat shim).")
+    parser = argparse.ArgumentParser(description="Pareto post-hoc figures")
     parser.add_argument("--run-dir", type=Path,
                         default=_REPO_ROOT / "data" / "outputs" / "20260211_2122")
     parser.add_argument("--out-dir", type=Path, default=None)
     parser.add_argument("--generation", type=int, default=None, metavar="N")
-    # Accept (and ignore) the legacy flags so old invocations don't error out.
+    # legacy flags kept so old CLI calls still parse
     parser.add_argument("--leaders-only", action="store_true",
                         help="(legacy, ignored)")
     parser.add_argument("--full", action="store_true",

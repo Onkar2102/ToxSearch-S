@@ -1,4 +1,4 @@
-"""End-of-pipeline analysis manifest: results snippet, validation checklist, figure index."""
+"""Phase 10: manifest, results snippet, validation checklist, figure index."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def build_validation_checklist(
     *,
     anchors: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Neutral measured vs plan anchor numbers (for manual verification)."""
+    """Compare measured stats to paper anchor numbers."""
     results_dir = Path(results_dir)
     anchors = anchors or {
         "n_f0_google": 100,
@@ -239,14 +239,14 @@ def build_results_snippet(results_dir: Path) -> str:
             f"{s.get('n_topics_no_single_axis_recovers_openai')} (OpenAI)."
         )
 
-    text = "# EMNLP analysis results (auto-generated)\n\n" + "\n".join(bullets) + "\n"
+    text = "# EMNLP analysis results\n\n" + "\n".join(bullets) + "\n"
     (results_dir / "RESULTS_SNIPPET.md").write_text(text, encoding="utf-8")
     return text
 
 
 PAPER_FIGURE_INDEX = """# Paper figure index
 
-Hero figures only (<=3 per phase). Per-cohort and per-evaluator singletons live under each phase's `figures/appendix/`.
+Main figures; appendix PCPs under `figures/appendix/`.
 
 | File | Section / role |
 |------|----------------|
@@ -263,10 +263,10 @@ Hero figures only (<=3 per phase). Per-cohort and per-evaluator singletons live 
 | phase7/figures/rank_contingency_heatmap.png | Rank contingency |
 | phase8/figures/epsilon_sweep_topics.png | Sensitivity appendix |
 | phase9/figures/cross_evaluator_summary.png | Robustness summary |
-| phase11/figures/fig11_single_axis_survival.png | Phase 11 — single-axis vs MO vs oracle survival |
-| phase11/figures/fig11_topic_profile_vs_domination.png | Phase 11 — per-topic profile + TDI + specialization |
-| phase11/figures/fig11_distinct_but_dominated.png | Phase 11 — distinct-but-dominated topics |
-| phase12/figures/fig5_niche_specialization_vs_tdi_labeled.png | Fig 5 — NSI vs TDI scatter, labelled with Phase 12 topics |
+| phase11/figures/fig11_single_axis_survival.png | Single-axis vs MO vs oracle survival |
+| phase11/figures/fig11_topic_profile_vs_domination.png | Per-topic profile, TDI, NSI |
+| phase11/figures/fig11_distinct_but_dominated.png | Distinct-but-dominated topics |
+| phase12/figures/fig5_niche_specialization_vs_tdi_labeled.png | Fig 5 — NSI vs TDI (labelled topics) |
 """
 
 

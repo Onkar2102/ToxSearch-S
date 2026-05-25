@@ -1,4 +1,4 @@
-"""pymoo PCP figures for Phase 2 (ported from AMBER ``utils.post_hoc.pymoo_viz``)."""
+"""pymoo PCP/Radviz for phase-2 Pareto fronts (from cluster_analysis)."""
 
 from __future__ import annotations
 
@@ -15,25 +15,24 @@ _logger = logging.getLogger("emnlp.pymoo_viz")
 
 COLOR_COHORT_PF = "#1a1a1a"
 COLOR_GLOBAL_PF = "#C9A227"
-COLOR_PF_OVERLAY = "#7B61FF"  # per-cohort PCP only (not combined)
+COLOR_PF_OVERLAY = "#7B61FF"  # appendix cohort PCPs only
 
-# Fixed cohort → colour (same on Google and OpenAI; hand-picked light pastels, hue-spread).
-# Chosen so adjacent legend entries are easy to tell apart (no clustered pinks).
+# cohort colours (shared Google/OpenAI)
 COHORT_LIGHT_HEX: Dict[str, str] = {
-    "species_2415": "#F5A0A0",  # coral
-    "species_2421": "#F5C070",  # orange
-    "species_2422": "#EDE060",  # yellow
-    "species_2423": "#90D890",  # green
-    "species_2424": "#70D0C8",  # teal
-    "species_2425": "#70A8E8",  # blue
-    "species_2426": "#9090E8",  # periwinkle
-    "species_2427": "#B888E8",  # violet
-    "species_2428": "#E888B8",  # rose
-    "reserves": "#C8B080",      # tan
-    "archive": "#88C898",       # sage
+    "species_2415": "#F5A0A0",
+    "species_2421": "#F5C070",
+    "species_2422": "#EDE060",
+    "species_2423": "#90D890",
+    "species_2424": "#70D0C8",
+    "species_2425": "#70A8E8",
+    "species_2426": "#9090E8",
+    "species_2427": "#B888E8",
+    "species_2428": "#E888B8",
+    "reserves": "#C8B080",
+    "archive": "#88C898",
 }
 
-# Blend cohort hex toward white for plot/legend (hue unchanged; lighter appearance).
+# lighten toward white for PCP lines
 COHORT_COLOR_LIGHTEN = 0.18
 
 _PASTEL_CACHE: Optional[Dict[str, Tuple[float, float, float, float]]] = None
@@ -81,7 +80,7 @@ def _cohort_sort_key(cohort: str) -> Tuple[int, Any]:
 
 
 def cohort_pastel_color(cohort: str) -> Tuple[float, float, float, float]:
-    """Color for a viz cohort label (fixed across evaluators; all hues distinct)."""
+    """RGBA for cohort label."""
     table = _cohort_pastel_table()
     if cohort in table:
         return table[cohort]
@@ -93,7 +92,6 @@ def cohort_pastel_color(cohort: str) -> Tuple[float, float, float, float]:
                 return table[key]
         except (IndexError, ValueError):
             pass
-    # Fallback for unexpected cohort labels.
     return _rgba_from_hex("#C0C0C0")
 
 
@@ -103,16 +101,16 @@ def _safe_stem(name: str) -> str:
 
 
 def _pcp_figsize(evaluator: str) -> Tuple[float, float]:
-    """Canvas sized for slanted axis names at publication font sizes."""
+    """Figure size; wider canvas for OpenAI axis labels."""
     if evaluator == "openai":
         return (26.0, 9.0)
     return (16.0, 8.5)
 
 
-# Publication export / typography (hero combined PCP).
+# combined PCP export (dpi + fonts)
 PCP_SAVE_DPI = 300
 PCP_AXIS_LABEL_SIZE = 12.0
-PCP_AXIS_LABEL_SIZE_OPENAI = 10.5
+PCP_AXIS_LABEL_SIZE_OPENAI = 12.0
 PCP_YTICK_LABEL_SIZE = 10.5
 PCP_LEGEND_FONT_SIZE = 10.5
 PCP_LEGEND_TITLE_SIZE = 11.5
@@ -136,7 +134,7 @@ def _apply_publication_rcparams() -> None:
 
 
 def _style_pcp_axes(ax: Any, *, evaluator: str, label_style: str) -> None:
-    """Rotate and enlarge parallel-axis attribute names for print readability."""
+    """PCP axis label rotation/size."""
     axis_fs = (
         PCP_AXIS_LABEL_SIZE_OPENAI
         if evaluator == "openai"
@@ -157,7 +155,7 @@ def _style_pcp_axes(ax: Any, *, evaluator: str, label_style: str) -> None:
     ax.figure.subplots_adjust(bottom=bottom, left=0.06, right=0.82 if evaluator == "google" else 0.78)
 
 
-# Default PCP x-axis labels: "abbrev" (readable short) or "full" (API attribute names).
+# PCP_LABEL_STYLE: abbrev | full
 PCP_LABEL_STYLE: str = "abbrev"
 
 _GOOGLE_ABBREV: Dict[str, str] = {
@@ -293,15 +291,7 @@ def generate_pymoo_viz(
     label_style: str = PCP_LABEL_STYLE,
     title_suffix: str = "",
 ) -> Dict[str, Optional[str]]:
-    """Render pymoo PCP (+ Radviz) for one evaluator's objective space.
-
-    Global and cohort F₀ masks are computed on the passed ``objectives`` rows
-    (8-D Google or 13-D OpenAI), not mixed across evaluators.
-
-    Hero output: a single combined PCP (``pymoo_pcp_pareto_<evaluator>.png``)
-    in ``out_dir``. Per-cohort PCPs and Radviz are demoted to ``out_dir/appendix/``
-    to honour the EMNLP plan's <=3 hero-figure budget per phase.
-    """
+    """Combined PCP in out_dir; per-cohort copies under appendix/."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     appendix_dir = out_dir / "appendix"
@@ -405,7 +395,7 @@ def generate_pymoo_viz(
         if np.any(g_m):
             combined.add(X[m][g_m], color=col, alpha=0.72, linewidth=0.95)
         cohorts_in_plot.append(cohort)
-    combined_path = out_dir / f"pymoo_pcp_pareto_{eval_tag}.png"
+    combined_path = out_dir / f"pymoo_pcp_pareto_{eval_tag}.pdf"
     combined.do()
     _style_pcp_axes(combined.ax, evaluator=evaluator, label_style=label_style)
     cohort_handles: List[Any] = []

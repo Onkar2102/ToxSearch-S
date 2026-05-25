@@ -187,7 +187,7 @@ def plot_domination_heatmap_dual(
     *,
     title: str = "Topic max-vector domination — Google vs OpenAI",
 ) -> Optional[str]:
-    """Two-panel heatmap (Google left, OpenAI right) for the hero figure budget."""
+    """Dual-panel topic domination heatmap (Google | OpenAI)."""
     if mat_g.size == 0 and mat_o.size == 0:
         return None
     try:

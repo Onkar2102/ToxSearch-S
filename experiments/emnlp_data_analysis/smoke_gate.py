@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-"""Offline smoke gate before any OpenAI scoring.
-
-Sanity-check a frozen evolution run (counts, topics, objective coverage) and
-write the result to ``results/gate0_smoke.json``. Anything downstream — the
-unified dataset, the notebook — assumes this passes.
-
-Examples
---------
-  python experiments/emnlp_data_analysis/smoke_gate.py
-  python experiments/emnlp_data_analysis/smoke_gate.py --run-path data/outputs/20260211_2122
-"""
+"""Gate 0: check frozen run counts/topics before OpenAI rescoring."""
 
 from __future__ import annotations
 
@@ -30,7 +20,7 @@ from analysis_utils import (  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Offline smoke gate for a frozen run")
+    parser = argparse.ArgumentParser(description="Gate 0 smoke check")
     parser.add_argument(
         "--run-path",
         type=Path,

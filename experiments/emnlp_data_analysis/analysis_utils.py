@@ -635,7 +635,7 @@ def save_phase3_artifacts(
     tau_intra: float = 0.85,
     tau_inter: float = 0.35,
 ) -> Dict[str, Any]:
-    """Phase 3: per-evaluator TDI tables + Google vs OpenAI global rank comparison."""
+    """TDI tables; Google vs OpenAI rank comparison."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -677,7 +677,7 @@ def save_phase3_artifacts(
         artifacts[f"{evaluator}_edges_json"] = str(ev_dir / "topic_domination_edges.json")
         phase3_meta["evaluators"][evaluator] = gstats
 
-    # --- Phase 3b: topic Google vs OpenAI comparison + domination visuals ---
+    # topic comparison + domination figs
     fig_dir = out_dir / "figures"
     fig_dir.mkdir(parents=True, exist_ok=True)
     try:
@@ -818,7 +818,7 @@ def save_phase4_artifacts(
     *,
     reference_species: int = 9,
 ) -> Dict[str, Any]:
-    """Phase 4: EvolutionTracker time series + temporal figure (Fig 1A)."""
+    """EvolutionTracker time series + Fig 1A."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -879,7 +879,7 @@ def save_phase5_artifacts(
     min_topic_size: int = 5,
     k_grid: Sequence[int] = (50, 100, 200),
 ) -> Dict[str, Any]:
-    """Phase 5: counterfactual topic survival (dual evaluator + Fig 3)."""
+    """Counterfactual topic survival + Fig 3."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -1013,7 +1013,7 @@ def save_phase6_artifacts(
     *,
     min_topic_size: int = 5,
 ) -> Dict[str, Any]:
-    """Phase 6: UMAP, topic×axis heatmaps, cluster quality, d_g vs d_p."""
+    """UMAP, heatmaps, cluster quality, d_g vs d_p."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -1144,7 +1144,7 @@ def save_phase7_artifacts(
     n_perm: int = 10000,
     rank_summary: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Phase 7: permutation tests, rank heatmap, axis correlations."""
+    """Permutation tests, rank heatmap, axis correlations."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -1286,7 +1286,7 @@ def save_phase8_artifacts(
     min_topic_size: int = 5,
     epsilon_grid: Sequence[float] = (0.0, 0.01, 0.02, 0.05, 0.10),
 ) -> Dict[str, Any]:
-    """Phase 8: epsilon / threshold / population ablation sensitivity."""
+    """Epsilon, threshold, population ablations."""
     out_dir = Path(out_dir)
     sens_dir = out_dir / "sensitivity"
     sens_dir.mkdir(parents=True, exist_ok=True)
@@ -1410,7 +1410,7 @@ def save_phase9_artifacts(
     phase5_dir: Optional[Path] = None,
     min_topic_size: int = 5,
 ) -> Dict[str, Any]:
-    """Phase 9: cross-evaluator robustness report."""
+    """Cross-evaluator robustness report."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -1493,12 +1493,7 @@ def save_phase11_artifacts(
     *,
     min_topic_size: int = 5,
 ) -> Dict[str, Any]:
-    """Phase 11 — deep advanced analytics.
-
-    Computes topic_advanced_analytics.csv, single_axis_counterfactual_survival.csv,
-    a phase11_summary.json, and three hero figures showing that single-metric
-    optimization erases multi-metric niches.
-    """
+    """Phase 11 CSVs + fig11_*."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -1510,7 +1505,6 @@ def save_phase11_artifacts(
 
         importlib.reload(niche_dominance)
 
-        # Make sure per-evaluator F0 flags are stamped on each row.
         behaviour_layout.stamp_f0_flags(rows, global_pareto_annotate=global_pareto_annotate)
 
         google_summaries, _ = compute_topic_summaries(
@@ -1630,12 +1624,7 @@ def save_phase12_artifacts(
     top_k_exemplars: int = 3,
     phase11_dir: Optional[Path] = None,
 ) -> Dict[str, Any]:
-    """Phase 12 — semantic topic labels and redacted exemplars (deterministic + cached LLM).
-
-    Also produces Figure 5 (NSI vs TDI scatter with topic labels) when the
-    Phase 11 ``topic_advanced_analytics.csv`` is available next to the
-    Phase 12 directory.
-    """
+    """Phase 12 labels/exemplars; Fig 5 if phase11 CSV present."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     artifacts: Dict[str, str] = {}
@@ -1720,7 +1709,7 @@ def save_phase10_artifacts(
     results_dir: Path,
     run_id: str,
 ) -> Dict[str, Any]:
-    """Phase 10: manifest, snippet, validation checklist, figure index."""
+    """Manifest, snippet, checklist, figure index."""
     results_dir = Path(results_dir)
     artifacts: Dict[str, str] = {}
     try:
@@ -1783,7 +1772,7 @@ def save_phase2_artifacts(
     out_dir: Path,
     run_id: str,
 ) -> Dict[str, str]:
-    """Write Phase 2 CSVs, per-cohort front exports, and optional pymoo figures."""
+    """Phase 2 Pareto CSVs + pymoo PCPs."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     axis_order = list(get_axis_order())
@@ -2294,7 +2283,7 @@ def load_unified_from_artifacts(
     *,
     unified_subdir: str = "unified",
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
-    """Load row dicts from phase-1 unified CSV + embeddings (read-only, no API)."""
+    """Load unified CSV + embeddings (no API)."""
     results_dir = Path(results_dir)
     unified_dir = results_dir / unified_subdir
     csv_path = unified_dir / f"{run_id}_genomes.csv"
@@ -2451,10 +2440,7 @@ def smoke_validate_run(
     min_topic_size: int = 5,
     min_objective_frac: float = 0.95,
 ) -> Dict[str, Any]:
-    """Phase 0 smoke gate: dataset size, topic coverage, and Google score completeness.
-
-    Does not call the OpenAI API (that is Phase 1 only).
-    """
+    """Gate 0: genome count, topics, Google objectives (no OpenAI)."""
     required_files = ("elites.json", "reserves.json", "archive.json")
     missing_files = [f for f in required_files if not (run_path / f).is_file()]
 
