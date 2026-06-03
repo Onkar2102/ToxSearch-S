@@ -1,23 +1,29 @@
 
-
 import numpy as np
 from typing import Optional
 
 from utils import get_custom_logging
+from utils.evaluator_profiles import (
+    GOOGLE_PHENOTYPE_SCORE_ORDER,
+    resolve_evaluator,
+)
 
 get_logger, _, _, _ = get_custom_logging()
 
-PHENOTYPE_SCORE_ORDER = [
-    'toxicity',
-    'threat',
-    'profanity',
-    'sexually_explicit',
-    'identity_attack',
-    'flirtation',
-    'insult',
-    'severe_toxicity'
-]
+PHENOTYPE_SCORE_ORDER = list(GOOGLE_PHENOTYPE_SCORE_ORDER)
 
+
+def _backend_key_from_genome(genome: dict) -> str:
+    evaluator = genome.get("evaluator")
+    if evaluator in ("google", "openai"):
+        return evaluator
+    mr = genome.get("moderation_result") or {}
+    if isinstance(mr, dict):
+        if "openai" in mr:
+            return "openai"
+        if "google" in mr:
+            return "google"
+    return "google"
 
 
 def extract_phenotype_vector(genome: dict, logger=None) -> Optional[np.ndarray]:
@@ -28,29 +34,27 @@ def extract_phenotype_vector(genome: dict, logger=None) -> Optional[np.ndarray]:
 
     if not genome or "moderation_result" not in genome:
         return None
-    
-    moderation_result = genome.get("moderation_result")
-    if not moderation_result or "google" not in moderation_result:
+
+    from utils.population_io import get_moderation_scores
+
+    scores = get_moderation_scores(genome)
+    if not scores:
         return None
-    
-    google_scores = moderation_result.get("google", {})
-    if not isinstance(google_scores, dict) or "scores" not in google_scores:
-        return None
-    
-    scores = google_scores.get("scores", {})
-    if not isinstance(scores, dict):
-        return None
-    
+
+    backend_key = _backend_key_from_genome(genome)
+    profile = resolve_evaluator(backend_key)
+    score_order = profile.phenotype_score_order
+
     phenotype = np.array([
         float(scores.get(score_name, 0.0))
-        for score_name in PHENOTYPE_SCORE_ORDER
+        for score_name in score_order
     ], dtype=np.float32)
-    
+
     if not np.all((phenotype >= 0.0) & (phenotype <= 1.0)):
         invalid_indices = np.where((phenotype < 0.0) | (phenotype > 1.0))[0]
         logger.warning(f"Phenotype scores out of [0,1] range: indices {invalid_indices}")
         phenotype = np.clip(phenotype, 0.0, 1.0)
-    
+
     return phenotype
 
 
@@ -97,5 +101,5 @@ __all__ = [
     "extract_phenotype_vector",
     "phenotype_distance",
     "phenotype_distances_batch",
-    "PHENOTYPE_SCORE_ORDER"
+    "PHENOTYPE_SCORE_ORDER",
 ]

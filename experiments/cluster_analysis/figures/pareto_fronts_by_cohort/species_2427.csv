@@ -1,0 +1,7 @@
+id,generation,source_file,species_pareto_rank,global_pareto_rank,partly_global_pareto_front,severe_toxicity,identity_attack,toxicity,flirtation,threat,sexually_explicit,profanity,insult
+1176,0,data/outputs/20260211_2122/elites.json,0,7,3,0.0024,0.0065,0.0378,0.3239,0.012,0.012,0.0211,0.0136
+4967,177,data/outputs/20260211_2122/elites.json,0,10,4,0.0014,0.0033,0.0291,0.2862,0.0083,0.0127,0.0199,0.0127
+4030,113,data/outputs/20260211_2122/elites.json,0,10,4,0.0012,0.0043,0.0373,0.2594,0.0066,0.0068,0.0156,0.0203
+5920,241,data/outputs/20260211_2122/elites.json,0,9,4,0.0017,0.0038,0.0208,0.2671,0.0092,0.0141,0.0195,0.0094
+13,0,data/outputs/20260211_2122/elites.json,1,13,,0.0009,0.0024,0.0145,0.2368,0.0075,0.0069,0.0127,0.0087
+1307,0,data/outputs/20260211_2122/elites.json,1,12,,0.0008,0.0029,0.0198,0.2211,0.007,0.0036,0.0105,0.0106

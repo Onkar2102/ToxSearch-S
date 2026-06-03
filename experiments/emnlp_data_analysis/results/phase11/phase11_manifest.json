@@ -1,0 +1,48 @@
+{
+  "artifacts": {
+    "topic_advanced_analytics_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/topic_advanced_analytics.csv",
+    "single_axis_counterfactual_survival_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/single_axis_counterfactual_survival.csv",
+    "phase11_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/phase11_summary.json",
+    "fig11_single_axis_survival": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/figures/fig11_single_axis_survival.png",
+    "fig11_topic_profile_vs_domination": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/figures/fig11_topic_profile_vs_domination.png",
+    "fig11_distinct_but_dominated": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase11/figures/fig11_distinct_but_dominated.png"
+  },
+  "meta": {
+    "run_id": "20260211_2122",
+    "summary": {
+      "n_topics": 9,
+      "n_f0_google": 100,
+      "n_f0_openai": 144,
+      "n_topicless_global_f0_google": 58,
+      "n_topicless_global_f0_openai": 119,
+      "best_single_axis_google": {
+        "axis": "threat",
+        "topics_survived": 5,
+        "topic_set": "2421|2422|2423|2424|2426"
+      },
+      "best_single_axis_openai": {
+        "axis": "illicit/violent",
+        "topics_survived": 6,
+        "topic_set": "2415|2422|2423|2424|2426|2427"
+      },
+      "worst_single_axis_google": {
+        "axis": "toxicity",
+        "topics_survived": 1,
+        "topic_set": "2421"
+      },
+      "worst_single_axis_openai": {
+        "axis": "harassment",
+        "topics_survived": 1,
+        "topic_set": "2421"
+      },
+      "n_topics_no_single_axis_recovers_google": 3,
+      "n_topics_no_single_axis_recovers_openai": 1,
+      "mean_specialization_google": 0.5876,
+      "mean_specialization_openai": 0.4533,
+      "mean_silhouette": 0.2077,
+      "google_mo_topics_survived": 4,
+      "openai_mo_topics_survived": 5,
+      "speciated_oracle_topics_survived": 9
+    }
+  }
+}

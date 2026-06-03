@@ -17,6 +17,22 @@ PERSPECTIVE_API_KEY=your_google_perspective_api_key_here
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
+# OPTIONAL: OpenAI Moderation API (when using --evaluator openai)
+# ------------------------------------------------------------------------------
+# Required for OpenAI omni-moderation backend. Optional org/project for team accounts.
+# OPENAI_API_KEY=
+# OPENAI_ORG_ID=
+# OPENAI_PROJECT_ID=
+# ------------------------------------------------------------------------------
+
+# ------------------------------------------------------------------------------
+# OPTIONAL: OpenAI API (required when using --evaluator openai)
+# ------------------------------------------------------------------------------
+# OPENAI_API_KEY=your_openai_api_key_here
+# OPENAI_ORG_ID=
+# OPENAI_PROJECT_ID=
+
+# ------------------------------------------------------------------------------
 # OPTIONAL: HuggingFace Hub Token  
 # ------------------------------------------------------------------------------
 # Only needed for downloading gated/private models from HuggingFace.

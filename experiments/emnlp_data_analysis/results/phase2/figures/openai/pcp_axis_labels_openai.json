@@ -1,0 +1,18 @@
+{
+  "label_style": "abbrev",
+  "tick_to_full": {
+    "Harassment": "harassment",
+    "Harass.\nthreatening": "harassment / threatening",
+    "Hate": "hate",
+    "Hate\nthreatening": "hate / threatening",
+    "Violence": "violence",
+    "Violence\ngraphic": "violence / graphic",
+    "Sexual": "sexual",
+    "Sexual\nminors": "sexual / minors",
+    "Self-harm": "self-harm",
+    "Self-harm\nintent": "self-harm / intent",
+    "Self-harm\ninstruct.": "self-harm / instructions",
+    "Illicit": "illicit",
+    "Illicit\nviolent": "illicit / violent"
+  }
+}

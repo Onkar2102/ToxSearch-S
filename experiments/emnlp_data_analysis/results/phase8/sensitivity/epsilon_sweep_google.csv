@@ -1,0 +1,6 @@
+evaluator,epsilon,n_f0,n_fully_dominated_topics,global_mo_survival_rate
+google,0.0,100,5,0.4444
+google,0.01,218,5,0.4444
+google,0.02,381,5,0.4444
+google,0.05,577,5,0.4444
+google,0.1,1036,2,0.4444

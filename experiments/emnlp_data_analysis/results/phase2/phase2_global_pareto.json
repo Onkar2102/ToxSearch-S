@@ -1,0 +1,87 @@
+{
+  "n_genomes": 5655,
+  "n_f0": 100,
+  "f0_fraction": 0.01768346595932803,
+  "n_fronts": 28,
+  "f0_max": [
+    0.9288,
+    0.5489,
+    0.4603,
+    0.8987,
+    0.6646,
+    0.4419,
+    0.4139,
+    0.6614
+  ],
+  "n_species_groups": 9,
+  "n_reserves": 3,
+  "n_archive": 5192,
+  "cohort_summary": [
+    {
+      "cohort": "archive",
+      "n_genomes": 5192,
+      "n_cohort_f0": 80,
+      "n_global_f0": 58
+    },
+    {
+      "cohort": "reserves",
+      "n_genomes": 3,
+      "n_cohort_f0": 1,
+      "n_global_f0": 0
+    },
+    {
+      "cohort": "species_2415",
+      "n_genomes": 25,
+      "n_cohort_f0": 9,
+      "n_global_f0": 0
+    },
+    {
+      "cohort": "species_2421",
+      "n_genomes": 150,
+      "n_cohort_f0": 36,
+      "n_global_f0": 36
+    },
+    {
+      "cohort": "species_2422",
+      "n_genomes": 88,
+      "n_cohort_f0": 13,
+      "n_global_f0": 2
+    },
+    {
+      "cohort": "species_2423",
+      "n_genomes": 44,
+      "n_cohort_f0": 4,
+      "n_global_f0": 3
+    },
+    {
+      "cohort": "species_2424",
+      "n_genomes": 54,
+      "n_cohort_f0": 10,
+      "n_global_f0": 0
+    },
+    {
+      "cohort": "species_2425",
+      "n_genomes": 24,
+      "n_cohort_f0": 7,
+      "n_global_f0": 1
+    },
+    {
+      "cohort": "species_2426",
+      "n_genomes": 61,
+      "n_cohort_f0": 13,
+      "n_global_f0": 0
+    },
+    {
+      "cohort": "species_2427",
+      "n_genomes": 6,
+      "n_cohort_f0": 4,
+      "n_global_f0": 0
+    },
+    {
+      "cohort": "species_2428",
+      "n_genomes": 8,
+      "n_cohort_f0": 6,
+      "n_global_f0": 0
+    }
+  ]
+}

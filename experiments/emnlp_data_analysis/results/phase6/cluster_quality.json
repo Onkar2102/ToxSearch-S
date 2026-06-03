@@ -1,0 +1,8 @@
+{
+  "silhouette_score": 0.36392418358071466,
+  "davies_bouldin_index": 2.524588077334243,
+  "calinski_harabasz_index": 55.42765752120532,
+  "num_samples": 460,
+  "num_clusters": 9,
+  "skipped": false
+}

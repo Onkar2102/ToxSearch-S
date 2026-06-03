@@ -30,7 +30,8 @@ class Individual:
     def from_genome(cls, genome: Dict[str, Any], embedding: Optional[np.ndarray] = None) -> "Individual":
         
         from utils.population_io import _extract_north_star_score
-        fitness = _extract_north_star_score(genome, "toxicity")
+        from utils.evaluator_profiles import get_active_north_star
+        fitness = _extract_north_star_score(genome, get_active_north_star())
         
         final_embedding = embedding
         if "prompt_embedding" in genome:

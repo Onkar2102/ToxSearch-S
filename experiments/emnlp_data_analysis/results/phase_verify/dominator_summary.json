@@ -1,0 +1,479 @@
+{
+  "run_id": "20260211_2122",
+  "evaluators": {
+    "google": {
+      "evaluator": "google",
+      "n_genomes": 5655,
+      "n_f0": 100,
+      "f0_species_composition": {
+        "species_2421": 36,
+        "species_2423": 3,
+        "species_2425": 1,
+        "species_2422": 2,
+        "archive": 58
+      },
+      "fully_dominated_topic_ids": [
+        2415,
+        2424,
+        2426,
+        2427,
+        2428
+      ],
+      "topics": [
+        {
+          "species_id": 2415,
+          "n_members": 25,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 40586,
+          "dominator_pairs_f0_only": 2421,
+          "members_with_dominator_all_g": 25,
+          "members_with_dominator_f0_only": 25,
+          "dominator_species_all_g": {
+            "species_2415": 94,
+            "species_2421": 3678,
+            "species_2426": 623,
+            "species_2423": 678,
+            "species_2422": 574,
+            "species_2424": 638,
+            "species_2427": 26,
+            "species_2425": 220,
+            "species_2428": 34,
+            "archive": 34019,
+            "reserves": 2
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 895,
+            "species_2423": 75,
+            "species_2425": 24,
+            "species_2422": 38,
+            "archive": 1389
+          },
+          "share_dominators_from_2421_all_g": 0.0906,
+          "share_dominators_from_2421_f0_only": 0.3697,
+          "share_dominators_from_archive_all_g": 0.8382,
+          "share_dominators_from_archive_f0_only": 0.5737
+        },
+        {
+          "species_id": 2421,
+          "n_members": 150,
+          "tdi": 0.76,
+          "fully_dominated": false,
+          "n_on_f0": 36
+        },
+        {
+          "species_id": 2422,
+          "n_members": 88,
+          "tdi": 0.9773,
+          "fully_dominated": false,
+          "n_on_f0": 2
+        },
+        {
+          "species_id": 2423,
+          "n_members": 44,
+          "tdi": 0.9318,
+          "fully_dominated": false,
+          "n_on_f0": 3
+        },
+        {
+          "species_id": 2424,
+          "n_members": 54,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 41035,
+          "dominator_pairs_f0_only": 4031,
+          "members_with_dominator_all_g": 54,
+          "members_with_dominator_f0_only": 54,
+          "dominator_species_all_g": {
+            "species_2421": 6810,
+            "species_2423": 716,
+            "species_2426": 437,
+            "species_2422": 341,
+            "species_2424": 526,
+            "species_2425": 199,
+            "archive": 31954,
+            "species_2415": 24,
+            "species_2427": 11,
+            "species_2428": 16,
+            "reserves": 1
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 1772,
+            "species_2423": 139,
+            "species_2425": 18,
+            "species_2422": 53,
+            "archive": 2049
+          },
+          "share_dominators_from_2421_all_g": 0.166,
+          "share_dominators_from_2421_f0_only": 0.4396,
+          "share_dominators_from_archive_all_g": 0.7787,
+          "share_dominators_from_archive_f0_only": 0.5083
+        },
+        {
+          "species_id": 2425,
+          "n_members": 24,
+          "tdi": 0.9583,
+          "fully_dominated": false,
+          "n_on_f0": 1
+        },
+        {
+          "species_id": 2426,
+          "n_members": 61,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 65752,
+          "dominator_pairs_f0_only": 4864,
+          "members_with_dominator_all_g": 61,
+          "members_with_dominator_f0_only": 61,
+          "dominator_species_all_g": {
+            "species_2421": 8008,
+            "species_2423": 1040,
+            "species_2426": 785,
+            "species_2424": 890,
+            "species_2422": 747,
+            "species_2425": 356,
+            "archive": 53718,
+            "species_2415": 124,
+            "species_2427": 35,
+            "species_2428": 45,
+            "reserves": 4
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 2056,
+            "species_2423": 159,
+            "species_2422": 72,
+            "archive": 2548,
+            "species_2425": 29
+          },
+          "share_dominators_from_2421_all_g": 0.1218,
+          "share_dominators_from_2421_f0_only": 0.4227,
+          "share_dominators_from_archive_all_g": 0.817,
+          "share_dominators_from_archive_f0_only": 0.5238
+        },
+        {
+          "species_id": 2427,
+          "n_members": 6,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 8985,
+          "dominator_pairs_f0_only": 568,
+          "members_with_dominator_all_g": 6,
+          "members_with_dominator_f0_only": 6,
+          "dominator_species_all_g": {
+            "species_2415": 15,
+            "species_2421": 898,
+            "species_2423": 157,
+            "species_2426": 143,
+            "species_2422": 118,
+            "species_2424": 142,
+            "species_2427": 5,
+            "species_2428": 5,
+            "species_2425": 57,
+            "archive": 7445
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 216,
+            "species_2423": 18,
+            "species_2425": 5,
+            "species_2422": 11,
+            "archive": 318
+          },
+          "share_dominators_from_2421_all_g": 0.0999,
+          "share_dominators_from_2421_f0_only": 0.3803,
+          "share_dominators_from_archive_all_g": 0.8286,
+          "share_dominators_from_archive_f0_only": 0.5599
+        },
+        {
+          "species_id": 2428,
+          "n_members": 8,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 8579,
+          "dominator_pairs_f0_only": 693,
+          "members_with_dominator_all_g": 8,
+          "members_with_dominator_f0_only": 8,
+          "dominator_species_all_g": {
+            "species_2415": 7,
+            "species_2421": 1009,
+            "species_2426": 125,
+            "species_2423": 158,
+            "species_2422": 87,
+            "species_2424": 133,
+            "species_2427": 1,
+            "species_2425": 57,
+            "archive": 7000,
+            "species_2428": 2
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 262,
+            "species_2423": 24,
+            "species_2425": 7,
+            "species_2422": 9,
+            "archive": 391
+          },
+          "share_dominators_from_2421_all_g": 0.1176,
+          "share_dominators_from_2421_f0_only": 0.3781,
+          "share_dominators_from_archive_all_g": 0.8159,
+          "share_dominators_from_archive_f0_only": 0.5642
+        }
+      ],
+      "aggregate_fully_dominated": {
+        "dominator_species_all_g": {
+          "archive": 134136,
+          "species_2421": 20403,
+          "species_2423": 2749,
+          "species_2424": 2329,
+          "species_2426": 2113,
+          "species_2422": 1867,
+          "species_2425": 889,
+          "species_2415": 264,
+          "species_2428": 102,
+          "species_2427": 78,
+          "reserves": 7
+        },
+        "dominator_species_f0_only": {
+          "archive": 6695,
+          "species_2421": 5201,
+          "species_2423": 415,
+          "species_2422": 183,
+          "species_2425": 83
+        },
+        "share_from_2421_all_g": 0.1237,
+        "share_from_2421_f0_only": 0.4135,
+        "share_from_archive_all_g": 0.8133,
+        "share_from_archive_f0_only": 0.5323,
+        "total_dominator_pairs_all_g": 164937,
+        "total_dominator_pairs_f0_only": 12577
+      }
+    },
+    "openai": {
+      "evaluator": "openai",
+      "n_genomes": 5655,
+      "n_f0": 144,
+      "f0_species_composition": {
+        "species_2421": 14,
+        "species_2422": 4,
+        "species_2424": 4,
+        "species_2426": 2,
+        "species_2423": 1,
+        "archive": 119
+      },
+      "fully_dominated_topic_ids": [
+        2415,
+        2425,
+        2427,
+        2428
+      ],
+      "topics": [
+        {
+          "species_id": 2415,
+          "n_members": 25,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 28993,
+          "dominator_pairs_f0_only": 1814,
+          "members_with_dominator_all_g": 25,
+          "members_with_dominator_f0_only": 25,
+          "dominator_species_all_g": {
+            "species_2415": 228,
+            "species_2421": 1265,
+            "species_2426": 571,
+            "species_2423": 517,
+            "species_2422": 776,
+            "species_2427": 60,
+            "species_2424": 507,
+            "archive": 24870,
+            "species_2428": 42,
+            "species_2425": 157
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 130,
+            "species_2422": 90,
+            "species_2424": 71,
+            "species_2426": 39,
+            "archive": 1476,
+            "species_2423": 8
+          },
+          "share_dominators_from_2421_all_g": 0.0436,
+          "share_dominators_from_2421_f0_only": 0.0717,
+          "share_dominators_from_archive_all_g": 0.8578,
+          "share_dominators_from_archive_f0_only": 0.8137
+        },
+        {
+          "species_id": 2421,
+          "n_members": 150,
+          "tdi": 0.9067,
+          "fully_dominated": false,
+          "n_on_f0": 14
+        },
+        {
+          "species_id": 2422,
+          "n_members": 88,
+          "tdi": 0.9545,
+          "fully_dominated": false,
+          "n_on_f0": 4
+        },
+        {
+          "species_id": 2423,
+          "n_members": 44,
+          "tdi": 0.9773,
+          "fully_dominated": false,
+          "n_on_f0": 1
+        },
+        {
+          "species_id": 2424,
+          "n_members": 54,
+          "tdi": 0.9259,
+          "fully_dominated": false,
+          "n_on_f0": 4
+        },
+        {
+          "species_id": 2425,
+          "n_members": 24,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 20125,
+          "dominator_pairs_f0_only": 1956,
+          "members_with_dominator_all_g": 24,
+          "members_with_dominator_f0_only": 24,
+          "dominator_species_all_g": {
+            "species_2421": 1527,
+            "species_2424": 210,
+            "species_2423": 333,
+            "species_2425": 137,
+            "archive": 17332,
+            "species_2422": 266,
+            "species_2415": 77,
+            "species_2426": 207,
+            "species_2428": 20,
+            "species_2427": 16
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 187,
+            "species_2424": 32,
+            "species_2423": 13,
+            "archive": 1652,
+            "species_2422": 49,
+            "species_2426": 23
+          },
+          "share_dominators_from_2421_all_g": 0.0759,
+          "share_dominators_from_2421_f0_only": 0.0956,
+          "share_dominators_from_archive_all_g": 0.8612,
+          "share_dominators_from_archive_f0_only": 0.8446
+        },
+        {
+          "species_id": 2426,
+          "n_members": 61,
+          "tdi": 0.9672,
+          "fully_dominated": false,
+          "n_on_f0": 2
+        },
+        {
+          "species_id": 2427,
+          "n_members": 6,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 7409,
+          "dominator_pairs_f0_only": 426,
+          "members_with_dominator_all_g": 6,
+          "members_with_dominator_f0_only": 6,
+          "dominator_species_all_g": {
+            "species_2415": 59,
+            "species_2421": 309,
+            "species_2423": 124,
+            "species_2426": 149,
+            "species_2422": 193,
+            "species_2427": 14,
+            "species_2424": 127,
+            "species_2428": 12,
+            "species_2425": 43,
+            "archive": 6379
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 30,
+            "species_2422": 22,
+            "species_2424": 17,
+            "species_2426": 9,
+            "species_2423": 2,
+            "archive": 346
+          },
+          "share_dominators_from_2421_all_g": 0.0417,
+          "share_dominators_from_2421_f0_only": 0.0704,
+          "share_dominators_from_archive_all_g": 0.861,
+          "share_dominators_from_archive_f0_only": 0.8122
+        },
+        {
+          "species_id": 2428,
+          "n_members": 8,
+          "tdi": 1.0,
+          "fully_dominated": true,
+          "n_on_f0": 0,
+          "dominator_pairs_all_g": 13813,
+          "dominator_pairs_f0_only": 1023,
+          "members_with_dominator_all_g": 8,
+          "members_with_dominator_f0_only": 8,
+          "dominator_species_all_g": {
+            "species_2415": 62,
+            "species_2421": 1097,
+            "species_2423": 168,
+            "species_2426": 177,
+            "species_2422": 216,
+            "species_2427": 15,
+            "species_2424": 163,
+            "species_2425": 60,
+            "archive": 11841,
+            "species_2428": 14
+          },
+          "dominator_species_f0_only": {
+            "species_2421": 104,
+            "species_2422": 31,
+            "species_2424": 29,
+            "species_2426": 16,
+            "species_2423": 6,
+            "archive": 837
+          },
+          "share_dominators_from_2421_all_g": 0.0794,
+          "share_dominators_from_2421_f0_only": 0.1017,
+          "share_dominators_from_archive_all_g": 0.8572,
+          "share_dominators_from_archive_f0_only": 0.8182
+        }
+      ],
+      "aggregate_fully_dominated": {
+        "dominator_species_all_g": {
+          "archive": 60422,
+          "species_2421": 4198,
+          "species_2422": 1451,
+          "species_2423": 1142,
+          "species_2426": 1104,
+          "species_2424": 1007,
+          "species_2415": 426,
+          "species_2425": 397,
+          "species_2427": 105,
+          "species_2428": 88
+        },
+        "dominator_species_f0_only": {
+          "archive": 4311,
+          "species_2421": 451,
+          "species_2422": 192,
+          "species_2424": 149,
+          "species_2426": 87,
+          "species_2423": 29
+        },
+        "share_from_2421_all_g": 0.0597,
+        "share_from_2421_f0_only": 0.0864,
+        "share_from_archive_all_g": 0.859,
+        "share_from_archive_f0_only": 0.826,
+        "total_dominator_pairs_all_g": 70340,
+        "total_dominator_pairs_f0_only": 5219
+      }
+    }
+  }
+}

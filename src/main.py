@@ -161,7 +161,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
          max_total_genomes=None, seed=None,
          theta_sim=0.2, theta_merge=0.1, min_stability_gens=5, species_capacity=100, cluster0_max_capacity=1000,
          cluster0_min_cluster_size=2, min_island_size=2, species_stagnation=20,
-         embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64):
+         embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64,
+         evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest"):
     
     
     get_logger, get_log_filename, log_system_info, PerformanceLogger = get_custom_logging()
@@ -173,18 +174,34 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     
     log_system_info(logger)
     
+    from utils.evaluator_profiles import (
+        resolve_evaluator,
+        set_active_evaluator,
+        set_active_north_star,
+        validate_north_star,
+        moderation_methods_to_backend_list,
+    )
+
+    profile = resolve_evaluator(evaluator)
+    set_active_evaluator(profile.name)
+    if north_star_metric is None:
+        north_star_metric = profile.default_north_star
+    north_star_metric = validate_north_star(profile, north_star_metric)
+    set_active_north_star(north_star_metric)
     if moderation_methods is None:
-        moderation_methods = ["google"]
-    
-    if "all" in moderation_methods:
-        moderation_methods = ["google"]
-    
+        moderation_methods = moderation_methods_to_backend_list(profile)
+    else:
+        moderation_methods = [profile.backend_key]
+
     start_time = time.time()
-    north_star_metric = "toxicity"
     if max_total_genomes is None:
         raise ValueError("Sequential mode requires --max-total-genomes; primary termination is by total genomes.")
-    logger.info("Starting evolutionary run: metric=%s, max_total_genomes=%s (primary termination criteria)",
-                north_star_metric, max_total_genomes)
+    logger.info(
+        "Starting evolutionary run: evaluator=%s, metric=%s, max_total_genomes=%s (primary termination criteria)",
+        profile.name,
+        north_star_metric,
+        max_total_genomes,
+    )
 
     try:
         with PerformanceLogger(logger, "Update model configs"):
@@ -232,7 +249,9 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 pop_path=temp_path,
                 log_file=log_file,
                 north_star_metric=north_star_metric,
-                moderation_methods=moderation_methods
+                moderation_methods=moderation_methods,
+                evaluator=evaluator,
+                openai_model=openai_model,
             )
         
         temp_path_obj = get_outputs_path() / "temp.json"
@@ -417,6 +436,9 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     theta_sim=theta_sim,
                     species_capacity=species_capacity,
                     cluster0_max_capacity=cluster0_max_capacity,
+                    evaluator=evaluator,
+                    north_star_metric=north_star_metric,
+                    openai_model=openai_model,
                     **({"max_total_genomes": max_total_genomes} if max_total_genomes is not None else {}),
                 ),
             )
@@ -549,7 +571,9 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     pop_path=temp_path,
                     log_file=log_file,
                     north_star_metric=north_star_metric,
-                    moderation_methods=moderation_methods
+                    moderation_methods=moderation_methods,
+                    evaluator=evaluator,
+                    openai_model=openai_model,
                 )
             
             try:
@@ -959,8 +983,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evolutionary Text Generation and Safety Analysis Framework")
     parser.add_argument("--generations", type=int, default=None,
                        help="Not used for termination. Kept for compatibility; termination is only by --max-total-genomes.")
-    parser.add_argument("--moderation-methods", nargs="+", choices=["google", "all"], default=["google"],
-                       help="Moderation methods to use: google (Perspective API), all (google only)")
+    parser.add_argument("--evaluator", type=str, choices=["google", "openai"], default=None,
+                       help="Moderation backend for this run: google (Perspective) or openai (omni-moderation)")
+    parser.add_argument("--north-star-metric", type=str, default=None,
+                       help="North-star score key for fitness (valid choices depend on --evaluator)")
+    parser.add_argument("--openai-model", type=str, default="omni-moderation-latest",
+                       help="OpenAI moderation model when --evaluator openai (default: omni-moderation-latest)")
+    parser.add_argument("--moderation-methods", nargs="+",
+                       choices=["google", "perspective", "all", "openai", "omni"], default=["google"],
+                       help="Deprecated alias for --evaluator; --evaluator wins when both are set")
     parser.add_argument("--stagnation-limit", type=int, default=5,
                        help="Number of generations without improvement before switching to explore mode (default: 5)")
     parser.add_argument("--theta-sim", type=float, default=0.2,
@@ -1013,15 +1044,35 @@ if __name__ == "__main__":
                             "Inspect with: python -m pstats <file> or snakeviz <file>")
     args = parser.parse_args()
 
+    import sys
+
     if getattr(args, "output_dir", None):
         set_outputs_path(args.output_dir)
-
-    import sys
 
     if getattr(args, "max_total_genomes", None) is None:
         parser.error(
             "--max-total-genomes is required (sequential and parallel): primary termination is total genomes in elites+reserves+archive."
         )
+
+    from utils.evaluator_profiles import (
+        resolve_evaluator,
+        set_active_evaluator,
+        set_active_north_star,
+        validate_north_star,
+        moderation_methods_to_evaluator,
+    )
+
+    if args.evaluator is not None and args.moderation_methods != ["google"]:
+        print("Warning: --evaluator takes precedence over --moderation-methods", file=sys.stderr)
+    evaluator_name = args.evaluator or moderation_methods_to_evaluator(args.moderation_methods)
+    profile = resolve_evaluator(evaluator_name)
+    set_active_evaluator(profile.name)
+    north_star_metric = args.north_star_metric or profile.default_north_star
+    try:
+        north_star_metric = validate_north_star(profile, north_star_metric)
+    except ValueError as exc:
+        parser.error(str(exc))
+    set_active_north_star(north_star_metric)
 
     prof = None
     if args.profile is not None:
@@ -1100,7 +1151,9 @@ if __name__ == "__main__":
                 moderation_methods=args.moderation_methods,
                 max_generations=args.generations,
                 max_total_genomes=getattr(args, "max_total_genomes", None),
-                north_star_metric="toxicity",
+                north_star_metric=north_star_metric,
+                evaluator_backend=evaluator_name,
+                openai_model=args.openai_model,
                 speciation_config=speciation_config,
                 log_file=log_file,
                 run_speciation_fn=run_speciation,
@@ -1126,7 +1179,9 @@ if __name__ == "__main__":
              species_capacity=args.species_capacity, cluster0_max_capacity=args.cluster0_max_capacity,
              cluster0_min_cluster_size=args.cluster0_min_cluster_size, min_island_size=args.min_island_size,
              species_stagnation=args.species_stagnation, embedding_model=args.embedding_model,
-             embedding_dim=args.embedding_dim, embedding_batch_size=args.embedding_batch_size)
+             embedding_dim=args.embedding_dim, embedding_batch_size=args.embedding_batch_size,
+             evaluator=evaluator_name, north_star_metric=north_star_metric,
+             openai_model=args.openai_model)
         sys.exit(0)
     except KeyboardInterrupt:
         print("\nPipeline interrupted by user.")

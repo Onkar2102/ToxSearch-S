@@ -1,0 +1,10 @@
+evaluator,species_id,n_members,n_on_f0,frac_on_f0,tdi,fully_dominated,distinct_topic,axis_exclusive_axes,n_axis_exclusive,intra_cosine_mean,inter_dg_min,dominating_topics,max_axis_0
+google,2415,25,0,0.0,1.0,True,False,,0,0.3304,0.2716,2421;2423;2426;2422;2424;2425,0.0366
+google,2421,150,36,0.24,0.76,False,True,,0,0.948,0.4275,,0.9288
+google,2422,88,2,0.022727272727272728,0.9773,False,False,,0,0.5739,0.3699,,0.3881
+google,2423,44,3,0.06818181818181818,0.9318,False,False,,0,0.4401,0.218,,0.3734
+google,2424,54,0,0.0,1.0,True,False,,0,0.2815,0.3015,2421,0.2178
+google,2425,24,1,0.041666666666666664,0.9583,False,False,,0,0.5148,0.4259,,0.196
+google,2426,61,0,0.0,1.0,True,False,,0,0.1938,0.218,2421;2424,0.12
+google,2427,6,0,0.0,1.0,True,False,,0,0.1487,0.2871,2421;2423;2426;2422;2424;2425,0.0378
+google,2428,8,0,0.0,1.0,True,False,,0,0.3198,0.2998,2421;2423;2422;2424;2425,0.0376

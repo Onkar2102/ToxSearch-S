@@ -24,6 +24,13 @@ _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 _state: Optional[Dict[str, Any]] = None
 
 
+def _metric_from_state(state: Optional[Dict[str, Any]] = None) -> str:
+    if state and state.get("north_star_metric"):
+        return state["north_star_metric"]
+    from utils.evaluator_profiles import get_active_north_star
+    return get_active_north_star()
+
+
 def _init_state(config: Optional[SpeciationConfig] = None, logger=None) -> None:
     
     global _state
@@ -46,7 +53,8 @@ def _init_state(config: Optional[SpeciationConfig] = None, logger=None) -> None:
             "metrics_tracker": SpeciationMetricsTracker(logger=logger or get_logger("Speciation")),
             "_current_gen_events": {"speciation": 0, "merge": 0, "extinction": 0, "moved_to_cluster0": 0},
             "_embedding_model": None,
-            "_archived_count": 0
+            "_archived_count": 0,
+            "north_star_metric": "toxicity",
         }
         _state["logger"].info(f"Speciation initialized: theta_sim={_state['config'].theta_sim}, species_capacity={_state['config'].species_capacity}")
     else:
@@ -637,10 +645,13 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
 
 def process_generation(current_generation: int,
                        temp_path: Optional[str] = None,
-                       config: Optional[SpeciationConfig] = None, logger=None) -> Tuple[Dict[int, Species], Cluster0]:
+                       config: Optional[SpeciationConfig] = None, logger=None,
+                       north_star_metric: Optional[str] = None) -> Tuple[Dict[int, Species], Cluster0]:
     
     _init_state(config, logger)
     state = _get_state()
+    if north_star_metric:
+        state["north_star_metric"] = north_star_metric
     
     
     _process_gen_start = _time.time()
@@ -768,7 +779,7 @@ def process_generation(current_generation: int,
                         if loaded_genomes:
                             max_fitness = 0.0
                             for g in loaded_genomes:
-                                fitness = _extract_north_star_score(g, "toxicity")
+                                fitness = _extract_north_star_score(g, _metric_from_state(state))
                                 if fitness is not None and fitness > max_fitness:
                                     max_fitness = fitness
                             state["_prev_max_fitness"][int(sid)] = max_fitness
@@ -1344,7 +1355,7 @@ def process_generation(current_generation: int,
             valid_genomes = []
             invalid_genomes = []
             for g in all_species_genomes:
-                fitness = _extract_north_star_score(g, "toxicity")
+                fitness = _extract_north_star_score(g, _metric_from_state(state))
                 if fitness is not None:
                     valid_genomes.append((g, fitness))
                 else:
@@ -1765,7 +1776,7 @@ def process_generation(current_generation: int,
                     from .phenotype_distance import extract_phenotype_vector as _epv
 
                     tox_vals = _np.array(
-                        [_extract_north_star_score(g, "toxicity") for g in cluster0_genomes],
+                        [_extract_north_star_score(g, _metric_from_state(state)) for g in cluster0_genomes],
                         dtype=_np.float64,
                     )
 
@@ -1805,7 +1816,7 @@ def process_generation(current_generation: int,
                     )
                 else:
                     cluster0_genomes.sort(
-                        key=lambda g: _extract_north_star_score(g, "toxicity"), reverse=True,
+                        key=lambda g: _extract_north_star_score(g, _metric_from_state(state)), reverse=True,
                     )
                     keep_genomes = cluster0_genomes[:capacity]
                     excess_genomes = cluster0_genomes[capacity:]
@@ -1987,7 +1998,8 @@ def process_generation(current_generation: int,
             extinction_events=state["_current_gen_events"]["extinction"],
             cluster0=state["cluster0"],
             elites_path=str(elites_path),
-            reserves_path=str(reserves_path) if reserves_path.exists() else None
+            reserves_path=str(reserves_path) if reserves_path.exists() else None,
+            north_star_metric=_metric_from_state(state),
         )
         
         state["logger"].debug(f"Recorded metrics for generation {current_generation} from corrected files")
@@ -1995,7 +2007,8 @@ def process_generation(current_generation: int,
         is_valid, errors = validate_metrics_from_files(
             outputs_path=outputs_path,
             metrics=metrics.to_dict(),
-            logger=state["logger"]
+            logger=state["logger"],
+            north_star_metric=_metric_from_state(state),
         )
         if not is_valid:
             state["logger"].warning(f"Metrics validation found {len(errors)} errors")
@@ -2345,7 +2358,7 @@ def save_state(path: str) -> None:
     cluster0_max_fitness = cluster0_min_fitness = 0.0
     if reserves_genomes:
         from utils.population_io import _extract_north_star_score
-        cluster0_fitnesses = [_extract_north_star_score(g, "toxicity") or 0.0 for g in reserves_genomes]
+        cluster0_fitnesses = [_extract_north_star_score(g, _metric_from_state(state)) or 0.0 for g in reserves_genomes]
         if cluster0_fitnesses:
             cluster0_max_fitness = round(max(cluster0_fitnesses), 4)
             cluster0_min_fitness = round(min(cluster0_fitnesses), 4)
@@ -2594,9 +2607,13 @@ def run_speciation(
     north_star_metric: str = "toxicity") -> Dict[str, Any]:
     
     logger = get_logger("RunSpeciation", log_file)
-    logger.info("Starting speciation: generation=%d", current_generation)
+    logger.info("Starting speciation: generation=%d, metric=%s", current_generation, north_star_metric)
 
     reset_speciation_module()
+    _init_state(config, logger)
+    state = _get_state()
+    if state is not None:
+        state["north_star_metric"] = north_star_metric
     
     if temp_path is None:
         outputs_path = get_outputs_path()
@@ -2767,7 +2784,8 @@ def run_speciation(
             current_generation=current_generation,
             temp_path=temp_path,
             config=config,
-            logger=logger
+            logger=logger,
+            north_star_metric=north_star_metric,
         )
         speciation_duration_seconds = round(_time.time() - _speciation_start, 3)
         
@@ -2998,7 +3016,7 @@ def get_speciation_statistics(log_file: Optional[str] = None) -> Dict[str, Any]:
                     from utils.population_io import _extract_north_star_score
                     for genome in elites_genomes:
                         if genome.get("id") == global_best_id:
-                            global_best_fitness = _extract_north_star_score(genome, "toxicity")
+                            global_best_fitness = _extract_north_star_score(genome, _metric_from_state(state))
                             break
                 except Exception:
                     pass
@@ -3114,7 +3132,7 @@ def update_evolution_tracker_with_speciation(
                     total_pop += len(elites_genomes)
                     from utils.population_io import _extract_north_star_score
                     for genome in elites_genomes:
-                        fitness = _extract_north_star_score(genome, "toxicity")
+                        fitness = _extract_north_star_score(genome, _metric_from_state(state))
                         if fitness > 0:
                             all_fitness.append(float(fitness))
                 except Exception:
@@ -3127,7 +3145,7 @@ def update_evolution_tracker_with_speciation(
                     total_pop += len(reserves_genomes)
                     from utils.population_io import _extract_north_star_score
                     for genome in reserves_genomes:
-                        fitness = _extract_north_star_score(genome, "toxicity")
+                        fitness = _extract_north_star_score(genome, _metric_from_state(state))
                         if fitness > 0:
                             all_fitness.append(float(fitness))
                 except Exception:

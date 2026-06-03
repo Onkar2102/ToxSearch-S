@@ -1,0 +1,30 @@
+{
+  "google": {
+    "evaluator": "google",
+    "p_value": 0.867713,
+    "obs_stat": 0.287541,
+    "n": 518,
+    "n_f0": 100,
+    "n_dominated_member": 418,
+    "skipped": false
+  },
+  "openai": {
+    "evaluator": "openai",
+    "p_value": 0.0001,
+    "obs_stat": 0.395186,
+    "n": 579,
+    "n_f0": 144,
+    "n_dominated_member": 435,
+    "skipped": false
+  },
+  "per_topic_holm": {
+    "google": {
+      "n_topics_tested": 9,
+      "n_rejected_at_0p05": 9
+    },
+    "openai": {
+      "n_topics_tested": 9,
+      "n_rejected_at_0p05": 9
+    }
+  }
+}

@@ -297,7 +297,8 @@ def validate_flow2_speciation(
 def validate_metrics_from_files(
     outputs_path: Path,
     metrics: Dict[str, Any],
-    logger=None
+    logger=None,
+    north_star_metric: Optional[str] = None,
 ) -> Tuple[bool, List[str]]:
     
     if logger is None:
@@ -339,13 +340,15 @@ def validate_metrics_from_files(
             errors.append(f"reserves_size mismatch: expected {expected_reserves_size} (from reserves.json), got {actual_reserves_size}")
         
         from utils.population_io import _extract_north_star_score
+        from utils.evaluator_profiles import get_active_north_star
+        metric = north_star_metric or get_active_north_star()
         all_fitness = []
         for g in elites:
-            fitness = _extract_north_star_score(g, "toxicity")
+            fitness = _extract_north_star_score(g, metric)
             if fitness > 0:
                 all_fitness.append(float(fitness))
         for g in reserves:
-            fitness = _extract_north_star_score(g, "toxicity")
+            fitness = _extract_north_star_score(g, metric)
             if fitness > 0:
                 all_fitness.append(float(fitness))
         

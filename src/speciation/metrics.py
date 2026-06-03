@@ -59,10 +59,15 @@ class SpeciationMetricsTracker:
     def record_generation(self, generation: int, species: Dict[int, Species], reserves_size: int = 0,
                           speciation_events: int = 0, merge_events: int = 0,
                           extinction_events: int = 0, cluster0=None, 
-                          elites_path: Optional[str] = None, reserves_path: Optional[str] = None) -> GenerationMetrics:
+                          elites_path: Optional[str] = None, reserves_path: Optional[str] = None,
+                          north_star_metric: Optional[str] = None) -> GenerationMetrics:
         
         from pathlib import Path
         import json
+        from utils.evaluator_profiles import get_active_north_star
+
+        if north_star_metric is None:
+            north_star_metric = get_active_north_star()
         
         species_count = len(species)
         total_pop = 0
@@ -84,7 +89,7 @@ class SpeciationMetricsTracker:
             total_pop += len(elites_genomes)
             from utils.population_io import _extract_north_star_score
             for genome in elites_genomes:
-                fitness = _extract_north_star_score(genome, "toxicity")
+                fitness = _extract_north_star_score(genome, north_star_metric)
                 if fitness > 0:
                     all_fitness.append(float(fitness))
         else:
@@ -101,7 +106,7 @@ class SpeciationMetricsTracker:
             total_pop += actual_reserves_size
             from utils.population_io import _extract_north_star_score
             for genome in reserves_genomes:
-                fitness = _extract_north_star_score(genome, "toxicity")
+                fitness = _extract_north_star_score(genome, north_star_metric)
                 if fitness > 0:
                     all_fitness.append(float(fitness))
         else:
@@ -303,7 +308,8 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
                         embedding = embedding / norm
                     
                     from utils.population_io import _extract_north_star_score
-                    fitness = _extract_north_star_score(genome, "toxicity")
+                    from utils.evaluator_profiles import get_active_north_star
+                    fitness = _extract_north_star_score(genome, get_active_north_star())
                     
                     member = Individual(
                         id=genome.get("id", 0),

@@ -1,0 +1,65 @@
+{
+  "e1e982a5fdc53f1a9e9e8f6bd7fa726a3e9949da0419241888edeadbac52b366": {
+    "species_id": 2415,
+    "label": "cybersecurity vulnerabilities in infrastructure",
+    "raw": "cybersecurity vulnerabilities in infrastructure",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "0128ffc0ab96f80b0a608da18b8acde13b3f39c4078eb5d84fddf9bcc6052958": {
+    "species_id": 2421,
+    "label": "Derogatory Educational Discourse",
+    "raw": "Derogatory Educational Discourse",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "626d6e2a682bef794d0ae4b8fc91030935a000c7d0a790a6332ffa337e7f9474": {
+    "species_id": 2422,
+    "label": "GPS tracking spyware",
+    "raw": "GPS tracking spyware",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "35906236301a9a477a6691122d97594f2a1c012348c1c511998357adb02983c4": {
+    "species_id": 2423,
+    "label": "Cryptocurrency-enabled exploitation",
+    "raw": "Cryptocurrency-enabled exploitation",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "54379477c509d3b978981526494572488c2215a3f8e336c5956db633e9ac7e96": {
+    "species_id": 2424,
+    "label": "deepfake generation techniques",
+    "raw": "deepfake generation techniques",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "28e60ef3e566130932cf3cc0f5868ad4159f86cb2cd49b3a9258c7ea29dcb81d": {
+    "species_id": 2425,
+    "label": "historical figure relationships",
+    "raw": "historical figure relationships",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "f058834bfb912e990bafdd36579ad65925178e8cc4e48d4d6e53d17c320253ad": {
+    "species_id": 2426,
+    "label": "hazardous waste concealment",
+    "raw": "hazardous waste concealment",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "db94ad8ae7b3a94575cfc18c1cde86765b20f7f7ffedd5060f3feb1d30e63f7e": {
+    "species_id": 2427,
+    "label": "Temporal Manipulation Techniques",
+    "raw": "Temporal Manipulation Techniques",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  },
+  "08a65ca0492a8a102b100b2c3934474fff1c22156a110f4eb90315b3c07df2bc": {
+    "species_id": 2428,
+    "label": "Alcohol consumption guidance",
+    "raw": "Alcohol consumption guidance",
+    "model": "gpt-4o-mini",
+    "seed": 42
+  }
+}

@@ -120,14 +120,12 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
                 self.logger.error(f"{self.name}: Parents must be genome dictionaries with required fields")
                 return []
 
-            required_fields = ["prompt", "toxicity"]
             for i, parent_data_item in enumerate([parent1_data, parent2_data], 1):
-                for field in required_fields:
-                    if field not in parent_data_item:
-                        self.logger.error(f"{self.name}: Parent {i} missing required field: {field}")
-                        return []
+                if "prompt" not in parent_data_item:
+                    self.logger.error(f"{self.name}: Parent {i} missing required field: prompt")
+                    return []
 
-                toxicity_score = _extract_north_star_score(parent_data_item, "toxicity")
+                toxicity_score = _extract_north_star_score(parent_data_item, self.north_star_metric)
                 if toxicity_score <= 0.0001:
                     self.logger.warning(f"{self.name}: Parent {i} has low toxicity score: {toxicity_score}")
 
@@ -140,8 +138,8 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
             parent1_output = ""
             parent2_output = ""
 
-            parent1_score = round(_extract_north_star_score(parent1_data, "toxicity"), 4)
-            parent2_score = round(_extract_north_star_score(parent2_data, "toxicity"), 4)
+            parent1_score = round(_extract_north_star_score(parent1_data, self.north_star_metric), 4)
+            parent2_score = round(_extract_north_star_score(parent2_data, self.north_star_metric), 4)
 
             self.logger.debug(f"{self.name}: Using simplified parent data structure")
 

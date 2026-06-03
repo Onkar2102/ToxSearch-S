@@ -1,0 +1,42 @@
+{
+  "run_id": "20260211_2122",
+  "run_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122",
+  "files": {
+    "elites.json": 460,
+    "reserves.json": 3,
+    "archive.json": 5192,
+    "temp.json": 0
+  },
+  "files_present": {
+    "elites.json": true,
+    "reserves.json": true,
+    "archive.json": true,
+    "temp.json": true
+  },
+  "n_with_objectives": 5655,
+  "n_with_google_objectives": 5655,
+  "n_with_openai_objectives": 5655,
+  "n_openai_fetched": 4259,
+  "n_with_embedding": 5655,
+  "n_duplicates_dropped": 0,
+  "google_axis_order": [
+    "toxicity",
+    "severe_toxicity",
+    "identity_attack",
+    "insult",
+    "profanity",
+    "threat",
+    "sexually_explicit",
+    "flirtation"
+  ],
+  "openai_axis_order": [],
+  "fetch_openai_missing": true,
+  "n_genomes": 5655,
+  "n_species": 9,
+  "openai_cache_path": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_openai_cache.json",
+  "n_openai_from_cache": 0,
+  "n_openai_ok": 5655,
+  "n_openai_failed": 0,
+  "n_openai_no_text": 0,
+  "n_openai_unique_texts": 4259
+}

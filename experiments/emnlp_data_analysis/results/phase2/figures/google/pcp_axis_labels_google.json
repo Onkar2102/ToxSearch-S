@@ -1,0 +1,13 @@
+{
+  "label_style": "abbrev",
+  "tick_to_full": {
+    "Toxicity": "toxicity",
+    "Severe\ntoxicity": "severe toxicity",
+    "Identity\nattack": "identity attack",
+    "Insult": "insult",
+    "Profanity": "profanity",
+    "Threat": "threat",
+    "Sexual\nexplicit": "sexually explicit",
+    "Flirtation": "flirtation"
+  }
+}

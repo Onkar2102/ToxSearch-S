@@ -1,0 +1,20 @@
+{
+  "artifacts": {
+    "epsilon_sweep_google_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase8/sensitivity/epsilon_sweep_google.csv",
+    "epsilon_sweep_openai_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase8/sensitivity/epsilon_sweep_openai.csv",
+    "threshold_sweep_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase8/sensitivity/threshold_sweep_distinctness.csv",
+    "population_ablation_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase8/sensitivity/population_ablation_counterfactual.csv",
+    "sensitivity_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase8/sensitivity/sensitivity.json",
+    "fig_epsilon_sweep": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase8/figures/epsilon_sweep_topics.png"
+  },
+  "meta": {
+    "run_id": "20260211_2122",
+    "epsilon_grid": [
+      0.0,
+      0.01,
+      0.02,
+      0.05,
+      0.1
+    ]
+  }
+}

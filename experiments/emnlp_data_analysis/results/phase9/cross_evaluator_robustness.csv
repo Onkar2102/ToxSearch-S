@@ -1,0 +1,8 @@
+delta_openai_minus_google,google,google_n,metric,n_topics,openai,openai_n,value
+,,5,jaccard_fully_dominated_topics,,,4,0.5
+,,100,jaccard_global_f0_genomes,,,144,0.0655
+,,,frac_fully_dominated_agreement,9,,,0.6667
+0.0,0.0,,counterfactual_survival_scalar,,0.0,,
+0.0,0.0,,counterfactual_survival_global_mo,,0.0,,
+0.0,0.0,,counterfactual_survival_speciated_oracle,,0.0,,
+,True,,counterfactual_hierarchy_scalar_lt_global_lt_oracle,,True,,

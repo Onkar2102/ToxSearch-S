@@ -1,0 +1,10 @@
+{
+  "n_topics": 9,
+  "n_fully_dominated_both": 3,
+  "n_fully_dominated_neither": 3,
+  "n_fully_dominated_google_only": 2,
+  "n_fully_dominated_openai_only": 1,
+  "mean_tdi_delta_openai_minus_google": 0.011577777777777777,
+  "max_tdi_delta_openai_minus_google": 0.1467,
+  "min_tdi_delta_openai_minus_google": -0.0741
+}

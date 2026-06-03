@@ -78,7 +78,7 @@ Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
             self._last_original_prompt = original_prompt
 
             generated_output = ""
-            current_score = _extract_north_star_score(parent_data, "toxicity")
+            current_score = _extract_north_star_score(parent_data, self.north_star_metric)
 
             messages = [
                 {

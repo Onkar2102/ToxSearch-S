@@ -11,6 +11,12 @@ from itertools import islice
 from typing import List, Dict, Optional, Any
 from dotenv import load_dotenv
 from utils import get_custom_logging, get_population_io
+from utils.evaluator_profiles import (
+    resolve_evaluator,
+    set_active_evaluator,
+    moderation_methods_to_backend_list,
+)
+from utils.population_io import _extract_north_star_score
 from concurrent.futures import ThreadPoolExecutor
 
 load_dotenv(override=True)
@@ -76,14 +82,22 @@ def _cleanup_cache_if_needed():
     logger.info("Cleaned moderation cache: removed %d entries, cache size now: %d", len(to_remove), len(_moderation_cache))
 
 class HybridModerationEvaluator:
-    """Content moderation evaluator using Google Perspective API. Provides comprehensive toxicity and safety evaluation of text content. Uses caching and parallel processing for efficiency. Attributes: logger: Logger instance for debugging and monitoring model_cfg: Model configuration loaded from YAML file"""
+    """Content moderation evaluator (Google Perspective or OpenAI omni-moderation)."""
     
     def __init__(self, log_file: Optional[str] = None, config_path: str = None,
-                 api_keys: Optional[List[str]] = None):
+                 api_keys: Optional[List[str]] = None,
+                 evaluator: Optional[str] = None,
+                 openai_model: str = "omni-moderation-latest"):
         
         get_logger, _, _, _ = get_custom_logging()
         self.logger = get_logger("HybridModerationEvaluator", log_file)
-        self.logger.info("Initializing Google Perspective Moderation Evaluator")
+        self.profile = set_active_evaluator(evaluator or "google")
+        self.openai_model = openai_model
+        self.logger.info(
+            "Initializing moderation evaluator: backend=%s, north_star_default=%s",
+            self.profile.name,
+            self.profile.default_north_star,
+        )
 
         import yaml
         from pathlib import Path
@@ -101,20 +115,33 @@ class HybridModerationEvaluator:
         self.model_cfg = config.get(model_key, {})
         self.logger.info("Model config loaded")
 
-        self._api_keys = self._resolve_api_keys(api_keys)
-        self.google_available = len(self._api_keys) > 0
-
-        if not self.google_available:
-            error_msg = (
-                "No Perspective API key found.\n"
-                "Provide api_keys, set PERSPECTIVE_API_KEYS (comma-separated),\n"
-                "or set PERSPECTIVE_API_KEY as an environment variable."
-            )
-            self.logger.error(error_msg)
-            raise ValueError(error_msg)
-
+        self.google_available = False
+        self.openai_available = False
+        self._api_keys: List[str] = []
         self._active_key_index = 0
-        self.logger.info("API Availability - Google: OK  (%d key(s))", len(self._api_keys))
+        self.google_client = None
+        self.openai_client = None
+
+        if self.profile.backend_key == "google":
+            self._api_keys = self._resolve_api_keys(api_keys)
+            self.google_available = len(self._api_keys) > 0
+            if not self.google_available:
+                error_msg = (
+                    "No Perspective API key found.\n"
+                    "Provide api_keys, set PERSPECTIVE_API_KEYS (comma-separated),\n"
+                    "or set PERSPECTIVE_API_KEY as an environment variable."
+                )
+                self.logger.error(error_msg)
+                raise ValueError(error_msg)
+            self.logger.info("API Availability - Google: OK  (%d key(s))", len(self._api_keys))
+        elif self.profile.backend_key == "openai":
+            api_key = os.getenv("OPENAI_API_KEY", "").strip()
+            self.openai_available = bool(api_key)
+            if not self.openai_available:
+                error_msg = "OPENAI_API_KEY is required when --evaluator openai is selected."
+                self.logger.error(error_msg)
+                raise ValueError(error_msg)
+            self.logger.info("API Availability - OpenAI: OK  (model=%s)", self.openai_model)
 
         self.evaluation_count = 0
         self.total_evaluation_time = 0.0
@@ -123,7 +150,7 @@ class HybridModerationEvaluator:
         
         self._initialize_clients()
         
-        self.logger.debug("Google Perspective Moderation Evaluator initialized successfully")
+        self.logger.debug("Moderation evaluator initialized successfully")
 
     @staticmethod
     def _resolve_api_keys(api_keys: Optional[List[str]] = None) -> List[str]:
@@ -168,7 +195,7 @@ class HybridModerationEvaluator:
     def _initialize_clients(self):
         
         try:
-            if self.google_available:
+            if self.profile.backend_key == "google" and self.google_available:
                 from googleapiclient import discovery
                 api_key = self._api_keys[self._active_key_index]
                 self.google_client = discovery.build(
@@ -179,6 +206,14 @@ class HybridModerationEvaluator:
                 )
                 self.logger.info("Google Perspective API client initialized (key index %d)",
                                  self._active_key_index)
+            elif self.profile.backend_key == "openai" and self.openai_available:
+                from openai import OpenAI
+                self.openai_client = OpenAI(
+                    api_key=os.environ["OPENAI_API_KEY"],
+                    organization=os.getenv("OPENAI_ORG_ID") or None,
+                    project=os.getenv("OPENAI_PROJECT_ID") or None,
+                )
+                self.logger.info("OpenAI moderation client initialized (model=%s)", self.openai_model)
                 
         except Exception as e:
             self.logger.error(
@@ -233,8 +268,6 @@ class HybridModerationEvaluator:
                 
                 normalized_scores = self._normalize_scores(raw_categories)
                 
-                flagged = normalized_scores.get("toxicity", 0.0) > 0.5
-                
                 result = {
                     "scores": normalized_scores,
                     "api_version": "google",
@@ -273,6 +306,83 @@ class HybridModerationEvaluator:
                     return None, {"retries": attempt + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
         
         return None, {"retries": max_retries + 1, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
+
+    def _evaluate_with_openai(self, text: str, genome_id: str, max_retries: int = 10):
+        
+        import time
+
+        cached = _get_cached_result(text, "openai")
+        if cached is not None:
+            return cached, {"retries": 0, "attempt_durations": [], "api_wait_seconds": 0.0}
+
+        attempt_durations = []
+        api_wait_seconds = 0.0
+        for attempt in range(max_retries + 1):
+            attempt_start = time.time()
+            try:
+                response = self.openai_client.moderations.create(
+                    model=self.openai_model,
+                    input=text,
+                )
+                result_block = response.results[0] if response.results else None
+                category_scores = {}
+                if result_block is not None:
+                    scores_obj = getattr(result_block, "category_scores", None)
+                    if scores_obj is not None:
+                        if hasattr(scores_obj, "model_dump"):
+                            raw = scores_obj.model_dump()
+                        elif isinstance(scores_obj, dict):
+                            raw = scores_obj
+                        else:
+                            raw = dict(scores_obj)
+                        category_scores = {str(k).lower(): float(v) for k, v in raw.items()}
+
+                normalized_scores = self._normalize_scores(category_scores)
+                result = {
+                    "scores": normalized_scores,
+                    "api_version": "openai",
+                    "model": self.openai_model,
+                }
+                _cache_result(text, result, "openai")
+                attempt_durations.append(round(time.time() - attempt_start, 4))
+                return result, {
+                    "retries": attempt,
+                    "attempt_durations": attempt_durations,
+                    "api_wait_seconds": round(api_wait_seconds, 4),
+                }
+            except Exception as e:
+                attempt_durations.append(round(time.time() - attempt_start, 4))
+                is_retriable = self._is_retriable_error(e)
+                safe_err = _redact_url_api_key_query_param(str(e))
+                if attempt < max_retries and is_retriable:
+                    wait_time = 2 ** attempt
+                    self.logger.warning(
+                        "OpenAI moderation failed for genome %s (attempt %d/%d): %s. Retrying in %ds...",
+                        genome_id,
+                        attempt + 1,
+                        max_retries + 1,
+                        safe_err,
+                        wait_time,
+                    )
+                    time.sleep(wait_time)
+                    api_wait_seconds += wait_time
+                    continue
+                self.logger.error(
+                    "OpenAI moderation failed for genome %s after %d attempts: %s",
+                    genome_id,
+                    attempt + 1,
+                    safe_err,
+                )
+                return None, {
+                    "retries": attempt + 1,
+                    "attempt_durations": attempt_durations,
+                    "api_wait_seconds": round(api_wait_seconds, 4),
+                }
+        return None, {
+            "retries": max_retries + 1,
+            "attempt_durations": attempt_durations,
+            "api_wait_seconds": round(api_wait_seconds, 4),
+        }
     
     def _is_retriable_error(self, error: Exception) -> bool:
         
@@ -323,18 +433,19 @@ class HybridModerationEvaluator:
         
         import time
         start_time = time.time()
+        backend = self.profile.backend_key
         
         try:
             self.logger.debug("Evaluating text for genome %s: %d characters", genome_id, len(text))
             
             if moderation_methods is None:
-                moderation_methods = ["google"]
+                moderation_methods = moderation_methods_to_backend_list(self.profile)
             
-            self.logger.debug("Using moderation methods: %s for genome %s", moderation_methods, genome_id)
+            self.logger.debug("Using moderation backend %s for genome %s", backend, genome_id)
             
             results = {}
             
-            if "google" in moderation_methods and self.google_available:
+            if backend == "google" and "google" in moderation_methods and self.google_available:
                 google_result, retry_info = self._evaluate_with_google(text, genome_id)
                 if not hasattr(self, '_last_evaluation_time'):
                     self._last_evaluation_time = {}
@@ -344,8 +455,20 @@ class HybridModerationEvaluator:
                 if google_result is not None:
                     results["google"] = google_result
                     self.logger.debug("Google evaluation completed for genome %s", genome_id)
-            elif "google" in moderation_methods and not self.google_available:
+            elif backend == "openai" and "openai" in moderation_methods and self.openai_available:
+                openai_result, retry_info = self._evaluate_with_openai(text, genome_id)
+                if not hasattr(self, '_last_evaluation_time'):
+                    self._last_evaluation_time = {}
+                self._last_evaluation_time['retries'] = retry_info.get("retries", 0)
+                self._last_evaluation_time['attempt_durations'] = retry_info.get("attempt_durations", [])
+                self._last_evaluation_time['api_wait_seconds'] = retry_info.get("api_wait_seconds", 0.0)
+                if openai_result is not None:
+                    results["openai"] = openai_result
+                    self.logger.debug("OpenAI evaluation completed for genome %s", genome_id)
+            elif backend == "google" and not self.google_available:
                 self.logger.warning("Google Perspective API requested but not available for genome %s", genome_id)
+            elif backend == "openai" and not self.openai_available:
+                self.logger.warning("OpenAI moderation requested but not available for genome %s", genome_id)
             
             if not results:
                 return {
@@ -386,8 +509,11 @@ class HybridModerationEvaluator:
                                  north_star_metric: str = "toxicity", 
                                  pop_path: str = "", moderation_methods: List[str] = None) -> List[Dict[str, Any]]:
         
+        backend = self.profile.backend_key
+        progress_label = north_star_metric
+        
         try:
-            self.logger.info("Starting hybrid population evaluation")
+            self.logger.info("Starting population evaluation (backend=%s)", backend)
             self.logger.info("North star metric: %s", north_star_metric)
             
             pending_genomes = [g for g in population if g.get('status') == 'pending_evaluation']
@@ -403,7 +529,7 @@ class HybridModerationEvaluator:
             total_genomes = len(pending_genomes)
             start_time = time.time()
             
-            print(f"\nEvaluating toxicity: 0/{total_genomes} (0%)", end='', flush=True)
+            print(f"\nEvaluating {progress_label}: 0/{total_genomes} (0%)", end='', flush=True)
             
             for i, genome in enumerate(pending_genomes, 1):
                 try:
@@ -421,15 +547,16 @@ class HybridModerationEvaluator:
                         rate = i / elapsed if elapsed > 0 else 0
                         percentage = (i / total_genomes) * 100
                         remaining = (total_genomes - i) / rate if rate > 0 else 0
-                        print(f"\rEvaluating toxicity: {i}/{total_genomes} ({percentage:.1f}%) | "
+                        print(f"\rEvaluating {progress_label}: {i}/{total_genomes} ({percentage:.1f}%) | "
                               f"Processed: {total_processed} | Errors: {total_errors} | "
                               f"Rate: {rate:.1f}/s | ETA: {remaining:.0f}s", end='', flush=True)
                         continue
                     
                     evaluation_result = self._evaluate_text_hybrid(generated_text, genome_id, moderation_methods=moderation_methods)
                     
-                    if 'google' in evaluation_result:
+                    if backend in evaluation_result:
                         genome['moderation_result'] = evaluation_result
+                        genome['evaluator'] = self.profile.name
                         
                         if hasattr(self, '_last_evaluation_time'):
                             genome['evaluation_duration'] = round(self._last_evaluation_time['duration'], 4)
@@ -437,7 +564,7 @@ class HybridModerationEvaluator:
                             genome['evaluation_attempt_durations'] = self._last_evaluation_time.get('attempt_durations', [])
                             genome['evaluation_api_wait_seconds'] = round(self._last_evaluation_time.get('api_wait_seconds', 0.0), 4)
                         
-                        north_star_score = self._extract_north_star_score(evaluation_result, north_star_metric)
+                        north_star_score = _extract_north_star_score(genome, north_star_metric)
                         
                         genome['status'] = 'complete'
                         total_processed += 1
@@ -455,9 +582,9 @@ class HybridModerationEvaluator:
                     percentage = (i / total_genomes) * 100
                     remaining = (total_genomes - i) / rate if rate > 0 else 0
                     avg_score = ""
-                    if total_processed > 0 and 'google' in evaluation_result:
+                    if total_processed > 0 and backend in evaluation_result:
                         avg_score = f" | Score: {north_star_score:.3f}"
-                    print(f"\rEvaluating toxicity: {i}/{total_genomes} ({percentage:.1f}%) | "
+                    print(f"\rEvaluating {progress_label}: {i}/{total_genomes} ({percentage:.1f}%) | "
                           f"Processed: {total_processed} | Errors: {total_errors}{avg_score} | "
                           f"Rate: {rate:.1f}/s | ETA: {remaining:.0f}s", end='', flush=True)
                     
@@ -480,12 +607,12 @@ class HybridModerationEvaluator:
                     rate = i / elapsed if elapsed > 0 else 0
                     percentage = (i / total_genomes) * 100
                     remaining = (total_genomes - i) / rate if rate > 0 else 0
-                    print(f"\rEvaluating toxicity: {i}/{total_genomes} ({percentage:.1f}%) | "
+                    print(f"\rEvaluating {progress_label}: {i}/{total_genomes} ({percentage:.1f}%) | "
                           f"Processed: {total_processed} | Errors: {total_errors} | "
                           f"Rate: {rate:.1f}/s | ETA: {remaining:.0f}s", end='', flush=True)
             
             elapsed = time.time() - start_time
-            print(f"\rEvaluating toxicity: {total_genomes}/{total_genomes} (100.0%) | "
+            print(f"\rEvaluating {progress_label}: {total_genomes}/{total_genomes} (100.0%) | "
                   f"Processed: {total_processed} | Errors: {total_errors} | "
                   f"Completed in {elapsed:.1f}s{'':<20}", flush=True)
             
@@ -537,82 +664,68 @@ class HybridModerationEvaluator:
         except Exception as e:
             self.logger.debug(f"Incremental save failed for genome {genome.get('id', 'unknown')}: {e} (final batch save will persist changes)")
 
-    def _extract_north_star_score(self, evaluation_result: Dict[str, Any], north_star_metric: str) -> float:
-        
-        for api_name, result in evaluation_result.items():
-            if api_name == "error":
-                continue
-            scores = result.get("scores", {})
-            if north_star_metric in scores:
-                return scores[north_star_metric]
-            
-            metric_variations = {
-                "violence": ["violence", "threat", "violence/graphic"],
-                "toxicity": ["toxicity", "severe_toxicity"],
-                "hate": ["hate", "identity_attack", "hate/threatening"]
-            }
-            
-            if north_star_metric in metric_variations:
-                for variation in metric_variations[north_star_metric]:
-                    if variation in scores:
-                        return scores[variation]
-        
-        return 0.0
-    
     def evaluate_population_sync(self, pop_path: str, north_star_metric: str = "toxicity", moderation_methods: List[str] = None) -> None:
         
         try:
-            self.logger.info("Starting hybrid population evaluation pipeline")
+            self.logger.info("Starting population evaluation pipeline")
             
             _pio = get_population_io()
             load_population, save_population = _pio[2], _pio[3]
             population = load_population(pop_path, logger=self.logger)
             
             if moderation_methods is None:
-                moderation_methods = ["google"]
+                moderation_methods = moderation_methods_to_backend_list(self.profile)
             
-            self.logger.info("Using moderation methods: %s", moderation_methods)
+            self.logger.info("Using moderation backend: %s", self.profile.backend_key)
             
             updated_population = self._evaluate_population_sync(population, north_star_metric, pop_path=pop_path, moderation_methods=moderation_methods)
             
             save_population(updated_population, pop_path, logger=self.logger)
             
-            self.logger.info("Hybrid population evaluation completed successfully")
+            self.logger.info("Population evaluation completed successfully")
             
         except Exception as e:
             self.logger.error(
-                "Hybrid population evaluation pipeline failed: %s",
+                "Population evaluation pipeline failed: %s",
                 _redact_url_api_key_query_param(str(e)),
                 exc_info=True,
             )
             raise
 
 def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None, 
-                               north_star_metric: str = "toxicity", moderation_methods: List[str] = None, outputs_path: str = None) -> None:
+                               north_star_metric: str = "toxicity", moderation_methods: List[str] = None,
+                               outputs_path: str = None, evaluator: Optional[str] = None,
+                               openai_model: str = "omni-moderation-latest") -> None:
     
     get_logger, _, _, _ = get_custom_logging()
     logger = get_logger("run_moderation", log_file)
     
     try:
-        logger.info("Starting hybrid moderation evaluation for population")
+        logger.info("Starting moderation evaluation for population")
         
+        profile = set_active_evaluator(evaluator or "google")
         if moderation_methods is None:
-            moderation_methods = ["google"]
+            moderation_methods = moderation_methods_to_backend_list(profile)
         
-        logger.info("Using moderation methods: %s", moderation_methods)
+        logger.info("Evaluator=%s, moderation_methods=%s", profile.name, moderation_methods)
         
         from pathlib import Path
         project_root = Path(__file__).resolve().parents[2]
         config_path = project_root / "config" / "RGConfig.yaml"
-        evaluator = HybridModerationEvaluator(config_path=str(config_path), log_file=log_file)
+        mod_evaluator = HybridModerationEvaluator(
+            config_path=str(config_path),
+            log_file=log_file,
+            evaluator=profile.name,
+            openai_model=openai_model,
+        )
         
-        evaluator.evaluate_population_sync(pop_path, north_star_metric, moderation_methods=moderation_methods)
+        mod_evaluator.evaluate_population_sync(pop_path, north_star_metric, moderation_methods=moderation_methods)
         
-        logger.info("Hybrid moderation evaluation completed successfully")
+        logger.info("Moderation evaluation completed successfully")
         
     except Exception as e:
         logger.error(
-            "Hybrid moderation evaluation failed: %s",
+            "Moderation evaluation failed: %s",
             _redact_url_api_key_query_param(str(e)),
             exc_info=True,
         )
@@ -622,17 +735,22 @@ def evaluate_single_genome(evaluator, genome, moderation_methods=None):
     
     generated_text = genome.get("generated_output", "")
     genome_id = genome.get("local_variant_id", genome.get("id", "unknown"))
+    backend = evaluator.profile.backend_key
 
     if not generated_text:
         genome["status"] = "error"
         genome["error"] = "No generated output"
         return genome
 
+    if moderation_methods is None:
+        moderation_methods = moderation_methods_to_backend_list(evaluator.profile)
+
     evaluation_result = evaluator._evaluate_text_hybrid(
         generated_text, genome_id, moderation_methods=moderation_methods)
 
-    if "google" in evaluation_result:
+    if backend in evaluation_result:
         genome["moderation_result"] = evaluation_result
+        genome["evaluator"] = evaluator.profile.name
         if hasattr(evaluator, "_last_evaluation_time"):
             genome["evaluation_duration"] = round(
                 evaluator._last_evaluation_time.get("duration", 0.0), 4)

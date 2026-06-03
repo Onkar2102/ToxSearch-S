@@ -1,0 +1,4 @@
+topics_total,topics_survived,survival_rate,extinction_rate,evaluator,policy,kept_size,k,n_f0,wilson_ci_lower,wilson_ci_upper,confidence
+9,1,0.1111,0.8889,openai,scalar,144,144,144,0.0199,0.435,0.95
+9,5,0.5556,0.4444,openai,global_mo,144,144,144,0.2667,0.8112,0.95
+9,9,1.0,0.0,openai,speciated_oracle,72,144,144,0.7009,1.0,0.95
