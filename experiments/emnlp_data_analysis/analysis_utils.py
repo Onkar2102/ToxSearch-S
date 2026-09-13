@@ -39,7 +39,7 @@ OPENAI_AXIS_ORDER = list(OPENAI_NORTH_STAR_CHOICES)
 POP_FILES = ("elites.json", "reserves.json", "archive.json", "temp.json")
 _logger = logging.getLogger("emnlp.analysis")
 DEFAULT_PRIMARY_RUN = REPO_ROOT / "data/outputs/20260211_2122"
-RESULTS_DIR = Path(__file__).resolve().parent / "results"
+RESULTS_DIR = REPO_ROOT / "results" / "emnlp2026"
 
 __all__ = [
     "DEFAULT_PRIMARY_RUN",
@@ -342,10 +342,17 @@ def member_dominated_mask(F: np.ndarray) -> np.ndarray:
 
 
 def genotype_distance(e1: np.ndarray, e2: np.ndarray) -> float:
+    """Ensemble-normalized genotype distance (``semantic_distance / 2`` on unit embeddings)."""
+    from speciation.distance import semantic_distance
+
     e1 = np.asarray(e1, dtype=np.float64).reshape(-1)
     e2 = np.asarray(e2, dtype=np.float64).reshape(-1)
-    cos = float(np.clip(np.dot(e1, e2), -1.0, 1.0))
-    return 0.5 * (1.0 - cos)
+    n1, n2 = float(np.linalg.norm(e1)), float(np.linalg.norm(e2))
+    if n1 > 0:
+        e1 = e1 / n1
+    if n2 > 0:
+        e2 = e2 / n2
+    return semantic_distance(e1, e2) / 2.0
 
 
 def topic_centroids(

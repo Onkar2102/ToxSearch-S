@@ -9,7 +9,9 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
 - [Models (GGUF)](#models-gguf)
 - [Project parameters](#project-parameters)
 - [How to run](#how-to-run)
+- [Repository layout](#repository-layout)
 - [Where outputs go](#where-outputs-go)
+- [Reproducibility](#reproducibility)
 - [Dataset](#dataset)
 
 ---
@@ -47,9 +49,26 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
 
 3. **Install Python packages**
 
+   Core evolution + speciation:
+
    ```bash
    pip install -r requirements.txt
+   pip install -e .
    ```
+
+   Paper / cluster analysis (optional):
+
+   ```bash
+   pip install -r requirements-analysis.txt
+   ```
+
+   Development (tests, ruff, mypy):
+
+   ```bash
+   pip install -r requirements-dev.txt
+   ```
+
+   You can still use `export PYTHONPATH=src` instead of `pip install -e .` if you prefer.
 
 4. **Configure API keys**
 
@@ -81,7 +100,7 @@ If your files differ, pass explicit paths, for example:
 
 ## Project parameters
 
-Defaults follow `src/main.py` and `SpeciationConfig` unless you override them on the command line (`python src/main.py …`).
+Defaults follow `SpeciationConfig` and `src/cli.py` unless you override them on the command line or via `--config configs/experiments/….yaml`.
 
 | Parameter | Meaning |
 |-----------|---------|
@@ -102,7 +121,8 @@ Defaults follow `src/main.py` and `SpeciationConfig` unless you override them on
 | Operators | Which evolutionary operators are enabled (`ie`, `cm`, or `all`). Set with `--operators`. |
 | Max variants | How many offspring variants to attempt per evolution cycle. Set with `--max-variants`. |
 | Seed file | CSV of starting prompts (expects a `questions` column). Set with `--seed-file`. |
-| RNG seed | Fixed seed for reproducible LLM sampling (optional). Set with `--seed`. |
+| RNG seed | Fixed seed for LLM sampling and Python EA randomness (optional). Set with `--seed`. |
+| Experiment config | YAML preset (CLI flags override). Set with `--config`. |
 | Batch size (parallel) | Master–worker merge batch threshold for MPI; also affects sequential parity defaults when omitted. Set with `--batch-size`. |
 | Parallel | Use MPI master–worker instead of a single process. Set with `--parallel`. |
 | Output directory | Run artifacts directory (default timestamped under `data/outputs/`). Set with `--output-dir`. |
@@ -186,8 +206,28 @@ See `python src/main.py --help` for `--batch-size`, speciation knobs, and other 
 ### Tests
 
 ```bash
-PYTHONPATH=src python -m pytest tests/ -v
+PYTHONPATH=src python -m pytest tests/ -v -m "not mpi"
 ```
+
+MPI tests: `python -m pytest tests/ -v -m mpi` (requires `mpiexec`).
+
+---
+
+## Repository layout
+
+| Path | Purpose |
+|------|---------|
+| `src/` | Core framework (`ea`, `gne`, `speciation`, `parallel`, `utils`, `cli.py`, `main.py`) |
+| `tests/` | Unit and integration tests |
+| `configs/` | Experiment YAML presets and speciation defaults |
+| `config/` | GGUF inference YAML (`RGConfig.yaml`, `PGConfig.yaml`) |
+| `experiments/` | Analysis drivers (Python); generated artifacts live under `results/` |
+| `results/` | Paper/comparison outputs (gitignored); manifests in `results/manifests/` |
+| `scripts/` | Output validation and analysis helpers |
+| `verfier/` | Lean formal audit of distance semantics |
+| `docs/` | Architecture notes |
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
@@ -195,7 +235,17 @@ PYTHONPATH=src python -m pytest tests/ -v
 
 By default each run writes under `data/outputs/<YYYYMMDD_HHMM>/`. Use `--output-dir` to fix a directory name (for reproducible experiments or paper artifacts).
 
-Typical files include `EvolutionTracker.json`, `elites.json`, population-related JSON, logs, and plots from live analysis when that path runs successfully.
+Each run starts with **`run_config.json`** (full CLI + speciation snapshot). Typical files include `EvolutionTracker.json`, `elites.json`, population-related JSON, logs, and plots from live analysis when that path runs successfully.
+
+Paper analysis CSVs and figures are under **`results/`** (not mixed with `experiments/` drivers).
+
+---
+
+## Reproducibility
+
+- **`--seed`** — GGUF generation seed plus Python/NumPy RNG for evolutionary operators.
+- **`run_config.json`** — written at run start under the output directory.
+- **Study manifests** — from repo root: `python results/manifests/build_study_manifest.py` (SHA256 index; see [`results/manifests/README.md`](results/manifests/README.md)).
 
 ---
 

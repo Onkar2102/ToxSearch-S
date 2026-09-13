@@ -1,0 +1,10 @@
+# Default paper-scale single run (150 genomes cap)
+max_total_genomes: 150
+evaluator: google
+north_star_metric: toxicity
+theta_sim: 0.25
+theta_merge: 0.25
+seed_file: data/prompt.csv
+operators: all
+max_variants: 1
+stagnation_limit: 5

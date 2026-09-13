@@ -53,9 +53,9 @@ SEQ_ROOT = DATA / "toxsearch_s"
 PAR_ROOT = DATA / "toxsearch_s_2w"
 PAR4_ROOT = DATA / "toxsearch_s_4w"
 # Prefer the canonical 3-way manifest; fallback kept for older branches.
-C1_MANIFEST = PROJ / "experiments" / "comparison_results" / "c1_ppsn2026_three_way" / "run_manifest.csv"
+C1_MANIFEST = PROJ / "results" / "comparison" / "c1_ppsn2026_three_way" / "run_manifest.csv"
 
-OUT = PROJ / "experiments" / "comparison_results" / "c3_ppsn2026_species"
+OUT = PROJ / "results" / "comparison" / "c3_ppsn2026_species"
 FIG = OUT / "figures"
 OUT.mkdir(parents=True, exist_ok=True)
 FIG.mkdir(parents=True, exist_ok=True)

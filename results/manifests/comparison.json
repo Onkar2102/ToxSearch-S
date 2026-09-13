@@ -1,0 +1,188 @@
+{
+  "study": "comparison",
+  "generated_at": "2026-09-13T06:42:31.320721+00:00",
+  "git_commit": "a057afa7401d3cdcf112313b6fb28579061afc4b",
+  "root": "results/comparison",
+  "dependency_files": [
+    "requirements.txt",
+    "requirements-analysis.txt"
+  ],
+  "regenerate_notes": "See experiments/ drivers and results/manifests/README.md",
+  "files": [
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/__pycache__/rq1_c1_three_way_report.cpython-312.pyc",
+      "bytes": 54536,
+      "sha256": "ae031c57b101a8085aa7dda7096af916022507d04ff5a76a6c168d514383e977"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/figures/best_so_far_vs_evaluated_genomes_milestones_max.pdf",
+      "bytes": 23549,
+      "sha256": "eb3cc4637818e021aa4e76a2ee1427223842f191b9de9318eff85f75c61bd439"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/figures/embedding_mds_landmark_map.pdf",
+      "bytes": 2868574,
+      "sha256": "57cb328c86097bbe9c3408177461b15e049fe4310f1f8362b68f1cff408a807b"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/figures/run_level_diversity_raincloud.pdf",
+      "bytes": 29208,
+      "sha256": "e115a4abe5ea96cc264de9f3361401f36c1994b87e692e355c548ee2dadef8a3"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/figures/run_level_quality_raincloud.pdf",
+      "bytes": 28920,
+      "sha256": "865a7b10c140866322404f2140377bb8d9f71e02704f132494e7603a6b8f41fb"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/metrics_three_way.csv",
+      "bytes": 4229,
+      "sha256": "b4e10a91ca796aa81cd3ed8daeb5798ac88c01c9adb6deb1cbce95ad7ff20c76"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/milestones_best_so_far.csv",
+      "bytes": 2000,
+      "sha256": "d2fa4e6c271cb0619650b642c96ad81c86b57c2c4eaa1cc827f20d778a4a673f"
+    },
+    {
+      "path": "results/comparison/c1_ppsn2026_three_way/run_manifest.csv",
+      "bytes": 2544,
+      "sha256": "91c503f3684c85a041402666fb0adb7b2d8ae4829fba2b27e431d15d612ca2be"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/__pycache__/c2_seq_vs_2w_report.cpython-312.pyc",
+      "bytes": 63584,
+      "sha256": "8b3484a7010b40038ae4f0be45d67fcfdbb31496dab0b6cb2f544debedd33a25"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/execution_throughput_table.csv",
+      "bytes": 1335,
+      "sha256": "9ae1437e8eeb209cd44191f5eb70d022bc62487aaeb6628bcea66c9c4101a738"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/figures/best_so_far_vs_wall_time.pdf",
+      "bytes": 13775,
+      "sha256": "e7d9bc6d14165358a1aaa7543280681b63a86940e738ef11d1fa6c012da60759"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/figures/throughput_wall_vs_evaluated_genomes.pdf",
+      "bytes": 16126,
+      "sha256": "e0fefe9de5f7b002dcb132d24d389d1af2164b1c044a08bd5f8f37591baee09b"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/figures/toxicity_diversity_vs_evaluated_genomes.pdf",
+      "bytes": 16677,
+      "sha256": "8e11628fae758d17375c60c3816977b27621de006c3b46d874ddbfc1a6f95f37"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/metrics_per_run.csv",
+      "bytes": 6869,
+      "sha256": "21080400d3cb9022c93b22e5ea4d66f345bb260a211d5a454a131d91ff47f7c4"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/run_manifest.csv",
+      "bytes": 2834,
+      "sha256": "3e05a9ecd956345db62d3d22375f93cb1ab5cf4ddc2a892773d043bde0a28ae8"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/stats_summary.json",
+      "bytes": 17952,
+      "sha256": "286b05822444589895cbf169a824ce6761f378e8de68cf4944fc20f3148152ac"
+    },
+    {
+      "path": "results/comparison/c2_ppsn2026_seq_vs_2w/stats_table.csv",
+      "bytes": 4082,
+      "sha256": "d506d02bffab5ebdf80843cbb8e0dd248b4cac8105b83d6e92a4a11c9ef46d70"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/__pycache__/c3_species_report.cpython-312.pyc",
+      "bytes": 92662,
+      "sha256": "59166cc5f275885d6e0f518d21df324101b245fd6f93267382e271da684207c0"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/c1_speciation_summary_by_milestone.csv",
+      "bytes": 331,
+      "sha256": "f45ab8722a30f0f85bd07bda443488258b16b24cd99acc2cb3f7b098383d863e"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/c2_speciation_summary_by_milestone.csv",
+      "bytes": 831,
+      "sha256": "c938382395fee454bb806a0711bc9afd9fc07c906642a67586b6907a8aea2590"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/c3_mds_gdp_3d_points.csv",
+      "bytes": 458295,
+      "sha256": "355720bfb6aaae806ff23c0fc05ea27f945f85bad15ef2b8ce2d9b9b893fb065"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/c3_mds_gdp_3d_summary.json",
+      "bytes": 374,
+      "sha256": "71221ddda8b842ea2a660224d6b80ee35e7661fba46b5769ec1eb03d0b621545"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/c3_prompt_embeddings_mds_summary.json",
+      "bytes": 648,
+      "sha256": "06edfab5115de3bbd0a85d90c86c4a54c5844c52daebd4412f5bc59ae6d9c0e2"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/c3_top_species_by_labels_across_runs.csv",
+      "bytes": 1436,
+      "sha256": "23542f0af3e79975533ef6310195c32938d71018763fe719d8abd6c75275e3f4"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/figures/c3_mds_gdp_3d_by_cohort.pdf",
+      "bytes": 120599,
+      "sha256": "6dbdde5173784e887d8587fe460459274213fa47bb8a58010f8616faefa713c9"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/figures/c3_mds_gdp_3d_by_cohort_interactive.html",
+      "bytes": 8152313,
+      "sha256": "1f49e42fb62ef4d5f42ecdb47fcac8eb00bd77e2e8ca7e2c2fbf40a045bd42b4"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/figures/c3_prompt_embeddings_mds_by_species.pdf",
+      "bytes": 274430,
+      "sha256": "f5241edf7b5a8731f033cd954937170ff922b17ac81120cf557742fbfe53af76"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/figures/c3_top_species_by_labels_across_runs.pdf",
+      "bytes": 24615,
+      "sha256": "7f87ed486c54dc5b6bad657bd3a55b665460e8c979a2b45f16385566ad0112ff"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/run_manifest.csv",
+      "bytes": 3916,
+      "sha256": "f63832f2e3c98c4397210fca1e2afb37789d119edd2bea00ade06bfbb803e993"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/speciation_species_count_milestones_long.csv",
+      "bytes": 11941,
+      "sha256": "63761a3607268cc0f1f3e0f64de8aed5072efec5500a86f4e4cd63f8455faef1"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/species_metrics_per_run.csv",
+      "bytes": 5502,
+      "sha256": "ef9c655f9762cb06fc3c8694382bc71497ad5c9d9bdb4488b1d3a98ae87cce75"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/species_stats_summary.json",
+      "bytes": 8003,
+      "sha256": "c65bdc672d2c84d6e3e92df537f47abe0f8575e8e204476a06a0ddfa342fa3b0"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/species_stats_table.csv",
+      "bytes": 3482,
+      "sha256": "c05e9f2986188454a06fa1e570ddff682ebe9c322a28df5cfc8319fa33e8e434"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/top_species_per_run.csv",
+      "bytes": 10804,
+      "sha256": "65a7daba8b105021014c5462eff39105b0cd472591954d6a940ed2c7bcbb3a8d"
+    },
+    {
+      "path": "results/comparison/c3_ppsn2026_species/top_species_summary.csv",
+      "bytes": 2219,
+      "sha256": "4613bdcb6ac217a35bea9a919184c583ff990284ec239c021b3acb9c8b208cc1"
+    }
+  ]
+}

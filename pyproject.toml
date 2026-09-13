@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toxsearch-s"
+version = "0.1.0"
+description = "Evolutionary adversarial prompt search with semantic speciation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=7.0",
+    "ruff>=0.8",
+    "mypy>=1.11",
+    "types-PyYAML",
+]
+
+[project.scripts]
+toxsearch = "cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+py-modules = ["main", "cli"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["ea*", "gne*", "speciation*", "parallel*", "utils*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+    "mpi: tests requiring MPI (mpiexec)",
+    "integration: integration tests needing fixtures or network",
+]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+src = ["src", "tests", "experiments"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["speciation", "utils"]
+ignore_missing_imports = true
+warn_return_any = false

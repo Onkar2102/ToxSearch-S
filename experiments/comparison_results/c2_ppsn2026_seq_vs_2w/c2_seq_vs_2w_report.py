@@ -50,7 +50,7 @@ SEQ_ROOT = DATA / "toxsearch_s"
 PAR_ROOT = DATA / "toxsearch_s_2w"
 PAR4_ROOT = DATA / "toxsearch_s_4w"
 
-OUT = PROJ / "experiments" / "comparison_results" / "c2_ppsn2026_seq_vs_2w"
+OUT = PROJ / "results" / "comparison" / "c2_ppsn2026_seq_vs_2w"
 FIG = OUT / "figures"
 OUT.mkdir(parents=True, exist_ok=True)
 FIG.mkdir(parents=True, exist_ok=True)

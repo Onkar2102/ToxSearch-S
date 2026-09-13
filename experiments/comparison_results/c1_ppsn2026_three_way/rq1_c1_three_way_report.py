@@ -81,9 +81,9 @@ from experiments.rainbowplus_io import iter_jsonl  # noqa: E402
 # ------------------------------- configuration -------------------------------
 
 DATA = PROJ / "data" / "outputs" / "ppsn2026"
-MANIFEST = PROJ / "experiments" / "comparison_results" / "c1_ppsn2026_three_way" / "run_manifest.csv"
+MANIFEST = PROJ / "results" / "comparison" / "c1_ppsn2026_three_way" / "run_manifest.csv"
 
-OUT = PROJ / "experiments" / "comparison_results" / "c1_ppsn2026_three_way"
+OUT = PROJ / "results" / "comparison" / "c1_ppsn2026_three_way"
 FIG = OUT / "figures"
 OUT.mkdir(parents=True, exist_ok=True)
 FIG.mkdir(parents=True, exist_ok=True)

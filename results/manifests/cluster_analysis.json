@@ -1,0 +1,173 @@
+{
+  "study": "cluster_analysis",
+  "generated_at": "2026-09-13T06:42:31.342077+00:00",
+  "git_commit": "a057afa7401d3cdcf112313b6fb28579061afc4b",
+  "root": "results/cluster_analysis",
+  "dependency_files": [
+    "requirements.txt",
+    "requirements-analysis.txt"
+  ],
+  "regenerate_notes": "See experiments/ drivers and results/manifests/README.md",
+  "files": [
+    {
+      "path": "results/cluster_analysis/figures/pareto_cohort_counts.png",
+      "bytes": 70957,
+      "sha256": "03223701de1e6097208ccf120f61a0938788606b9674eb3701893c97ba48bdcb"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_cohort_summary.csv",
+      "bytes": 431,
+      "sha256": "ac950158af3b56cc686b33fd6057fee28b672c04cee15440d84692488b0e2f67"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_front_driver_summary.csv",
+      "bytes": 384,
+      "sha256": "16e4159906d470d7f5a59ba11a496dc93fa5ebb079e48d94c7c776f86bdd3d58"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/reserves.csv",
+      "bytes": 525,
+      "sha256": "7cce8061be0731fe1861ccc80bae29cbd97f51a8b54d98056d015b5e2e012647"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2415.csv",
+      "bytes": 2946,
+      "sha256": "1660e7844279435e5126d40db10ca09cb1d643801825ae5695830c76f4202caa"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2421.csv",
+      "bytes": 16542,
+      "sha256": "3b7ed707e08cee6add7009f545d0173fe9b31fb4a3f2ac866865a871687f4c75"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2422.csv",
+      "bytes": 9845,
+      "sha256": "4921b38506e5f78e9c06b2319961202743a52def8d67aef2b1d04ca66e2b40da"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2423.csv",
+      "bytes": 4947,
+      "sha256": "e8f8ef3e2b3a6adf458179f3c095ce5d8e6a69179bfc6566d9097f66786cc785"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2424.csv",
+      "bytes": 6056,
+      "sha256": "a5b0a301feeed0bdc7482aae9da21e52cbe38ed004ed96914783bd837aaf72b0"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2425.csv",
+      "bytes": 2814,
+      "sha256": "3a664df895bbec62b1688d995c7ac7d54dd1afd638b168ab2d27deaf9abb050a"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2426.csv",
+      "bytes": 6788,
+      "sha256": "8550d04b1147c25e043702c5da031a6240886df693aae79d322d6e0bcaf1c96e"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2427.csv",
+      "bytes": 844,
+      "sha256": "1b336576af898482c159e2ca36b3bcb0e4d31f0fed49b9fd984c3b4352db79d6"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_fronts_by_cohort/species_2428.csv",
+      "bytes": 1074,
+      "sha256": "65404d50fc4324992254c1e1ba89aa9dfe45593ab5b651fe85282cff9160f72e"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_genomes.csv",
+      "bytes": 62831,
+      "sha256": "4e7e98b441581a9c1997d7b43ce5ab7934977ab8ef84a91ab460b0a2b1e9a9e2"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_global_front_drivers.png",
+      "bytes": 76240,
+      "sha256": "edfa45540c99042e0f2a778869b7be5fb949fad1079cf82db06ccd22451526c4"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_mds_objectives.png",
+      "bytes": 218300,
+      "sha256": "98de754bd42f54d361e7ee1fe72c790ba4483d27710e831358fbcfd10dc51c21"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_mean_profile_global_vs_rest.png",
+      "bytes": 123696,
+      "sha256": "7a25e588c67b8ffdf83a39ed55bd6e387462636aa2c13ff2a967e40dc00e5dc4"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_objectives_heatmap.png",
+      "bytes": 115072,
+      "sha256": "473f50111b19acf1a5f4190c9a4c918b0f324bdec8de11ef3015e92f687a9b1b"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_parallel_coordinates.png",
+      "bytes": 1427870,
+      "sha256": "5f0095f758ea78997b5667c0e18be2a12e4cbfa4a3ceb5f67162e4e8cab5d7d1"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pareto_radvis_3d.png",
+      "bytes": 344806,
+      "sha256": "d67c3c0d5de9fa662cca7e70f63a0b096acb887af40fb9181981b886439816d9"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_pareto.png",
+      "bytes": 754562,
+      "sha256": "68ce1cf8cea793f2f040a54d48231e470944a2c12af29b5c3ab41128bf4dff98"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_reserves.png",
+      "bytes": 56264,
+      "sha256": "3bd46bda8e9dbf0f4b7fdd87a62557d4e7033e7f64e4396f3f151c22cabdd63b"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2415.png",
+      "bytes": 132818,
+      "sha256": "199373ee569a1bed61c480ee1400f3b3df3666fbe16892859271f628b8b97b61"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2421.png",
+      "bytes": 596105,
+      "sha256": "de9a911cc644017645f2db0bb9770af837fa2edf96aba72030c4925d0d19ba7e"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2422.png",
+      "bytes": 290334,
+      "sha256": "ca07e83510c15c772d1d9bb0734c3f24ffd8672d19faab5403fc0aa7b0ceb0bd"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2423.png",
+      "bytes": 332991,
+      "sha256": "47f66c014180762b8edd907c01d3c6eadd7628bd4a9e872d0c4b0a0e26cd5b78"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2424.png",
+      "bytes": 254418,
+      "sha256": "8a0092bcf298b6d51f099ad8e86e12100f318dedcb6adb1823666cd74c4b0e30"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2425.png",
+      "bytes": 239515,
+      "sha256": "efde3c66782123883512e7611d6004acad0ad3ef442b7b576bead054c152d850"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2426.png",
+      "bytes": 233198,
+      "sha256": "e7eca22ca2b677aa257be5eb4d30865b2a0f7261451bce6e362d6bc4abc12a4a"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2427.png",
+      "bytes": 85500,
+      "sha256": "7228fcf42bc9355cc6ae18f3d3fef758ecb7b271a007f08bc42dd1812c7a3f7e"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_pcp_species_2428.png",
+      "bytes": 107608,
+      "sha256": "4b38fe687a9f9773c4d92dfac21294123486c8108b62253f9ba79768485a792b"
+    },
+    {
+      "path": "results/cluster_analysis/figures/pymoo_radviz_pareto.png",
+      "bytes": 42438,
+      "sha256": "80e4fb53507def4984c77c5d47d245abcd22b058fd1b3d07e2a0ee5fd5e0bc4c"
+    }
+  ]
+}

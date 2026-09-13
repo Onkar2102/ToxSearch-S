@@ -180,15 +180,12 @@ logs/
 models/
 htmlcov/
 pre-modification/
-docs/ 
-tests/
 archive/
 .vscode/
-# Doxygen build output
+# Doxygen build output (keep docs/ source tracked)
 docs/html/
 docs/latex/
-.ARCHITECTURE.md
-tests/
+docs/_build/
 
 requirements_spack.txt
 project_script.sh
@@ -196,31 +193,32 @@ project_script.sh
 # Data directory (outputs, archives, CSVs) — not in repo
 data/outputs/
 data/*.CSV
+data/analysis/
 
+# Generated paper / comparison outputs (manifests under results/manifests/ stay tracked)
+results/**
+!results/manifests/
+!results/manifests/**
 
 .cursor/
 
-experiments/*.json
+# Ephemeral experiment caches only (phase manifests stay tracked if under results/)
+experiments/**/*_cache.json
+experiments/**/label_cache.json
 .spvenv/
 
 exaqc-main/
-
 genetic-distance-projection-main/
-
-*.txt
-
 rainbowplus-main/
 
-rc_script.sh
+# Local notes (requirements*.txt and env_example.txt are tracked explicitly)
+research_questions_*.txt
+EMNLP_*.txt
 
+rc_script.sh
 dependency_parallel.sh
 
-scripts/
-
-data/analysis/
-
-*.tex 
-
+*.tex
 report/
 
 

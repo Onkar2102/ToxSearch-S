@@ -1422,6 +1422,10 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
     if max_total_genomes is None:
         raise ValueError("Parallel mode requires max_total_genomes (--max-total-genomes); primary termination is by total genomes.")
 
+    from utils.rng import init_run_rng
+
+    init_run_rng(seed)
+
     try:
         from utils.population_io import get_project_root
         _project_root = get_project_root()
