@@ -4,10 +4,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
-from typing import Any
-
-import yaml
 
 from speciation.config import SpeciationConfig
 from utils import get_custom_logging, get_system_utils
@@ -20,32 +16,9 @@ get_project_root, get_config_path, get_data_path, get_outputs_path, _, initializ
 )
 
 
-def _load_experiment_config(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    if not isinstance(data, dict):
-        raise ValueError(f"Config file must be a YAML mapping: {path}")
-    return data
-
-
-def _apply_config_defaults(parser: argparse.ArgumentParser, config: dict[str, Any]) -> None:
-    """Map YAML keys (snake_case) onto argparse dest names (hyphens → underscores)."""
-    dest_map = {a.dest: a for a in parser._actions if a.dest != "help"}
-    for key, value in config.items():
-        dest = key.replace("-", "_")
-        if dest in dest_map and value is not None:
-            dest_map[dest].default = value
-
-
 def build_parser() -> argparse.ArgumentParser:
     defaults = SpeciationConfig()
     parser = argparse.ArgumentParser(description="Evolutionary Text Generation and Safety Analysis Framework")
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=None,
-        help="Optional YAML experiment config (CLI flags override file values)",
-    )
     parser.add_argument(
         "--generations",
         type=int,
@@ -240,12 +213,6 @@ def _persist_run_config(
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    pre_args, _ = parser.parse_known_args(argv)
-    if pre_args.config:
-        cfg_path = Path(pre_args.config)
-        if not cfg_path.is_absolute():
-            cfg_path = get_project_root() / cfg_path
-        _apply_config_defaults(parser, _load_experiment_config(cfg_path))
     args = parser.parse_args(argv)
 
     if args.output_dir:

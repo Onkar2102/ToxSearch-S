@@ -11,9 +11,13 @@ def test_max_total_genomes_parsed() -> None:
     assert args.max_total_genomes == 10
 
 
-def test_parser_help_includes_config_flag() -> None:
+def test_parser_has_required_flags() -> None:
     parser = build_parser()
-    assert any(a.dest == "config" for a in parser._actions)
+    dests = {a.dest for a in parser._actions}
+    assert "max_total_genomes" in dests
+    assert "theta_sim" in dests
+    assert "evaluator" in dests
+    assert "config" not in dests
 
 
 def test_theta_sim_default_matches_speciation_config() -> None:

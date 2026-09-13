@@ -221,4 +221,5 @@ dependency_parallel.sh
 *.tex
 report/
 
+verifier/
 

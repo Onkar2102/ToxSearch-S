@@ -4,6 +4,9 @@ Lean 4 + Mathlib formalization of the mathematical core of ToxSearch-S
 (ensemble distance, config well-formedness, NSGA-II dominance, speciation
 invariants, refusal penalty).
 
+The directory name `verfier/` is historical; Python docs and imports still
+point here. For the runtime architecture, see [`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md).
+
 See:
 
 - [AUDIT.md](AUDIT.md) — claim-by-claim correct / incorrect / empirical-only verdicts
