@@ -82,28 +82,28 @@ def main():
         from pathlib import Path
         outputs = Path(tmpdir) / "outputs"
 
-        with open(outputs / "reserves.json", "r") as f:
-            reserves = json.load(f)
+        with open(outputs / "archive.json", "r") as f:
+            archive = json.load(f)
         with open(outputs / "temp.json", "r") as f:
             temp = json.load(f)
         with open(outputs / "EvolutionTracker.json", "r") as f:
             tracker = json.load(f)
 
         assert len(temp) == 0, f"temp should be empty, got {len(temp)}"
-        assert len(reserves) >= 4, f"reserves should have >= 4, got {len(reserves)}"
+        assert len(archive) >= 4, f"archive should have >= 4, got {len(archive)}"
         assert tracker["total_generations"] >= 1
 
-        ids = [g["id"] for g in reserves]
+        ids = [g["id"] for g in archive]
         assert len(ids) == len(set(ids)), f"Duplicate IDs: {ids}"
 
-        for g in reserves:
+        for g in archive:
             assert "id" in g, f"Genome missing id: {g}"
             assert "generation" in g, f"Genome missing generation: {g}"
             assert "prompt" in g, f"Genome missing prompt: {g}"
 
         logger.info("=" * 60)
-        logger.info("RUN TEST PASSED  reserves=%d  tracker_gens=%d",
-                     len(reserves), tracker["total_generations"])
+        logger.info("RUN TEST PASSED  archive=%d  tracker_gens=%d",
+                     len(archive), tracker["total_generations"])
         logger.info("=" * 60)
 
         shutil.rmtree(tmpdir, ignore_errors=True)

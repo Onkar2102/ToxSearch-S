@@ -207,7 +207,7 @@ def calculate_cluster_quality_metrics(
         
         outputs_dir = Path(outputs_path)
         elites_path = outputs_dir / "elites.json"
-        reserves_path = outputs_dir / "reserves.json"
+        archive_path = outputs_dir / "archive.json"
         
         all_genomes = []
         genomes_with_embeddings = {}
@@ -220,8 +220,8 @@ def calculate_cluster_quality_metrics(
                     if genome_id is not None:
                         genomes_with_embeddings[genome_id] = genome
         
-        if reserves_path.exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
+        if archive_path.exists():
+            with open(archive_path, 'r', encoding='utf-8') as f:
                 existing_genomes = json.load(f)
                 for genome in existing_genomes:
                     genome_id = genome.get("id")
@@ -267,7 +267,7 @@ def calculate_cluster_quality_metrics(
             _logger.warning(
                 f"Not enough genomes with embeddings ({len(embeddings_list)}) for cluster quality. "
                 f"Total genomes: {len(all_genomes)}, genomes with species_id: {len([g for g in all_genomes if g.get('species_id') is not None])}. "
-                f"This is likely because embeddings were removed from temp.json after distribution (embeddings are preserved in elites.json and reserves.json)."
+                f"This is likely because embeddings were removed from temp.json after distribution (embeddings are preserved in elites.json and archive.json)."
             )
             metrics["qd_score"] = calculate_qd_score(outputs_path=outputs_path, logger=_logger)
             return metrics
@@ -282,7 +282,7 @@ def calculate_cluster_quality_metrics(
             if metrics["num_clusters"] < num_species_total:
                 _logger.warning(
                     "Cluster quality uses only %d of %d species (num_clusters < num_species_total). "
-                    "Excluded species have no elites with prompt_embedding, or all members are in reserves. "
+                    "Excluded species have no elites with prompt_embedding, or all members are in archive. "
                     "To include all species, ensure prompt_embedding is persisted for all elites.",
                     metrics["num_clusters"], num_species_total
                 )

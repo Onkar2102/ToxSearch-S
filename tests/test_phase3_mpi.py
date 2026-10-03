@@ -97,12 +97,12 @@ def test_dedup(comm, rank, size, logger):
     tmpdir = tempfile.mkdtemp(prefix="toxsearch_dedup_")
     outputs = Path(tmpdir)
 
-    for fn in ("temp.json", "elites.json", "reserves.json", "archive.json"):
+    for fn in ("temp.json", "elites.json", "archive.json"):
         with open(outputs / fn, "w") as f:
             json.dump([], f)
 
-    with open(outputs / "reserves.json", "w") as f:
-        json.dump([{"id": 99, "prompt": "already_exists", "species_id": 0}], f)
+    with open(outputs / "archive.json", "w") as f:
+        json.dump([{"id": 99, "prompt": "already_exists", "species_id": -1}], f)
 
     buffers = defaultdict(list)
     buffers[1] = [
@@ -118,9 +118,9 @@ def test_dedup(comm, rank, size, logger):
     assert accepted == 2, f"Expected 2 accepted, got {accepted}"
     assert discarded == 2, f"Expected 2 discarded, got {discarded}"
 
-    with open(outputs / "reserves.json", "r") as f:
-        reserves = json.load(f)
-    new_prompts = {g["prompt"] for g in reserves if g["id"] != 99}
+    with open(outputs / "archive.json", "r") as f:
+        archive = json.load(f)
+    new_prompts = {g["prompt"] for g in archive if g["id"] != 99}
     assert "unique_A" in new_prompts
     assert "unique_B" in new_prompts
     assert nid == 3, f"Expected next_genome_id=3, got {nid}"
@@ -149,7 +149,7 @@ def test_phase3(comm, rank, size, logger):
         from pathlib import Path
 
         outputs = Path(tmpdir)
-        for fn in ("temp.json", "elites.json", "reserves.json", "archive.json"):
+        for fn in ("temp.json", "elites.json", "archive.json"):
             with open(outputs / fn, "w") as f:
                 json.dump([], f)
 
@@ -182,12 +182,12 @@ def test_phase3(comm, rank, size, logger):
 
                 else:
                     parents_list = []
-                    reserves_path = outputs / "reserves.json"
-                    if reserves_path.exists():
-                        with open(reserves_path, "r") as f:
-                            reserves = json.load(f)
-                        if reserves:
-                            parents_list = reserves[:2]
+                    archive_path = outputs / "archive.json"
+                    if archive_path.exists():
+                        with open(archive_path, "r") as f:
+                            archive = json.load(f)
+                        if archive:
+                            parents_list = archive[:2]
 
                     if parents_list:
                         send_payload(comm, src, PARENTS,
@@ -220,9 +220,9 @@ def test_phase3(comm, rank, size, logger):
                         logger.info("Max generations %d reached. Shutdown flag set.", MAX_GENERATIONS)
 
                           
-        reserves_path = outputs / "reserves.json"
-        with open(reserves_path, "r") as f:
-            reserves = json.load(f)
+        archive_path = outputs / "archive.json"
+        with open(archive_path, "r") as f:
+            archive = json.load(f)
 
         temp_path = outputs / "temp.json"
         with open(temp_path, "r") as f:
@@ -233,17 +233,17 @@ def test_phase3(comm, rank, size, logger):
             tracker = json.load(f)
 
         assert len(temp) == 0, f"temp should be empty, got {len(temp)}"
-        assert len(reserves) >= K, f"reserves should have >= {K}, got {len(reserves)}"
+        assert len(archive) >= K, f"archive should have >= {K}, got {len(archive)}"
         assert generation_id >= MAX_GENERATIONS, f"gen_id should be >= {MAX_GENERATIONS}, got {generation_id}"
         assert total_evaluated >= K, f"total_evaluated should be >= {K}, got {total_evaluated}"
         assert total_integrated >= K, f"total_integrated should be >= {K}, got {total_integrated}"
         assert tracker["total_generations"] >= 1
 
-        ids = [g["id"] for g in reserves]
+        ids = [g["id"] for g in archive]
         assert len(ids) == len(set(ids)), f"Duplicate genome IDs: {ids}"
 
-        logger.info("PHASE 3: PASS  reserves=%d  gen_id=%d  evaluated=%d  integrated=%d  discarded=%d",
-                     len(reserves), generation_id, total_evaluated, total_integrated, total_discarded)
+        logger.info("PHASE 3: PASS  archive=%d  gen_id=%d  evaluated=%d  integrated=%d  discarded=%d",
+                     len(archive), generation_id, total_evaluated, total_integrated, total_discarded)
 
     else:
         seq = 0

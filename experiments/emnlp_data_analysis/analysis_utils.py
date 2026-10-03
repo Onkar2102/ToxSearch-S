@@ -1030,7 +1030,7 @@ def save_phase6_artifacts(
         import behaviour_layout
 
         importlib.reload(behaviour_layout)
-        from speciation.phenotype_distance import phenotype_distance  # noqa: E402
+        from speciation.distance import phenotype_distance  # noqa: E402
 
         behaviour_layout.stamp_f0_flags(rows, global_pareto_annotate=global_pareto_annotate)
         fig_dir = out_dir / "figures"
@@ -1114,7 +1114,7 @@ def save_phase6_artifacts(
                 artifacts["fig_topic_axis_heatmap_dual"] = hp_dual
 
         # Hero #3: dual d_g vs d_p
-        from speciation.phenotype_distance import phenotype_distance as _pd  # noqa: E402
+        from speciation.distance import phenotype_distance as _pd  # noqa: E402
         dp_dual = behaviour_layout.plot_centroid_dg_dp_dual(
             rows,
             summaries_by_eval,

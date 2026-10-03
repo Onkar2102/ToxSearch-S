@@ -123,7 +123,7 @@ class TestMergeErrorFiltering:
     def _setup_outputs(self):
         tmpdir = tempfile.mkdtemp(prefix="toxsearch_p5_merge_")
         outputs = Path(tmpdir)
-        for fname in ("elites.json", "reserves.json", "archive.json", "temp.json"):
+        for fname in ("elites.json", "archive.json", "temp.json"):
             with open(outputs / fname, "w") as f:
                 json.dump([], f)
         return tmpdir, outputs
@@ -152,9 +152,7 @@ class TestMergeErrorFiltering:
             assert accepted == 2
             assert discarded == 1
 
-            with open(outputs / "reserves.json") as f:
-                reserves = json.load(f)
-            prompts = [g["prompt"] for g in reserves]
+            prompts = [g["prompt"] for g in accepted_genomes]
             assert "error prompt" not in prompts
             assert "good prompt 1" in prompts
             assert "good prompt 2" in prompts

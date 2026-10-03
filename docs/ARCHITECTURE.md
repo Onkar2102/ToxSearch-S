@@ -8,7 +8,7 @@ ToxSearch-S runs a quality–diversity evolutionary loop over adversarial prompt
 
 1. A local **GGUF** model answers (and helps mutate) prompts.
 2. An external **moderation API** (Perspective or OpenAI) scores responses → fitness / phenotype.
-3. **Semantic speciation** clusters prompts in embedding space (genotype) and uses ensemble distance with phenotype for species membership, merge, and capacity.
+3. **Semantic speciation** clusters prompts with selectable dissimilarities (`--distance-method`) and clustering (`--clustering-method`). Fitness comes from the evaluator; non-elites go to `archive.json`.
 
 ```text
 CLI (cli.py) --> run_config.json + RNG seed
@@ -51,7 +51,7 @@ Speciation fields are validated in `SpeciationConfig.__post_init__`. There is a 
 ## Data flow (sequential)
 
 1. CLI resolves evaluator / north-star, builds `SpeciationConfig`, writes **`run_config.json`**, calls `init_run_rng(seed)`.
-2. **Gen 0:** seed CSV → responses → moderation → refusal penalties → speciation → `elites.json` / `reserves.json`.
+2. **Gen 0:** seed CSV → responses → moderation → refusal penalties → speciation → `elites.json` / `archive.json`.
 3. **Later generations:** parent selection → operators → evaluate → speciation cadence → `EvolutionTracker.json`.
 4. Optional live analysis / GDP projection under the run output directory.
 
@@ -61,13 +61,15 @@ Speciation fields are validated in `SpeciationConfig.__post_init__`. There is a 
 2. Workers initialize generators with the shared LLM `seed` and process gen0 / variant jobs.
 3. Master merges batches of size **K**, runs speciation, updates tracker; termination when total genomes hit `--max-total-genomes`.
 
-## Distances (genotype / phenotype / ensemble)
+## Distances (embedding / objective / hybrids)
 
-Implemented in `speciation/distance.py` and `speciation/phenotype_distance.py`:
+Implemented in `speciation/distance.py` and `speciation/distance_metrics/`:
 
-- **Genotype:** cosine distance on L2-normalized prompt embeddings (`semantic_distance`). Not a classical metric; see `verfier/` for the 2-relaxed triangle inequality.
-- **Phenotype:** distance over moderation score vectors (missing phenotypes treated as maximal distance `1.0` in ensemble).
-- **Ensemble:** `w_genotype * (d_genotype / 2) + w_phenotype * d_phenotype` with weights summing to 1 (defaults 0.7 / 0.3). Species radii (`theta_sim`, `theta_merge`) apply in this ensemble space.
+- **Embedding:** cosine dissimilarity on L2-normalized prompt embeddings (`embedding_distance` ∈ [0,1]). Not a classical metric.
+- **Objective (phenotype):** scaled Euclidean over moderation score vectors (missing vectors → `1.0`).
+- **Hybrids:** `nli+embedding` and `embedding+objective` blends via `--distance-method`.
+
+Prompt embeddings are produced by `speciation/embeddings.py` (sentence-transformers); distance math lives in `distance_metrics/embedding.py`.
 
 Analysis code should reuse core distances (e.g. EMNLP `genotype_distance` wraps `semantic_distance / 2`) rather than reimplementing formulas.
 

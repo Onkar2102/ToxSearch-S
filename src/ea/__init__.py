@@ -132,3 +132,13 @@ __all__ = [
     "get_SemanticSimilarityCrossover",
     "get_SemanticFusionCrossover",
 ]
+
+
+def __getattr__(name: str):
+    """Lazy-load submodules so ``ea.evolution_engine`` resolves for imports/patches."""
+    import importlib
+
+    try:
+        return importlib.import_module(f".{name}", __name__)
+    except ModuleNotFoundError as exc:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from exc

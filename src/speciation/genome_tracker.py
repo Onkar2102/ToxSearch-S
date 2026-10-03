@@ -11,7 +11,7 @@ get_logger, _, _, _ = get_custom_logging()
 
 
 class GenomeTracker:
-    """Master registry of all genomes and their current species_id. Single source of truth for genome distribution: - species_id > 0: In elites.json (belongs to a species) - species_id == 0: In reserves.json (cluster 0 / reserves) - species_id == -1: In archive.json (archived) The tracker is authoritative - if files show different species_id, the tracker's value is correct and files should be updated."""
+    """Master registry of all genomes and their current species_id. species_id > 0 → elites.json; species_id == -1 (or legacy 0) → archive.json. Tracker is authoritative over file contents."""
     
     def __init__(self, logger=None):
         
@@ -205,8 +205,11 @@ class GenomeTracker:
             species_id = data["species_id"]
             if not isinstance(species_id, int):
                 errors.append(f"Genome {genome_id} has invalid species_id type: {type(species_id)}, expected int")
-            elif species_id < -1:
-                errors.append(f"Genome {genome_id} has invalid species_id value: {species_id} (must be -1, 0, or >0)")
+            elif species_id < -1 or species_id == 0:
+                errors.append(
+                    f"Genome {genome_id} has invalid species_id value: {species_id} "
+                    f"(must be -1 archive or >0 elite; 0/reserves removed)"
+                )
             
             if "created_generation" in data:
                 created_gen = data["created_generation"]
@@ -221,9 +224,9 @@ class GenomeTracker:
         is_valid = len(errors) == 0
         return is_valid, errors
     
-    def validate_consistency(self, elites_path: Path, reserves_path: Path, archive_path: Path, 
+    def validate_consistency(self, elites_path: Path, archive_path: Path,
                             load_archive: bool = False) -> Tuple[bool, List[str]]:
-        
+        """Check tracker vs elites.json and archive.json."""
         errors = []
         
         is_internal_valid, internal_errors = self.validate_internal_state()
@@ -231,10 +234,12 @@ class GenomeTracker:
             errors.extend(internal_errors)
         
         stats = self.get_distribution_stats()
-        has_archived = int(stats["by_species_id"].get("-1", 0)) > 0
+        has_archived = (
+            int(stats["by_species_id"].get("-1", 0)) > 0
+            or int(stats["by_species_id"].get("0", 0)) > 0
+        )
         
         elites_genomes = []
-        reserves_genomes = []
         archive_genomes = []
         
         if elites_path.exists():
@@ -244,14 +249,7 @@ class GenomeTracker:
             except Exception as e:
                 errors.append(f"Failed to load elites.json: {e}")
         
-        if reserves_path.exists():
-            try:
-                with open(reserves_path, 'r', encoding='utf-8') as f:
-                    reserves_genomes = json.load(f)
-            except Exception as e:
-                errors.append(f"Failed to load reserves.json: {e}")
-        
-        if load_archive and has_archived and archive_path.exists():
+        if (load_archive or has_archived) and archive_path.exists():
             try:
                 with open(archive_path, 'r', encoding='utf-8') as f:
                     archive_genomes = json.load(f)
@@ -264,11 +262,6 @@ class GenomeTracker:
             if gid is not None and gid != "":
                 all_file_genomes[str(gid)] = ("elites", g.get("species_id"))
         
-        for g in reserves_genomes:
-            gid = g.get("id")
-            if gid is not None and gid != "":
-                all_file_genomes[str(gid)] = ("reserves", g.get("species_id", 0))
-        
         for g in archive_genomes:
             gid = g.get("id")
             if gid is not None and gid != "":
@@ -276,6 +269,8 @@ class GenomeTracker:
         
         for genome_id, data in self.genomes.items():
             tracker_species_id = data["species_id"]
+            if tracker_species_id == 0:
+                tracker_species_id = -1
             
             if genome_id in all_file_genomes:
                 file_location, file_species_id = all_file_genomes[genome_id]
@@ -286,7 +281,10 @@ class GenomeTracker:
                         f"but {file_location}.json shows {file_species_id} (tracker is authoritative)"
                     )
                 
-                expected_location = "elites" if tracker_species_id > 0 else ("reserves" if tracker_species_id == 0 else "archive")
+                if tracker_species_id > 0:
+                    expected_location = "elites"
+                else:
+                    expected_location = "archive"
                 if file_location != expected_location:
                     errors.append(
                         f"Genome {genome_id}: tracker says species_id={tracker_species_id} (should be in {expected_location}.json), "

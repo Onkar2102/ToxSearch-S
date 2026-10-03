@@ -113,13 +113,15 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
         
         gen_nums = []
         species_counts = []
-        reserves_counts = []
+        archive_panel = []
         
         for g in generations:
             gen_nums.append(g.get("generation_number", 0))
             speciation = g.get("speciation") or {}
             species_counts.append(speciation.get("species_count", 0))
-            reserves_counts.append(speciation.get("reserves_size", 0))
+            archive_panel.append(
+                int(speciation.get("archived_count", g.get("archived_count", 0)) or 0)
+            )
         
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
         
@@ -130,10 +132,10 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
         ax1.set_ylim(bottom=0)
         ax1.grid(True, alpha=0.3)
         
-        ax2.plot(gen_nums, reserves_counts, 's-', color='#4daf4a', linewidth=2, markersize=6)
+        ax2.plot(gen_nums, archive_panel, 's-', color='#984ea3', linewidth=2, markersize=6)
         ax2.set_xlabel('Generation', fontsize=12)
-        ax2.set_ylabel('Reserves Size', fontsize=12)
-        ax2.set_title('Reserves Size Over Generations', fontsize=12, fontweight='bold')
+        ax2.set_ylabel('Archive size (cumulative)', fontsize=12)
+        ax2.set_title('Non-elites (archive) Over Generations', fontsize=12, fontweight='bold')
         ax2.set_xlim(left=0)
         ax2.set_ylim(bottom=0)
         ax2.grid(True, alpha=0.3)
@@ -237,24 +239,22 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         
         gen_nums = [g.get("generation_number", 0) for g in generations]
         elites_counts = [int(g.get("elites_count", 0) or 0) for g in generations]
-        reserves_counts = [int(g.get("reserves_count", 0) or 0) for g in generations]
         archive_counts = [int(g.get("archived_count", 0) or 0) for g in generations]
         
         plt.figure(figsize=(10, 6))
         plt.stackplot(
             gen_nums,
             elites_counts,
-            reserves_counts,
             archive_counts,
-            labels=["Elites (cumulative)", "Reserves (cumulative)", "Archive (cumulative)"],
-            colors=["#377eb8", "#4daf4a", "#984ea3"],
+            labels=["Elites (cumulative)", "Archive (cumulative)"],
+            colors=["#377eb8", "#984ea3"],
             alpha=0.88,
         )
         
         plt.xlabel("Generation", fontsize=12)
         plt.ylabel("Cumulative genome count (per pool)", fontsize=12)
         plt.title(
-            "Population composition (cumulative: elites + reserves + archive)",
+            "Population composition (cumulative: elites + archive)",
             fontsize=14,
             fontweight="bold",
         )
@@ -289,7 +289,7 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
         outputs_path = str(get_outputs_path())
     base = Path(outputs_path)
     elites_path = base / "elites.json"
-    reserves_path = base / "reserves.json"
+    archive_path = base / "archive.json"
     figures_dir = base / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     try:
@@ -310,9 +310,8 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
             return None
         _, reduced = run_gdp_projection(
             elites_path=elites_path,
-            reserves_path=reserves_path,
             output_dir=base,
-            archive_path=base / "archive.json",
+            archive_path=archive_path if archive_path.exists() else None,
             reduced_size=2,
             save_json=True,
         )

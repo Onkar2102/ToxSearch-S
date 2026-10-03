@@ -1,5 +1,3 @@
-
-
 import sys
 import time
 import json
@@ -43,10 +41,12 @@ def update_model_configs(rg_model, pg_model, logger):
 
 def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", pg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
          max_total_genomes=None, seed=None,
-         theta_sim=0.25, theta_merge=0.1, min_stability_gens=5, species_capacity=100, cluster0_max_capacity=1000,
-         cluster0_min_cluster_size=2, min_island_size=2, species_stagnation=20,
+         theta_sim=0.25, theta_merge=0.1, min_stability_gens=5, species_capacity=100,
+         min_island_size=2, species_stagnation=20,
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64,
-         evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest"):
+         evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest",
+         clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
+         distance_method="embedding", distance_alpha=0.7):
     
     
     get_logger, get_log_filename, log_system_info, PerformanceLogger = get_custom_logging()
@@ -179,13 +179,16 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         theta_merge=theta_merge,
         min_stability_gens=min_stability_gens,
         species_capacity=species_capacity,
-        cluster0_max_capacity=cluster0_max_capacity,
-        cluster0_min_cluster_size=cluster0_min_cluster_size,
         min_island_size=min_island_size,
         species_stagnation=species_stagnation,
         embedding_model=embedding_model,
         embedding_dim=embedding_dim,
-        embedding_batch_size=embedding_batch_size
+        embedding_batch_size=embedding_batch_size,
+        clustering_method=clustering_method,
+        dbscan_eps=dbscan_eps,
+        dbscan_min_samples=dbscan_min_samples,
+        distance_method=distance_method,
+        distance_alpha=distance_alpha,
     )
 
     temp_path_obj = get_outputs_path() / "temp.json"
@@ -217,9 +220,9 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             )
             
             if speciation_result.get("success"):
-                logger.info("Speciation complete: %d species, %d in reserves, %d genomes updated",
+                logger.info("Speciation complete: %d species, %d archived this gen, %d genomes updated",
                            speciation_result.get("species_count", 0),
-                           speciation_result.get("reserves_size", 0),
+                           speciation_result.get("archived_count", 0),
                            speciation_result.get("genomes_updated", 0))
             else:
                 logger.warning("Speciation completed with warnings: %s", speciation_result.get("error", "unknown"))
@@ -284,7 +287,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["crossover_variants"] = 0
             gen0_stats["variants_integrated"] = (
                 gen0_stats.get("elites_count", 0)
-                + gen0_stats.get("reserves_count", 0)
                 + gen0_stats.get("archived_count", 0)
             )
             gen0_stats["max_score_variants"] = gen0_max_score
@@ -294,13 +296,13 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["species_count"] = speciation_result.get("species_count", 0)
             gen0_stats["active_species_count"] = speciation_result.get("active_species_count", 0)
             gen0_stats["frozen_species_count"] = speciation_result.get("frozen_species_count", 0)
-            gen0_stats["reserves_size"] = speciation_result.get("reserves_size", 0)
+            gen0_stats["archive_size"] = speciation_result.get("archive_size", 0)
             gen0_stats["speciation_events"] = speciation_result.get("speciation_events", 0)
             gen0_stats["merge_events"] = speciation_result.get("merge_events", 0)
             gen0_stats["extinction_events"] = speciation_result.get("extinction_events", 0)
             gen0_stats["archived_this_generation"] = speciation_result.get("archived_count", 0)
             gen0_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
-            gen0_stats["reserves_moved"] = speciation_result.get("reserves_moved", 0)
+            gen0_stats["archive_moved"] = speciation_result.get("archive_moved", 0)
             gen0_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
             if speciation_result.get("speciation_duration_seconds") is not None:
                 gen0_stats["speciation_duration_seconds"] = speciation_result["speciation_duration_seconds"]
@@ -319,7 +321,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 run_metadata_update=dict(
                     theta_sim=theta_sim,
                     species_capacity=species_capacity,
-                    cluster0_max_capacity=cluster0_max_capacity,
                     evaluator=evaluator,
                     north_star_metric=north_star_metric,
                     openai_model=openai_model,
@@ -345,15 +346,13 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             except Exception as e:
                 logger.warning("Failed to update adaptive selection logic: %s", e)
             
-            logger.info("Gen0 metrics: elites=%d (avg=%.4f), reserves=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f",
+            logger.info("Gen0 metrics: elites=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f",
                         gen0_stats["elites_count"], gen0_stats["avg_fitness_elites"],
-                        gen0_stats["reserves_count"], gen0_stats["avg_fitness_reserves"],
                         gen0_stats.get("archived_count", 0), gen0_stats["total_population"], gen0_stats["avg_fitness_generation"])
     except Exception as e:
         logger.warning("Failed to update generation 0 metrics in EvolutionTracker: %s", e)
 
     elites_path = get_outputs_path() / "elites.json"
-    reserves_path = get_outputs_path() / "reserves.json"
     has_population = False
     
     if elites_path.exists():
@@ -366,18 +365,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         except Exception as e:
             logger.warning("Failed to read elites.json for validation: %s", e)
     
-    if not has_population and reserves_path.exists():
-        try:
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves_data = json.load(f)
-                if isinstance(reserves_data, list) and len(reserves_data) > 0:
-                    has_population = True
-                    logger.info("Generation 0 validation: reserves.json has %d genomes", len(reserves_data))
-        except Exception as e:
-            logger.warning("Failed to read reserves.json for validation: %s", e)
-    
     if not has_population:
-        logger.error("Generation 0 failed: No genomes in elites.json or reserves.json after speciation.")
+        logger.error("Generation 0 failed: No genomes in elites.json after speciation.")
         logger.error("This indicates that Generation 0 did not complete successfully.")
         logger.error("Possible causes: empty temp.json, all genomes archived, or speciation failure.")
         return
@@ -407,7 +396,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gens = tracker.get("generations", [])
             latest = max(gens, key=lambda g: g.get("generation_number", 0), default=None) if gens else None
             if latest is not None:
-                total = latest.get("elites_count", 0) + latest.get("reserves_count", 0) + latest.get("archived_count", 0)
+                total = latest.get("elites_count", 0) + latest.get("archived_count", 0)
                 final_total_genomes = total
                 if total >= max_total_genomes:
                     terminated_by_total_genomes = True
@@ -485,6 +474,28 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     )
             except Exception as e:
                 logger.warning("Gen %d: Failed to compute avg_fitness before speciation: %s", generation_count, e)
+
+            if max_total_genomes is not None:
+                try:
+                    from utils.population_io import trim_temp_to_budget, count_elites_and_archive
+                    kept = trim_temp_to_budget(
+                        str(get_outputs_path()),
+                        max_total_genomes,
+                        north_star_metric,
+                        logger=logger,
+                        log_file=log_file,
+                    )
+                    if kept == 0:
+                        elites_n, archive_n = count_elites_and_archive(str(get_outputs_path()))
+                        if elites_n + archive_n >= max_total_genomes:
+                            logger.info(
+                                "Gen %d: no remaining budget for new genomes (%d+%d >= %d); stopping before speciation",
+                                generation_count, elites_n, archive_n, max_total_genomes,
+                            )
+                            terminated_by_total_genomes = True
+                            break
+                except Exception as e:
+                    logger.warning("Gen %d: trim_temp_to_budget failed: %s", generation_count, e)
             
             variant_counts = {"variants_created": 0, "mutation_variants": 0, "crossover_variants": 0, "variants_integrated": 0}
             max_score_variants = 0.0001
@@ -551,12 +562,11 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     )
                 
                 if speciation_result.get("success"):
-                    logger.info("Gen %d speciation: %d species, %d in reserves, %d elites moved, %d reserves moved",
+                    logger.info("Gen %d speciation: %d species, %d archived, %d elites assigned",
                                generation_count,
                                speciation_result.get("species_count", 0),
-                               speciation_result.get("reserves_size", 0),
-                               speciation_result.get("elites_moved", 0),
-                               speciation_result.get("reserves_moved", 0))
+                               speciation_result.get("archived_count", 0),
+                               speciation_result.get("elites_moved", 0))
                 else:
                     logger.warning("Gen %d speciation completed with warnings: %s", 
                                   generation_count, speciation_result.get("error", "unknown"))
@@ -646,7 +656,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     outputs_path = get_outputs_path()
                     
                     all_genomes = []
-                    for file_name in ["temp.json", "elites.json", "reserves.json"]:
+                    for file_name in ["temp.json", "elites.json", "archive.json"]:
                         file_path = outputs_path / file_name
                         if file_path.exists():
                             file_genomes = load_population(str(file_path), logger=logger)
@@ -693,13 +703,13 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             gen_stats["species_count"] = speciation_result.get("species_count", 0)
                             gen_stats["active_species_count"] = speciation_result.get("active_species_count", 0)
                             gen_stats["frozen_species_count"] = speciation_result.get("frozen_species_count", 0)
-                            gen_stats["reserves_size"] = speciation_result.get("reserves_size", 0)
+                            gen_stats["archive_size"] = speciation_result.get("archive_size", 0)
                             gen_stats["speciation_events"] = speciation_result.get("speciation_events", 0)
                             gen_stats["merge_events"] = speciation_result.get("merge_events", 0)
                             gen_stats["extinction_events"] = speciation_result.get("extinction_events", 0)
                             gen_stats["archived_this_generation"] = speciation_result.get("archived_count", 0)
                             gen_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
-                            gen_stats["reserves_moved"] = speciation_result.get("reserves_moved", 0)
+                            gen_stats["archive_moved"] = speciation_result.get("archive_moved", 0)
                             gen_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
                             if "inter_species_diversity" in speciation_result:
                                 gen_stats["inter_species_diversity"] = speciation_result.get("inter_species_diversity", 0.0)
@@ -728,15 +738,23 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             logger.warning("Recalculating from files to verify...")
                             current_population_max = 0.0001
                         
-                        if (current_population_max == 0.0 or current_population_max == 0.0001) and (gen_stats.get("elites_count", 0) > 0 or gen_stats.get("reserves_count", 0) > 0):
-                            logger.warning(f"Gen {generation_count}: population_max_toxicity is {current_population_max:.4f} but we have genomes (elites={gen_stats.get('elites_count', 0)}, reserves={gen_stats.get('reserves_count', 0)}) - recalculating...")
+                        if (current_population_max == 0.0 or current_population_max == 0.0001) and (
+                            gen_stats.get("elites_count", 0) > 0 or gen_stats.get("archived_count", 0) > 0
+                        ):
+                            logger.warning(
+                                "Gen %d: population_max_toxicity is %s but we have genomes (elites=%d, archived=%d) - recalculating...",
+                                generation_count,
+                                current_population_max,
+                                gen_stats.get("elites_count", 0),
+                                gen_stats.get("archived_count", 0),
+                            )
                             logger.warning(f"Gen {generation_count}: population_max_toxicity is 0.0 but we have genomes - this may indicate a calculation issue")
                             try:
                                 outputs_path = get_outputs_path()
                                 elites_path = outputs_path / "elites.json"
-                                reserves_path = outputs_path / "reserves.json"
+                                archive_path = outputs_path / "archive.json"
                                 all_scores = []
-                                for path in [elites_path, reserves_path]:
+                                for path in [elites_path, archive_path]:
                                     if path.exists():
                                         with open(path, 'r', encoding='utf-8') as f:
                                             genomes = json.load(f)
@@ -774,7 +792,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             log_file=log_file,
                             run_metadata_update={"max_total_genomes": max_total_genomes} if max_total_genomes is not None else None,
                         )
-                        total_genomes = gen_stats["elites_count"] + gen_stats["reserves_count"] + gen_stats.get("archived_count", 0)
+                        total_genomes = gen_stats["elites_count"] + gen_stats.get("archived_count", 0)
                         final_total_genomes = total_genomes
                         try:
                             outputs_path = str(get_outputs_path())
@@ -795,9 +813,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                         except Exception as e:
                             logger.warning("Failed to update adaptive selection logic: %s", e)
                         
-                        logger.info("Gen%d metrics: elites=%d (avg=%.4f), reserves=%d (avg=%.4f), archived=%d, variants: max=%.4f, min=%.4f, avg=%.4f",
+                        logger.info("Gen%d metrics: elites=%d (avg=%.4f), archived=%d, variants: max=%.4f, min=%.4f, avg=%.4f",
                                     generation_count, gen_stats["elites_count"], gen_stats["avg_fitness_elites"],
-                                    gen_stats["reserves_count"], gen_stats["avg_fitness_reserves"],
                                     gen_stats.get("archived_count", 0), max_score_variants, min_score_variants, avg_fitness_variants)
                         
                         try:

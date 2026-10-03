@@ -77,21 +77,21 @@ def _mock_run_speciation(temp_path=None, current_generation=0,
     speciation_called_with["call_count"] = speciation_called_with.get("call_count", 0) + 1
 
     temp = Path(temp_path)
-    reserves_path = temp.parent / "reserves.json"
+    archive_path = temp.parent / "archive.json"
 
     with open(temp, "r", encoding="utf-8") as f:
         genomes = json.load(f)
 
     existing = []
-    if reserves_path.exists():
-        with open(reserves_path, "r", encoding="utf-8") as f:
+    if archive_path.exists():
+        with open(archive_path, "r", encoding="utf-8") as f:
             existing = json.load(f)
 
     for g in genomes:
-        g.setdefault("species_id", 0)
+        g.setdefault("species_id", -1)
     existing.extend(genomes)
 
-    with open(reserves_path, "w", encoding="utf-8") as f:
+    with open(archive_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
     with open(temp, "w", encoding="utf-8") as f:
@@ -100,7 +100,7 @@ def _mock_run_speciation(temp_path=None, current_generation=0,
     return {
         "success": True,
         "species_count": 1,
-        "reserves_size": len(existing),
+        "archived_count": len(genomes),
         "elites_moved": 0,
     }
 
@@ -168,11 +168,12 @@ def test_gen0_partial_speciation(comm, rank, size, logger):
             assert tracker["total_generations"] >= 1, \
                 f"Expected >= 1 generation, got {tracker['total_generations']}"
 
-            reserves_path = out / "reserves.json"
-            with open(reserves_path) as f:
-                reserves = json.load(f)
-            assert len(reserves) >= 1, \
-                f"Expected >= 1 genome in reserves, got {len(reserves)}"
+            archive_path = out / "archive.json"
+            assert archive_path.exists(), "archive.json missing"
+            with open(archive_path) as f:
+                archive = json.load(f)
+            assert len(archive) >= 1, \
+                f"Expected >= 1 genome in archive, got {len(archive)}"
 
             temp_path = out / "temp.json"
             with open(temp_path) as f:
@@ -254,10 +255,11 @@ def test_cli_args_flow(comm, rank, size, logger):
                 tracker = json.load(f)
             assert tracker["total_generations"] >= 1
 
-            reserves_path = out / "reserves.json"
-            with open(reserves_path) as f:
-                reserves = json.load(f)
-            assert len(reserves) >= 1
+            archive_path = out / "archive.json"
+            assert archive_path.exists(), "archive.json missing"
+            with open(archive_path) as f:
+                archive = json.load(f)
+            assert len(archive) >= 1
 
             logger.info("PASS: CLI args flow through correctly")
 

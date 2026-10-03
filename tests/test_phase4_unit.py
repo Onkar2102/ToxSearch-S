@@ -108,6 +108,8 @@ class TestProcessSingleGenome:
 class TestEvaluateSingleGenome:
     def test_updates_genome_on_success(self):
         mock_eval = MagicMock()
+        mock_eval.profile.backend_key = "google"
+        mock_eval.profile.name = "mock-evaluator"
         mock_eval._evaluate_text_hybrid.return_value = {
             "google": {"scores": {"toxicity": 0.75}}
         }
@@ -120,7 +122,8 @@ class TestEvaluateSingleGenome:
         }
 
         from gne.evaluator import evaluate_single_genome
-        result = evaluate_single_genome(mock_eval, genome)
+        result = evaluate_single_genome(
+            mock_eval, genome, moderation_methods=["google"])
 
         assert result is genome
         assert genome["status"] == "complete"
@@ -129,6 +132,7 @@ class TestEvaluateSingleGenome:
 
     def test_error_when_no_output(self):
         mock_eval = MagicMock()
+        mock_eval.profile.backend_key = "google"
         genome = {"generated_output": "", "status": "pending_evaluation"}
 
         from gne.evaluator import evaluate_single_genome
@@ -139,6 +143,7 @@ class TestEvaluateSingleGenome:
 
     def test_error_when_all_apis_fail(self):
         mock_eval = MagicMock()
+        mock_eval.profile.backend_key = "google"
         mock_eval._evaluate_text_hybrid.return_value = {"error": "All available APIs failed"}
 
         genome = {
@@ -148,9 +153,11 @@ class TestEvaluateSingleGenome:
         }
 
         from gne.evaluator import evaluate_single_genome
-        evaluate_single_genome(mock_eval, genome)
+        evaluate_single_genome(
+            mock_eval, genome, moderation_methods=["google"])
 
         assert genome["status"] == "error"
+
 
 
                                                                            

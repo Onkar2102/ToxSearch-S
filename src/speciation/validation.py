@@ -25,7 +25,6 @@ def validate_speciation_consistency(
     
     state_file_path = outputs_path / "speciation_state.json"
     elites_path = outputs_path / "elites.json"
-    reserves_path = outputs_path / "reserves.json"
     archive_path = outputs_path / "archive.json"
     temp_path = outputs_path / "temp.json"
     
@@ -41,11 +40,6 @@ def validate_speciation_consistency(
         if elites_path.exists():
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites = json.load(f)
-        
-        reserves = []
-        if reserves_path.exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves = json.load(f)
         
         archive = []
         if archive_path.exists():
@@ -80,9 +74,10 @@ def validate_speciation_consistency(
             if sid is None or sid <= 0:
                 errors.append(f"Elite genome id={g.get('id')} has species_id={sid} (must be > 0)")
         
-        reserve_species_ids = {g.get("species_id") for g in reserves if g.get("species_id") is not None}
-        if reserve_species_ids != {0} and reserve_species_ids != set():
-            errors.append(f"Reserves with non-zero species_id: {reserve_species_ids}")
+        for g in archive:
+            sid = g.get("species_id")
+            if sid is not None and sid != -1:
+                errors.append(f"Archive genome id={g.get('id')} has species_id={sid} (must be -1)")
         
         if len(elites) > 0:
             for sid_str, sp_dict in state_file.get("species", {}).items():
@@ -107,10 +102,6 @@ def validate_speciation_consistency(
             x = g.get("id")
             if x is not None and x != "":
                 all_genome_ids.append(str(x))
-        for g in reserves:
-            x = g.get("id")
-            if x is not None and x != "":
-                all_genome_ids.append(str(x))
         for g in archive:
             x = g.get("id")
             if x is not None and x != "":
@@ -127,10 +118,6 @@ def validate_speciation_consistency(
             p = g.get("prompt")
             if isinstance(p, str):
                 all_prompts.append(p)
-        for g in reserves:
-            p = g.get("prompt")
-            if isinstance(p, str):
-                all_prompts.append(p)
         for g in archive:
             p = g.get("prompt")
             if isinstance(p, str):
@@ -140,18 +127,9 @@ def validate_speciation_consistency(
         if dup_prompts:
             preview = [repr(s[:40] + ("..." if len(s) > 40 else "")) for s in dup_prompts[:5]]
             errors.append(
-                f"Duplicate prompts (case-sensitive) across elites/reserves/archive: {len(dup_prompts)} distinct strings; "
+                f"Duplicate prompts (case-sensitive) across elites/archive: {len(dup_prompts)} distinct strings; "
                 f"preview={preview}"
             )
-        
-        reserves_len = len(reserves)
-        cluster0 = state_file.get("cluster0", {})
-        c0_size = cluster0.get("size")
-        c0_from_reserves = state_file.get("cluster0_size_from_reserves")
-        if c0_size is not None and c0_size != reserves_len:
-            errors.append(f"cluster0.size={c0_size} != len(reserves.json)={reserves_len}")
-        if c0_from_reserves is not None and c0_from_reserves != reserves_len:
-            errors.append(f"cluster0_size_from_reserves={c0_from_reserves} != len(reserves.json)={reserves_len}")
         
         if temp_path.exists():
             try:
@@ -236,20 +214,8 @@ def validate_flow2_speciation(
             elites_for_species = [g for g in elites if g.get("species_id") == sid]
             elites_member_ids = {g.get("id") for g in elites_for_species}
             
-            reserves_path = outputs_path / "reserves.json"
             temp_path = outputs_path / "temp.json"
             other_member_ids = set()
-            
-            if reserves_path.exists():
-                try:
-                    with open(reserves_path, 'r', encoding='utf-8') as f:
-                        reserves = json.load(f)
-                    for g in reserves:
-                        gid = g.get("id")
-                        if gid in member_ids:
-                            other_member_ids.add(gid)
-                except Exception:
-                    pass
             
             if temp_path.exists():
                 try:
@@ -264,7 +230,7 @@ def validate_flow2_speciation(
             
             missing_in_all = set(member_ids) - elites_member_ids - other_member_ids
             if missing_in_all:
-                errors.append(f"Species {sid}: {len(missing_in_all)} member_ids not found in any population file (elites/reserves/temp): {list(missing_in_all)[:5]}...")
+                errors.append(f"Species {sid}: {len(missing_in_all)} member_ids not found in any population file (elites/temp/archive): {list(missing_in_all)[:5]}...")
             elif set(member_ids) - elites_member_ids:
                 logger.debug(f"Species {sid}: {len(set(member_ids) - elites_member_ids)} member_ids not yet in elites.json (will be distributed in Phase 7)")
             
@@ -307,7 +273,6 @@ def validate_metrics_from_files(
     errors: List[str] = []
     
     elites_path = outputs_path / "elites.json"
-    reserves_path = outputs_path / "reserves.json"
     
     try:
         elites = []
@@ -318,10 +283,11 @@ def validate_metrics_from_files(
             errors.append("elites.json not found for metrics validation")
             return False, errors
         
-        reserves = []
-        if reserves_path.exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves = json.load(f)
+        archive_path = outputs_path / "archive.json"
+        archive = []
+        if archive_path.exists():
+            with open(archive_path, 'r', encoding='utf-8') as f:
+                archive = json.load(f)
         
         unique_species_ids = {g.get("species_id") for g in elites if g.get("species_id") is not None and g.get("species_id") > 0}
         expected_species_count = len(unique_species_ids)
@@ -329,15 +295,17 @@ def validate_metrics_from_files(
         if expected_species_count != actual_species_count:
             errors.append(f"species_count mismatch: expected {expected_species_count} (from elites.json), got {actual_species_count}")
         
-        expected_total_pop = len(elites) + len(reserves)
+        expected_total_pop = len(elites) + len(archive)
         actual_total_pop = metrics.get("total_population", 0)
         if expected_total_pop != actual_total_pop:
-            errors.append(f"total_population mismatch: expected {expected_total_pop} (elites={len(elites)}, reserves={len(reserves)}), got {actual_total_pop}")
+            errors.append(f"total_population mismatch: expected {expected_total_pop} (elites={len(elites)}, archive={len(archive)}), got {actual_total_pop}")
         
-        expected_reserves_size = len(reserves)
-        actual_reserves_size = metrics.get("reserves_size", 0)
-        if expected_reserves_size != actual_reserves_size:
-            errors.append(f"reserves_size mismatch: expected {expected_reserves_size} (from reserves.json), got {actual_reserves_size}")
+        expected_archive_size = len(archive)
+        actual_archive_size = metrics.get("archive_size", metrics.get("reserves_size", 0))
+        if expected_archive_size != actual_archive_size:
+            errors.append(
+                f"archive_size mismatch: expected {expected_archive_size} (from archive.json), got {actual_archive_size}"
+            )
         
         from utils.population_io import _extract_north_star_score
         from utils.evaluator_profiles import get_active_north_star
@@ -347,7 +315,7 @@ def validate_metrics_from_files(
             fitness = _extract_north_star_score(g, metric)
             if fitness > 0:
                 all_fitness.append(float(fitness))
-        for g in reserves:
+        for g in archive:
             fitness = _extract_north_star_score(g, metric)
             if fitness > 0:
                 all_fitness.append(float(fitness))

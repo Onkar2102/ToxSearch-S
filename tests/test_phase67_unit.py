@@ -16,7 +16,7 @@ class TestPartialGen0Speciation:
     def _setup_outputs(self):
         tmpdir = tempfile.mkdtemp(prefix="toxsearch_p67_")
         outputs = Path(tmpdir)
-        for fname in ("elites.json", "reserves.json", "archive.json", "temp.json"):
+        for fname in ("elites.json", "archive.json", "temp.json"):
             with open(outputs / fname, "w") as f:
                 json.dump([], f)
         return tmpdir, outputs
@@ -42,7 +42,7 @@ class TestPartialGen0Speciation:
             total_buffered = sum(len(b) for b in buffers.values())
             batch_size = min(total_buffered, 100)
 
-            accepted, discarded, new_id, _, _ = _merge_and_speciate(
+            accepted, discarded, new_id, _, accepted_genomes = _merge_and_speciate(
                 buffers, K=batch_size, outputs_path=outputs, generation_id=0,
                 next_genome_id=1, north_star_metric="toxicity",
                 speciation_config=None, log_file=None, logger=logger,
@@ -51,12 +51,10 @@ class TestPartialGen0Speciation:
             assert accepted == 3, f"Expected 3 accepted, got {accepted}"
             assert discarded == 0
 
-            with open(outputs / "reserves.json") as f:
-                reserves = json.load(f)
-            prompts = {g["prompt"] for g in reserves}
+            prompts = {g["prompt"] for g in accepted_genomes}
             assert prompts == {"prompt A", "prompt B", "prompt C"}
 
-            for g in reserves:
+            for g in accepted_genomes:
                 assert "id" in g
                 assert g["generation"] == 0
         finally:

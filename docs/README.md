@@ -4,6 +4,7 @@
 |----------|----------|----------|
 | [../README.md](../README.md) | Everyone | Install, run, layout, reproducibility |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Developers / researchers | Packages, evolution loop, distances, configs, outputs |
+| [SPECIATION.md](SPECIATION.md) | Researchers / developers | Live speciation + next scientific report plan (distance × clustering, TopN, remaining checklist) |
 | [../tests/README.md](../tests/README.md) | Contributors | Pytest layout, markers, CI notes |
 | [../results/manifests/README.md](../results/manifests/README.md) | Paper / analysis | SHA256 manifests for generated artifacts |
 | [../verfier/README.md](../verfier/README.md) | Formal methods | Lean 4 audit of distance and speciation claims |

@@ -81,7 +81,7 @@ def _check_stop(comm, logger=None):
 def _load_existing_prompts(outputs_path, logger):
     
     existing = set()
-    for fname in ("elites.json", "reserves.json", "archive.json"):
+    for fname in ("elites.json", "archive.json"):
         fpath = outputs_path / fname
         if not fpath.exists():
             continue
@@ -109,7 +109,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
     logger.debug("Merge drain: round-robin from buffers.")
 
     existing_prompts = _load_existing_prompts(outputs_path, logger)
-    logger.debug("Loaded %d existing prompts for dedup (elites+reserves+archive)",
+    logger.debug("Loaded %d existing prompts for dedup (elites+archive)",
                  len(existing_prompts))
     temp_prompts = set()
 
@@ -176,11 +176,10 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
             )
             speciation_elapsed = time.time() - speciation_start
             if speciation_result.get("success"):
-                logger.info("Speciation gen %d done (%.2fs): %d species, %d reserves, "
-                            "%d elites moved",
+                logger.info("Speciation gen %d done (%.2fs): %d species, %d archived, %d elites assigned",
                             generation_id, speciation_elapsed,
                             speciation_result.get("species_count", 0),
-                            speciation_result.get("reserves_size", 0),
+                            speciation_result.get("archived_count", 0),
                             speciation_result.get("elites_moved", 0))
             else:
                 logger.warning("Speciation gen %d completed with warnings (%.2fs): %s",
@@ -208,20 +207,20 @@ def _stub_speciation(outputs_path, temp_path, logger):
         genomes = []
 
     for g in genomes:
-        g.setdefault("species_id", 0)
+        g.setdefault("species_id", -1)
 
-    reserves_path = outputs_path / "reserves.json"
+    archive_path = outputs_path / "archive.json"
     existing = []
-    if reserves_path.exists():
+    if archive_path.exists():
         try:
-            with open(reserves_path, "r", encoding="utf-8") as f:
+            with open(archive_path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
         except Exception as e:
-            logger.warning("_stub_speciation: failed to read reserves.json: %s", e)
+            logger.warning("_stub_speciation: failed to read archive.json: %s", e)
             existing = []
 
     existing.extend(genomes)
-    with open(reserves_path, "w", encoding="utf-8") as f:
+    with open(archive_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
     with open(temp_path, "w", encoding="utf-8") as f:
@@ -233,7 +232,7 @@ def _stub_speciation(outputs_path, temp_path, logger):
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump([], f)
 
-    logger.info("Stub speciation: moved %d genomes to reserves, temp cleared", len(genomes))
+    logger.info("Stub speciation: moved %d genomes to archive, temp cleared", len(genomes))
 
 
 def _select_parents(outputs_path, north_star_metric, generation_id, logger):
@@ -394,9 +393,9 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["discarded_this_generation"] = int(discarded_this_generation)
 
         _spec_keys = ("species_count", "active_species_count", "frozen_species_count",
-                     "reserves_size", "largest_species_size", "average_species_size",
+                     "archive_size", "largest_species_size", "average_species_size",
                      "speciation_events", "merge_events", "extinction_events",
-                     "elites_moved", "reserves_moved", "genomes_updated",
+                     "elites_moved", "archive_moved", "genomes_updated",
                      "inter_species_diversity", "intra_species_diversity", "cluster_quality",
                      "speciation_duration_seconds")
         gen_stats.update({k: speciation_result[k] for k in _spec_keys if k in speciation_result})
@@ -479,9 +478,9 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             logger.warning("Adaptive selection update failed (non-fatal): %s", e)
 
         logger.info("Tracker updated: gen=%d  evaluated=%d  integrated=%d  discarded=%d  "
-                     "elites=%d  reserves=%d  avg_fitness=%.4f  best_fitness=%.4f",
+                     "elites=%d  archived=%d  avg_fitness=%.4f  best_fitness=%.4f",
                      generation_id, total_evaluated, total_integrated, total_discarded,
-                     gen_stats.get("elites_count", 0), gen_stats.get("reserves_count", 0),
+                     gen_stats.get("elites_count", 0), gen_stats.get("archived_count", 0),
                      gen_stats.get("avg_fitness_generation", 0.0001),
                      gen_stats.get("population_max_toxicity", 0.0001))
 
@@ -619,7 +618,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     outputs_path = Path(outputs_path)
     outputs_path.mkdir(parents=True, exist_ok=True)
     created = []
-    for fname in ("temp.json", "elites.json", "reserves.json", "archive.json"):
+    for fname in ("temp.json", "elites.json", "archive.json"):
         fpath = outputs_path / fname
         if not fpath.exists():
             with open(fpath, "w", encoding="utf-8") as f:
@@ -631,7 +630,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
     buffers = defaultdict(list)
     generation_id = 0
     next_genome_id = get_max_genome_id_from_all_files(str(outputs_path)) + 1
-    logger.info("Starting next_genome_id=%d (from max ID in elites/reserves/archive + 1)", next_genome_id)
+    logger.info("Starting next_genome_id=%d (from max ID in elites/archive + 1)", next_genome_id)
     total_evaluated = 0
     total_integrated = 0
     total_discarded = 0
@@ -929,7 +928,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         )
                         total_genomes = (
                             gen_stats.get("elites_count", 0)
-                            + gen_stats.get("reserves_count", 0)
                             + gen_stats.get("archived_count", 0)
                         )
                         if total_genomes >= max_total:

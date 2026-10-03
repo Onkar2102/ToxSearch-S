@@ -59,7 +59,7 @@ def get_max_genome_id_from_all_files(outputs_path: Optional[Union[str, Path]] = 
     outputs_path = get_outputs_path() if outputs_path is None else Path(outputs_path)
     log = get_logger("GetMaxGenomeID")
     max_id = 0
-    for fname in ("elites.json", "reserves.json", "archive.json"):
+    for fname in ("elites.json", "archive.json"):
         path = outputs_path / fname
         if not path.exists():
             continue
@@ -246,7 +246,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
     
     _log = get_logger("population_io")
     base_path = Path(base_dir).resolve()
-    population_file = base_path / "reserves.json"
+    population_file = base_path / "elites.json"
     elites_file = base_path / "elites.json"
     evolution_tracker_file = base_path / "EvolutionTracker.json"
     
@@ -277,7 +277,7 @@ def get_population_files_info(base_dir: str = "outputs") -> Dict[str, Any]:
                 k = str(g["generation"])
                 info["generation_counts"][k] = info["generation_counts"].get(k, 0) + 1
 
-    for path in (population_file, elites_file):
+    for path in (elites_file, base_path / "archive.json"):
         if not path.exists():
             continue
         try:
@@ -423,7 +423,7 @@ def get_latest_generation(base_dir: str = "outputs") -> int:
     return info["total_generations"] - 1 if info["total_generations"] > 0 else 0
 
 
-def load_population(pop_path: str = "data/outputs/reserves.json", *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
+def load_population(pop_path: str = "data/outputs/elites.json", *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
     
     _logger = logger or get_logger("population_io", log_file)
 
@@ -433,7 +433,7 @@ def load_population(pop_path: str = "data/outputs/reserves.json", *, logger=None
             
             if pop_path_obj.is_dir():
                 base_dir = pop_path_obj
-                population_file = base_dir / "reserves.json"
+                population_file = base_dir / "elites.json"
             else:
                 population_file = pop_path_obj
                 base_dir = pop_path_obj.parent
@@ -466,7 +466,7 @@ def load_population(pop_path: str = "data/outputs/reserves.json", *, logger=None
                 return all_genomes
             else:
                 if not os.path.exists(pop_path):
-                    _logger.error("No population files found: neither reserves.json nor split files exist")
+                    _logger.error("No population files found: neither elites.json nor split files exist")
                     raise FileNotFoundError(f"No population files found in {base_dir}")
                 else:
                     _logger.debug("Using fallback population file: %s", pop_path)
@@ -482,7 +482,7 @@ def load_population(pop_path: str = "data/outputs/reserves.json", *, logger=None
             raise
 
 
-def save_population(population: List[Dict[str, Any]], pop_path: str = "data/outputs/reserves.json", 
+def save_population(population: List[Dict[str, Any]], pop_path: str = "data/outputs/elites.json", 
                    *, logger=None, log_file: Optional[str] = None, preserve_sort_order: bool = False) -> None:
     
     _logger = logger or get_logger("population_io", log_file)
@@ -492,7 +492,7 @@ def save_population(population: List[Dict[str, Any]], pop_path: str = "data/outp
             cleaned_population = clean_population(population, logger=_logger, log_file=log_file)
             
             pop_path_obj = Path(pop_path)
-            output_file = pop_path_obj if pop_path_obj.suffix else pop_path_obj / "reserves.json"
+            output_file = pop_path_obj if pop_path_obj.suffix else pop_path_obj / "elites.json"
             
             output_file.parent.mkdir(parents=True, exist_ok=True)
             
@@ -640,13 +640,6 @@ def load_and_initialize_population(
                     json.dump(empty_elites, f, indent=2, ensure_ascii=False)
                 logger.info("Initialized empty elites.json")
 
-            with PerformanceLogger(logger, "Initialize empty reserves.json"):
-                empty_reserves = []
-                reserves_path = Path(output_path) / "reserves.json"
-                reserves_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(reserves_path, 'w', encoding='utf-8') as f:
-                    json.dump(empty_reserves, f, indent=2, ensure_ascii=False)
-                logger.info("Initialized empty reserves.json")
             
             with PerformanceLogger(logger, "Initialize empty archive.json"):
                 empty_archive = []
@@ -729,7 +722,6 @@ def load_and_initialize_population(
                     except Exception:
                         config_dict = {
                             "theta_sim": 0.25, "theta_merge": 0.1,
-                            "cluster0_min_cluster_size": 2, "cluster0_max_capacity": 1000,
                             "species_capacity": 100, "min_island_size": 2, "species_stagnation": 20,
                             "embedding_model": "all-MiniLM-L6-v2", "embedding_dim": 384,
                             "embedding_batch_size": 64, "w_genotype": 0.7, "w_phenotype": 0.3
@@ -738,8 +730,7 @@ def load_and_initialize_population(
                         "species": {},
                         "incubators": [],
                         "extinct": [],
-                        "cluster0": {"cluster_id": 0, "size": 0, "max_capacity": config_dict.get("cluster0_max_capacity", 1000), "speciation_events": []},
-                        "cluster0_size_from_reserves": 0,
+                        "archive_count": 0,
                         "global_best_id": None,
                         "metrics": {"history": [], "summary": {"total_speciation_events": 0, "total_merge_events": 0, "total_extinction_events": 0}},
                         "config": config_dict
@@ -1029,7 +1020,7 @@ def migrate_from_split_to_single(base_dir: str = "outputs",
     
     with PerformanceLogger(_logger, "Migrate from Split to Single File"):
         try:
-            if not consolidate_generations_to_single_file(base_dir, "reserves.json", logger=_logger, log_file=log_file):
+            if not consolidate_generations_to_single_file(base_dir, "elites.json", logger=_logger, log_file=log_file):
                 _logger.error("Failed to consolidate generation files")
                 return False
             
@@ -1043,9 +1034,9 @@ def migrate_from_split_to_single(base_dir: str = "outputs",
                     
                     tracker["population_metadata"] = {
                         "single_file_mode": True,
-                        "population_file": "reserves.json",
+                        "population_file": "elites.json",
                         "elites_file": "elites.json",
-                        "migration_note": "Migrated from split files to single reserves.json"
+                        "migration_note": "Migrated from split files to single elites.json"
                     }
                     
                     with open(evolution_tracker_file, 'w', encoding='utf-8') as f:
@@ -1055,13 +1046,13 @@ def migrate_from_split_to_single(base_dir: str = "outputs",
                 except Exception as e:
                     _logger.warning(f"Failed to update EvolutionTracker: {e}")
             
-            population_file = base_path / "reserves.json"
+            population_file = base_path / "elites.json"
             if population_file.exists():
                 try:
                     with open(population_file, 'r', encoding='utf-8') as f:
                         consolidated_genomes = json.load(f)
                     
-                    _logger.info(f"Migration successful! reserves.json contains {len(consolidated_genomes)} genomes")
+                    _logger.info(f"Migration successful! elites.json contains {len(consolidated_genomes)} genomes")
                     _logger.info("You can now use the single file approach")
                     
                     return True
@@ -1070,7 +1061,7 @@ def migrate_from_split_to_single(base_dir: str = "outputs",
                     _logger.error(f"Failed to verify consolidated file: {e}")
                     return False
             else:
-                _logger.error("reserves.json was not created during consolidation")
+                _logger.error("elites.json was not created during consolidation")
                 return False
                 
         except Exception as e:
@@ -1137,7 +1128,7 @@ def save_elites(elites: List[Dict[str, Any]], elites_file_path: str = "data/outp
 
 
 
-def get_population_stats_steady_state(population_file_path: str = FileConstants.DEFAULT_RESERVES_FILE,
+def get_population_stats_steady_state(population_file_path: str = FileConstants.DEFAULT_ELITES_FILE,
                                      elites_file_path: str = FileConstants.DEFAULT_ELITES_FILE,
                                      *, logger=None, log_file: Optional[str] = None) -> Dict[str, Any]:
     
@@ -1174,7 +1165,7 @@ def calculate_average_fitness(
     try:
         outputs_dir = Path(outputs_path)
         elites_path = outputs_dir / "elites.json"
-        reserves_path = outputs_dir / "reserves.json"
+        archive_path = outputs_dir / "archive.json"
         temp_path = outputs_dir / "temp.json"
         
         total_score = 0.0
@@ -1188,13 +1179,19 @@ def calculate_average_fitness(
                 total_count += 1
             _logger.debug(f"Processed {len(elites_genomes)} genomes from elites.json")
         
-        if reserves_path.exists():
-            reserves_genomes = load_population(str(reserves_path), logger=_logger, log_file=log_file)
-            for genome in reserves_genomes:
-                score = _extract_north_star_score(genome, north_star_metric)
-                total_score += score
-                total_count += 1
-            _logger.debug(f"Processed {len(reserves_genomes)} genomes from reserves.json")
+        if archive_path.exists():
+            try:
+                with open(archive_path, 'r', encoding='utf-8') as f:
+                    archive_genomes = json.load(f)
+                for genome in archive_genomes:
+                    score = _extract_north_star_score(genome, north_star_metric)
+                    total_score += score
+                    total_count += 1
+                _logger.debug(f"Processed {len(archive_genomes)} genomes from archive.json")
+            except Exception as e:
+                _logger.warning(f"Failed to load archive.json for avg_fitness: {e}")
+        
+        # placeholder removed duplicate elites block
         
         if include_temp and temp_path.exists():
             try:
@@ -1218,19 +1215,98 @@ def calculate_average_fitness(
         
         avg_fitness = total_score / total_count
         avg_fitness = round(avg_fitness, 4)
-        mode = "before speciation (elites+reserves+temp)" if include_temp else "after speciation (elites+reserves)"
+        mode = "before speciation (elites+archive+temp)" if include_temp else "after speciation (elites+archive)"
         _logger.info(f"Calculated average fitness: {avg_fitness:.4f} from {total_count} genomes ({mode})")
         
         return avg_fitness
-        
     except Exception as e:
         _logger.error(f"Failed to calculate average fitness: {e}", exc_info=True)
         return 0.0
 
 
+def count_elites_and_archive(outputs_path: Union[str, Path], *, logger=None) -> tuple:
+    """Return ``(elites_count, archive_count)`` from disk."""
+    outputs_dir = Path(outputs_path)
+    elites_n = archive_n = 0
+    elites_path = outputs_dir / "elites.json"
+    archive_path = outputs_dir / "archive.json"
+    try:
+        if elites_path.exists():
+            with open(elites_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            elites_n = len(data) if isinstance(data, list) else 0
+    except Exception:
+        pass
+    try:
+        if archive_path.exists():
+            with open(archive_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            archive_n = len(data) if isinstance(data, list) else 0
+    except Exception:
+        pass
+    return elites_n, archive_n
+
+
+def trim_temp_to_budget(
+    outputs_path: Union[str, Path],
+    max_total_genomes: int,
+    north_star_metric: str,
+    *,
+    logger=None,
+    log_file: Optional[str] = None,
+) -> int:
+    """Keep at most ``remaining`` genomes in temp.json so elites+archive+new ≤ budget.
+
+    Drops lowest-fitness temp rows (not archived — they never enter the counted pools).
+    Returns number of temp genomes kept.
+    """
+    _logger = logger or get_logger("TrimTempBudget", log_file)
+    outputs_dir = Path(outputs_path)
+    elites_n, archive_n = count_elites_and_archive(outputs_dir)
+    remaining = int(max_total_genomes) - elites_n - archive_n
+    temp_path = outputs_dir / "temp.json"
+    if not temp_path.exists():
+        return 0
+    try:
+        with open(temp_path, "r", encoding="utf-8") as f:
+            temp = json.load(f)
+        if not isinstance(temp, list):
+            return 0
+    except Exception as e:
+        _logger.warning("trim_temp_to_budget: failed to load temp.json: %s", e)
+        return 0
+
+    if remaining <= 0:
+        _logger.info(
+            "Budget exhausted (elites=%d archive=%d max=%d); clearing %d pending temp genomes",
+            elites_n, archive_n, max_total_genomes, len(temp),
+        )
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump([], f, indent=2, ensure_ascii=False)
+        return 0
+
+    if len(temp) <= remaining:
+        return len(temp)
+
+    ranked = sorted(
+        temp,
+        key=lambda g: _extract_north_star_score(g or {}, north_star_metric),
+        reverse=True,
+    )
+    kept = ranked[:remaining]
+    dropped = len(temp) - len(kept)
+    _logger.info(
+        "Trimmed temp.json to budget: kept=%d dropped=%d (elites=%d archive=%d remaining_slots=%d)",
+        len(kept), dropped, elites_n, archive_n, remaining,
+    )
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(kept, f, indent=2, ensure_ascii=False)
+    return len(kept)
+
+
 def calculate_budget_metrics(
     elites_genomes: List[Dict[str, Any]],
-    reserves_genomes: List[Dict[str, Any]],
+    archive_genomes: List[Dict[str, Any]],
     temp_genomes: List[Dict[str, Any]],
     current_generation: int,
     logger=None
@@ -1271,7 +1347,7 @@ def calculate_budget_metrics(
     }
     
     try:
-        all_genomes = (elites_genomes or []) + (reserves_genomes or []) + (temp_genomes or [])
+        all_genomes = (elites_genomes or []) + (archive_genomes or []) + (temp_genomes or [])
         current_gen_genomes = [g for g in all_genomes if g and g.get("generation") == current_generation]
         
         def _operator_name_for_budget(genome: Dict[str, Any]) -> Optional[str]:
@@ -1525,7 +1601,6 @@ def calculate_generation_statistics(
         "generation_number": current_generation,
         "initial_population_size": 0,
         "elites_count": 0,
-        "reserves_count": 0,
         "archived_count": 0,
         "total_population": 0,
         "max_score_variants": 0.0001,
@@ -1534,7 +1609,6 @@ def calculate_generation_statistics(
         "avg_fitness_generation": 0.0001,
         "avg_fitness": 0.0001,
         "avg_fitness_elites": 0.0001,
-        "avg_fitness_reserves": 0.0001,
         "population_max_toxicity": 0.0001,
     }
     
@@ -1544,12 +1618,6 @@ def calculate_generation_statistics(
         if elites_path.exists():
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites_genomes = json.load(f)
-        
-        reserves_path = outputs_dir / "reserves.json"
-        reserves_genomes = []
-        if reserves_path.exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves_genomes = json.load(f)
         
         temp_path = outputs_dir / "temp.json"
         temp_genomes = []
@@ -1581,7 +1649,6 @@ def calculate_generation_statistics(
             return gen_val
         
         elites_up_to_gen = [g for g in elites_genomes if _get_generation_value(g, current_generation) <= current_generation]
-        reserves_up_to_gen = [g for g in reserves_genomes if _get_generation_value(g, current_generation) <= current_generation]
         archive_up_to_gen = [g for g in archive_genomes if _get_generation_value(g, current_generation) <= current_generation]
         
         _seen_e, _uniq_e = set(), []
@@ -1593,15 +1660,6 @@ def calculate_generation_statistics(
                 _seen_e.add(_k)
                 _uniq_e.append(g)
         elites_up_to_gen = _uniq_e
-        _seen_r, _uniq_r = set(), []
-        for g in reserves_up_to_gen:
-            if g.get("id") is None:
-                continue
-            _k = str(g["id"])
-            if _k not in _seen_r:
-                _seen_r.add(_k)
-                _uniq_r.append(g)
-        reserves_up_to_gen = _uniq_r
         _seen_a, _uniq_a = set(), []
         for g in archive_up_to_gen:
             if g.get("id") is None:
@@ -1613,9 +1671,8 @@ def calculate_generation_statistics(
         archive_up_to_gen = _uniq_a
         
         stats["elites_count"] = len(elites_up_to_gen)
-        stats["reserves_count"] = len(reserves_up_to_gen)
         stats["archived_count"] = len(archive_up_to_gen)
-        stats["total_population"] = stats["elites_count"] + stats["reserves_count"]
+        stats["total_population"] = stats["elites_count"] + stats["archived_count"]
         
         elite_scores = []
         for g in elites_up_to_gen:
@@ -1625,15 +1682,6 @@ def calculate_generation_statistics(
         
         if elite_scores:
             stats["avg_fitness_elites"] = round(sum(elite_scores) / len(elite_scores), 4)
-        
-        reserves_scores = []
-        for g in reserves_up_to_gen:
-            score = _extract_north_star_score(g, north_star_metric)
-            if score > 0.0001:
-                reserves_scores.append(score)
-        
-        if reserves_scores:
-            stats["avg_fitness_reserves"] = round(sum(reserves_scores) / len(reserves_scores), 4)
         
         variant_scores = []
         for g in temp_genomes:
@@ -1646,7 +1694,13 @@ def calculate_generation_statistics(
             stats["min_score_variants"] = round(min(variant_scores), 4)
             stats["avg_fitness_variants"] = round(sum(variant_scores) / len(variant_scores), 4)
         
-        all_scores = elite_scores + reserves_scores
+        archive_scores = []
+        for g in archive_up_to_gen:
+            score = _extract_north_star_score(g, north_star_metric)
+            if score > 0.0001:
+                archive_scores.append(score)
+        
+        all_scores = elite_scores + archive_scores
         if all_scores:
             stats["avg_fitness_generation"] = round(sum(all_scores) / len(all_scores), 4)
             max_score = max(all_scores)
@@ -1668,21 +1722,20 @@ def calculate_generation_statistics(
             stats["initial_population_size"] = len(temp_genomes) if temp_genomes else stats["total_population"]
         
         budget_metrics = calculate_budget_metrics(
-            elites_genomes, reserves_genomes, temp_genomes,
+            elites_genomes, archive_up_to_gen, temp_genomes,
             current_generation, _logger
         )
         stats.update(budget_metrics)
         
         _logger.info(
-            "Gen %d stats: elites=%d reserves=%d total=%d avg_fit_gen=%.4f max_tox=%.4f",
-            current_generation, stats["elites_count"], stats["reserves_count"],
+            "Gen %d stats: elites=%d archived=%d total=%d avg_fit_gen=%.4f max_tox=%.4f",
+            current_generation, stats["elites_count"], stats["archived_count"],
             stats["total_population"], stats["avg_fitness_generation"],
             stats.get("population_max_toxicity", 0.0001)
         )
         _logger.debug(
-            "Gen %d stats: elites=%d (avg=%.4f), reserves=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f, llm_calls=%d, api_calls=%d",
+            "Gen %d stats: elites=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f, llm_calls=%d, api_calls=%d",
             current_generation, stats["elites_count"], stats["avg_fitness_elites"],
-            stats["reserves_count"], stats["avg_fitness_reserves"],
             stats["archived_count"], stats["total_population"], stats["avg_fitness_generation"],
             stats.get("llm_calls", 0), stats.get("api_calls", 0)
         )
@@ -1705,7 +1758,6 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "avg_fitness_variants": 0.0001,
         "avg_fitness_generation": 0.0001,
         "avg_fitness_elites": 0.0001,
-        "avg_fitness_reserves": 0.0001,
         "parents": [],
         "top_10": [],
         "variants_created": 0,
@@ -1713,7 +1765,6 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "crossover_variants": 0,
         "variants_integrated": None,
         "elites_count": 0,
-        "reserves_count": 0,
         "archived_count": 0,
         "total_population": 0,
         "selection_mode": selection_mode,
@@ -1791,7 +1842,6 @@ def update_evolution_tracker_with_statistics(
 
         gen_entry.update({
             "elites_count": statistics.get("elites_count", 0),
-            "reserves_count": statistics.get("reserves_count", 0),
             "archived_count": statistics.get("archived_count", 0),
             "total_population": statistics.get("total_population", 0),
             "generation_duration_seconds": round(statistics["generation_duration_seconds"], 3) if statistics.get("generation_duration_seconds") is not None else None,
@@ -1802,7 +1852,6 @@ def update_evolution_tracker_with_statistics(
             "avg_fitness_generation": round(statistics.get("avg_fitness_generation", gen_entry.get("avg_fitness_generation", 0.0001)), 4),
             "avg_fitness": round(statistics.get("avg_fitness", statistics.get("avg_fitness_generation", gen_entry.get("avg_fitness", 0.0001))), 4),
             "avg_fitness_elites": round(statistics.get("avg_fitness_elites", gen_entry.get("avg_fitness_elites", 0.0001)), 4),
-            "avg_fitness_reserves": round(statistics.get("avg_fitness_reserves", gen_entry.get("avg_fitness_reserves", 0.0001)), 4),
         })
         if statistics.get("generation_duration_scope") is not None:
             gen_entry["generation_duration_scope"] = statistics["generation_duration_scope"]
@@ -1811,12 +1860,12 @@ def update_evolution_tracker_with_statistics(
             gen_entry["speciation"] = existing_speciation
             if statistics.get("speciation_duration_seconds") is not None:
                 gen_entry["speciation"]["speciation_duration_seconds"] = round(statistics["speciation_duration_seconds"], 3)
-        elif any(statistics.get(k) is not None for k in ("species_count", "reserves_size")):
+        elif any(statistics.get(k) is not None for k in ("species_count", "archive_size")):
             gen_entry["speciation"] = {
                 "species_count": statistics.get("species_count", 0),
                 "active_species_count": statistics.get("active_species_count", statistics.get("species_count", 0)),
                 "frozen_species_count": statistics.get("frozen_species_count", 0),
-                "reserves_size": statistics.get("reserves_size", statistics.get("reserves_count", 0)),
+                "archive_size": statistics.get("archive_size", 0),
                 "largest_species_size": statistics.get("largest_species_size", 0),
                 "average_species_size": statistics.get("average_species_size", 0.0),
                 "speciation_events": statistics.get("speciation_events", 0),
@@ -1824,7 +1873,7 @@ def update_evolution_tracker_with_statistics(
                 "extinction_events": statistics.get("extinction_events", 0),
                 "archived_count": statistics.get("archived_this_generation", 0),
                 "elites_moved": statistics.get("elites_moved", 0),
-                "reserves_moved": statistics.get("reserves_moved", 0),
+                "archive_moved": statistics.get("archive_moved", 0),
                 "genomes_updated": statistics.get("genomes_updated", 0),
                 "inter_species_diversity": statistics.get("inter_species_diversity", existing_speciation.get("inter_species_diversity", 0.0) if existing_speciation else 0.0),
                 "intra_species_diversity": statistics.get("intra_species_diversity", existing_speciation.get("intra_species_diversity", 0.0) if existing_speciation else 0.0),
@@ -1979,10 +2028,10 @@ def update_evolution_tracker_with_statistics(
         
         best_fit = statistics.get("population_max_toxicity", gen_entry.get("best_fitness", 0.0001))
         _logger.info(
-            "Updated EvolutionTracker gen %d: elites=%d, reserves=%d, archived=%d, "
+            "Updated EvolutionTracker gen %d: elites=%d, archived=%d, "
             "avg_fitness=%.4f, best_fitness=%.4f, parents=%d, top_10=%d",
             current_generation, statistics.get("elites_count", 0),
-            statistics.get("reserves_count", 0), statistics.get("archived_count", 0),
+            statistics.get("archived_count", 0),
             statistics.get("avg_fitness_generation", 0.0001), best_fit,
             len(gen_entry.get("parents", [])), len(gen_entry.get("top_10", []))
         )
@@ -2079,7 +2128,6 @@ def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
     final_mean = 0.0
     final_species = 0
     final_elites = 0
-    final_reserves = 0
     final_archived = 0
     if gens:
         last = gens[-1]
@@ -2087,7 +2135,6 @@ def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
         spec = last.get("speciation") or {}
         final_species = int(spec.get("species_count", 0) or 0)
         final_elites = int(last.get("elites_count", 0) or 0)
-        final_reserves = int(last.get("reserves_count", 0) or 0)
         final_archived = int(last.get("archived_count", 0) or 0)
 
     total_gens = len(gens)
@@ -2103,7 +2150,6 @@ def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
         "final_mean_fitness": round(final_mean, 4),
         "final_species_count": final_species,
         "final_elites_count": final_elites,
-        "final_reserves_count": final_reserves,
         "final_archived_count": final_archived,
         "total_generations": total_gens,
         "num_workers": num_workers,
@@ -2178,6 +2224,8 @@ __all__ = [
     "clean_population",
     
     "calculate_average_fitness",
+    "count_elites_and_archive",
+    "trim_temp_to_budget",
     "update_generation_avg_fitness",
     "calculate_slope",
     "update_adaptive_selection_logic",

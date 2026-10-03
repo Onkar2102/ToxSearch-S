@@ -44,11 +44,11 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
 2. **Create and activate a virtual environment**
 
    ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate          # Windows: .venv\Scripts\activate
+   python3 -m venv venv
+   source venv/bin/activate          # Windows: venv\Scripts\activate
    ```
 
-   `run_experiments_local.sh` also looks for `venv` or `.spvenv` if `.venv` is missing.
+   Experiment scripts prefer `venv` (then `.venv` / `.spvenv` if present).
 
 3. **Install Python packages**
 
@@ -110,13 +110,13 @@ Defaults follow [`SpeciationConfig`](src/speciation/config.py) and [`src/cli.py`
 
 | Parameter | Meaning |
 |-----------|---------|
-| Max total genomes | Stop when elites + reserves + archive reach this count (required termination). Set with `--max-total-genomes`. |
+| Max total genomes | Stop when elites + archive reach this count (required termination). Set with `--max-total-genomes`. |
 | Theta similarity | Species assignment radius in **ensemble** (genotype + phenotype) distance; followers join a leader within this radius. Set with `--theta-sim` (default **0.25**). |
 | Theta merge | Two species whose leaders are closer than this may merge; must be ≤ `--theta-sim`. Set with `--theta-merge`. |
 | Min stability generations | Both species must be at least this old before they are allowed to merge. Set with `--min-stability-gens`. |
 | Species capacity | Maximum individuals kept per species (excess archived by fitness). Set with `--species-capacity`. |
-| Cluster-0 max capacity | Upper bound on individuals in cluster 0 / reserves before archiving. Set with `--cluster0-max-capacity`. |
-| Cluster-0 min cluster size | Minimum cohesive cluster size in cluster 0 before a new species can form from it. Set with `--cluster0-min-cluster-size`. |
+| Cluster-0 max capacity | *(deprecated)* legacy flag; reserves pool removed — non-elites live in archive. |
+| Cluster-0 min cluster size | *(deprecated)* legacy reserves speciation; unused in steady state. |
 | Min island size | Islands smaller than this are treated as extinct. Set with `--min-island-size`. |
 | Species stagnation | Generations without improvement after which a species can go extinct. Set with `--species-stagnation`. |
 | Embedding model | Sentence-transformer name for prompt embeddings in speciation. Set with `--embedding-model`. |
@@ -151,7 +151,7 @@ Always run commands from the **repository root** so `config/`, `data/`, and `.en
 export PYTHONPATH=src   # skip if you used pip install -e .
 ```
 
-**Termination:** `--max-total-genomes` is **required**. The run stops when elites + reserves + archive reach that cap.
+**Termination:** `--max-total-genomes` is **required**. The run stops when elites + archive reach that cap. Active breeding population is `elites.json` only (`species_id > 0`); `archive.json` holds non-elites (`species_id = -1`).
 
 ### Local experiment script
 
@@ -223,7 +223,7 @@ By default each run writes under `data/outputs/<YYYYMMDD_HHMM>/`. Use `--output-
 At run start the framework writes **`run_config.json`** (CLI + speciation snapshot, git commit when available). Typical artifacts:
 
 - `EvolutionTracker.json` — generation metrics and `run_metadata`
-- `elites.json`, `reserves.json`, `archive.json`
+- `elites.json`, `archive.json` — breeding elites and non-elites
 - Logs and optional live-analysis / GDP plots
 
 Paper analysis CSVs and figures belong under **`results/`** (e.g. `results/emnlp2026/`, `results/comparison/`), not under `experiments/`.
@@ -272,6 +272,7 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 | Doc | Contents |
 |-----|----------|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Packages, data flow, distances, configs |
+| [`docs/SPECIATION.md`](docs/SPECIATION.md) | Live speciation + next scientific report plan |
 | [`docs/README.md`](docs/README.md) | Documentation index |
 | [`tests/README.md`](tests/README.md) | How to run and interpret tests |
 | [`results/manifests/README.md`](results/manifests/README.md) | Artifact manifests |

@@ -100,12 +100,12 @@ def run_mpi_gen0_pull_based_test():
     comm.Barrier()
 
     if rank == 0:
-        reserves_path = out_path / "reserves.json"
-        if not reserves_path.exists():
-            return False, "reserves.json missing"
-        data = json.loads(reserves_path.read_text(encoding="utf-8"))
+        archive_path = out_path / "archive.json"
+        if not archive_path.exists():
+            return False, "archive.json missing"
+        data = json.loads(archive_path.read_text(encoding="utf-8"))
         if len(data) != 10:
-            return False, f"expected 10 genomes in reserves, got {len(data)}"
+            return False, f"expected 10 genomes in archive, got {len(data)}"
 
     comm.Barrier()
     return True, None
@@ -161,7 +161,7 @@ def run_mpi_gen0_small_queue_test():
     comm.Barrier()
 
     if rank == 0:
-        data = json.loads((out_path / "reserves.json").read_text(encoding="utf-8"))
+        data = json.loads((out_path / "archive.json").read_text(encoding="utf-8"))
         if len(data) != 5:
             return False, f"expected 5 genomes, got {len(data)}"
 

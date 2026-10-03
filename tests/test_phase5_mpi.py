@@ -140,27 +140,27 @@ def test_phase5(comm, rank, size, logger):
             with open(tracker_path) as f:
                 tracker = json.load(f)
 
-            reserves_path = out / "reserves.json"
-            assert reserves_path.exists(), "reserves.json missing"
-            with open(reserves_path) as f:
-                reserves = json.load(f)
+            archive_path = out / "archive.json"
+            assert archive_path.exists(), "archive.json missing"
+            with open(archive_path) as f:
+                archive = json.load(f)
 
             temp_path = out / "temp.json"
             with open(temp_path) as f:
                 temp = json.load(f)
 
-            logger.info("Validation: reserves=%d  temp=%d  generations=%s",
-                        len(reserves), len(temp), tracker.get("total_generations"))
+            logger.info("Validation: archive=%d  temp=%d  generations=%s",
+                        len(archive), len(temp), tracker.get("total_generations"))
 
             assert len(temp) == 0, f"temp.json should be empty after speciation, got {len(temp)}"
             assert tracker["total_generations"] >= 1, \
                 f"Expected >= 1 generation, got {tracker['total_generations']}"
 
-            for g in reserves:
+            for g in archive:
                 assert g.get("status") != "error", \
-                    f"Error genome leaked into reserves: id={g.get('id')} error={g.get('error')}"
+                    f"Error genome leaked into archive: id={g.get('id')} error={g.get('error')}"
 
-            ids = [g["id"] for g in reserves]
+            ids = [g["id"] for g in archive]
             assert len(ids) == len(set(ids)), f"Duplicate genome IDs: {ids}"
 
             total_discarded = sum(

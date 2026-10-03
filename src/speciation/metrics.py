@@ -19,7 +19,7 @@ class GenerationMetrics:
     generation: int
     species_count: int
     total_population: int
-    reserves_size: int
+    archive_size: int
     best_fitness: float
     avg_fitness: float
     fitness_std: float
@@ -33,7 +33,7 @@ class GenerationMetrics:
     def to_dict(self) -> Dict:
         result = {
             "generation": self.generation, "species_count": self.species_count,
-            "total_population": self.total_population, "reserves_size": self.reserves_size,
+            "total_population": self.total_population, "archive_size": self.archive_size,
             "best_fitness": round(self.best_fitness, 4), "avg_fitness": round(self.avg_fitness, 4),
             "fitness_std": round(self.fitness_std, 4),
             "speciation_events": self.speciation_events,
@@ -56,10 +56,10 @@ class SpeciationMetricsTracker:
         self.total_merges = 0
         self.total_extinctions = 0
     
-    def record_generation(self, generation: int, species: Dict[int, Species], reserves_size: int = 0,
+    def record_generation(self, generation: int, species: Dict[int, Species], archive_size: int = 0,
                           speciation_events: int = 0, merge_events: int = 0,
-                          extinction_events: int = 0, cluster0=None, 
-                          elites_path: Optional[str] = None, reserves_path: Optional[str] = None,
+                          extinction_events: int = 0,
+                          elites_path: Optional[str] = None,
                           north_star_metric: Optional[str] = None) -> GenerationMetrics:
         
         from pathlib import Path
@@ -98,23 +98,24 @@ class SpeciationMetricsTracker:
             total_pop = sum(sp.size for sp in species.values())
             all_fitness = [m.fitness for sp in species.values() for m in sp.members]
         
-        actual_reserves_size = reserves_size
-        if reserves_path and Path(reserves_path).exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves_genomes = json.load(f)
-            actual_reserves_size = len(reserves_genomes)
-            total_pop += actual_reserves_size
-            from utils.population_io import _extract_north_star_score
-            for genome in reserves_genomes:
-                fitness = _extract_north_star_score(genome, north_star_metric)
-                if fitness > 0:
-                    all_fitness.append(float(fitness))
-        else:
-            if reserves_path:
-                self.logger.warning(f"reserves.json not found at {reserves_path}, using parameter value (metrics may be inaccurate)")
-            total_pop += reserves_size
-            if cluster0 is not None and hasattr(cluster0, 'individuals'):
-                all_fitness.extend([ind.fitness for ind in cluster0.individuals])
+        actual_archive_size = archive_size
+        archive_path = None
+        if elites_path:
+            archive_path = Path(elites_path).parent / "archive.json"
+        if archive_path is not None and archive_path.exists():
+            try:
+                with open(archive_path, 'r', encoding='utf-8') as f:
+                    archive_genomes = json.load(f)
+                if isinstance(archive_genomes, list):
+                    actual_archive_size = len(archive_genomes)
+                    total_pop += len(archive_genomes)
+                    from utils.population_io import _extract_north_star_score
+                    for genome in archive_genomes:
+                        fitness = _extract_north_star_score(genome, north_star_metric)
+                        if fitness > 0:
+                            all_fitness.append(float(fitness))
+            except Exception as e:
+                self.logger.debug("Could not load archive.json for metrics: %s", e)
         
         best = max(all_fitness) if all_fitness else 0.0
         avg = np.mean(all_fitness) if all_fitness else 0.0
@@ -156,7 +157,7 @@ class SpeciationMetricsTracker:
         
         metrics = GenerationMetrics(
             generation=generation, species_count=species_count, total_population=total_pop,
-            reserves_size=actual_reserves_size, 
+            archive_size=actual_archive_size, 
             best_fitness=round(float(best), 4), 
             avg_fitness=round(float(avg), 4),
             fitness_std=round(float(std), 4), 
@@ -196,7 +197,7 @@ class SpeciationMetricsTracker:
                     generation=gen_dict.get("generation", 0),
                     species_count=gen_dict.get("species_count", 0),
                     total_population=gen_dict.get("total_population", 0),
-                    reserves_size=gen_dict.get("reserves_size", 0),
+                    archive_size=gen_dict.get("archive_size", gen_dict.get("reserves_size", 0)),
                     best_fitness=gen_dict.get("best_fitness", 0.0),
                     avg_fitness=gen_dict.get("avg_fitness", 0.0),
                     fitness_std=gen_dict.get("fitness_std", 0.0),
@@ -289,7 +290,7 @@ def compute_diversity_metrics(species: Dict[int, Species], w_genotype: float = 0
         
         if sp.id in elites_genomes_by_species:
             from .species import Individual
-            from .phenotype_distance import extract_phenotype_vector
+            from .distance import extract_phenotype_vector
             
             for genome in elites_genomes_by_species[sp.id]:
                 embedding = None
@@ -393,7 +394,7 @@ def get_species_statistics(species: Dict[int, Species], elites_path: Optional[st
     }
 
 
-def log_generation_summary(generation: int, species: Dict[int, Species], reserves_size: int = 0,
+def log_generation_summary(generation: int, species: Dict[int, Species], archive_size: int = 0,
                            events: Dict[str, int] = None, logger=None, elites_path: Optional[str] = None) -> None:
     
     if logger is None:
@@ -404,5 +405,5 @@ def log_generation_summary(generation: int, species: Dict[int, Species], reserve
     event_str = ", ".join(f"{k}={v}" for k, v in events.items() if v > 0)
     
     logger.info(f"Gen {generation}: {stats['count']} species, {stats['total_population']} pop, "
-                f"reserves={reserves_size}, best={stats['fitness']['global_best']:.4f}, "
+                f"archive={archive_size}, best={stats['fitness']['global_best']:.4f}, "
                 f"avg={stats['fitness']['global_avg']:.4f}" + (f", events: {event_str}" if event_str else ""))

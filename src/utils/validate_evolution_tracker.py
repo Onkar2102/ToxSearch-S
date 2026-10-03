@@ -105,10 +105,13 @@ def validate_top_level_fields(tracker: Dict[str, Any], logger=None) -> Tuple[boo
     
     speciation_summary = tracker.get("speciation_summary")
     if speciation_summary is not None:
-        required_fields = ["current_species_count", "current_reserves_size"]
-        for field in required_fields:
-            if field not in speciation_summary:
-                errors.append(f"speciation_summary missing field: {field}")
+        if "current_species_count" not in speciation_summary:
+            errors.append("speciation_summary missing field: current_species_count")
+        if (
+            "current_archive_size" not in speciation_summary
+            and "current_reserves_size" not in speciation_summary  # legacy read
+        ):
+            errors.append("speciation_summary missing field: current_archive_size")
     
     cumulative_budget = tracker.get("cumulative_budget")
     if cumulative_budget is not None:
@@ -161,9 +164,7 @@ def validate_per_generation_fields(tracker: Dict[str, Any], logger=None) -> Tupl
             "avg_fitness_generation",
             "avg_fitness_variants",
             "avg_fitness_elites",
-            "avg_fitness_reserves",
             "elites_count",
-            "reserves_count",
             "archived_count",
             "total_population",
             "selection_mode",
@@ -176,7 +177,7 @@ def validate_per_generation_fields(tracker: Dict[str, Any], logger=None) -> Tupl
         numeric_fields = [
             "max_score_variants", "min_score_variants", "avg_fitness",
             "avg_fitness_generation", "avg_fitness_variants",
-            "avg_fitness_elites", "avg_fitness_reserves"
+            "avg_fitness_elites",
         ]
         for field in numeric_fields:
             if field in gen:
@@ -184,22 +185,22 @@ def validate_per_generation_fields(tracker: Dict[str, Any], logger=None) -> Tupl
                 if not isinstance(value, (int, float)) or value < 0:
                     errors.append(f"Generation {gen_num} has invalid {field}: {value}")
         
-        count_fields = ["elites_count", "reserves_count", "archived_count", "total_population"]
+        count_fields = ["elites_count", "archived_count", "total_population"]
         for field in count_fields:
             if field in gen:
                 value = gen[field]
                 if not isinstance(value, int) or value < 0:
                     errors.append(f"Generation {gen_num} has invalid {field}: {value}")
         
-        if "total_population" in gen and "elites_count" in gen and "reserves_count" in gen:
+        if "total_population" in gen and "elites_count" in gen and "archived_count" in gen:
             total_pop = gen["total_population"]
             elites = gen["elites_count"]
-            reserves = gen["reserves_count"]
-            expected_total = elites + reserves
+            archived = gen["archived_count"]
+            expected_total = elites + archived
             if total_pop != expected_total:
                 errors.append(
                     f"Generation {gen_num}: total_population={total_pop} != "
-                    f"elites_count + reserves_count={elites + reserves}"
+                    f"elites_count + archived_count={elites + archived}"
                 )
         
         if "selection_mode" in gen:
@@ -268,32 +269,41 @@ def validate_speciation_block(tracker: Dict[str, Any], logger=None) -> Tuple[boo
         
         required_fields = [
             "species_count", "active_species_count", "frozen_species_count",
-            "reserves_size", "speciation_events", "merge_events",
+            "archive_size", "speciation_events", "merge_events",
             "extinction_events", "archived_count", "elites_moved",
-            "reserves_moved", "genomes_updated", "inter_species_diversity",
+            "archive_moved", "genomes_updated", "inter_species_diversity",
             "intra_species_diversity", "total_population"
         ]
         
         for field in required_fields:
             if field not in speciation:
+                # Legacy trackers may still use reserves_* names
+                if field == "archive_size" and "reserves_size" in speciation:
+                    continue
+                if field == "archive_moved" and "reserves_moved" in speciation:
+                    continue
                 errors.append(f"Generation {gen_num} speciation missing field: {field}")
         
         numeric_fields = [
             "species_count", "active_species_count", "frozen_species_count",
-            "reserves_size", "speciation_events", "merge_events",
+            "archive_size", "speciation_events", "merge_events",
             "extinction_events", "archived_count", "elites_moved",
-            "reserves_moved", "genomes_updated", "inter_species_diversity",
+            "archive_moved", "genomes_updated", "inter_species_diversity",
             "intra_species_diversity", "total_population"
         ]
         for field in numeric_fields:
-            if field in speciation:
-                value = speciation[field]
+            value = speciation.get(field)
+            if value is None and field == "archive_size":
+                value = speciation.get("reserves_size")
+            if value is None and field == "archive_moved":
+                value = speciation.get("reserves_moved")
+            if value is not None:
                 if not isinstance(value, (int, float)):
                     errors.append(f"Generation {gen_num} speciation has invalid {field}: {value} (must be numeric)")
                 elif field in ["species_count", "active_species_count", "frozen_species_count",
-                               "reserves_size", "speciation_events", "merge_events",
+                               "archive_size", "speciation_events", "merge_events",
                                "extinction_events", "archived_count", "elites_moved",
-                               "reserves_moved", "genomes_updated", "total_population"]:
+                               "archive_moved", "genomes_updated", "total_population"]:
                     if value < 0:
                         errors.append(f"Generation {gen_num} speciation has negative {field}: {value}")
         

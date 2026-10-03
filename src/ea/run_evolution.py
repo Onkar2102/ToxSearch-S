@@ -35,7 +35,7 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
         outputs_path = get_outputs_path()
         temp_path = outputs_path / "temp.json"
         elites_path = outputs_path / "elites.json"
-        reserves_path = outputs_path / "reserves.json"
+        archive_path = outputs_path / "archive.json"
 
         if not temp_path.exists():
             logger.warning("temp.json not found for deduplication")
@@ -59,10 +59,10 @@ def _deduplicate_variants_in_temp(logger, operator_stats=None):
                         existing_prompts.add(genome["prompt"])
                         existing_ids.add(genome.get("id"))
 
-        if reserves_path.exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                cluster0_genomes = json.load(f)
-                for genome in cluster0_genomes:
+        if archive_path.exists():
+            with open(archive_path, 'r', encoding='utf-8') as f:
+                archive_genomes = json.load(f)
+                for genome in archive_genomes:
                     if genome and genome.get("prompt"):
                         existing_prompts.add(genome["prompt"])
                         existing_ids.add(genome.get("id"))
@@ -168,7 +168,6 @@ def check_threshold_and_update_tracker(population, north_star_metric, log_file=N
                     "avg_fitness_variants": 0.0001,
                     "avg_fitness_generation": 0.0001,
                     "avg_fitness_elites": 0.0001,
-                    "avg_fitness_reserves": 0.0001,
                     "parents": None,
                     "top_10": None,
                     "variants_created": None,
@@ -429,16 +428,15 @@ def create_final_statistics_with_tracker(evolution_tracker: List[dict], north_st
 def run_evolution(north_star_metric, log_file=None, current_cycle=None, max_variants=1, max_num_parents=4, operators="all"):
     
     outputs_path = get_outputs_path()
-    reserves_path = outputs_path / "reserves.json"
     elites_path = outputs_path / "elites.json"
     evolution_tracker_path = outputs_path / "EvolutionTracker.json"
 
     logger = get_logger("RunEvolution", log_file)
     logger.info("Starting evolution: cycle=%s, metric=%s", current_cycle, north_star_metric)
 
-    if not reserves_path.exists() and not elites_path.exists():
-        logger.error("No population file found: checked reserves.json and elites.json")
-        raise FileNotFoundError(f"No population file found in {outputs_path}")
+    if not elites_path.exists():
+        logger.error("No population file found: elites.json missing")
+        raise FileNotFoundError(f"No elites.json found in {outputs_path}")
 
     try:
         with PerformanceLogger(logger, "Evolution: Load population"):

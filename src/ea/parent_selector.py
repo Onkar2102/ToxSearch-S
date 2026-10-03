@@ -11,11 +11,10 @@ from utils import get_system_utils
 
 get_logger, _, _, _ = get_custom_logging()
 _, _, _, get_outputs_path, _, _, _ = get_system_utils()
-CLUSTER_0_ID = 0
 
 
 class ParentSelector:
-    """Parent selection based on species with Category 1 (active + species 0) and Category 2 (frozen). Use Category 2 only when Category 1 has no genomes. Sorting uses actual max fitness over current genomes only (no merge with stored values). If no genomes in active, reserves, or frozen: raises an error to end the evolution run. Selection modes (applied to the chosen category): - DEFAULT: Pick any species (random from sorted), 2 parents; if chosen has <2, fill from category. - EXPLOIT: Pick species with highest max fitness, 3 parents; if <3, fill from category. - EXPLORE: Pick top + 2 random species, 1 parent (best) from each; if <3 species, reuse/fill from category."""
+    """Parent selection from elites.json only (species_id > 0). Category 1 = active species; Category 2 = frozen when Category 1 is empty."""
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None):
         
@@ -48,13 +47,13 @@ class ParentSelector:
                 frozen_ids.add(sid)
         
         if all_species_in_genomes is not None:
-            all_in_genomes = set(all_species_in_genomes)
+            all_in_genomes = {sid for sid in all_species_in_genomes if sid is not None and sid > 0}
         else:
-            all_in_genomes = set(int(s) for s in species_dict.keys()) - frozen_ids
+            all_in_genomes = {int(s) for s in species_dict.keys() if int(s) > 0} - frozen_ids
         
-        category1_ids = (all_in_genomes - frozen_ids) | {CLUSTER_0_ID}
-        
-        self.logger.debug(f"Category1 (active+0): {sorted(category1_ids)}, Frozen: {sorted(frozen_ids)}")
+        category1_ids = all_in_genomes - frozen_ids
+
+        self.logger.debug(f"Category1 (active elites): {sorted(category1_ids)}, Frozen: {sorted(frozen_ids)}")
         
         return (category1_ids, frozen_ids)
 
@@ -63,7 +62,7 @@ class ParentSelector:
         species_groups = defaultdict(list)
         for genome in genomes:
             species_id = genome.get("species_id")
-            if species_id is not None:
+            if species_id is not None and species_id > 0:
                 species_groups[species_id].append(genome)
         return dict(species_groups)
 
@@ -105,13 +104,11 @@ class ParentSelector:
     def _select_parents_default(
         self,
         elites: List[Dict[str, Any]],
-        reserves: List[Dict[str, Any]],
         active_species_ids: set,
         outputs_path: str = None,
     ) -> List[Dict[str, Any]]:
         
-        all_genomes = elites + reserves
-        species_groups = self._group_by_species(all_genomes)
+        species_groups = self._group_by_species(elites)
         sorted_species = self._get_sorted_active_species(species_groups, active_species_ids)
 
         if not sorted_species:
@@ -135,13 +132,11 @@ class ParentSelector:
     def _select_parents_exploitation(
         self,
         elites: List[Dict[str, Any]],
-        reserves: List[Dict[str, Any]],
         active_species_ids: set,
         outputs_path: str = None,
     ) -> List[Dict[str, Any]]:
         
-        all_genomes = elites + reserves
-        species_groups = self._group_by_species(all_genomes)
+        species_groups = self._group_by_species(elites)
         sorted_species = self._get_sorted_active_species(species_groups, active_species_ids)
 
         if not sorted_species:
@@ -165,13 +160,11 @@ class ParentSelector:
     def _select_parents_exploration(
         self,
         elites: List[Dict[str, Any]],
-        reserves: List[Dict[str, Any]],
         active_species_ids: set,
         outputs_path: str = None,
     ) -> List[Dict[str, Any]]:
         
-        all_genomes = elites + reserves
-        species_groups = self._group_by_species(all_genomes)
+        species_groups = self._group_by_species(elites)
         sorted_species = self._get_sorted_active_species(species_groups, active_species_ids)
 
         if not sorted_species:
@@ -216,24 +209,15 @@ class ParentSelector:
                 outputs_path = get_outputs_path()
 
             elites_path = str(Path(outputs_path) / "elites.json")
-            reserves_path = str(Path(outputs_path) / "reserves.json")
 
             elites = load_elites(elites_path, log_file=None)
-            
-            reserves = []
-            reserves_file = Path(reserves_path)
-            if reserves_file.exists():
-                with open(reserves_file, 'r', encoding='utf-8') as f:
-                    reserves = json.load(f)
-            else:
-                self.logger.warning(f"Reserves file not found: {reserves_path}")
+            elites = [g for g in elites if g.get("species_id") is not None and g.get("species_id", 0) > 0]
 
-            if not elites and not reserves:
-                self.logger.critical("No genomes in elites.json or reserves.json - evolution cannot continue")
-                raise RuntimeError("No genomes available - evolution cannot continue.")
+            if not elites:
+                self.logger.critical("No genomes in elites.json with species_id > 0 - evolution cannot continue")
+                raise RuntimeError("No elite genomes available - evolution cannot continue.")
 
-            all_genomes = elites + reserves
-            species_groups = self._group_by_species(all_genomes)
+            species_groups = self._group_by_species(elites)
             all_species_in_genomes = set(species_groups.keys())
 
             speciation_state = self._load_speciation_state(outputs_path)
@@ -248,7 +232,7 @@ class ParentSelector:
                     ids_to_use = frozen_ids
                 else:
                     raise RuntimeError(
-                        "No genomes in active, reserves, or frozen - evolution cannot continue."
+                        "No genomes in active or frozen elites - evolution cannot continue."
                     )
 
             self.logger.debug(f"Using category with IDs: {sorted(ids_to_use)}")
@@ -260,11 +244,11 @@ class ParentSelector:
             self.logger.debug(f"Selection mode: {selection_mode}")
 
             if selection_mode == "exploit" or selection_mode == "exploitation":
-                selected_parents = self._select_parents_exploitation(elites, reserves, ids_to_use, outputs_path)
+                selected_parents = self._select_parents_exploitation(elites, ids_to_use, outputs_path)
             elif selection_mode == "explore" or selection_mode == "exploration":
-                selected_parents = self._select_parents_exploration(elites, reserves, ids_to_use, outputs_path)
+                selected_parents = self._select_parents_exploration(elites, ids_to_use, outputs_path)
             else:
-                selected_parents = self._select_parents_default(elites, reserves, ids_to_use, outputs_path)
+                selected_parents = self._select_parents_default(elites, ids_to_use, outputs_path)
 
             expected_count = 3 if selection_mode in ["exploit", "exploitation", "explore", "exploration"] else 2
             if len(selected_parents) < expected_count:
@@ -274,7 +258,7 @@ class ParentSelector:
 
             self._save_parents_to_file(selected_parents, outputs_path)
 
-            self._save_top_10_by_toxicity(elites_path, reserves_path, str(Path(outputs_path) / "top_10.json"))
+            self._save_top_10_by_toxicity(elites_path, str(Path(outputs_path) / "top_10.json"))
 
         except Exception as e:
             self.logger.error(f"Error in adaptive tournament selection: {e}")
@@ -306,15 +290,12 @@ class ParentSelector:
             self.logger.error(f"Failed to save parents to file: {e}")
             raise
 
-    def _save_top_10_by_toxicity(self, elites_path: str = None, reserves_path: str = None, output_path: str = None) -> None:
+    def _save_top_10_by_toxicity(self, elites_path: str = None, output_path: str = None) -> None:
         
         try:
             if elites_path is None:
                 outputs_path = get_outputs_path()
                 elites_path = str(outputs_path / "elites.json")
-            if reserves_path is None:
-                outputs_path = get_outputs_path()
-                reserves_path = str(outputs_path / "reserves.json")
             if output_path is None:
                 outputs_path = get_outputs_path()
                 output_path = str(outputs_path / "top_10.json")
@@ -327,21 +308,13 @@ class ParentSelector:
             else:
                 self.logger.warning(f"Elites file not found: {elites_path}")
 
-            reserves_file = Path(reserves_path)
-            reserves = []
-            if reserves_file.exists():
-                with open(reserves_file, 'r', encoding='utf-8') as f:
-                    reserves = json.load(f)
-            else:
-                self.logger.warning(f"Reserves file not found: {reserves_path}")
+            elites = [g for g in elites if g.get("species_id") is not None and g.get("species_id", 0) > 0]
 
-            all_genomes = elites + reserves
-
-            if not all_genomes:
-                self.logger.error("No genomes found in elites or reserves")
+            if not elites:
+                self.logger.error("No elite genomes found for top_10")
                 return
 
-            sorted_genomes = sorted(all_genomes, key=lambda g: _extract_north_star_score(g, self.north_star_metric), reverse=True)
+            sorted_genomes = sorted(elites, key=lambda g: _extract_north_star_score(g, self.north_star_metric), reverse=True)
             top_10_full = sorted_genomes[:10]
 
             top_10_slim = []

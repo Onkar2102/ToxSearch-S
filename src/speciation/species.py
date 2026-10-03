@@ -8,7 +8,13 @@ from typing import List, Dict, Any, Optional
 
 @dataclass
 class Individual:
-    """Represents an individual genome in the evolutionary population. An Individual is a wrapper around a genome (prompt) that includes: - Genotype: Semantic embedding for clustering (prompt embedding) - Phenotype: Response scores (8D toxicity scores) - Fitness score for selection - Species assignment for speciation This class bridges the gap between the raw genome format (dict) and the speciation framework's internal representation. Attributes: id: Unique identifier for the individual (matches genome ID) prompt: The text prompt (genome content) fitness: Fitness score (typically toxicity score, range [0, 1]) embedding: L2-normalized semantic embedding vector (384-dim for all-MiniLM-L6-v2) Used for genotype distance computation in clustering phenotype: Phenotype vector (8D response scores) for phenotype distance computation species_id: ID of the species this individual belongs to (None if unassigned, 0 for cluster 0) generation: Generation number when this individual was created genome_data: Original genome dictionary (for preserving metadata)"""
+    """Represents an individual genome in the evolutionary population.
+
+    Bridges raw genome dicts and speciation internals: genotype embedding,
+    objective (phenotype) vector, fitness, and species assignment.
+
+    ``species_id``: ``> 0`` elite member; ``-1`` archive (non-elite); ``None`` unassigned.
+    """
     id: int
     prompt: str
     fitness: float = 0.0
@@ -43,7 +49,7 @@ class Individual:
         elif embedding is not None:
             final_embedding = embedding
         
-        from .phenotype_distance import extract_phenotype_vector
+        from .distance import extract_phenotype_vector
         phenotype = extract_phenotype_vector(genome, logger=None)
         
         return cls(
@@ -82,7 +88,12 @@ class Individual:
 
 @dataclass
 class Species:
-    """Represents a species in the speciation framework. A Species is a cluster of semantically similar individuals that evolve together. Each species has: - A leader (highest fitness individual, defines species center) - Members (all individuals assigned to this species, max species_capacity) - A radius (constant, equal to theta_sim for all species) - Fitness tracking for stagnation detection - Origin tracking (how the species was created: merge/split/natural) Species evolve independently, can merge with similar species, and can become frozen (excluded from parent selection but still alive). Note: Species IDs start from 1. ID 0 is reserved for Cluster 0 (reserves). Species States: - "active": Normal operating state, participates in evolution - "frozen": Species frozen due to stagnation (species_stagnation exceeded), excluded from parent selection (but still alive; can be reactivated if assigned a new leader) - "incubator": Species moved to cluster 0 (reserves), awaiting potential new species formation - "extinct": Species that merged with another (parent species become extinct, merged species is new) Attributes: id: Unique species identifier (1+, 0 reserved for cluster 0) leader: Leader individual (highest fitness, defines species center) members: List of all individuals in this species (includes leader, max species_capacity) radius: Semantic distance threshold for species membership (constant = theta_sim) stagnation: Incremented when species was selected as parent and max_fitness did not increase; reset to 0 when max_fitness increased. Unchanged when not selected. max_fitness: Actual max over current members only (no merge with stored/previous values). species_state: "active", "frozen", "incubator", or "extinct" (only active species used for parent selection) created_at: Generation when this species was created last_improvement: Generation when fitness last improved fitness_history: List of best fitness values over time (for trend analysis) labels: Current c-TF-IDF labels (top 10 representative words) label_history: History of labels over generations (for tracking topic evolution) cluster_origin: How this species was created ("merge", "split", or "natural") - never None parent_ids: List of parent species IDs (None or [] for natural, [id1, id2] for merge, [id1] for split) leader_distance: Ensemble distance score of leader (0-1 normalized, for reference)"""
+    """Breeding group of semantically similar individuals.
+
+    Species IDs are ``>= 1``. Non-elites live in ``archive.json`` with
+    ``species_id == -1`` (not a Species object). States: active, frozen,
+    incubator (dissolved → archive), extinct (after merge).
+    """
     id: int
     leader: Individual
     members: List[Individual] = field(default_factory=list)

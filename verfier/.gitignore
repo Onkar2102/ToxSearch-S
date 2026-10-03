@@ -1,7 +1,0 @@
-# Ignore Lake / Lean build artifacts
-.lake/
-*.olean
-*.ilean
-*.c
-*.hash
-/lake-packages/

@@ -61,7 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--theta-sim",
         type=float,
         default=defaults.theta_sim,
-        help=f"Species similarity threshold (ensemble distance, default: {defaults.theta_sim})",
+        help=f"Species similarity threshold (default: {defaults.theta_sim})",
     )
     parser.add_argument(
         "--theta-merge",
@@ -80,18 +80,6 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=defaults.species_capacity,
         help=f"Maximum individuals per species (default: {defaults.species_capacity})",
-    )
-    parser.add_argument(
-        "--cluster0-max-capacity",
-        type=int,
-        default=defaults.cluster0_max_capacity,
-        help=f"Maximum individuals in cluster 0/reserves (default: {defaults.cluster0_max_capacity})",
-    )
-    parser.add_argument(
-        "--cluster0-min-cluster-size",
-        type=int,
-        default=defaults.cluster0_min_cluster_size,
-        help=f"Minimum cluster size for cluster 0 speciation (default: {defaults.cluster0_min_cluster_size})",
     )
     parser.add_argument(
         "--min-island-size",
@@ -160,7 +148,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--max-total-genomes",
         type=int,
         default=None,
-        help="Required termination cap (elites + reserves + archive)",
+        help="Required termination cap (elites + archive)",
     )
     parser.add_argument("--parallel", action="store_true", help="MPI master-worker mode")
     parser.add_argument(
@@ -176,6 +164,43 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         metavar="OUTPUT.prof",
         help="Enable cProfile; writes profile_main.prof under output dir",
+    )
+    parser.add_argument(
+        "--clustering-method",
+        type=str,
+        choices=["leader_follower", "dbscan"],
+        default=defaults.clustering_method,
+        help="Niche clustering: leader_follower (default) or dbscan",
+    )
+    parser.add_argument(
+        "--dbscan-eps",
+        type=float,
+        default=None,
+        help="DBSCAN eps (distance in [0,1]; default: --theta-sim)",
+    )
+    parser.add_argument(
+        "--dbscan-min-samples",
+        type=int,
+        default=defaults.dbscan_min_samples,
+        help=f"DBSCAN min_samples (default: {defaults.dbscan_min_samples})",
+    )
+    parser.add_argument(
+        "--distance-method",
+        type=str,
+        default=defaults.distance_method,
+        help=(
+            "Distance metric: embedding | objective | nli | nli+embedding | embedding+objective "
+            f"(default: {defaults.distance_method})"
+        ),
+    )
+    parser.add_argument(
+        "--distance-alpha",
+        type=float,
+        default=defaults.distance_alpha,
+        help=(
+            "Alpha for nli+embedding hybrid: d_H = alpha*d_E + (1-alpha)*d_N "
+            f"(default: {defaults.distance_alpha})"
+        ),
     )
     return parser
 
@@ -245,19 +270,28 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(exc))
     set_active_north_star(north_star_metric)
 
-    speciation_config = SpeciationConfig(
-        theta_sim=args.theta_sim,
-        theta_merge=args.theta_merge,
-        min_stability_gens=args.min_stability_gens,
-        species_capacity=args.species_capacity,
-        cluster0_max_capacity=args.cluster0_max_capacity,
-        cluster0_min_cluster_size=args.cluster0_min_cluster_size,
-        min_island_size=args.min_island_size,
-        species_stagnation=args.species_stagnation,
-        embedding_model=args.embedding_model,
-        embedding_dim=args.embedding_dim,
-        embedding_batch_size=args.embedding_batch_size,
-    )
+    if args.clustering_method == "dbscan" and args.dbscan_eps is None and args.theta_sim is None:
+        parser.error("--dbscan-eps or --theta-sim is required when --clustering-method dbscan")
+
+    try:
+        speciation_config = SpeciationConfig(
+            theta_sim=args.theta_sim,
+            theta_merge=args.theta_merge,
+            min_stability_gens=args.min_stability_gens,
+            species_capacity=args.species_capacity,
+            min_island_size=args.min_island_size,
+            species_stagnation=args.species_stagnation,
+            embedding_model=args.embedding_model,
+            embedding_dim=args.embedding_dim,
+            embedding_batch_size=args.embedding_batch_size,
+            clustering_method=args.clustering_method,
+            dbscan_eps=args.dbscan_eps,
+            dbscan_min_samples=args.dbscan_min_samples,
+            distance_method=args.distance_method,
+            distance_alpha=args.distance_alpha,
+        )
+    except (AssertionError, ValueError) as exc:
+        parser.error(str(exc))
 
     _persist_run_config(
         args,
@@ -363,8 +397,6 @@ def main(argv: list[str] | None = None) -> int:
             theta_merge=args.theta_merge,
             min_stability_gens=args.min_stability_gens,
             species_capacity=args.species_capacity,
-            cluster0_max_capacity=args.cluster0_max_capacity,
-            cluster0_min_cluster_size=args.cluster0_min_cluster_size,
             min_island_size=args.min_island_size,
             species_stagnation=args.species_stagnation,
             embedding_model=args.embedding_model,
@@ -373,6 +405,11 @@ def main(argv: list[str] | None = None) -> int:
             evaluator=evaluator_name,
             north_star_metric=north_star_metric,
             openai_model=args.openai_model,
+            clustering_method=args.clustering_method,
+            dbscan_eps=args.dbscan_eps,
+            dbscan_min_samples=args.dbscan_min_samples,
+            distance_method=args.distance_method,
+            distance_alpha=args.distance_alpha,
         )
         return 0
     except KeyboardInterrupt:

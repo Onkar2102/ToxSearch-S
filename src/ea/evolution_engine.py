@@ -306,10 +306,8 @@ class EvolutionEngine:
         
 
         elites_path = Path(self.outputs_path) / "elites.json"
-        reserves_path = Path(self.outputs_path) / "reserves.json"
         
         has_elites = False
-        has_reserves = False
         
         if elites_path.exists():
             try:
@@ -319,21 +317,10 @@ class EvolutionEngine:
                 self.logger.warning(f"Failed to read elites.json: {e}")
                 has_elites = False
         
-        if reserves_path.exists():
-            try:
-                reserves_data = json.loads(reserves_path.read_text())
-                has_reserves = isinstance(reserves_data, list) and len(reserves_data) > 0
-            except (json.JSONDecodeError, Exception) as e:
-                self.logger.warning(f"Failed to read reserves.json: {e}")
-                has_reserves = False
-        
-        if not has_elites and not has_reserves:
-            self.logger.critical("No population files found with content (elites.json or reserves.json) - evolution cannot continue")
-            self.logger.error("Evolution cannot continue without any genomes. Stopping immediately.")
-            raise RuntimeError("No population files found - evolution cannot continue. This indicates a critical system failure.")
-        
         if not has_elites:
-            self.logger.warning("elites.json is empty or missing, using reserves.json for parent selection")
+            self.logger.critical("No genomes in elites.json - evolution cannot continue")
+            self.logger.error("Evolution cannot continue without elite breeding population. Stopping immediately.")
+            raise RuntimeError("No elite genomes found - evolution cannot continue.")
 
         self.parent_selector.adaptive_tournament_selection(evolution_tracker, outputs_path=str(self.outputs_path))
 

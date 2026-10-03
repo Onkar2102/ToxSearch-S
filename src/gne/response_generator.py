@@ -4,12 +4,9 @@ import os
 import json
 import yaml
 import time
-import psutil
 import sys
 from typing import List, Dict, Any, Optional
-from llama_cpp import Llama
 from utils import get_custom_logging
-from .model_interface import LlamaCppChatInterface
 
 get_logger, _, _, _ = get_custom_logging()
 
@@ -17,6 +14,8 @@ class ResponseGenerator:
     """Response generator using v1/chat/completions interface for efficient inference."""
     
     def __init__(self, model_key="response_generator", config_path="config/RGConfig.yaml", log_file: Optional[str] = None, seed: Optional[int] = None):
+        from .model_interface import LlamaCppChatInterface
+
         self.log_file = log_file
         self.logger = get_logger("ResponseGenerator", self.log_file)
         self.logger.debug(f"Logger correctly initialized with log_file: {self.log_file}")

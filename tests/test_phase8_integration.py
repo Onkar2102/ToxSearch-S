@@ -83,21 +83,21 @@ def _mock_run_speciation(temp_path=None, current_generation=0,
     })
 
     temp = Path(temp_path)
-    reserves_path = temp.parent / "reserves.json"
+    archive_path = temp.parent / "archive.json"
 
     with open(temp, "r", encoding="utf-8") as f:
         genomes = json.load(f)
 
     existing = []
-    if reserves_path.exists():
-        with open(reserves_path, "r", encoding="utf-8") as f:
+    if archive_path.exists():
+        with open(archive_path, "r", encoding="utf-8") as f:
             existing = json.load(f)
 
     for g in genomes:
-        g.setdefault("species_id", 0)
+        g.setdefault("species_id", -1)
     existing.extend(genomes)
 
-    with open(reserves_path, "w", encoding="utf-8") as f:
+    with open(archive_path, "w", encoding="utf-8") as f:
         json.dump(existing, f, indent=2, ensure_ascii=False)
 
     with open(temp, "w", encoding="utf-8") as f:
@@ -106,7 +106,7 @@ def _mock_run_speciation(temp_path=None, current_generation=0,
     return {
         "success": True,
         "species_count": 1,
-        "reserves_size": len(existing),
+        "archived_count": len(genomes),
         "elites_moved": 0,
     }
 
@@ -198,12 +198,12 @@ def test_full_integration(comm, rank, size, logger):
                         last_gen["total_discarded"])
 
                                                     
-            reserves_path = out / "reserves.json"
-            assert reserves_path.exists(), "reserves.json missing"
-            with open(reserves_path) as f:
-                reserves = json.load(f)
-            assert len(reserves) >= 1, f"Expected >= 1 genome in reserves, got {len(reserves)}"
-            logger.info("PASS: reserves has %d genomes", len(reserves))
+            archive_path = out / "archive.json"
+            assert archive_path.exists(), "archive.json missing"
+            with open(archive_path) as f:
+                archive = json.load(f)
+            assert len(archive) >= 1, f"Expected >= 1 genome in archive, got {len(archive)}"
+            logger.info("PASS: archive has %d genomes", len(archive))
 
             temp_path = out / "temp.json"
             with open(temp_path) as f:
@@ -212,13 +212,13 @@ def test_full_integration(comm, rank, size, logger):
             logger.info("PASS: temp.json empty")
 
                                                       
-            ids_in_reserves = [g["id"] for g in reserves if "id" in g]
-            assert len(ids_in_reserves) == len(set(ids_in_reserves)), \
-                f"Duplicate genome IDs in reserves: {ids_in_reserves}"
-            logger.info("PASS: all %d genome IDs unique in reserves", len(ids_in_reserves))
+            ids_in_archive = [g["id"] for g in archive if "id" in g]
+            assert len(ids_in_archive) == len(set(ids_in_archive)), \
+                f"Duplicate genome IDs in archive: {ids_in_archive}"
+            logger.info("PASS: all %d genome IDs unique in archive", len(ids_in_archive))
 
                                                              
-            for g in reserves:
+            for g in archive:
                 assert "id" in g, f"Genome missing 'id': {list(g.keys())}"
                 assert "generation" in g, f"Genome missing 'generation': {list(g.keys())}"
                 assert "prompt" in g, f"Genome missing 'prompt': {list(g.keys())}"

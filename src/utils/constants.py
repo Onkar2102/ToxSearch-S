@@ -21,8 +21,7 @@ class ModelConstants:
     pass
 
 class FileConstants:
-    """Constants related to file operations Note: Active population = elites.json + reserves.json - elites.json: Genomes with species_id > 0 (assigned to species) - reserves.json: Cluster 0 outliers (genomes that don't fit existing species) - archive.json: Archived/removed genomes (excluded from active population)"""
+    """File layout: active EA population = elites.json (species_id > 0); non-elites = archive.json (species_id == -1)."""
     DEFAULT_ELITES_FILE = "data/outputs/elites.json"
-    DEFAULT_RESERVES_FILE = "data/outputs/reserves.json"
     DEFAULT_ARCHIVE_FILE = "data/outputs/archive.json"
     DEFAULT_EVOLUTION_TRACKER_FILE = "data/outputs/EvolutionTracker.json"

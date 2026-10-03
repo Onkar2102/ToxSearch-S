@@ -119,10 +119,10 @@ def test_phase4(comm, rank, size, logger):
         if rank == 0:
             out = Path(outputs_dir)
 
-            reserves_path = out / "reserves.json"
-            assert reserves_path.exists(), "reserves.json missing"
-            with open(reserves_path) as f:
-                reserves = json.load(f)
+            archive_path = out / "archive.json"
+            assert archive_path.exists(), "archive.json missing"
+            with open(archive_path) as f:
+                archive = json.load(f)
 
             temp_path = out / "temp.json"
             with open(temp_path) as f:
@@ -133,24 +133,24 @@ def test_phase4(comm, rank, size, logger):
             with open(tracker_path) as f:
                 tracker = json.load(f)
 
-            logger.info("Validation: reserves=%d  temp=%d  generations=%s",
-                        len(reserves), len(temp), tracker.get("total_generations"))
+            logger.info("Validation: archive=%d  temp=%d  generations=%s",
+                        len(archive), len(temp), tracker.get("total_generations"))
 
             assert len(temp) == 0, f"temp.json should be empty after speciation, got {len(temp)}"
-            assert len(reserves) >= K, f"reserves should have >= {K} genomes, got {len(reserves)}"
+            assert len(archive) >= K, f"archive should have >= {K} genomes, got {len(archive)}"
             assert tracker["total_generations"] >= 1, \
                 f"Expected at least 1 generation, got {tracker['total_generations']}"
 
-            ids = [g["id"] for g in reserves]
-            assert len(ids) == len(set(ids)), f"Duplicate genome IDs in reserves: {ids}"
+            ids = [g["id"] for g in archive]
+            assert len(ids) == len(set(ids)), f"Duplicate genome IDs in archive: {ids}"
 
-            for g in reserves:
+            for g in archive:
                 assert "id" in g, f"Genome missing 'id': {g}"
                 assert "generation" in g, f"Genome missing 'generation': {g}"
                 assert "prompt" in g, f"Genome missing 'prompt': {g}"
 
-            gen0_genomes = [g for g in reserves if g.get("generation") == 0]
-            later_genomes = [g for g in reserves if g.get("generation", 0) > 0]
+            gen0_genomes = [g for g in archive if g.get("generation") == 0]
+            later_genomes = [g for g in archive if g.get("generation", 0) > 0]
 
             for g in gen0_genomes:
                 assert g.get("moderation_result") is not None, \

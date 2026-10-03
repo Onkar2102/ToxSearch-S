@@ -28,7 +28,6 @@ def calculate_table4_metrics(
         outputs_dir = Path(outputs_path)
         
         elites_path = outputs_dir / "elites.json"
-        reserves_path = outputs_dir / "reserves.json"
         archive_path = outputs_dir / "archive.json"
         tracker_path = outputs_dir / "EvolutionTracker.json"
         
@@ -46,28 +45,16 @@ def calculate_table4_metrics(
         else:
             _logger.debug(f"elites.json not found at {elites_path}")
         
-        if reserves_path.exists():
-            with open(reserves_path, 'r', encoding='utf-8') as f:
-                reserves_genomes = json.load(f)
-                current_gen_reserves = [
-                    g for g in reserves_genomes 
-                    if g and g.get("generation") == current_generation
-                ]
-                all_variants.extend(current_gen_reserves)
-                _logger.info(f"Found {len(current_gen_reserves)} variants in reserves.json for generation {current_generation} (total reserves: {len(reserves_genomes)})")
-        else:
-            _logger.debug(f"reserves.json not found at {reserves_path}")
-        
         if archive_path.exists():
             try:
                 with open(archive_path, 'r', encoding='utf-8') as f:
                     archive_genomes = json.load(f)
                 if not isinstance(archive_genomes, list):
                     if isinstance(archive_genomes, dict):
-                        _logger.warning(f"archive.json is a dict (expected list), converting to list")
+                        _logger.warning("archive.json is a dict (expected list), converting to list")
                         archive_genomes = list(archive_genomes.values()) if len(archive_genomes) > 0 else []
                     else:
-                        _logger.warning(f"archive.json has unexpected format, treating as empty")
+                        _logger.warning("archive.json has unexpected format, treating as empty")
                         archive_genomes = []
                 
                 current_gen_archived = [
@@ -75,7 +62,10 @@ def calculate_table4_metrics(
                     if g and g.get("generation") == current_generation
                 ]
                 all_variants.extend(current_gen_archived)
-                _logger.info(f"Found {len(current_gen_archived)} variants in archive.json for generation {current_generation} (total archived: {len(archive_genomes)})")
+                _logger.info(
+                    "Found %d variants in archive.json for generation %d (total archived: %d)",
+                    len(current_gen_archived), current_generation, len(archive_genomes),
+                )
             except Exception as e:
                 _logger.warning(f"Failed to load archive.json: {e}")
         else:

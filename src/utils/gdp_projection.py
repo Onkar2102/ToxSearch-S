@@ -2,7 +2,7 @@
 gdp_projection.py
 
 Genetic Distance Projection (GDP) integration for ToxSearch-S.
-Maps elites/reserves (+ optional archive) to GDP's GenomeData format.
+Maps elites.json + archive.json (non-elites) to GDP's GenomeData format.
 - MDS-GDP: cosine-MDS reduction (cosine distance in embedding space).
 - NN-GDP: neural-network reduction (Euclidean distance in embedding space; requires torch).
 - UMAP-GDP: UMAP reduction (cosine metric in embedding space; requires umap-learn).
@@ -98,7 +98,7 @@ def _reduce_using_umap(
 
 
 def _load_genomes_from_json(path: Path) -> List[Dict[str, Any]]:
-    """Load a list of genome dicts from elites.json, reserves.json, or archive.json."""
+    """Load a list of genome dicts from a population JSON file."""
     if not path.exists():
         return []
     with open(path, "r", encoding="utf-8") as f:
@@ -112,7 +112,7 @@ def _genomes_to_genome_data(
 ) -> Tuple[Optional[Any], List[int]]:
     """
     Build GDP GenomeData from a list of genome dicts (each with id, prompt_embedding, etc.).
-    If alive_ids is provided, adds "alive": 1 for ids in alive_ids (elites+reserves), 0 for archive.
+    If alive_ids is provided, adds "alive": 1 for ids in alive_ids (elites), 0 for archive.
     Returns (GenomeData or None if GDP unavailable, list of genome ids in order).
     """
     if not genomes:
@@ -155,25 +155,19 @@ def _genomes_to_genome_data(
     return genome_data, [g["id"] for g in genomes]
 
 
-def build_genome_data_from_elites_reserves(
+def build_genome_data_from_elites_archive(
     elites_path: Path,
-    reserves_path: Path,
     archive_path: Optional[Path] = None,
 ) -> Tuple[Optional[Any], List[Dict], List[int]]:
     """
-    Build GDP GenomeData from elites.json, reserves.json, and optionally archive.json.
-    When archive_path is provided, merges all three so the dataset spans generation 0 through
-    the final generation (current elites/reserves plus all ever archived).
+    Build GDP GenomeData from elites.json and optionally archive.json (non-elites).
     Deduped by genome id; only genomes with prompt_embedding are included.
     Returns (GenomeData or None if GDP unavailable, list of genome dicts used, list of genome ids in order).
     """
     elites = _load_genomes_from_json(Path(elites_path))
-    reserves = _load_genomes_from_json(Path(reserves_path))
-    # Order: elites, reserves, then archive so current population overwrites if id reappears
-    all_raw = list(elites) + list(reserves)
-    if archive_path and Path(archive_path).exists():
-        all_raw = all_raw + _load_genomes_from_json(Path(archive_path))
-    # Dedupe by id (keep first = prefer elites/reserves over archive)
+    archive = _load_genomes_from_json(Path(archive_path)) if archive_path else []
+    # Prefer elites over archive on id collision
+    all_raw = list(elites) + list(archive)
     seen: Dict[int, Dict[str, Any]] = {}
     for g in all_raw:
         gid = g.get("id")
@@ -187,29 +181,28 @@ def build_genome_data_from_elites_reserves(
         return None, [], []
 
     alive_ids = {g.get("id") for g in elites if g.get("id") is not None}
-    alive_ids |= {g.get("id") for g in reserves if g.get("id") is not None}
     genome_data, genome_ids = _genomes_to_genome_data(genomes, alive_ids=alive_ids)
     return genome_data, genomes, genome_ids
 
 
+# Backward-compatible alias
+build_genome_data_from_elites_reserves = build_genome_data_from_elites_archive
+
+
 def run_gdp_projection(
     elites_path: Path,
-    reserves_path: Path,
     output_dir: Path,
     archive_path: Optional[Path] = None,
     reduced_size: int = 2,
     save_json: bool = True,
     random_state: int = 42,
+    reserves_path: Optional[Path] = None,  # legacy alias for archive_path
 ) -> Tuple[Optional[Dict], Optional[Any]]:
-    """
-    Run GDP projection: load elites + reserves and optionally archive (generation 0 to final).
-    Build GenomeData, run cosine-MDS, optionally save gdp_projection.json.
-    When archive_path is provided, the diagram includes all genomes from the full run (gen 0 through final generation).
-    Returns (payload for gdp_projection.json, ReducedGenomeData or None).
-    Does not generate the figure; use generate_gdp_figure for that.
-    """
-    genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
-        elites_path, reserves_path, archive_path=archive_path
+    """Run GDP projection over elites.json + archive.json (non-elites)."""
+    if archive_path is None:
+        archive_path = reserves_path
+    genome_data, genomes, genome_ids = build_genome_data_from_elites_archive(
+        elites_path, archive_path=archive_path
     )
     if not genomes:
         return None, None
@@ -242,23 +235,17 @@ def run_gdp_projection(
 
 def run_gdp_projection_nn(
     elites_path: Path,
-    reserves_path: Path,
     output_dir: Path,
     archive_path: Optional[Path] = None,
     save_json: bool = True,
     model_save_fname: str = "gdp_nn_model.pt",
+    reserves_path: Optional[Path] = None,  # legacy alias for archive_path
 ) -> Tuple[Optional[Dict], Optional[Any]]:
-    """
-    Run GDP projection using NN (neural network) reduction.
-    Same data as MDS (elites + reserves + optional archive). Uses GDP's
-    perform_reduction_nn: a small NN is trained so 2D Euclidean distances
-    approximate Euclidean distances in embedding space (GDP uses Euclidean;
-    our MDS uses cosine). Output is 2D only. Model is saved under
-    output_dir/saved_models/<model_save_fname>.
-    Returns (payload for gdp_projection_nn.json, ReducedGenomeData or None).
-    """
-    genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
-        elites_path, reserves_path, archive_path=archive_path
+    """Run GDP NN projection over elites + archive."""
+    if archive_path is None:
+        archive_path = reserves_path
+    genome_data, genomes, genome_ids = build_genome_data_from_elites_archive(
+        elites_path, archive_path=archive_path
     )
     if not genomes:
         return None, None
@@ -296,7 +283,6 @@ def run_gdp_projection_nn(
 
 def run_gdp_projection_umap(
     elites_path: Path,
-    reserves_path: Path,
     output_dir: Path,
     archive_path: Optional[Path] = None,
     reduced_size: int = 2,
@@ -304,13 +290,13 @@ def run_gdp_projection_umap(
     random_state: int = 42,
     n_neighbors: int = 15,
     min_dist: float = 0.1,
+    reserves_path: Optional[Path] = None,  # legacy alias for archive_path
 ) -> Tuple[Optional[Dict], Optional[Any]]:
-    """
-    Run GDP projection using UMAP (cosine metric in embedding space).
-    Same data as MDS. Requires umap-learn. Returns (payload for gdp_projection_umap.json, ReducedGenomeData or None).
-    """
-    genome_data, genomes, genome_ids = build_genome_data_from_elites_reserves(
-        elites_path, reserves_path, archive_path=archive_path
+    """Run GDP UMAP projection over elites + archive."""
+    if archive_path is None:
+        archive_path = reserves_path
+    genome_data, genomes, genome_ids = build_genome_data_from_elites_archive(
+        elites_path, archive_path=archive_path
     )
     if not genomes:
         return None, None
@@ -403,7 +389,7 @@ def generate_gdp_figure(
 ) -> bool:
     """
     Build GenomeVisualizer from reduced data, set colors, and save 2D figure.
-    color_by: "alive" (elites+reserves vs archived), "species_id", or "fitness".
+    color_by: "alive" (elites vs archive), "species_id", or "fitness".
     Returns True on success, False if GDP unavailable or visualization fails.
     """
     if not _GDP_AVAILABLE or reduced_genome_data is None:

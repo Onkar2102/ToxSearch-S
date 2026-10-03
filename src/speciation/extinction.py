@@ -1,12 +1,8 @@
 
 
-from typing import Dict, List, Tuple, Optional, TYPE_CHECKING
+from typing import Dict, List, Tuple, Optional
 
 from .species import Individual, Species
-from .reserves import CLUSTER_0_ID
-
-if TYPE_CHECKING:
-    from .reserves import Cluster0
 
 from utils import get_custom_logging
 get_logger, _, _, _ = get_custom_logging()
@@ -14,7 +10,6 @@ get_logger, _, _, _ = get_custom_logging()
 
 def process_extinctions(
     species: Dict[int, Species],
-    cluster0: "Cluster0",
     current_generation: int,
     species_stagnation: int = 20,
     min_size: int = 2,
@@ -26,7 +21,7 @@ def process_extinctions(
         logger = get_logger("Extinction")
     
     extinction_events = []
-    moved_to_cluster0_events = []
+    archived_from_extinction_events = []
     incubator_species = {}
     
     frozen_ids = []
@@ -49,70 +44,52 @@ def process_extinctions(
             continue
         current_size = sp.size
         if sp.species_state == "incubator" or current_size < min_size:
-            if sp.species_state != "incubator":
-                small_species_ids.append(sid)
-                logger.debug(f"Species {sid}: current size={current_size} (in-memory), min_size={min_size}, state={sp.species_state} -> will move to incubator")
-            else:
-                small_species_ids.append(sid)
-                logger.debug(f"Species {sid}: already marked as incubator but not yet processed, will complete cleanup")
+            small_species_ids.append(sid)
     
     for sid in small_species_ids:
         if sid not in species:
             continue
         
-        if cluster0.size >= cluster0.max_capacity:
-            logger.debug(f"Cluster 0 at capacity ({cluster0.max_capacity}), cannot move species {sid}")
-            continue
-        
         sp = species[sid]
-        
         original_size = sp.size
-        
-        moved_count = 0
         moved_member_ids = []
-        member_ids_set = {m.id for m in sp.members}
-        
-        if sp.leader and sp.leader.id not in member_ids_set:
-            if cluster0.size < cluster0.max_capacity:
-                cluster0.add(sp.leader, current_generation)
-                moved_member_ids.append(sp.leader.id)
-                moved_count += 1
-        
-        for member in sp.members:
-            if cluster0.size >= cluster0.max_capacity:
-                break
-            cluster0.add(member, current_generation)
-            moved_member_ids.append(member.id)
-            moved_count += 1
+        members_to_archive = list(sp.members)
+        if sp.leader and sp.leader.id not in {m.id for m in sp.members}:
+            members_to_archive.append(sp.leader)
         
         try:
-            from .run_speciation import _get_state
+            from .run_speciation import _get_state, _archive_individuals
             state = _get_state()
             genome_tracker = state.get("_genome_tracker")
-            if genome_tracker and moved_member_ids:
-                updates = {str(mid): 0 for mid in moved_member_ids}
-                result = genome_tracker.batch_update(updates, current_generation, f"extinct_to_reserves_species_{sid}")
+            if genome_tracker and members_to_archive:
+                updates = {str(m.id): -1 for m in members_to_archive}
+                result = genome_tracker.batch_update(
+                    updates, current_generation, f"extinct_to_archive_species_{sid}"
+                )
                 if result["failed"] > 0:
                     logger.warning(f"Genome tracker batch update had {result['failed']} failures during extinction")
+                moved_member_ids = [m.id for m in members_to_archive]
+            if members_to_archive:
+                _archive_individuals(members_to_archive, current_generation, f"extinct_species_{sid}")
         except Exception as e:
-            logger.debug(f"Could not update genome tracker during extinction: {e}")
+            logger.debug(f"Could not archive genomes during extinction: {e}")
         
         sp.species_state = "incubator"
         sp.members = []
         incubator_species[sid] = sp
         
-        moved_to_cluster0_events.append({
+        archived_from_extinction_events.append({
             "generation": current_generation,
             "species_id": sid,
-            "action": "moved_to_cluster0",
+            "action": "archived",
             "new_state": "incubator",
             "size": original_size,
-            "moved_count": moved_count,
+            "moved_count": len(moved_member_ids),
             "moved_member_ids": moved_member_ids
         })
-        logger.info(f"Moved species {sid} ({moved_count} members) to cluster 0 - state=incubator")
+        logger.info(f"Archived species {sid} ({len(moved_member_ids)} members) - state=incubator")
     
     for sid in incubator_species:
         species.pop(sid, None)
     
-    return species, extinction_events, moved_to_cluster0_events, incubator_species
+    return species, extinction_events, archived_from_extinction_events, incubator_species
