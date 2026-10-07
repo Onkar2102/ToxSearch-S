@@ -14,6 +14,7 @@ class Individual:
     objective (phenotype) vector, fitness, and species assignment.
 
     ``species_id``: ``> 0`` elite member; ``-1`` archive (non-elite); ``None`` unassigned.
+    ``0`` is legacy (old cluster-0 / reserves) and raises on redistribute.
     """
     id: int
     prompt: str
@@ -37,7 +38,7 @@ class Individual:
         
         from utils.population_io import _extract_north_star_score
         from utils.evaluator_profiles import get_active_north_star
-        fitness = _extract_north_star_score(genome, get_active_north_star())
+        fitness = float(_extract_north_star_score(genome, get_active_north_star()))
         
         final_embedding = embedding
         if "prompt_embedding" in genome:
@@ -55,7 +56,7 @@ class Individual:
         return cls(
             id=genome.get("id", 0),
             prompt=genome.get("prompt", ""),
-            fitness=float(fitness) if fitness else 0.0,
+            fitness=fitness,
             embedding=final_embedding,
             phenotype=phenotype,
             species_id=genome.get("species_id"),
@@ -199,26 +200,32 @@ class Species:
 
 
 class SpeciesIdGenerator:
-    """Thread-safe species ID generator (singleton pattern). Ensures unique species IDs across the entire evolution run. IDs are sequential integers starting from 1 (ID 0 is reserved for cluster 0)."""
+    """Thread-safe species ID generator (singleton pattern).
+
+    Ensures unique species IDs across the evolution run. IDs are sequential
+    integers starting from 1. ID 0 is unused (legacy cluster-0 / reserves).
+    """
     _current_id: int = 0
     
     @classmethod
     def next_id(cls) -> int:
-        
         cls._current_id += 1
         return cls._current_id
     
     @classmethod
     def reset(cls, start: int = 0) -> None:
-        
         cls._current_id = start
     
     @classmethod
     def set_min_id(cls, min_id: int) -> None:
-        
-        cls._current_id = max(cls._current_id, min_id)
+        """Ensure the next ``next_id()`` return is ``>= min_id``.
+
+        Callers pass ``max_existing_id + 1``. Because ``next_id`` pre-increments,
+        the cursor is stored as ``min_id - 1`` (not ``min_id``), otherwise the
+        first allocated ID would skip ``min_id``.
+        """
+        cls._current_id = max(cls._current_id, min_id - 1)
 
 
 def generate_species_id() -> int:
-    
     return SpeciesIdGenerator.next_id()

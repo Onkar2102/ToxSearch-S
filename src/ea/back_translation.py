@@ -138,13 +138,16 @@ Return ONLY the translation in this format: <trans>TRANSLATED_QUESTION_HERE</tra
                     self.logger.info(f"{self.name}: Generated back-translated variant")
                     return [cleaned]
                 else:
-                    raise ValueError(f"{self.name}: Back-translation returned same text")
+                    self.logger.warning(f"{self.name}: Back-translation returned same text")
+                    return []
             else:
-                raise ValueError(f"{self.name}: First translation step failed")
+                self.logger.warning(f"{self.name}: First translation step failed or echoed source")
+                return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed with error: {e}")
-            raise RuntimeError(f"{self.name} back-translation failed: {e}") from e
+            # Soft-fail: keep other operators running for this generation.
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             try:
                 end_time = time.time()

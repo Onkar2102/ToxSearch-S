@@ -53,7 +53,11 @@ DISTANCE_METHODS = (
 
 def normalize_distance_method(method: Optional[str]) -> str:
     """Normalize aliases / punctuation to a canonical ``DISTANCE_METHODS`` value."""
-    raw = (method or "embedding").strip().lower().replace("-", "_").replace(" ", "")
+    if method is None or not str(method).strip():
+        raise ValueError(
+            f"distance_method is required; choose one of {DISTANCE_METHODS}"
+        )
+    raw = str(method).strip().lower().replace("-", "_").replace(" ", "")
     aliases = {
         "emb": "embedding",
         "genotype": "embedding",
@@ -129,12 +133,21 @@ def pair_distance(
     w_phenotype: float = 0.3,
     logger=None,
 ) -> float:
-    """Pairwise distance under the selected method (always in ``[0, 1]``)."""
+    """Pairwise distance under the selected method (always in ``[0, 1]``).
+
+    Missing inputs required by ``method`` raise ``ValueError`` (no silent 1.0 fallback).
+    """
     m = normalize_distance_method(method)
+    comps = parse_distance_components(m)
+
+    if "embedding" in comps and (embedding_a is None or embedding_b is None):
+        raise ValueError(f"distance_method={m!r} requires embeddings on both sides")
+    if "objective" in comps and (objective_a is None or objective_b is None):
+        raise ValueError(f"distance_method={m!r} requires objective vectors on both sides")
+    if "nli" in comps and (not (text_a or "").strip() or not (text_b or "").strip()):
+        raise ValueError(f"distance_method={m!r} requires non-empty texts on both sides")
 
     def _emb() -> float:
-        if embedding_a is None or embedding_b is None:
-            return 1.0
         return embedding_distance(embedding_a, embedding_b)
 
     def _obj() -> float:
@@ -189,35 +202,30 @@ def distances_to_query(
             return len(texts)
         return 0
 
+    comps = parse_distance_components(m)
+    if "embedding" in comps and (query_embedding is None or embeddings is None):
+        raise ValueError(f"distance_method={m!r} requires query_embedding and embeddings")
+    if "objective" in comps and (query_objective is None or objectives is None):
+        raise ValueError(f"distance_method={m!r} requires query_objective and objectives")
+    if "nli" in comps:
+        if texts is None:
+            raise ValueError(f"distance_method={m!r} requires texts")
+        if not (query_text or "").strip():
+            raise ValueError(f"distance_method={m!r} requires non-empty query_text")
+
     def _emb_batch() -> np.ndarray:
-        if query_embedding is None or embeddings is None:
-            return np.ones(_n_targets(), dtype=np.float64)
         return embedding_distances_batch(query_embedding, embeddings)
 
     def _obj_batch() -> np.ndarray:
-        if objectives is None:
-            return np.zeros(0, dtype=np.float64)
         if isinstance(objectives, list):
-            n = len(objectives)
-            out = np.full(n, 1.0, dtype=np.float64)
-            valid_idx = []
-            valid_rows = []
-            for i, p in enumerate(objectives):
-                if p is not None:
-                    valid_idx.append(i)
-                    valid_rows.append(p)
-            if query_objective is not None and valid_rows:
-                batch = objective_distances_batch(
-                    query_objective, np.asarray(valid_rows, dtype=np.float32)
-                )
-                for j, i in enumerate(valid_idx):
-                    out[i] = batch[j]
-            return out
+            if any(p is None for p in objectives):
+                raise ValueError(f"distance_method={m!r} requires all objective rows (None found)")
+            return objective_distances_batch(
+                query_objective, np.asarray(objectives, dtype=np.float32)
+            )
         return objective_distances_batch(query_objective, np.asarray(objectives))
 
     def _nli_batch() -> np.ndarray:
-        if texts is None:
-            return np.zeros(0, dtype=np.float64)
         return nli_distances_batch(query_text or "", texts, logger=logger)
 
     if m == "embedding":

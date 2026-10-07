@@ -27,10 +27,12 @@ class SpeciationConfig:
     # Weight for nli+embedding hybrid: d_H = alpha * d_E + (1-alpha) * d_N
     distance_alpha: float = 0.7
 
-    # Clustering: leader_follower (default) or dbscan
+    # Clustering: leader_follower (default) or dbscan (= incremental DBSCAN + temp.json D_t)
     clustering_method: str = "leader_follower"
     dbscan_eps: Optional[float] = None  # defaults to theta_sim when None
     dbscan_min_samples: int = 2
+    # Periodic batch-DBSCAN partition check for IncDBSCAN (0 = disabled)
+    inc_dbscan_validate_every: int = 0
 
     # Distance used for membership / merge / DBSCAN matrix
     distance_method: str = "embedding"
@@ -64,6 +66,7 @@ class SpeciationConfig:
         if self.dbscan_eps is not None:
             assert 0 <= self.dbscan_eps <= 1, f"dbscan_eps must be in [0, 1], got {self.dbscan_eps}"
         assert self.dbscan_min_samples >= 1, "dbscan_min_samples must be >= 1"
+        assert self.inc_dbscan_validate_every >= 0, "inc_dbscan_validate_every must be >= 0"
 
         self.distance_method = normalize_distance_method(self.distance_method)
         assert self.distance_method in DISTANCE_METHODS
@@ -85,6 +88,7 @@ class SpeciationConfig:
             "clustering_method": self.clustering_method,
             "dbscan_eps": self.dbscan_eps,
             "dbscan_min_samples": self.dbscan_min_samples,
+            "inc_dbscan_validate_every": self.inc_dbscan_validate_every,
             "distance_method": self.distance_method,
         }
 

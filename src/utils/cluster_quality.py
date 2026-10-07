@@ -124,13 +124,14 @@ def calculate_qd_score(
         outputs_dir = Path(outputs_path)
         elites_path = outputs_dir / "elites.json"
         speciation_state_path = outputs_dir / "speciation_state.json"
-        
-        if not elites_path.exists():
-            _logger.warning("elites.json not found for QD score calculation")
+        from utils.population_io import load_analysis_population
+        elites_genomes = load_analysis_population(outputs_dir, logger=_logger)
+        if not elites_genomes and elites_path.exists():
+            with open(elites_path, 'r', encoding='utf-8') as f:
+                elites_genomes = json.load(f)
+        if not elites_genomes:
+            _logger.warning("No population found for QD score calculation (elites/temp)")
             return 0.0
-        
-        with open(elites_path, 'r', encoding='utf-8') as f:
-            elites_genomes = json.load(f)
         
         inter_species_diversity = 0.0
         if speciation_state_path.exists():
@@ -146,23 +147,18 @@ def calculate_qd_score(
                 _logger.debug(f"Could not load inter-species diversity from speciation_state: {e}")
         
         species_max_fitness = {}
+        from utils.population_io import _extract_north_star_score
+        from utils.evaluator_profiles import get_active_north_star
+        metric = get_active_north_star()
         for genome in elites_genomes:
             species_id = genome.get("species_id")
             if species_id is None or species_id <= 0:
                 continue
             
-            fitness = 0.0
-            if "north_star_score" in genome:
-                fitness = genome["north_star_score"]
-            elif "moderation_result" in genome and isinstance(genome["moderation_result"], dict):
-                google_result = genome["moderation_result"].get("google", {})
-                if google_result and "scores" in google_result:
-                    fitness = google_result["scores"].get("toxicity", 0.0)
-                else:
-                    scores = genome["moderation_result"].get("scores", {})
-                    fitness = scores.get("toxicity", 0.0)
-            elif "toxicity" in genome:
-                fitness = genome["toxicity"]
+            try:
+                fitness = float(_extract_north_star_score(genome, metric))
+            except ValueError:
+                continue
             
             if fitness > 0:
                 if species_id not in species_max_fitness:
@@ -211,40 +207,49 @@ def calculate_cluster_quality_metrics(
         
         all_genomes = []
         genomes_with_embeddings = {}
-        
-        if elites_path.exists():
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                existing_genomes = json.load(f)
-                for genome in existing_genomes:
-                    genome_id = genome.get("id")
-                    if genome_id is not None:
-                        genomes_with_embeddings[genome_id] = genome
-        
-        if archive_path.exists():
-            with open(archive_path, 'r', encoding='utf-8') as f:
-                existing_genomes = json.load(f)
-                for genome in existing_genomes:
-                    genome_id = genome.get("id")
-                    if genome_id is not None:
-                        genomes_with_embeddings[genome_id] = genome
-        
-        if temp_path and Path(temp_path).exists():
-            try:
-                with open(temp_path, 'r', encoding='utf-8') as f:
-                    temp_genomes = json.load(f)
-                backfilled = 0
-                for genome in temp_genomes:
-                    genome_id = genome.get("id")
-                    emb = genome.get("prompt_embedding")
-                    if genome_id is not None and emb is not None:
-                        existing = genomes_with_embeddings.get(genome_id)
-                        if existing is not None and existing.get("prompt_embedding") is None:
-                            existing["prompt_embedding"] = emb
-                            backfilled += 1
-                if backfilled:
-                    _logger.debug(f"Backfilled prompt_embedding from temp.json for {backfilled} genomes")
-            except Exception as e:
-                _logger.debug(f"Could not load temp.json: {e}")
+        from speciation.clustering_mode import is_inc_dbscan_mode
+        from utils.population_io import load_analysis_population
+        use_inc = is_inc_dbscan_mode(outputs_path=str(outputs_dir))
+
+        if use_inc:
+            for genome in load_analysis_population(outputs_dir, logger=_logger):
+                genome_id = genome.get("id")
+                if genome_id is not None:
+                    genomes_with_embeddings[genome_id] = genome
+        else:
+            if elites_path.exists():
+                with open(elites_path, 'r', encoding='utf-8') as f:
+                    existing_genomes = json.load(f)
+                    for genome in existing_genomes:
+                        genome_id = genome.get("id")
+                        if genome_id is not None:
+                            genomes_with_embeddings[genome_id] = genome
+            
+            if archive_path.exists():
+                with open(archive_path, 'r', encoding='utf-8') as f:
+                    existing_genomes = json.load(f)
+                    for genome in existing_genomes:
+                        genome_id = genome.get("id")
+                        if genome_id is not None:
+                            genomes_with_embeddings[genome_id] = genome
+            
+            if temp_path and Path(temp_path).exists():
+                try:
+                    with open(temp_path, 'r', encoding='utf-8') as f:
+                        temp_genomes = json.load(f)
+                    backfilled = 0
+                    for genome in temp_genomes:
+                        genome_id = genome.get("id")
+                        emb = genome.get("prompt_embedding")
+                        if genome_id is not None and emb is not None:
+                            existing = genomes_with_embeddings.get(genome_id)
+                            if existing is not None and existing.get("prompt_embedding") is None:
+                                existing["prompt_embedding"] = emb
+                                backfilled += 1
+                    if backfilled:
+                        _logger.debug(f"Backfilled prompt_embedding from temp.json for {backfilled} genomes")
+                except Exception as e:
+                    _logger.debug(f"Could not load temp.json: {e}")
         
         all_genomes = list(genomes_with_embeddings.values())
         
@@ -257,17 +262,17 @@ def calculate_cluster_quality_metrics(
         
         for genome in all_genomes:
             embedding = genome.get("prompt_embedding")
-            species_id = genome.get("species_id")
+            species_id = genome.get("density_label", genome.get("species_id"))
             
-            if embedding is not None and species_id is not None and species_id > 0:
+            if embedding is not None and species_id is not None and int(species_id) > 0:
                 embeddings_list.append(embedding)
-                labels_list.append(species_id)
+                labels_list.append(int(species_id))
         
         if len(embeddings_list) < 4:
             _logger.warning(
                 f"Not enough genomes with embeddings ({len(embeddings_list)}) for cluster quality. "
-                f"Total genomes: {len(all_genomes)}, genomes with species_id: {len([g for g in all_genomes if g.get('species_id') is not None])}. "
-                f"This is likely because embeddings were removed from temp.json after distribution (embeddings are preserved in elites.json and archive.json)."
+                f"Total genomes: {len(all_genomes)}, genomes with species_id: "
+                f"{len([g for g in all_genomes if g.get('species_id') is not None or g.get('density_label') is not None])}."
             )
             metrics["qd_score"] = calculate_qd_score(outputs_path=outputs_path, logger=_logger)
             return metrics

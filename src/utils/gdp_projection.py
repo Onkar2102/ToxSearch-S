@@ -135,12 +135,15 @@ def _genomes_to_genome_data(
                 parent_ids.append(int(p["id"]))
             elif isinstance(p, (int, float)):
                 parent_ids.append(int(p))
-        # Use project-standard toxicity (0–1); fallback to "fitness" if extract returns minimum
-        toxicity = _extract_north_star_score(g, "toxicity")
-        if toxicity <= 0.0001 and "fitness" in g:
-            toxicity = float(g["fitness"])
+        # North-star fitness (0–1) for the active metric
+        from utils.evaluator_profiles import get_active_north_star
+        metric = get_active_north_star()
+        try:
+            fitness = float(_extract_north_star_score(g, metric))
+        except ValueError:
+            fitness = float(g["fitness"]) if "fitness" in g else 0.0001
         info: Dict[str, Any] = {
-            "fitness": float(toxicity),
+            "fitness": fitness,
             "parents": parent_ids,
             "species_id": g.get("species_id") if g.get("species_id") is not None else 0,
             "generation": g.get("generation", 0),
@@ -161,8 +164,10 @@ def build_genome_data_from_elites_archive(
 ) -> Tuple[Optional[Any], List[Dict], List[int]]:
     """
     Build GDP GenomeData from elites.json and optionally archive.json (non-elites).
-    Deduped by genome id; only genomes with prompt_embedding are included.
-    Returns (GenomeData or None if GDP unavailable, list of genome dicts used, list of genome ids in order).
+
+    For Incremental DBSCAN, pass ``temp.json`` as ``elites_path`` (density memory D_t)
+    and omit ``archive_path``. Clustered genomes (species_id/density_label > 0) are
+    treated as "alive"; noise remains in the projection set.
     """
     elites = _load_genomes_from_json(Path(elites_path))
     archive = _load_genomes_from_json(Path(archive_path)) if archive_path else []
@@ -180,7 +185,18 @@ def build_genome_data_from_elites_archive(
     if not genomes:
         return None, [], []
 
-    alive_ids = {g.get("id") for g in elites if g.get("id") is not None}
+    def _is_clustered(g: Dict[str, Any]) -> bool:
+        lab = g.get("density_label", g.get("species_id"))
+        try:
+            return lab is not None and int(lab) > 0
+        except (TypeError, ValueError):
+            return False
+
+    # L–F: elites file rows are alive. IncDBSCAN: clustered density members are alive.
+    if archive_path is None and any(g.get("density_label") is not None for g in elites):
+        alive_ids = {g.get("id") for g in elites if _is_clustered(g)}
+    else:
+        alive_ids = {g.get("id") for g in elites if g.get("id") is not None}
     genome_data, genome_ids = _genomes_to_genome_data(genomes, alive_ids=alive_ids)
     return genome_data, genomes, genome_ids
 

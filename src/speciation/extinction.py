@@ -74,7 +74,7 @@ def process_extinctions(
         except Exception as e:
             logger.debug(f"Could not archive genomes during extinction: {e}")
         
-        sp.species_state = "incubator"
+        sp.species_state = "extinct"
         sp.members = []
         incubator_species[sid] = sp
         
@@ -82,12 +82,12 @@ def process_extinctions(
             "generation": current_generation,
             "species_id": sid,
             "action": "archived",
-            "new_state": "incubator",
+            "new_state": "extinct",
             "size": original_size,
             "moved_count": len(moved_member_ids),
             "moved_member_ids": moved_member_ids
         })
-        logger.info(f"Archived species {sid} ({len(moved_member_ids)} members) - state=incubator")
+        logger.info(f"Archived species {sid} ({len(moved_member_ids)} members) - state=extinct")
     
     for sid in incubator_species:
         species.pop(sid, None)

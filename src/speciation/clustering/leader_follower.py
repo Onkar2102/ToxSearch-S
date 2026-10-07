@@ -24,8 +24,6 @@ get_logger, _, _, _ = get_custom_logging()
 
 # sid, embedding, phenotype
 LeaderRow = Tuple[int, np.ndarray, Optional[np.ndarray]]
-# species_id|None, emb, pheno, seed_ind, followers
-Potential = Tuple[Optional[int], np.ndarray, Optional[np.ndarray], Individual, List[Individual]]
 
 
 def _dist_kw(alpha: float, w_g: float, w_p: float, logger) -> dict:
@@ -82,8 +80,9 @@ def _ensure_unique_leader(
                 sp.members.insert(0, sp.leader)
             logger.info("Reassigned species %s leader → %s", other_id, sp.leader.id)
         else:
-            sp.species_state = "incubator"
+            sp.species_state = "extinct"
             sp.leader = None
+            logger.info("Species %s emptied after leader reassignment — marked extinct (no incubator)", other_id)
 
 
 def _maybe_promote_leader(
@@ -107,76 +106,37 @@ def _maybe_promote_leader(
             break
 
 
-def _members_within(
-    candidates: List[Individual], leader: Individual, theta: float, method: str, **dkw
-) -> List[Individual]:
-    keep = [leader]
-    for m in candidates:
-        if m.id == leader.id or m.embedding is None:
-            continue
-        d = pair_distance(
-            method,
-            embedding_a=m.embedding, embedding_b=leader.embedding,
-            objective_a=m.phenotype, objective_b=leader.phenotype,
-            text_a=m.prompt, text_b=leader.prompt, **dkw,
-        )
-        if d < theta:
-            keep.append(m)
-    return keep
-
-
-def _try_form_species(
-    pl_id: int,
-    pot: Dict[int, Potential],
+def _form_singleton_species(
+    ind: Individual,
     species: Dict[int, Species],
     leaders: List[LeaderRow],
     touched: Set[int],
     theta: float,
-    min_size: int,
     generation: int,
-    method: str,
-    dkw: dict,
     logger,
-    genome_tracker=None,
     events_tracker=None,
-) -> bool:
-    """Form a species from a potential-leader bucket if large enough. Returns True if joined/formed."""
-    pl_sid, pl_emb, pl_pheno, pl_ind, followers = pot[pl_id]
-    if pl_sid is not None:
-        return False  # caller handles join-to-existing
-
-    all_members = [pl_ind] + followers
-    if len(all_members) < min_size:
-        return False
-    leader = max(all_members, key=lambda x: x.fitness)
-    valid = _members_within(all_members, leader, theta, method, **dkw)
-    if len(valid) < min_size:
-        # drop followers that fell outside the new leader's radius
-        valid_ids = {m.id for m in valid}
-        pot[pl_id] = (None, pl_emb, pl_pheno, pl_ind, [f for f in followers if f.id in valid_ids])
-        return False
-
+) -> int:
+    """Create a new elite species with ``ind`` as sole leader/member."""
     sid = generate_species_id()
-    _ensure_unique_leader(species, leader, sid, logger)
+    _ensure_unique_leader(species, ind, sid, logger)
+    ind.species_id = sid
     species[sid] = Species(
-        id=sid, leader=leader, members=valid, radius=theta,
-        created_at=generation, last_improvement=generation,
-        cluster_origin="natural", parent_ids=None, leader_distance=0.0,
+        id=sid,
+        leader=ind,
+        members=[ind],
+        radius=theta,
+        created_at=generation,
+        last_improvement=generation,
+        cluster_origin="natural",
+        parent_ids=None,
+        leader_distance=0.0,
     )
-    for m in valid:
-        m.species_id = sid
-        if genome_tracker:
-            genome_tracker.update_species_id(str(m.id), sid, generation, "species_formed")
-        if events_tracker:
-            events_tracker.log(m.id, "species_formed", {"species_id": sid})
+    leaders.append((sid, ind.embedding, ind.phenotype))
     touched.add(sid)
-    pot[pl_id] = (sid, leader.embedding, leader.phenotype, leader, followers)
-    leaders.append((sid, leader.embedding, leader.phenotype))
-    logger.info(
-        "Species %s formed: leader %s + %d members (min=%d)",
-        sid, leader.id, len(valid) - 1, min_size,
-    )
-    return True
+    if events_tracker:
+        events_tracker.log(ind.id, "species_formed", {"species_id": sid, "size": 1})
+    logger.info("Species %s formed: singleton leader %s", sid, ind.id)
+    return sid
 
 
 def leader_follower_clustering(
@@ -193,6 +153,12 @@ def leader_follower_clustering(
     genome_tracker=None,
     events_tracker=None,
 ) -> Tuple[Dict[int, Species], Set[int]]:
+    """Assign ``temp`` genomes to nearest leaders; unmatched genomes seed new species.
+
+    ``min_island_size`` is accepted for API compatibility but unused: singleton
+    elite species are allowed (no reserves / no minimum-size reject).
+    """
+    del min_island_size  # size-1 species are valid elites
     log = logger or get_logger("LeaderFollowerClustering")
     method = normalize_distance_method(distance_method)
     dkw = _dist_kw(distance_alpha, w_genotype, w_phenotype, log)
@@ -213,17 +179,15 @@ def leader_follower_clustering(
         return {}, set()
 
     species = load_species_state(state_p, theta_sim, logger=log)
-    is_gen0 = len(species) == 0
     leaders: List[LeaderRow] = [
         (sid, sp.leader.embedding, sp.leader.phenotype)
         for sid, sp in species.items()
         if sp.leader and sp.leader.embedding is not None
     ]
-    potentials: Dict[int, Potential] = {}
     touched: Set[int] = set()
+    new_species = 0
 
     for ind in sorted(population, key=lambda x: x.fitness, reverse=True):
-        assigned = False
         sid, dist = _nearest_leader(ind, leaders, species, method, **dkw)
         if sid is not None and dist < theta_sim:
             sp = species[sid]
@@ -231,39 +195,14 @@ def leader_follower_clustering(
             ind.species_id = sid
             touched.add(sid)
             _maybe_promote_leader(sp, ind, dist, sid, species, leaders, log)
-            assigned = True
+            continue
 
-        if not assigned and is_gen0 and potentials:
-            for pl_id, (pl_sid, pl_emb, pl_pheno, pl_ind, followers) in list(potentials.items()):
-                d = pair_distance(
-                    method,
-                    embedding_a=ind.embedding, embedding_b=pl_emb,
-                    objective_a=ind.phenotype, objective_b=pl_pheno,
-                    text_a=ind.prompt, text_b=pl_ind.prompt, **dkw,
-                )
-                if d >= theta_sim:
-                    continue
-                if pl_sid is None:
-                    followers.append(ind)
-                    ind.species_id = ARCHIVE_SPECIES_ID
-                    _try_form_species(
-                        pl_id, potentials, species, leaders, touched,
-                        theta_sim, min_island_size, current_generation,
-                        method, dkw, log, genome_tracker, events_tracker,
-                    )
-                else:
-                    sp = species[pl_sid]
-                    sp.add_member(ind)
-                    ind.species_id = pl_sid
-                    touched.add(pl_sid)
-                    _maybe_promote_leader(sp, ind, d, pl_sid, species, leaders, log)
-                assigned = True
-                break
-
-        if not assigned:
-            ind.species_id = ARCHIVE_SPECIES_ID
-            if is_gen0:
-                potentials[ind.id] = (None, ind.embedding, ind.phenotype, ind, [])
+        # Farther than theta_sim from all leaders → seed a new singleton species
+        # (replaces legacy reserves/archive path for unmatched temp genomes).
+        _form_singleton_species(
+            ind, species, leaders, touched, theta_sim, current_generation, log, events_tracker
+        )
+        new_species += 1
 
     # Persist species_id onto temp genomes + tracker (batch once)
     id_to_sid = {ind.id: ind.species_id for ind in population}
@@ -282,5 +221,8 @@ def leader_follower_clustering(
         if result.get("failed", 0) > 0:
             log.warning("Genome tracker batch update had %s failures", result["failed"])
 
-    log.info("Leader-Follower: %d individuals → %d species", len(population), len(species))
+    log.info(
+        "Leader-Follower: %d individuals → %d species (%d new singletons this call)",
+        len(population), len(species), new_species,
+    )
     return species, touched

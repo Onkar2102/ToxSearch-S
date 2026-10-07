@@ -59,7 +59,8 @@ def get_max_genome_id_from_all_files(outputs_path: Optional[Union[str, Path]] = 
     outputs_path = get_outputs_path() if outputs_path is None else Path(outputs_path)
     log = get_logger("GetMaxGenomeID")
     max_id = 0
-    for fname in ("elites.json", "archive.json"):
+    # Always include temp.json (IncDBSCAN D_t and L–F staging / new variants)
+    for fname in ("elites.json", "archive.json", "temp.json"):
         path = outputs_path / fname
         if not path.exists():
             continue
@@ -73,6 +74,60 @@ def get_max_genome_id_from_all_files(outputs_path: Optional[Union[str, Path]] = 
         except Exception as e:
             log.warning("Failed to read %s for max ID: %s", fname, e)
     return max_id
+
+
+def _density_label_of(genome: Dict[str, Any]) -> Optional[int]:
+    if genome.get("density_label") is not None:
+        return int(genome["density_label"])
+    sid = genome.get("species_id")
+    if sid is None:
+        return None
+    return int(sid)
+
+
+def load_analysis_population(
+    outputs_path: Union[str, Path],
+    *,
+    logger=None,
+) -> List[Dict[str, Any]]:
+    """Load the analysis population: temp.json (IncDBSCAN D_t) or elites+archive (L–F)."""
+    from speciation.clustering_mode import is_inc_dbscan_mode
+
+    outputs_dir = Path(outputs_path)
+    log = logger or get_logger("LoadAnalysisPopulation")
+    if is_inc_dbscan_mode(outputs_path=str(outputs_dir)):
+        temp_path = outputs_dir / "temp.json"
+        if not temp_path.exists():
+            return []
+        try:
+            with open(temp_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, list) else []
+        except Exception as e:
+            log.warning("Failed to load IncDBSCAN density memory: %s", e)
+            return []
+
+    out: List[Dict[str, Any]] = []
+    seen: set = set()
+    for fname in ("elites.json", "archive.json"):
+        path = outputs_dir / fname
+        if not path.exists():
+            continue
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            items = data if isinstance(data, list) else list(data.values()) if isinstance(data, dict) else []
+            for g in items:
+                if not isinstance(g, dict) or g.get("id") is None:
+                    continue
+                key = str(g["id"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(g)
+        except Exception as e:
+            log.warning("Failed to load %s for analysis: %s", fname, e)
+    return out
 
 
 def set_outputs_path(path: Union[str, Path]) -> Path:
@@ -116,54 +171,63 @@ def get_moderation_scores(genome) -> Optional[Dict[str, float]]:
     return None
 
 
-def _resolve_score_metric(metric: str, scores: Dict[str, float], genome=None) -> str:
-    if metric in scores:
-        return metric
-    try:
-        from utils.evaluator_profiles import get_active_evaluator, resolve_evaluator
-        evaluator_name = (genome or {}).get("evaluator") if genome else None
-        profile = resolve_evaluator(evaluator_name) if evaluator_name else get_active_evaluator()
-        resolved = profile.resolve_metric_alias(metric)
-        if resolved in scores:
-            return resolved
-    except Exception:
-        pass
-    metric_variations = {
-        "violence": ["violence", "threat", "violence/graphic"],
-        "toxicity": ["toxicity", "severe_toxicity", "harassment"],
-        "hate": ["hate", "identity_attack", "hate/threatening"],
-    }
-    if metric in metric_variations:
-        for variation in metric_variations[metric]:
-            if variation in scores:
-                return variation
-    return metric
-
-
 def _extract_north_star_score(genome, metric="toxicity"):
-    
+    """Return the north-star score; raise if the metric is missing (no 0.0001 fallback)."""
     if not genome:
-        return 0.0001
-
-    def _valid(s):
-        return s is not None and float(s) > 0
+        raise ValueError("Cannot extract north-star score from empty genome")
+    if not metric:
+        raise ValueError("north-star metric is empty")
 
     scores = get_moderation_scores(genome)
-    if scores:
-        key = _resolve_score_metric(metric, scores, genome=genome)
-        s = scores.get(key, 0.0001)
-        if _valid(s):
-            return round(float(s), 4)
-    if metric in genome and _valid(genome.get(metric)):
+    if scores is not None and metric in scores and scores[metric] is not None:
+        return round(float(scores[metric]), 4)
+    if metric in genome and genome.get(metric) is not None:
         return round(float(genome[metric]), 4)
-    if isinstance(genome.get("scores"), dict):
-        s = genome["scores"].get(metric, 0.0001)
-        if _valid(s):
-            return round(float(s), 4)
-    return 0.0001
+    if isinstance(genome.get("scores"), dict) and metric in genome["scores"] and genome["scores"][metric] is not None:
+        return round(float(genome["scores"][metric]), 4)
+
+    gid = genome.get("id", "?")
+    available = sorted(scores.keys()) if isinstance(scores, dict) else []
+    raise ValueError(
+        f"Genome {gid}: north-star metric {metric!r} not found in moderation scores "
+        f"(available={available}). Use a native --north-star-metric for the active evaluator."
+    )
 
 
-def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None):
+def slim_selection_genome(
+    genome: Dict[str, Any],
+    north_star_metric: str,
+    *,
+    include_prompt: bool = True,
+    include_species_id: bool = False,
+) -> Dict[str, Any]:
+    """Compact parents.json / top_10.json record with score under the active metric key."""
+    if not north_star_metric:
+        raise ValueError("north_star_metric is required for slim selection records")
+    score = round(_extract_north_star_score(genome, north_star_metric), 4)
+    out: Dict[str, Any] = {"id": genome.get("id"), north_star_metric: score}
+    if include_prompt:
+        out["prompt"] = genome.get("prompt", "")
+    if include_species_id:
+        out["species_id"] = genome.get("species_id")
+    return out
+
+
+def get_population_max_fitness(tracker_or_stats: Optional[Dict[str, Any]], default: float = 0.0001) -> float:
+    """Read cumulative/best north-star fitness (metric-agnostic key).
+
+    Prefers ``population_max_fitness``; falls back to legacy ``population_max_toxicity``.
+    """
+    if not tracker_or_stats:
+        return default
+    if "population_max_fitness" in tracker_or_stats and tracker_or_stats["population_max_fitness"] is not None:
+        return float(tracker_or_stats["population_max_fitness"])
+    if "population_max_toxicity" in tracker_or_stats and tracker_or_stats["population_max_toxicity"] is not None:
+        return float(tracker_or_stats["population_max_toxicity"])
+    return default
+
+
+def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None, clustering_method=None):
     
     from utils.device_utils import device_manager
     device = device_manager.get_optimal_device()
@@ -183,8 +247,12 @@ def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None):
     from ea.evolution_engine import set_global_generators
     set_global_generators(response_generator, prompt_generator)
     logger.debug("Global generators set")
-    
-    population_file = get_outputs_path() / "elites.json"
+
+    from speciation.clustering_mode import is_inc_dbscan_mode
+    use_inc = is_inc_dbscan_mode(clustering_method=clustering_method)
+
+    # IncDBSCAN: resume/skip init based on temp.json; L–F: elites.json
+    population_file = get_outputs_path() / ("temp.json" if use_inc else "elites.json")
     
     population_content = None
     if not population_file.exists():
@@ -211,17 +279,18 @@ def initialize_system(logger, log_file, seed_file="data/prompt.csv", seed=None):
             load_and_initialize_population(
                 input_path=input_path,
                 output_path=str(get_outputs_path()),
-                log_file=log_file
+                log_file=log_file,
+                clustering_method=clustering_method,
             )
             logger.debug("Population successfully initialized and saved.")
         except Exception as e:
             logger.error("Failed to initialize population: %s", e, exc_info=True)
             raise
     else:
-        logger.info("Existing elites file found. Skipping initialization.")
+        logger.info("Existing population file found (%s). Skipping initialization.", population_file.name)
         try:
             population = population_content if population_content is not None else []
-            logger.info("Loaded %d genomes from existing elites.json", len(population))
+            logger.info("Loaded %d genomes from %s", len(population), population_file.name)
             generations = set(g.get("generation", 0) for g in population if g)
             logger.debug("Available generations: %s", sorted(generations))
         except Exception as e:
@@ -430,6 +499,25 @@ def load_population(pop_path: str = "data/outputs/elites.json", *, logger=None, 
     with PerformanceLogger(_logger, "Load Population", file_path=pop_path):
         try:
             pop_path_obj = Path(pop_path)
+
+            # IncDBSCAN: population lives in temp.json (D_t); elites.json is unused.
+            if pop_path_obj.is_dir():
+                from speciation.clustering_mode import is_inc_dbscan_mode
+                if is_inc_dbscan_mode(outputs_path=str(pop_path_obj)):
+                    temp_file = pop_path_obj / "temp.json"
+                    if not temp_file.exists():
+                        _logger.error("IncDBSCAN: temp.json density memory missing under %s", pop_path_obj)
+                        raise FileNotFoundError(f"IncDBSCAN temp.json not found in {pop_path_obj}")
+                    with open(temp_file, "r", encoding="utf-8") as f:
+                        population = json.load(f)
+                    if not isinstance(population, list):
+                        population = []
+                    population = clean_population(population, logger=_logger, log_file=log_file)
+                    _logger.debug(
+                        "Loaded IncDBSCAN density memory: %d genomes from temp.json",
+                        len(population),
+                    )
+                    return population
             
             if pop_path_obj.is_dir():
                 base_dir = pop_path_obj
@@ -522,11 +610,14 @@ def load_and_initialize_population(
     output_path: str,
     *,
     log_file: Optional[str] = None,
+    clustering_method: Optional[str] = None,
 ) -> None:
     
 
     get_logger, _, _, PerformanceLogger = get_custom_logging()
     logger = get_logger("initialize_population", log_file)
+    from speciation.clustering_mode import is_inc_dbscan_mode
+    use_inc = is_inc_dbscan_mode(clustering_method=clustering_method)
 
     with PerformanceLogger(
         logger, "Initialize Population", input_path=input_path, output_path=output_path
@@ -625,29 +716,37 @@ def load_and_initialize_population(
 
             logger.info("Created %d genomes", len(population))
 
-            with PerformanceLogger(logger, "Initialize temp.json (staging)"):
+            with PerformanceLogger(logger, "Initialize temp.json"):
                 temp_path = Path(output_path) / "temp.json"
                 temp_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(temp_path, 'w', encoding='utf-8') as f:
                     json.dump(population, f, indent=2, ensure_ascii=False)
-                logger.info("Initialized temp.json with %d genomes (staging)", len(population))
+                if use_inc:
+                    logger.info(
+                        "Initialized temp.json with %d genomes (IncDBSCAN density memory D_t)",
+                        len(population),
+                    )
+                else:
+                    logger.info("Initialized temp.json with %d genomes (staging)", len(population))
 
-            with PerformanceLogger(logger, "Initialize empty elites.json"):
-                empty_elites = []
-                elites_path = Path(output_path) / "elites.json"
-                elites_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(elites_path, 'w', encoding='utf-8') as f:
-                    json.dump(empty_elites, f, indent=2, ensure_ascii=False)
-                logger.info("Initialized empty elites.json")
+            if not use_inc:
+                with PerformanceLogger(logger, "Initialize empty elites.json"):
+                    empty_elites = []
+                    elites_path = Path(output_path) / "elites.json"
+                    elites_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(elites_path, 'w', encoding='utf-8') as f:
+                        json.dump(empty_elites, f, indent=2, ensure_ascii=False)
+                    logger.info("Initialized empty elites.json")
 
-            
-            with PerformanceLogger(logger, "Initialize empty archive.json"):
-                empty_archive = []
-                archive_path = Path(output_path) / "archive.json"
-                archive_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(archive_path, 'w', encoding='utf-8') as f:
-                    json.dump(empty_archive, f, indent=2, ensure_ascii=False)
-                logger.info("Initialized empty archive.json")
+                with PerformanceLogger(logger, "Initialize empty archive.json"):
+                    empty_archive = []
+                    archive_path = Path(output_path) / "archive.json"
+                    archive_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(archive_path, 'w', encoding='utf-8') as f:
+                        json.dump(empty_archive, f, indent=2, ensure_ascii=False)
+                    logger.info("Initialized empty archive.json")
+            else:
+                logger.info("IncDBSCAN mode: skipping elites.json / archive.json initialization")
 
             with PerformanceLogger(logger, "Initialize empty parents.json"):
                 empty_parents = []
@@ -1163,13 +1262,31 @@ def calculate_average_fitness(
     _logger = logger or get_logger("calculate_average_fitness", log_file)
     
     try:
+        from speciation.clustering_mode import is_inc_dbscan_mode
         outputs_dir = Path(outputs_path)
-        elites_path = outputs_dir / "elites.json"
-        archive_path = outputs_dir / "archive.json"
         temp_path = outputs_dir / "temp.json"
-        
         total_score = 0.0
         total_count = 0
+
+        if is_inc_dbscan_mode(outputs_path=str(outputs_dir)):
+            if temp_path.exists():
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    temp_genomes = json.load(f)
+                for genome in temp_genomes if isinstance(temp_genomes, list) else []:
+                    if genome:
+                        total_score += _extract_north_star_score(genome, north_star_metric)
+                        total_count += 1
+            if total_count == 0:
+                return 0.0
+            avg_fitness = round(total_score / total_count, 4)
+            _logger.info(
+                "Calculated average fitness: %.4f from %d genomes (IncDBSCAN density memory)",
+                avg_fitness, total_count,
+            )
+            return avg_fitness
+
+        elites_path = outputs_dir / "elites.json"
+        archive_path = outputs_dir / "archive.json"
         
         if elites_path.exists():
             elites_genomes = load_population(str(elites_path), logger=_logger, log_file=log_file)
@@ -1190,8 +1307,6 @@ def calculate_average_fitness(
                 _logger.debug(f"Processed {len(archive_genomes)} genomes from archive.json")
             except Exception as e:
                 _logger.warning(f"Failed to load archive.json for avg_fitness: {e}")
-        
-        # placeholder removed duplicate elites block
         
         if include_temp and temp_path.exists():
             try:
@@ -1474,8 +1589,8 @@ def update_adaptive_selection_logic(
         if current_max_toxicity < 0 or previous_max_toxicity < 0:
             _logger.error(f"Invalid toxicity values: current={current_max_toxicity:.6f}, previous={previous_max_toxicity:.6f}")
         
-        tracker_current_max = tracker.get("population_max_toxicity", 0.0001)
-        _logger.debug(f"Tracker population_max_toxicity (after update): {tracker_current_max:.6f}")
+        tracker_current_max = tracker.get("population_max_fitness", 0.0001)
+        _logger.debug(f"Tracker population_max_fitness (after update): {tracker_current_max:.6f}")
         
         epsilon = 1e-6
         comparison_result = current_max_toxicity > previous_max_toxicity + epsilon
@@ -1603,27 +1718,104 @@ def calculate_generation_statistics(
         "elites_count": 0,
         "archived_count": 0,
         "total_population": 0,
+        "density_size": 0,
+        "noise_count": 0,
+        "clustered_count": 0,
+        "population_mode": "leader_follower",
         "max_score_variants": 0.0001,
         "min_score_variants": 0.0001,
         "avg_fitness_variants": 0.0001,
         "avg_fitness_generation": 0.0001,
         "avg_fitness": 0.0001,
         "avg_fitness_elites": 0.0001,
-        "population_max_toxicity": 0.0001,
+        "population_max_fitness": 0.0001,
     }
     
     try:
-        elites_path = outputs_dir / "elites.json"
-        elites_genomes = []
-        if elites_path.exists():
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                elites_genomes = json.load(f)
-        
+        from speciation.clustering_mode import is_inc_dbscan_mode
+        use_inc = is_inc_dbscan_mode(outputs_path=str(outputs_dir))
+
+        def _get_generation_value(genome, current_gen):
+            gen_val = genome.get("generation")
+            if gen_val is None:
+                return 0
+            return gen_val
+
         temp_path = outputs_dir / "temp.json"
         temp_genomes = []
         if temp_path.exists():
             with open(temp_path, 'r', encoding='utf-8') as f:
                 temp_genomes = json.load(f)
+            if not isinstance(temp_genomes, list):
+                temp_genomes = []
+
+        if use_inc:
+            stats["population_mode"] = "inc_dbscan"
+            dens = [g for g in temp_genomes if _get_generation_value(g, current_generation) <= current_generation]
+            _seen, uniq = set(), []
+            for g in dens:
+                if g.get("id") is None:
+                    continue
+                k = str(g["id"])
+                if k not in _seen:
+                    _seen.add(k)
+                    uniq.append(g)
+            dens = uniq
+            noise = [g for g in dens if _density_label_of(g) == -1]
+            clustered = [g for g in dens if (_density_label_of(g) or 0) > 0]
+            # Compat: elites_count ↔ clustered, archived_count ↔ noise (for legacy figure fields)
+            stats["clustered_count"] = len(clustered)
+            stats["noise_count"] = len(noise)
+            stats["density_size"] = len(dens)
+            stats["elites_count"] = len(clustered)
+            stats["archived_count"] = len(noise)
+            stats["total_population"] = len(dens)
+
+            clustered_scores = [
+                s for g in clustered
+                if (s := _extract_north_star_score(g, north_star_metric)) >= 0.0001
+            ]
+            if clustered_scores:
+                stats["avg_fitness_elites"] = round(sum(clustered_scores) / len(clustered_scores), 4)
+
+            this_gen = [g for g in dens if _get_generation_value(g, current_generation) == current_generation]
+            variant_scores = [
+                s for g in this_gen
+                if (s := _extract_north_star_score(g, north_star_metric)) >= 0.0001
+            ]
+            if variant_scores:
+                stats["max_score_variants"] = round(max(variant_scores), 4)
+                stats["min_score_variants"] = round(min(variant_scores), 4)
+                stats["avg_fitness_variants"] = round(sum(variant_scores) / len(variant_scores), 4)
+
+            all_scores = [
+                s for g in dens
+                if (s := _extract_north_star_score(g, north_star_metric)) >= 0.0001
+            ]
+            if all_scores:
+                stats["avg_fitness_generation"] = round(sum(all_scores) / len(all_scores), 4)
+                stats["population_max_fitness"] = round(max(all_scores), 4)
+            if stats["avg_fitness"] <= 0.0001 and stats["avg_fitness_generation"] > 0.0001:
+                stats["avg_fitness"] = stats["avg_fitness_generation"]
+            if current_generation == 0:
+                stats["initial_population_size"] = stats["total_population"]
+            budget_metrics = calculate_budget_metrics(
+                clustered, noise, this_gen, current_generation, _logger
+            )
+            stats.update(budget_metrics)
+            _logger.info(
+                "Gen %d IncDBSCAN stats: density=%d clustered=%d noise=%d avg_fit=%.4f max=%.4f",
+                current_generation, stats["density_size"], stats["clustered_count"],
+                stats["noise_count"], stats["avg_fitness_generation"],
+                stats.get("population_max_fitness", 0.0001),
+            )
+            return stats
+
+        elites_path = outputs_dir / "elites.json"
+        elites_genomes = []
+        if elites_path.exists():
+            with open(elites_path, 'r', encoding='utf-8') as f:
+                elites_genomes = json.load(f)
         
         archive_path = outputs_dir / "archive.json"
         archive_genomes = []
@@ -1640,13 +1832,6 @@ def calculate_generation_statistics(
                         archive_genomes = []
             except Exception as e:
                 _logger.warning(f"Failed to load archive.json: {e}")
-        
-        def _get_generation_value(genome, current_gen):
-            
-            gen_val = genome.get("generation")
-            if gen_val is None:
-                return 0
-            return gen_val
         
         elites_up_to_gen = [g for g in elites_genomes if _get_generation_value(g, current_generation) <= current_generation]
         archive_up_to_gen = [g for g in archive_genomes if _get_generation_value(g, current_generation) <= current_generation]
@@ -1677,7 +1862,7 @@ def calculate_generation_statistics(
         elite_scores = []
         for g in elites_up_to_gen:
             score = _extract_north_star_score(g, north_star_metric)
-            if score > 0.0001:
+            if score >= 0.0001:
                 elite_scores.append(score)
         
         if elite_scores:
@@ -1686,34 +1871,37 @@ def calculate_generation_statistics(
         variant_scores = []
         for g in temp_genomes:
             score = _extract_north_star_score(g, north_star_metric)
-            if score > 0.0001:
+            if score >= 0.0001:
                 variant_scores.append(score)
         
         if variant_scores:
             stats["max_score_variants"] = round(max(variant_scores), 4)
             stats["min_score_variants"] = round(min(variant_scores), 4)
-            stats["avg_fitness_variants"] = round(sum(variant_scores) / len(variant_scores), 4)
+            stats["avg_fitness_variants"] = round(sum(variant_scores), 4) / len(variant_scores)
+            stats["avg_fitness_variants"] = round(stats["avg_fitness_variants"], 4)
         
         archive_scores = []
         for g in archive_up_to_gen:
             score = _extract_north_star_score(g, north_star_metric)
-            if score > 0.0001:
+            if score >= 0.0001:
                 archive_scores.append(score)
         
         all_scores = elite_scores + archive_scores
         if all_scores:
             stats["avg_fitness_generation"] = round(sum(all_scores) / len(all_scores), 4)
             max_score = max(all_scores)
-            if max_score > 0.0001:
-                stats["population_max_toxicity"] = round(max_score, 4)
-                _logger.debug(f"Gen {current_generation}: Calculated population_max_toxicity={stats['population_max_toxicity']:.4f} from {len(all_scores)} scores (cumulative max)")
-            else:
-                _logger.warning(f"Gen {current_generation}: All fitness scores <= 0.0001, setting population_max_toxicity to 0.0001")
-                stats["population_max_toxicity"] = 0.0001
+            stats["population_max_fitness"] = round(max_score, 4)
+            _logger.debug(
+                f"Gen {current_generation}: Calculated population_max_fitness="
+                f"{stats['population_max_fitness']:.4f} from {len(all_scores)} scores (cumulative max)"
+            )
         else:
             if stats.get("total_population", 0) > 0:
-                _logger.warning(f"Gen {current_generation}: No fitness scores found but total_population={stats.get('total_population')} - setting population_max_toxicity to 0.0001")
-            stats["population_max_toxicity"] = 0.0001
+                _logger.warning(
+                    f"Gen {current_generation}: No fitness scores found but "
+                    f"total_population={stats.get('total_population')} - setting population_max_fitness to 0.0001"
+                )
+            stats["population_max_fitness"] = 0.0001
         
         if stats["avg_fitness"] <= 0.0001 and stats["avg_fitness_generation"] > 0.0001:
             stats["avg_fitness"] = stats["avg_fitness_generation"]
@@ -1731,7 +1919,7 @@ def calculate_generation_statistics(
             "Gen %d stats: elites=%d archived=%d total=%d avg_fit_gen=%.4f max_tox=%.4f",
             current_generation, stats["elites_count"], stats["archived_count"],
             stats["total_population"], stats["avg_fitness_generation"],
-            stats.get("population_max_toxicity", 0.0001)
+            stats.get("population_max_fitness", 0.0001)
         )
         _logger.debug(
             "Gen %d stats: elites=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f, llm_calls=%d, api_calls=%d",
@@ -1767,6 +1955,10 @@ def _get_standard_generation_entry_template(generation_number: int, selection_mo
         "elites_count": 0,
         "archived_count": 0,
         "total_population": 0,
+        "density_size": 0,
+        "noise_count": 0,
+        "clustered_count": 0,
+        "population_mode": "leader_follower",
         "selection_mode": selection_mode,
         "operator_statistics": {},
         "speciation": None,
@@ -1844,8 +2036,12 @@ def update_evolution_tracker_with_statistics(
             "elites_count": statistics.get("elites_count", 0),
             "archived_count": statistics.get("archived_count", 0),
             "total_population": statistics.get("total_population", 0),
+            "density_size": statistics.get("density_size", gen_entry.get("density_size", 0)),
+            "noise_count": statistics.get("noise_count", gen_entry.get("noise_count", 0)),
+            "clustered_count": statistics.get("clustered_count", gen_entry.get("clustered_count", 0)),
+            "population_mode": statistics.get("population_mode", gen_entry.get("population_mode", "leader_follower")),
             "generation_duration_seconds": round(statistics["generation_duration_seconds"], 3) if statistics.get("generation_duration_seconds") is not None else None,
-            "best_fitness": round(statistics.get("population_max_toxicity", gen_entry.get("best_fitness", 0.0001)), 4),
+            "best_fitness": round(statistics.get("population_max_fitness", gen_entry.get("best_fitness", 0.0001)), 4),
             "max_score_variants": round(statistics.get("max_score_variants", gen_entry.get("max_score_variants", 0.0001)), 4),
             "min_score_variants": round(statistics.get("min_score_variants", gen_entry.get("min_score_variants", 0.0001)), 4),
             "avg_fitness_variants": round(statistics.get("avg_fitness_variants", gen_entry.get("avg_fitness_variants", 0.0001)), 4),
@@ -1931,15 +2127,15 @@ def update_evolution_tracker_with_statistics(
                 + statistics.get("total_evaluation_api_wait_seconds", 0.0), 2
             )
         
-        new_max = statistics.get("population_max_toxicity")
+        new_max = statistics.get("population_max_fitness")
         if new_max and new_max > 0.0001:
-            if "population_max_toxicity" not in tracker:
-                tracker["population_max_toxicity"] = 0.0001
-            tracker["population_max_toxicity"] = max(
-                tracker.get("population_max_toxicity", 0.0001),
+            if "population_max_fitness" not in tracker:
+                tracker["population_max_fitness"] = 0.0001
+            tracker["population_max_fitness"] = max(
+                tracker.get("population_max_fitness", 0.0001),
                 new_max
             )
-            _logger.debug(f"Updated cumulative population_max_toxicity to {tracker['population_max_toxicity']:.4f}")
+            _logger.debug(f"Updated cumulative population_max_fitness to {tracker['population_max_fitness']:.4f}")
         
         if statistics.get("variants_created") is not None:
             gen_entry["variants_created"] = statistics.get("variants_created", 0)
@@ -1982,6 +2178,26 @@ def update_evolution_tracker_with_statistics(
             gen_entry["top_10"] = statistics["top_10"]
         
         outputs_dir = os.path.dirname(tracker_path)
+        metric = (
+            (tracker.get("run_metadata") or {}).get("north_star_metric")
+            or statistics.get("north_star_metric")
+        )
+        if not metric:
+            try:
+                from utils.evaluator_profiles import get_active_north_star
+                metric = get_active_north_star()
+            except Exception:
+                metric = "toxicity"
+
+        def _tracker_slim(record: Dict[str, Any]) -> Dict[str, Any]:
+            score = record.get(metric)
+            if score is None:
+                score = record.get("score")
+            if score is None:
+                # Last resort for older parents.json that used a fixed "toxicity" key.
+                score = record.get("toxicity", 0)
+            return {"id": record.get("id"), metric: score}
+
         if not gen_entry.get("parents"):
             parents_path = os.path.join(outputs_dir, "parents.json")
             try:
@@ -1989,10 +2205,10 @@ def update_evolution_tracker_with_statistics(
                     with open(parents_path, 'r', encoding='utf-8') as pf:
                         parents_data = json.load(pf)
                     if parents_data:
-                        gen_entry["parents"] = [
-                            {"id": p.get("id"), "toxicity": p.get("toxicity", 0)}
-                            for p in parents_data
-                        ] if isinstance(parents_data, list) else []
+                        gen_entry["parents"] = (
+                            [_tracker_slim(p) for p in parents_data]
+                            if isinstance(parents_data, list) else []
+                        )
                         _logger.debug("Loaded %d parents from %s for gen %d",
                                       len(gen_entry["parents"]), parents_path, current_generation)
             except Exception as ex:
@@ -2004,10 +2220,10 @@ def update_evolution_tracker_with_statistics(
                     with open(top10_path, 'r', encoding='utf-8') as tf:
                         top10_data = json.load(tf)
                     if top10_data:
-                        gen_entry["top_10"] = [
-                            {"id": t.get("id"), "toxicity": t.get("toxicity", 0)}
-                            for t in top10_data
-                        ] if isinstance(top10_data, list) else []
+                        gen_entry["top_10"] = (
+                            [_tracker_slim(t) for t in top10_data]
+                            if isinstance(top10_data, list) else []
+                        )
                         _logger.debug("Loaded %d top_10 from %s for gen %d",
                                       len(gen_entry["top_10"]), top10_path, current_generation)
             except Exception as ex:
@@ -2026,7 +2242,7 @@ def update_evolution_tracker_with_statistics(
         with open(tracker_path, 'w', encoding='utf-8') as f:
             json.dump(tracker, f, indent=2, ensure_ascii=False)
         
-        best_fit = statistics.get("population_max_toxicity", gen_entry.get("best_fitness", 0.0001))
+        best_fit = statistics.get("population_max_fitness", gen_entry.get("best_fitness", 0.0001))
         _logger.info(
             "Updated EvolutionTracker gen %d: elites=%d, archived=%d, "
             "avg_fitness=%.4f, best_fitness=%.4f, parents=%d, top_10=%d",
@@ -2124,7 +2340,7 @@ def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
         if last.get("total_discarded") is not None:
             total_discarded = int(last["total_discarded"])
 
-    final_best = tracker.get("population_max_toxicity") or 0.0
+    final_best = tracker.get("population_max_fitness") or 0.0
     final_mean = 0.0
     final_species = 0
     final_elites = 0
@@ -2240,6 +2456,7 @@ __all__ = [
     
     "calculate_generation_statistics",
     "update_evolution_tracker_with_statistics",
+    "load_analysis_population",
     "update_run_metadata_at_end",
     "compute_run_summary",
     "write_run_summary_and_termination",

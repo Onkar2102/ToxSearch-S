@@ -31,7 +31,7 @@ device_config:
   n_batch: 2048
   preferred_device: null
 response_generator:
-  name: "models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+  name: "models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_S.gguf"
   generation_args:
     max_new_tokens: 2048
     repetition_penalty: 1.0

@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from collections import defaultdict
 from utils import get_custom_logging
-from utils.population_io import load_elites, _extract_north_star_score
+from utils.population_io import load_elites, _extract_north_star_score, slim_selection_genome
 from utils import get_system_utils
 
 get_logger, _, _, _ = get_custom_logging()
@@ -129,13 +129,28 @@ class ParentSelector:
             return random.choices(all_cat, k=2)
         raise RuntimeError("No genomes in this category (all_cat empty); cannot supply 2 parents.")
 
+    @staticmethod
+    def _sample_random_from(
+        genomes: List[Dict[str, Any]],
+        k: int,
+        exclude_ids: Optional[set] = None,
+    ) -> List[Dict[str, Any]]:
+        pool = [g for g in genomes if exclude_ids is None or g.get("id") not in exclude_ids]
+        if not pool:
+            pool = list(genomes)
+        if not pool:
+            return []
+        if len(pool) >= k:
+            return random.sample(pool, k)
+        return [random.choice(pool) for _ in range(k)]
+
     def _select_parents_exploitation(
         self,
         elites: List[Dict[str, Any]],
         active_species_ids: set,
         outputs_path: str = None,
     ) -> List[Dict[str, Any]]:
-        
+        """Top genome of best species + 2 random genomes from the same species."""
         species_groups = self._group_by_species(elites)
         sorted_species = self._get_sorted_active_species(species_groups, active_species_ids)
 
@@ -144,18 +159,12 @@ class ParentSelector:
                 "No genomes in this category (sorted_species empty); should not happen after adaptive_tournament_selection."
             )
 
-        top_species_id, top_genomes, top_fitness = sorted_species[0]
-
-        if len(top_genomes) >= 3:
-            return random.sample(top_genomes, 3)
-
-        all_cat = [g for sid in active_species_ids for g in species_groups.get(sid, [])]
-        if not all_cat:
-            raise RuntimeError("No genomes in this category (all_cat empty); cannot supply 3 parents.")
-        selected = list(top_genomes)
-        needed = 3 - len(selected)
-        selected.extend(random.choices(all_cat, k=needed))
-        return selected[:3]
+        _top_species_id, top_genomes, _top_fitness = sorted_species[0]
+        parent1 = self._get_genome_with_highest_fitness(top_genomes)
+        rest = self._sample_random_from(top_genomes, 2, exclude_ids={parent1.get("id")})
+        if len(rest) < 2:
+            rest = self._sample_random_from(top_genomes, 2)
+        return [parent1, rest[0], rest[1]]
 
     def _select_parents_exploration(
         self,
@@ -163,7 +172,7 @@ class ParentSelector:
         active_species_ids: set,
         outputs_path: str = None,
     ) -> List[Dict[str, Any]]:
-        
+        """Best of top species; then one genome from each of two randomly chosen other species."""
         species_groups = self._group_by_species(elites)
         sorted_species = self._get_sorted_active_species(species_groups, active_species_ids)
 
@@ -172,35 +181,24 @@ class ParentSelector:
                 "No genomes in this category (sorted_species empty); should not happen after adaptive_tournament_selection."
             )
 
-        all_cat = [g for sid in active_species_ids for g in species_groups.get(sid, [])]
-
-        first_id, first_genomes, first_fit = sorted_species[0]
+        first_id, first_genomes, _first_fit = sorted_species[0]
         parent1 = self._get_genome_with_highest_fitness(first_genomes)
 
-        if len(sorted_species) >= 3:
-            other = random.choice(sorted_species[1:])
-            parent2 = self._get_genome_with_highest_fitness(other[1])
-            exclude = {first_id, other[0]}
-            candidates = [sp for sp in sorted_species if sp[0] not in exclude]
-            if candidates:
-                parent3 = self._get_genome_with_highest_fitness(random.choice(candidates)[1])
-            else:
-                parent3 = parent1
-            return [parent1, parent2, parent3]
+        others = [sp for sp in sorted_species if sp[0] != first_id]
+        if len(others) >= 2:
+            chosen = random.sample(others, 2)
+            return [parent1, random.choice(chosen[0][1]), random.choice(chosen[1][1])]
 
-        if len(sorted_species) == 2:
-            second_id, second_genomes, _ = sorted_species[1]
-            parent2 = self._get_genome_with_highest_fitness(second_genomes)
-            parent3 = parent1
-            return [parent1, parent2, parent3]
+        if len(others) == 1:
+            # Only one other species: sample twice from it (may repeat)
+            other_gs = others[0][1]
+            return [parent1, random.choice(other_gs), random.choice(other_gs)]
 
-        if len(first_genomes) >= 3:
-            return random.sample(first_genomes, 3)
-        if not all_cat:
-            raise RuntimeError("No genomes in this category (all_cat empty); cannot supply 3 parents.")
-        selected = list(first_genomes)
-        selected.extend(random.choices(all_cat, k=3 - len(selected)))
-        return selected[:3]
+        # Single species: pad with random genomes from it
+        pad = self._sample_random_from(first_genomes, 2, exclude_ids={parent1.get("id")})
+        if len(pad) < 2:
+            pad = self._sample_random_from(first_genomes, 2)
+        return [parent1, pad[0], pad[1]]
 
     def adaptive_tournament_selection(self, evolution_tracker: Dict[str, Any] = None, outputs_path: str = None, current_generation: int = None) -> None:
         
@@ -267,16 +265,15 @@ class ParentSelector:
     def _save_parents_to_file(self, parents: List[Dict], outputs_path: str = None) -> None:
         
         try:
-            slim_parents = []
-            for parent in parents:
-                toxicity_score = round(_extract_north_star_score(parent, self.north_star_metric), 4)
-                slim_parent = {
-                    "id": parent.get("id"),
-                    "prompt": parent.get("prompt", ""),
-                    "toxicity": toxicity_score,
-                    "species_id": parent.get("species_id")
-                }
-                slim_parents.append(slim_parent)
+            slim_parents = [
+                slim_selection_genome(
+                    parent,
+                    self.north_star_metric,
+                    include_prompt=True,
+                    include_species_id=True,
+                )
+                for parent in parents
+            ]
 
             parents_path = Path(outputs_path) / "parents.json"
             parents_path.parent.mkdir(exist_ok=True)
@@ -284,14 +281,17 @@ class ParentSelector:
             with open(parents_path, 'w', encoding='utf-8') as f:
                 json.dump(slim_parents, f, indent=2, ensure_ascii=False)
 
-            self.logger.debug(f"Saved {len(slim_parents)} slimmed parents to {parents_path}")
+            self.logger.debug(
+                "Saved %d slimmed parents to %s (score key=%s)",
+                len(slim_parents), parents_path, self.north_star_metric,
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to save parents to file: {e}")
             raise
 
     def _save_top_10_by_toxicity(self, elites_path: str = None, output_path: str = None) -> None:
-        
+        """Write top_10.json ranked by the active north-star metric (score key = metric name)."""
         try:
             if elites_path is None:
                 outputs_path = get_outputs_path()
@@ -315,22 +315,18 @@ class ParentSelector:
                 return
 
             sorted_genomes = sorted(elites, key=lambda g: _extract_north_star_score(g, self.north_star_metric), reverse=True)
-            top_10_full = sorted_genomes[:10]
-
-            top_10_slim = []
-            for genome in top_10_full:
-                original_score = round(_extract_north_star_score(genome, self.north_star_metric), 4)
-                slim_genome = {
-                    "id": genome.get("id"),
-                    "prompt": genome.get("prompt", ""),
-                    "toxicity": original_score
-                }
-                top_10_slim.append(slim_genome)
+            top_10_slim = [
+                slim_selection_genome(genome, self.north_star_metric, include_prompt=True)
+                for genome in sorted_genomes[:10]
+            ]
 
             output_file = Path(output_path)
             output_file.parent.mkdir(exist_ok=True)
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(top_10_slim, f, indent=2, ensure_ascii=False)
-            self.logger.debug(f"Saved top 10 slimmed genomes to {output_path}")
+            self.logger.debug(
+                "Saved top 10 slimmed genomes to %s (score key=%s)",
+                output_path, self.north_star_metric,
+            )
         except Exception as e:
             self.logger.error(f"Failed to save top 10 genomes: {e}")

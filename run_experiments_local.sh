@@ -1,26 +1,49 @@
 #!/bin/bash
-# Local experiment runner: single sequential run (default 150 total genomes).
+# Local experiment runner: leader–follower + Incremental DBSCAN (default 777 genomes).
 #
-# Usage:
-#   From project root: bash run_experiments_local.sh
+# Usage (from project root):
+#   bash run_experiments_local.sh
 #
-# Environment overrides:
-#   MAX_TOTAL_GENOMES=150   Termination cap (elites + reserves + archive).
-#   EVALUATOR=google          Moderation backend: google | openai.
-#   NORTH_STAR_METRIC=        Optional; profile default if unset (toxicity / violence).
-#   OPENAI_MODEL=             When EVALUATOR=openai (default: omni-moderation-latest).
-#   THETA_SIM=0.25            Species similarity threshold.
-#   THETA_MERGE=              Defaults to THETA_SIM.
-#   RUN_THETA_SWEEP=0         Set to 1 to run THETA_VALUES sweep (legacy).
-#   THETA_VALUES="0.25 0.30 0.35"
+# Run one mode only:
+#   CLUSTERING_METHODS=leader_follower bash run_experiments_local.sh
+#   CLUSTERING_METHODS=dbscan bash run_experiments_local.sh
+#
+# Notes:
+#   - Figures are written under <output-dir>/figures/ after Gen 0 and each later gen.
+#   - PG/RG max_new_tokens are capped in config/PGConfig.yaml and config/RGConfig.yaml
+#     (256 / 512). Restart the run after changing those — a live process keeps old values.
+#   - operators=all × 8B is still slow per generation; use OPERATORS=cm for faster local smokes.
+#
+# Environment overrides (defaults match SpeciationConfig / CLI):
+#   MAX_TOTAL_GENOMES=777
+#   CLUSTERING_METHODS="leader_follower dbscan"
+#   EVALUATOR=google|openai
+#   NORTH_STAR_METRIC=          profile default if unset
+#   OPENAI_MODEL=omni-moderation-latest
+#   OPERATORS=all               ie | cm | all
+#   MAX_VARIANTS=1
+#   SEED_FILE=data/prompt_100.csv
+#   SEED=42
+#   THETA_SIM=0.25
+#   THETA_MERGE=0.1             must be <= THETA_SIM
+#   MIN_STABILITY_GENS=5
+#   SPECIES_CAPACITY=100
+#   MIN_ISLAND_SIZE=2
+#   SPECIES_STAGNATION=20
+#   EMBEDDING_MODEL=all-MiniLM-L6-v2
+#   EMBEDDING_DIM=384
+#   EMBEDDING_BATCH_SIZE=64
+#   DISTANCE_METHOD=embedding
+#   DISTANCE_ALPHA=0.7
+#   DBSCAN_EPS=                 defaults to THETA_SIM when empty
+#   DBSCAN_MIN_SAMPLES=2
+#   INC_DBSCAN_VALIDATE_EVERY=0
+#   STAGNATION_LIMIT=5
+#   RG_MODEL / PG_MODEL         GGUF paths
 #   PYTHON=python3
-#   MAX_ATTEMPTS=2            Retry count for transient failures only.
+#   MAX_ATTEMPTS=2
 #
-# Parallel (disabled by default):
-#   RUN_PARALLEL=0, MPI_RANKS=2 — see commented block at bottom.
-#
-# .env is loaded for PERSPECTIVE_API_KEY / OPENAI_API_KEY etc.
-# PYTHONPATH is set to src for imports and config resolution.
+# .env is loaded for API keys. PYTHONPATH is set to src.
 
 set -Eeuo pipefail
 
@@ -28,10 +51,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
 if [ -d "venv" ]; then
+    # shellcheck source=/dev/null
     source venv/bin/activate
 elif [ -d ".venv" ]; then
+    # shellcheck source=/dev/null
     source .venv/bin/activate
 elif [ -d ".spvenv" ]; then
+    # shellcheck source=/dev/null
     source .spvenv/bin/activate
 fi
 
@@ -47,18 +73,40 @@ fi
 PYTHON="${PYTHON:-python3}"
 export PYTHONPATH="${SCRIPT_DIR}/src"
 
-MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-150}"
+MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-210}"
+CLUSTERING_METHODS="${CLUSTERING_METHODS:-leader_follower dbscan}"
 EVALUATOR="${EVALUATOR:-google}"
 NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-}"
 OPENAI_MODEL="${OPENAI_MODEL:-omni-moderation-latest}"
+OPERATORS="${OPERATORS:-all}"
+MAX_VARIANTS="${MAX_VARIANTS:-1}"
+SEED_FILE="${SEED_FILE:-data/prompt_100.csv}"
+SEED="${SEED:-42}"
+STAGNATION_LIMIT="${STAGNATION_LIMIT:-5}"
+
 THETA_SIM="${THETA_SIM:-0.25}"
-THETA_MERGE="${THETA_MERGE:-$THETA_SIM}"
+THETA_MERGE="${THETA_MERGE:-0.25}"
+MIN_STABILITY_GENS="${MIN_STABILITY_GENS:-5}"
+SPECIES_CAPACITY="${SPECIES_CAPACITY:-10}"
+MIN_ISLAND_SIZE="${MIN_ISLAND_SIZE:-1}"
+SPECIES_STAGNATION="${SPECIES_STAGNATION:-5}"
+
+EMBEDDING_MODEL="${EMBEDDING_MODEL:-all-MiniLM-L6-v2}"
+EMBEDDING_DIM="${EMBEDDING_DIM:-384}"
+EMBEDDING_BATCH_SIZE="${EMBEDDING_BATCH_SIZE:-64}"
+
+DISTANCE_METHOD="${DISTANCE_METHOD:-embedding}"
+DISTANCE_ALPHA="${DISTANCE_ALPHA:-0.7}"
+
+DBSCAN_EPS="${DBSCAN_EPS:-}"
+DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-1}"
+INC_DBSCAN_VALIDATE_EVERY="${INC_DBSCAN_VALIDATE_EVERY:-0}"
+
+RG_MODEL="${RG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_S.gguf}"
+PG_MODEL="${PG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_S.gguf}"
+
 RUN_TS="$(date +%Y%m%d_%H%M%S)"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-2}"
-MPI_RANKS="${MPI_RANKS:-2}"
-
-RG_MODEL="${RG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q5_K_M.gguf}"
-PG_MODEL="${PG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q5_K_M.gguf}"
 
 preflight() {
     if [ ! -f "src/main.py" ]; then
@@ -90,28 +138,36 @@ preflight() {
             echo "WARNING: GGUF not found: $gguf" >&2
         fi
     done
+
+    if [ ! -f "$SEED_FILE" ]; then
+        echo "ERROR: seed file not found: $SEED_FILE" >&2
+        exit 1
+    fi
 }
 
-build_base_args() {
+# Shared args for both speciation modes (all operators + full speciation CLI).
+build_common_args() {
     ARGS_ARR=(
         --evaluator "$EVALUATOR"
-        --stagnation-limit 5
-        --min-stability-gens 5
-        --species-capacity 100
-        --cluster0-max-capacity 1000
-        --cluster0-min-cluster-size 1
-        --min-island-size 3
-        --species-stagnation 20
-        --embedding-model all-MiniLM-L6-v2
-        --embedding-dim 384
-        --embedding-batch-size 64
+        --operators "$OPERATORS"
+        --max-variants "$MAX_VARIANTS"
+        --stagnation-limit "$STAGNATION_LIMIT"
+        --seed-file "$SEED_FILE"
+        --seed "$SEED"
+        --max-total-genomes "$MAX_TOTAL_GENOMES"
         --rg "$RG_MODEL"
         --pg "$PG_MODEL"
-        --operators all
-        --max-variants 1
-        --seed-file data/prompt_100.csv
-        --seed 42
-        --max-total-genomes "$MAX_TOTAL_GENOMES"
+        --theta-sim "$THETA_SIM"
+        --theta-merge "$THETA_MERGE"
+        --min-stability-gens "$MIN_STABILITY_GENS"
+        --species-capacity "$SPECIES_CAPACITY"
+        --min-island-size "$MIN_ISLAND_SIZE"
+        --species-stagnation "$SPECIES_STAGNATION"
+        --embedding-model "$EMBEDDING_MODEL"
+        --embedding-dim "$EMBEDDING_DIM"
+        --embedding-batch-size "$EMBEDDING_BATCH_SIZE"
+        --distance-method "$DISTANCE_METHOD"
+        --distance-alpha "$DISTANCE_ALPHA"
     )
     if [ -n "$NORTH_STAR_METRIC" ]; then
         ARGS_ARR+=(--north-star-metric "$NORTH_STAR_METRIC")
@@ -144,65 +200,72 @@ run_until_success() {
     return 1
 }
 
-run_single_sequential() {
-    local out_dir="data/outputs/local_${RUN_TS}_sequential_g${MAX_TOTAL_GENOMES}"
+run_clustering_method() {
+    local method="${1:?clustering method required}"
+    local tag out_dir
+    case "$method" in
+        leader_follower|lf)
+            method="leader_follower"
+            tag="lf"
+            ;;
+        dbscan|inc_dbscan|incdbscan)
+            method="dbscan"
+            tag="inc_dbscan"
+            ;;
+        *)
+            echo "ERROR: unknown clustering method: $method (use leader_follower or dbscan)" >&2
+            return 1
+            ;;
+    esac
+
+    out_dir="data/outputs/local_${RUN_TS}_${tag}_g${MAX_TOTAL_GENOMES}"
+
     echo "=========================================="
-    echo "Sequential (single process)"
+    echo "Speciation: ${method}"
     echo "  max_total_genomes=${MAX_TOTAL_GENOMES}"
+    echo "  operators=${OPERATORS}"
     echo "  evaluator=${EVALUATOR}"
     echo "  north_star_metric=${NORTH_STAR_METRIC:-<profile default>}"
     echo "  theta_sim=${THETA_SIM}  theta_merge=${THETA_MERGE}"
+    echo "  distance_method=${DISTANCE_METHOD}  distance_alpha=${DISTANCE_ALPHA}"
+    if [ "$method" = "dbscan" ]; then
+        echo "  dbscan_eps=${DBSCAN_EPS:-$THETA_SIM}  dbscan_min_samples=${DBSCAN_MIN_SAMPLES}"
+        echo "  inc_dbscan_validate_every=${INC_DBSCAN_VALIDATE_EVERY}"
+    fi
     echo "Output: ${out_dir}"
     echo "=========================================="
-    run_until_success "${ARGS_ARR[@]}" \
-        --theta-sim "$THETA_SIM" \
-        --theta-merge "$THETA_MERGE" \
-        --output-dir "$out_dir"
-}
 
-run_sequential_theta() {
-    local theta="${1:?run_sequential_theta: theta required}"
-    local out_tag
-    out_tag="$(echo "$theta" | tr '.' 'p')"
-    local out_dir="data/outputs/local_${RUN_TS}_sequential_theta${out_tag}_g${MAX_TOTAL_GENOMES}"
-    echo "=========================================="
-    echo "Sequential (theta sweep)  theta_sim=${theta}  theta_merge=${theta}"
-    echo "  max_total_genomes=${MAX_TOTAL_GENOMES}"
-    echo "Output: ${out_dir}"
-    echo "=========================================="
-    run_until_success "${ARGS_ARR[@]}" \
-        --theta-sim "$theta" \
-        --theta-merge "$theta" \
+    local method_args=(
+        "${ARGS_ARR[@]}"
+        --clustering-method "$method"
         --output-dir "$out_dir"
+    )
+
+    if [ "$method" = "dbscan" ]; then
+        method_args+=(--dbscan-min-samples "$DBSCAN_MIN_SAMPLES")
+        method_args+=(--inc-dbscan-validate-every "$INC_DBSCAN_VALIDATE_EVERY")
+        if [ -n "$DBSCAN_EPS" ]; then
+            method_args+=(--dbscan-eps "$DBSCAN_EPS")
+        else
+            method_args+=(--dbscan-eps "$THETA_SIM")
+        fi
+    fi
+
+    run_until_success "${method_args[@]}"
 }
 
 preflight
-build_base_args
+build_common_args
 
-RUN_SEQUENTIAL="${RUN_SEQUENTIAL:-1}"
-RUN_THETA_SWEEP="${RUN_THETA_SWEEP:-0}"
-RUN_PARALLEL="${RUN_PARALLEL:-0}"
-THETA_VALUES="${THETA_VALUES:-0.25 0.30 0.35}"
+echo "RUN_TS=${RUN_TS}"
+echo "Will run clustering methods: ${CLUSTERING_METHODS}"
+echo ""
 
-if [ "$RUN_SEQUENTIAL" = "1" ]; then
-    if [ "$RUN_THETA_SWEEP" = "1" ]; then
-        for theta in $THETA_VALUES; do
-            run_sequential_theta "$theta"
-            echo ""
-        done
-    else
-        run_single_sequential
-        echo ""
-    fi
-fi
-
-# Parallel (MPI): set RUN_PARALLEL=1 to enable.
-# run_parallel() { ... mpiexec -n "${MPI_RANKS}" "$PYTHON" src/main.py --parallel ... }
+for method in $CLUSTERING_METHODS; do
+    run_clustering_method "$method"
+    echo ""
+done
 
 echo "All requested experiments completed!"
 echo "RUN_TS=${RUN_TS}"
-if [ "$RUN_THETA_SWEEP" = "1" ]; then
-    echo "Sequential outputs: data/outputs/local_${RUN_TS}_sequential_theta*_g${MAX_TOTAL_GENOMES}"
-else
-    echo "Sequential output: data/outputs/local_${RUN_TS}_sequential_g${MAX_TOTAL_GENOMES}"
-fi
+echo "Outputs under: data/outputs/local_${RUN_TS}_*_g${MAX_TOTAL_GENOMES}"

@@ -81,6 +81,10 @@ def _cleanup_cache_if_needed():
         del _moderation_cache[k]
     logger.info("Cleaned moderation cache: removed %d entries, cache size now: %d", len(to_remove), len(_moderation_cache))
 
+class PerspectiveAuthError(RuntimeError):
+    """Non-retriable Perspective API key / permission failure."""
+
+
 class HybridModerationEvaluator:
     """Content moderation evaluator (Google Perspective or OpenAI omni-moderation)."""
     
@@ -192,20 +196,49 @@ class HybridModerationEvaluator:
         self._initialize_clients()
         self.logger.debug("Switched to API key index %d", clamped)
     
+    # Direct REST endpoint — avoids googleapiclient discovery.build / httplib2,
+    # which often hangs fetching $discovery before any comments:analyze call.
+    _PERSPECTIVE_ANALYZE_URL = (
+        "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
+    )
+    _PERSPECTIVE_HTTP_TIMEOUT_S = 30
+    _perspective_session = None
+
+    @classmethod
+    def _get_perspective_session(cls):
+        """Shared requests session; force IPv4 (macOS IPv6 getaddrinfo can hang)."""
+        if cls._perspective_session is None:
+            import socket
+            import requests
+            from requests.adapters import HTTPAdapter
+
+            try:
+                import urllib3.util.connection as urllib3_cn
+
+                urllib3_cn.allowed_gai_family = lambda: socket.AF_INET
+            except Exception:
+                pass
+
+            session = requests.Session()
+            adapter = HTTPAdapter(max_retries=0)
+            session.mount("https://", adapter)
+            session.mount("http://", adapter)
+            cls._perspective_session = session
+        return cls._perspective_session
+
     def _initialize_clients(self):
         
         try:
             if self.profile.backend_key == "google" and self.google_available:
-                from googleapiclient import discovery
-                api_key = self._api_keys[self._active_key_index]
-                self.google_client = discovery.build(
-                    "commentanalyzer",
-                    "v1alpha1",
-                    developerKey=api_key,
-                    discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1"
+                if not self._api_keys:
+                    raise ValueError("No Perspective API keys available for client init")
+                # Marker only; scoring uses requests + active key (no discovery doc).
+                self.google_client = "requests"
+                self._get_perspective_session()  # eager IPv4 session setup
+                self.logger.info(
+                    "Google Perspective API ready via REST (key index %d, no discovery fetch)",
+                    self._active_key_index,
                 )
-                self.logger.info("Google Perspective API client initialized (key index %d)",
-                                 self._active_key_index)
             elif self.profile.backend_key == "openai" and self.openai_available:
                 from openai import OpenAI
                 self.openai_client = OpenAI(
@@ -226,7 +259,6 @@ class HybridModerationEvaluator:
         
         import time
         
-        
         MAX_TEXT_BYTES = 20480
         text_bytes = text.encode('utf-8')
         
@@ -234,9 +266,15 @@ class HybridModerationEvaluator:
             self.logger.warning("Text for genome %s exceeds Perspective API limit (%d bytes). Truncating to %d bytes.", 
                               genome_id, len(text_bytes), MAX_TEXT_BYTES)
             text = text_bytes[:MAX_TEXT_BYTES].decode('utf-8', errors='ignore')
+
+        cached = _get_cached_result(text, "google")
+        if cached is not None:
+            return cached, {"retries": 0, "attempt_durations": [], "api_wait_seconds": 0.0}
             
         attempt_durations = []
         api_wait_seconds = 0.0
+        api_key = self._api_keys[self._active_key_index]
+        session = self._get_perspective_session()
         for attempt in range(max_retries + 1):
             attempt_start = time.time()
             try:
@@ -258,7 +296,27 @@ class HybridModerationEvaluator:
                     'doNotStore': True
                 }
                 
-                response = self.google_client.comments().analyze(body=analyze_request).execute()
+                http_resp = session.post(
+                    self._PERSPECTIVE_ANALYZE_URL,
+                    params={"key": api_key},
+                    json=analyze_request,
+                    timeout=self._PERSPECTIVE_HTTP_TIMEOUT_S,
+                )
+                if http_resp.status_code != 200:
+                    body_snip = (http_resp.text or "")[:500]
+                    msg = f"Perspective HTTP {http_resp.status_code}: {body_snip}"
+                    # Auth / invalid-key: fail the whole run immediately (do not burn retries).
+                    if http_resp.status_code in (400, 401, 403):
+                        lower = body_snip.lower()
+                        if (
+                            http_resp.status_code in (401, 403)
+                            or "api key" in lower
+                            or "api_key_invalid" in lower
+                            or "permission" in lower
+                        ):
+                            raise PerspectiveAuthError(msg)
+                    raise RuntimeError(msg)
+                response = http_resp.json()
             
                 attribute_scores = response.get("attributeScores", {})
                 raw_categories = {}
@@ -278,10 +336,12 @@ class HybridModerationEvaluator:
                 attempt_durations.append(round(time.time() - attempt_start, 4))
                 return result, {"retries": attempt, "attempt_durations": attempt_durations, "api_wait_seconds": round(api_wait_seconds, 4)}
                 
+            except PerspectiveAuthError:
+                raise
             except Exception as e:
                 attempt_durations.append(round(time.time() - attempt_start, 4))
-                is_retriable = self._is_retriable_error(e)
                 safe_err = _redact_url_api_key_query_param(str(e))
+                is_retriable = self._is_retriable_error(e)
 
                 if attempt < max_retries and is_retriable:
                     wait_time = 2 ** attempt
@@ -408,25 +468,20 @@ class HybridModerationEvaluator:
         return False
     
     def _normalize_scores(self, scores: Dict[str, float]) -> Dict[str, float]:
-        
+        """Validate [0, 1], round to 4 decimals; map rounded 0.0000 → 0.0001 only."""
         normalized_scores = {}
-        
         for category, score in scores.items():
             score = float(score)
-            
-            if score < 0.0001:
-                score = 0.0001
-            
-            if score > 1.0000:
-                score = 1.0000
-            
-            normalized_score = round(score, 4)
-            
-            if normalized_score == 0.0:
-                normalized_score = 0.0001
-                
-            normalized_scores[category] = normalized_score
-        
+            if score < 0.0 or score > 1.0:
+                raise ValueError(
+                    f"Moderation score {category!r}={score} outside [0, 1]"
+                )
+            normalized = round(score, 4)
+            # After 4-decimal rounding, only exact 0.0000 is floored (tiny
+            # positives like 1e-8 otherwise become 0.0 and break the [0.0001, 1] range).
+            if normalized == 0.0:
+                normalized = 0.0001
+            normalized_scores[category] = normalized
         return normalized_scores
     
     def _evaluate_text_hybrid(self, text: str, genome_id: str, moderation_methods: List[str] = None) -> Dict[str, Any]:
@@ -481,6 +536,8 @@ class HybridModerationEvaluator:
             
             return unified_result
             
+        except PerspectiveAuthError:
+            raise
         except Exception as e:
             safe_err = _redact_url_api_key_query_param(str(e))
             self.logger.error(
@@ -590,6 +647,8 @@ class HybridModerationEvaluator:
                     
                     time.sleep(0.75)
                         
+                except PerspectiveAuthError:
+                    raise
                 except Exception as e:
                     safe_err = _redact_url_api_key_query_param(str(e))
                     self.logger.error(
@@ -620,6 +679,12 @@ class HybridModerationEvaluator:
             self.logger.info("  - Total genomes: %d", len(population))
             self.logger.info("  - Processed: %d", total_processed)
             self.logger.info("  - Errors: %d", total_errors)
+
+            if total_processed == 0:
+                raise RuntimeError(
+                    f"Moderation evaluation produced 0 scored genomes "
+                    f"({total_errors} errors of {total_genomes} pending); aborting"
+                )
             
             return population
             
@@ -729,6 +794,7 @@ def run_moderation_on_population(pop_path: str, log_file: Optional[str] = None,
             _redact_url_api_key_query_param(str(e)),
             exc_info=True,
         )
+        raise
 
 
 def evaluate_single_genome(evaluator, genome, moderation_methods=None):

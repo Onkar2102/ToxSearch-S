@@ -30,6 +30,20 @@ def _metric_from_state(state: Optional[Dict[str, Any]] = None) -> str:
     return get_active_north_star()
 
 
+def _require_radius_inputs(method: str, genome: Dict[str, Any]) -> None:
+    """Raise if genome lacks fields required by ``distance_method`` for radius checks."""
+    from .distance import extract_phenotype_vector, parse_distance_components
+
+    comps = parse_distance_components(method)
+    gid = genome.get("id", "?")
+    if "embedding" in comps and not genome.get("prompt_embedding"):
+        raise ValueError(f"Genome {gid}: missing prompt_embedding for distance_method={method!r}")
+    if "nli" in comps and not (genome.get("prompt") or "").strip():
+        raise ValueError(f"Genome {gid}: missing prompt text for distance_method={method!r}")
+    if "objective" in comps and extract_phenotype_vector(genome, logger=None) is None:
+        raise ValueError(f"Genome {gid}: missing objective/phenotype for distance_method={method!r}")
+
+
 def _init_state(config: Optional[SpeciationConfig] = None, logger=None) -> None:
     
     global _state
@@ -438,25 +452,28 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
         
         species_id = genome.get("species_id")
         if species_id is None:
-            species_id = genome_tracker.get_species_id(gid) if genome_tracker.exists(gid) else -1
-            genome["species_id"] = species_id
             if not genome_tracker.exists(gid):
-                genome_tracker.register(gid, -1, current_generation)
+                raise ValueError(
+                    f"Genome {gid} has species_id=None and is missing from genome_tracker "
+                    "(no archive fallback)"
+                )
+            species_id = genome_tracker.get_species_id(gid)
+            genome["species_id"] = species_id
         if species_id == 0:
-            species_id = -1
-            genome["species_id"] = -1
-            if genome_tracker.exists(gid):
-                genome_tracker.update_species_id(gid, -1, current_generation, "legacy_species0_to_archive")
+            raise ValueError(
+                f"Genome {gid} has legacy species_id=0 (cluster-0/reserves removed). "
+                "Expected species_id > 0 (elite) or -1 (archive)."
+            )
         
         if species_id > 0:
             new_file = "elites"
         elif species_id == -1:
             new_file = "archive"
         else:
-            logger.warning(f"Genome {gid} has invalid species_id: {species_id}, coercing to archive")
-            species_id = -1
-            genome["species_id"] = -1
-            new_file = "archive"
+            raise ValueError(
+                f"Genome {gid} has invalid species_id={species_id!r}; "
+                "expected > 0 (elite) or -1 (archive)"
+            )
         
         old_file = next((f for f, (_, ids) in file_sources.items() if gid in ids), None)
         if old_file and old_file != new_file:
@@ -551,6 +568,17 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
         if _rid in genome_tracker.genomes:
             del genome_tracker.genomes[_rid]
             genome_tracker._dirty = True
+    
+    from utils.population_io import sort_population_by_elite_criteria
+    metric = _metric_from_state(state)
+    elites_deduped = sort_population_by_elite_criteria(
+        elites_deduped, metric, logger=logger
+    )
+    logger.info(
+        "Phase 7: sorted %d elites by north-star metric %r (descending)",
+        len(elites_deduped),
+        metric,
+    )
     
     _write_json_atomic(elites_path, elites_deduped, logger, "elites.json")
     _write_json_atomic(archive_path, archive_deduped, logger, "archive.json")
@@ -777,16 +805,18 @@ def process_generation(current_generation: int,
         # Leader-radius cleanup is L–F only (not meaningful for DBSCAN density clusters)
         if method == "leader_follower":
           with PerformanceLogger(state["logger"], "Speciation Phase 1: Radius enforcement"):
-            from .distance import ensemble_distance
             import numpy as np
-            
+            from .distance import extract_phenotype_vector, pair_distance
+
             outputs_path = get_outputs_path()
             elites_path = outputs_path / "elites.json"
             temp_path_obj = Path(temp_path)
+            cfg = state["config"]
+            dist_method = cfg.distance_method
             
             for sid in list(state["species"].keys()):
                 sp = state["species"][sid]
-                if sp.leader is None or sp.leader.embedding is None:
+                if sp.leader is None:
                     continue
                 
                 species_genome_ids = state["_genome_tracker"].get_all_genomes_by_species(sid)
@@ -812,38 +842,50 @@ def process_generation(current_generation: int,
                         state["logger"].warning(f"Failed to load temp.json for radius cleanup: {e}")
                 
                 members_to_remove = []
+                leader_emb = sp.leader.embedding
+                leader_pheno = sp.leader.phenotype
+                leader_text = sp.leader.prompt or ""
                 for genome in all_member_genomes:
                     genome_id = genome.get("id")
                     if genome_id == sp.leader.id:
                         continue
                     
+                    _require_radius_inputs(dist_method, genome)
                     genome_embedding = genome.get("prompt_embedding")
-                    if genome_embedding is None:
-                        members_to_remove.append(genome_id)
-                        continue
-                    
-                    from .distance import extract_phenotype_vector
                     genome_phenotype = extract_phenotype_vector(genome, logger=state["logger"])
-                    leader_phenotype = sp.leader.phenotype
-                    
-                    dist = ensemble_distance(
-                        np.array(genome_embedding), sp.leader.embedding,
-                        genome_phenotype, leader_phenotype,
-                        state["config"].w_genotype, state["config"].w_phenotype
+                    dist = pair_distance(
+                        dist_method,
+                        embedding_a=np.array(genome_embedding) if genome_embedding is not None else None,
+                        embedding_b=leader_emb,
+                        objective_a=genome_phenotype,
+                        objective_b=leader_pheno,
+                        text_a=genome.get("prompt") or "",
+                        text_b=leader_text,
+                        alpha=cfg.distance_alpha,
+                        w_genotype=cfg.w_genotype,
+                        w_phenotype=cfg.w_phenotype,
+                        logger=state["logger"],
                     )
                     
                     if dist >= state["config"].theta_sim:
                         members_to_remove.append(genome_id)
                 
                 if members_to_remove:
-                    state["logger"].debug(f"Species {sid}: removing {len(members_to_remove)} members outside radius")
+                    state["logger"].debug(
+                        "Species %s: removing %d members outside radius (distance_method=%s)",
+                        sid, len(members_to_remove), dist_method,
+                    )
                     for genome_id in members_to_remove:
                         state["_genome_tracker"].update_species_id(
                             str(genome_id), -1, current_generation, "radius_enforcement_to_archive"
                         )
                     
                     updated_member_ids = state["_genome_tracker"].get_all_genomes_by_species(sid)
-                    sp.members = [m for m in sp.members if m.id in updated_member_ids]
+                    sp.members = [m for m in sp.members if str(m.id) in {str(x) for x in updated_member_ids}]
+                    # Singleton (leader-only) species remain valid elites
+                    if sp.leader and str(sp.leader.id) in {str(x) for x in updated_member_ids}:
+                        if not any(m.id == sp.leader.id for m in sp.members):
+                            sp.members = [sp.leader] + list(sp.members)
         else:
             state["logger"].info("Phase 1: skipping radius enforcement (clustering_method=dbscan)")
 
@@ -854,7 +896,10 @@ def process_generation(current_generation: int,
     
     _phase2_start = _time.time()
     state["logger"].info("=== Phase 2: (skipped) ===")
-    state["logger"].info("Phase 2 skipped (unassigned → archive)")
+    state["logger"].info(
+        "Phase 2 skipped: legacy unassigned/cluster-0 → reserves step removed; "
+        "leader-follower assigns unmatched temp genomes as new singleton species"
+    )
     newly_formed_species_ids = set()
     state["logger"].info("Phase 2 completed in %.2fs", _time.time() - _phase2_start)
     
@@ -886,11 +931,12 @@ def process_generation(current_generation: int,
                         "created_at": sp.created_at
                     }
         
-        from .distance import ensemble_distance
+        from .distance import pair_distance
         from .merging import merge_islands
         
         species_count_before_merge = len(state["species"])
         merge_count = 0
+        cfg = state["config"]
         
         while True:
             merge_candidates = []
@@ -898,17 +944,27 @@ def process_generation(current_generation: int,
             
             for i, (id1, info1) in enumerate(species_list):
                 for j, (id2, info2) in enumerate(species_list[i + 1:], start=i + 1):
-                    min_stable = state["config"].min_stability_gens
+                    min_stable = cfg.min_stability_gens
                     sp1_stable = (current_generation - info1["created_at"]) >= min_stable
                     sp2_stable = (current_generation - info2["created_at"]) >= min_stable
                     
                     if not (sp1_stable and sp2_stable):
                         continue
                     
-                    dist = ensemble_distance(
-                        info1["embedding"], info2["embedding"],
-                        info1["phenotype"], info2["phenotype"],
-                        state["config"].w_genotype, state["config"].w_phenotype
+                    text1 = (info1["leader"].prompt if info1.get("leader") else "") or ""
+                    text2 = (info2["leader"].prompt if info2.get("leader") else "") or ""
+                    dist = pair_distance(
+                        cfg.distance_method,
+                        embedding_a=info1["embedding"],
+                        embedding_b=info2["embedding"],
+                        objective_a=info1["phenotype"],
+                        objective_b=info2["phenotype"],
+                        text_a=text1,
+                        text_b=text2,
+                        alpha=cfg.distance_alpha,
+                        w_genotype=cfg.w_genotype,
+                        w_phenotype=cfg.w_phenotype,
+                        logger=state["logger"],
                     )
                     
                     if dist < state["config"].theta_merge:
@@ -928,15 +984,17 @@ def process_generation(current_generation: int,
                 state["config"].w_phenotype,
                 state["logger"]
             )
+            survivor = merged_species.id
+            absorbed_id = id2 if survivor == id1 else id1
+            absorbed_sp = sp2 if survivor == id1 else sp1
             
             del state["species"][id1]
             del state["species"][id2]
             state["species"][merged_species.id] = merged_species
             
-            sp1.species_state = "extinct"
-            sp2.species_state = "extinct"
-            state["historical_species"][id1] = sp1
-            state["historical_species"][id2] = sp2
+            # Survivor keeps its ID; only the absorbed parent is marked extinct.
+            absorbed_sp.species_state = "extinct"
+            state["historical_species"][absorbed_id] = absorbed_sp
             
             del species_info[id1]
             del species_info[id2]
@@ -999,8 +1057,13 @@ def process_generation(current_generation: int,
         state["logger"].info("Phase 3 radius enforcement skipped (clustering_method=dbscan)")
     else:
       with PerformanceLogger(state["logger"], "Speciation Phase 3: Radius enforcement"):
+        import numpy as np
+        from .distance import extract_phenotype_vector, pair_distance
+
+        cfg = state["config"]
+        dist_method = cfg.distance_method
         for sid, sp in list(state["species"].items()):
-            if sp.leader is None or sp.leader.embedding is None:
+            if sp.leader is None:
                 continue
             
             if "_genome_tracker" in state:
@@ -1011,30 +1074,39 @@ def process_generation(current_generation: int,
             all_member_genomes = _load_genomes_by_ids(species_genome_ids, outputs_path, state["logger"])
             
             members_to_remove = []
+            leader_emb = sp.leader.embedding
+            leader_pheno = sp.leader.phenotype
+            leader_text = sp.leader.prompt or ""
             for genome in all_member_genomes:
                 genome_id = genome.get("id")
                 if genome_id == sp.leader.id:
                     continue
                 
+                _require_radius_inputs(dist_method, genome)
                 genome_embedding = genome.get("prompt_embedding")
-                if genome_embedding is None:
-                    members_to_remove.append(genome_id)
-                    continue
-                
-                from .distance import extract_phenotype_vector
                 genome_phenotype = extract_phenotype_vector(genome, logger=state["logger"])
-                
-                dist = ensemble_distance(
-                    np.array(genome_embedding), sp.leader.embedding,
-                    genome_phenotype, sp.leader.phenotype,
-                    state["config"].w_genotype, state["config"].w_phenotype
+                dist = pair_distance(
+                    dist_method,
+                    embedding_a=np.array(genome_embedding) if genome_embedding is not None else None,
+                    embedding_b=leader_emb,
+                    objective_a=genome_phenotype,
+                    objective_b=leader_pheno,
+                    text_a=genome.get("prompt") or "",
+                    text_b=leader_text,
+                    alpha=cfg.distance_alpha,
+                    w_genotype=cfg.w_genotype,
+                    w_phenotype=cfg.w_phenotype,
+                    logger=state["logger"],
                 )
                 
                 if dist >= state["config"].theta_sim:
                     members_to_remove.append(genome_id)
             
             if members_to_remove:
-                state["logger"].debug(f"Species {sid}: removing {len(members_to_remove)} members outside radius")
+                state["logger"].debug(
+                    "Species %s: removing %d members outside radius after merge (distance_method=%s)",
+                    sid, len(members_to_remove), dist_method,
+                )
                 for genome_id in members_to_remove:
                     state["_genome_tracker"].update_species_id(
                         str(genome_id), -1, current_generation, "radius_enforcement_to_archive_after_merge"
@@ -1046,26 +1118,26 @@ def process_generation(current_generation: int,
                         )
                 
                 updated_member_ids = state["_genome_tracker"].get_all_genomes_by_species(sid)
-                sp.members = [m for m in sp.members if m.id in updated_member_ids]
-                
-                if len(sp.members) <= 1:
-                    sp.species_state = "incubator"
+                updated_set = {str(x) for x in updated_member_ids}
+                sp.members = [m for m in sp.members if str(m.id) in updated_set]
+
+                if sp.leader and str(sp.leader.id) in updated_set:
+                    # Leader-only (or small) species stay elite — no incubator dissolve
+                    if not any(m.id == sp.leader.id for m in sp.members):
+                        sp.members = [sp.leader] + list(sp.members)
+                    if sp.species_state == "incubator":
+                        sp.species_state = "active"
+                elif not updated_set:
+                    # Truly empty: drop species from active map (no incubation)
+                    state["logger"].info(
+                        "Phase 3: Species %s empty after radius cleanup — removed (no incubator)",
+                        sid,
+                    )
+                    sp.species_state = "extinct"
                     sp.members = []
-                    
-                    if sp.leader and "_genome_tracker" in state:
-                        state["_genome_tracker"].update_species_id(
-                            str(sp.leader.id), -1, current_generation, "radius_enforcement_leader_to_archive_after_merge"
-                        )
-                        if "_events_tracker" in state:
-                            state["_events_tracker"].log(
-                                str(sp.leader.id), "radius_enforcement_after_merge",
-                                {"from_species": sid, "to_species": -1, "reason": "species_empty_after_radius_cleanup"}
-                            )
-                        _archive_individuals([sp.leader], current_generation, f"radius_cleanup_species_{sid}")
-                    
-                    state["logger"].info(f"Phase 3: Species {sid} became empty after radius cleanup - marked as incubator (will be processed in Phase 5)")
-                elif len(sp.members) < state["config"].min_island_size:
-                    state["logger"].debug(f"Phase 3: Species {sid} size={len(sp.members)} < min_island_size={state['config'].min_island_size} after radius cleanup - will be moved to incubator in Phase 5 Step 18")
+                    sp.leader = None
+                    state["historical_species"][sid] = sp
+                    del state["species"][sid]
     
     with PerformanceLogger(state["logger"], "Speciation Phase 3: Save tracker"):
         _save_tracker_if_dirty(state)
@@ -1168,18 +1240,12 @@ def process_generation(current_generation: int,
                     )
             
             from utils.population_io import _extract_north_star_score
-            valid_genomes = []
-            invalid_genomes = []
+            scored = []
             for g in all_species_genomes:
                 fitness = _extract_north_star_score(g, _metric_from_state(state))
-                if fitness is not None:
-                    valid_genomes.append((g, fitness))
-                else:
-                    invalid_genomes.append(g)
-                    state["logger"].warning(f"Phase 4: Genome {g.get('id')} in species {sid} has no valid fitness score, excluding from capacity enforcement")
-            
-            valid_genomes.sort(key=lambda x: x[1], reverse=True)
-            all_species_genomes = [g for g, _ in valid_genomes] + invalid_genomes
+                scored.append((g, fitness))
+            scored.sort(key=lambda x: x[1], reverse=True)
+            all_species_genomes = [g for g, _ in scored]
             
             if sp is not None:
                 state["logger"].debug(
@@ -1353,9 +1419,15 @@ def process_generation(current_generation: int,
                         sp.members.insert(0, sp.leader)
                     state["logger"].info(f"Reassigned species {sid} leader to genome {sp.leader.id} (fitness={sp.leader.fitness:.4f})")
                 else:
-                    sp.species_state = "incubator"
+                    # Empty after duplicate-leader fix: extinct, not incubator
+                    sp.species_state = "extinct"
                     sp.leader = None
-                    state["logger"].info(f"Species {sid} has no other members, marking as incubator (will be processed in Phase 5 Step 18)")
+                    state["historical_species"][sid] = sp
+                    del state["species"][sid]
+                    state["logger"].info(
+                        "Species %s has no members after duplicate-leader fix — removed (no incubator)",
+                        sid,
+                    )
     
     with PerformanceLogger(state["logger"], "Speciation Phase 4: Save tracker and validate"):
         _save_tracker_if_dirty(state)
@@ -1400,7 +1472,7 @@ def process_generation(current_generation: int,
                     sid_vals = [p.get("species_id") for p in parents]
                     state["logger"].info(
                         "Stagnation: selected_species_ids is empty (all parents species_id in %s). "
-                        "Stagnation only increments when a non-reserve species is selected and does not improve.",
+                        "Stagnation only increments when a parent species is selected and does not improve.",
                         sid_vals
                     )
         except Exception as e:
@@ -1469,86 +1541,13 @@ def process_generation(current_generation: int,
         _save_tracker_if_dirty(state)
         state["logger"].info(f"Step 10: Frozen {frozen_count} species (trackers updated)")
     
-    state["logger"].info("=== Phase 5: Step 11 - Incubate Small Species ===")
-    
-    species_count_before_incubation = len(state["species"])
-    incubator_species = {}
-    moved_to_archive_events = []
-    # DBSCAN noise/singleton niches are intentional breeding groups — do not dissolve by size
-    preserve_dbscan_singletons = state["config"].clustering_method == "dbscan"
-    
-    for sid, sp in list(state["species"].items()):
-        if sp.species_state not in ["active", "frozen", "incubator"]:
-            continue
-        
-        current_size = sp.size
-        is_newly_merged = (sp.cluster_origin == "merge" and sp.created_at == current_generation)
-
-        if preserve_dbscan_singletons and current_size >= 1 and sp.species_state != "incubator":
-            continue
-        
-        if sp.species_state == "incubator" or current_size < state["config"].min_island_size:
-            if is_newly_merged and current_size < state["config"].min_island_size:
-                state["logger"].info(f"Phase 5: Newly merged species {sid} has {current_size} members < min_island_size={state['config'].min_island_size} - dissolving to archive")
-            
-            members_to_archive = list(sp.members)
-            if sp.leader and sp.leader.id not in {m.id for m in sp.members}:
-                members_to_archive.append(sp.leader)
-            moved_member_ids = [m.id for m in members_to_archive]
-            
-            if "_genome_tracker" in state and moved_member_ids:
-                sid_int = int(sid)
-                genomes_to_update = [
-                    gid for gid, gdata in state["_genome_tracker"].genomes.items()
-                    if gdata.get("species_id") == sid_int
-                ]
-                all_ids = {str(mid) for mid in moved_member_ids}
-                genomes_to_update.extend(g for g in all_ids if g not in genomes_to_update)
-                if genomes_to_update:
-                    result = state["_genome_tracker"].batch_update(
-                        {gid: -1 for gid in genomes_to_update}, current_generation, f"incubated_species_{sid}_to_archive"
-                    )
-                    if result["failed"] > 0:
-                        state["logger"].warning(f"Tracker update failed for {result['failed']} genomes (species {sid})")
-            
-            if members_to_archive:
-                _archive_individuals(members_to_archive, current_generation, f"incubated_species_{sid}")
-            
-            sp.species_state = "incubator"
-            sp.members = []
-            incubator_species[sid] = sp
-            del state["species"][sid]
-            
-            moved_to_archive_events.append({
-                "generation": current_generation,
-                "species_id": sid,
-                "action": "archived",
-                "size": current_size,
-                "moved_count": len(moved_member_ids),
-                "moved_member_ids": moved_member_ids
-            })
-            
-            state["logger"].info(
-                f"Incubated species {sid} ({len(moved_member_ids)} members archived) - extinction/dissolution"
-            )
-    
-    for sid, sp in incubator_species.items():
-        state["historical_species"][sid] = sp
-        state["logger"].debug(f"Moved incubator species {sid} to historical_species (will be tracked by ID only in save_state)")
-    
-    if moved_to_archive_events:
-        _save_tracker_if_dirty(state)
-        state["_current_gen_events"]["moved_to_archive"] = len(moved_to_archive_events)
-        state["logger"].info(f"Step 11: Incubated {len(moved_to_archive_events)} species (archived, trackers updated)")
-    
-    species_count_after_incubation = len(state["species"])
-    expected_species_after = species_count_before_incubation - len(moved_to_archive_events)
-    if species_count_after_incubation != expected_species_after:
-        state["logger"].warning(
-            f"Incubation count mismatch: before={species_count_before_incubation}, "
-            f"after={species_count_after_incubation}, archived={len(moved_to_archive_events)}, "
-            f"expected_after={expected_species_after}"
-        )
+    state["logger"].info("=== Phase 5: Step 11 - Incubate Small Species (disabled) ===")
+    state["logger"].info(
+        "Step 11 skipped: singleton elite species are allowed; "
+        "undersized niches are no longer dissolved to archive/incubator "
+        "(min_island_size=%d retained in config for compatibility only)",
+        state["config"].min_island_size,
+    )
     
     _save_tracker_if_dirty(state)
     _validate_tracker_consistency(state, "Phase 5")
@@ -1558,7 +1557,10 @@ def process_generation(current_generation: int,
     
     _phase6_start = _time.time()
     state["logger"].info("=== Phase 6: (skipped) ===")
-    state["logger"].info("Phase 6 skipped")
+    state["logger"].info(
+        "Phase 6 skipped: legacy reserves / cluster-0 recovery step removed "
+        "(archive.json is non-breeding storage only)"
+    )
     state["logger"].info("Phase 6 completed in %.2fs", _time.time() - _phase6_start)
     
     
@@ -1837,7 +1839,7 @@ def save_state(path: str) -> None:
         if n < min_island_size:
             logger.debug(
                 "Species %s has size %d < min_island_size %d (count from tracker); "
-                "Phase 5 (Stagnation and Incubation) moves such species to incubator when in-memory size drops.",
+                "singleton elites are allowed (incubation dissolve disabled).",
                 sid_str, n, min_island_size
             )
 
@@ -2067,6 +2069,21 @@ def run_speciation(
     
     logger = get_logger("RunSpeciation", log_file)
     logger.info("Starting speciation: generation=%d, metric=%s", current_generation, north_star_metric)
+
+    # Incremental DBSCAN uses a separate population + speciation path (temp.json = D_t).
+    # Leader–follower continues below unchanged.
+    cfg = config or SpeciationConfig()
+    method = (cfg.clustering_method or "leader_follower").strip().lower().replace("-", "_")
+    if method == "dbscan":
+        from .run_inc_dbscan import run_inc_dbscan_speciation
+        logger.info("Dispatching to Incremental DBSCAN speciation path")
+        return run_inc_dbscan_speciation(
+            temp_path=temp_path,
+            current_generation=current_generation,
+            config=cfg,
+            log_file=log_file,
+            north_star_metric=north_star_metric,
+        )
 
     reset_speciation_module()
     _init_state(config, logger)
@@ -2528,13 +2545,16 @@ def update_evolution_tracker_with_speciation(
         
         metrics_summary = speciation_stats.get("metrics_summary", {})
         
-        state = _get_state()
+        is_inc = bool(speciation_result.get("inc_dbscan"))
+        # Avoid initializing empty L–F module state on the IncDBSCAN path.
+        state = None if is_inc else _get_state()
         current_metrics = None
         if state is not None and state["metrics_tracker"].history:
             current_metrics = state["metrics_tracker"].history[-1]
         
         frozen_species_count = speciation_result.get("frozen_species_count", 0)
-        if frozen_species_count == 0:
+        # IncDBSCAN does not use in-memory L–F species state; trust the result dict.
+        if frozen_species_count == 0 and not is_inc:
             state = _get_state()
             frozen_species_count = len([sp for sp in state["species"].values() if sp.species_state == "frozen"])
         
@@ -2546,11 +2566,19 @@ def update_evolution_tracker_with_speciation(
             if speciation_result.get("archive_size") is not None
             else speciation_result.get("archived_size", 0)
         )
+        density_size = int(speciation_result.get("density_size", 0) or 0)
+        noise_count = int(speciation_result.get("noise_count", 0) or 0)
         speciation_summary = {
             "species_count": total_species_count,
             "active_species_count": active_species_count,
             "frozen_species_count": frozen_species_count,
             "archive_size": archive_size,
+            "density_size": density_size,
+            "noise_count": noise_count,
+            "clustered_count": max(0, density_size - noise_count) if density_size else 0,
+            "population_mode": (
+                "inc_dbscan" if is_inc else "leader_follower"
+            ),
             "largest_species_size": speciation_result.get("largest_species_size", 0),
             "average_species_size": speciation_result.get("average_species_size", 0.0),
             "speciation_events": speciation_result.get("speciation_events", 0),
@@ -2579,40 +2607,40 @@ def update_evolution_tracker_with_speciation(
                 speciation_summary["cluster_quality"] = current_metrics.cluster_quality
         else:
             outputs_path = get_outputs_path()
-            elites_path = outputs_path / "elites.json"
-            archive_path = outputs_path / "archive.json"
-            
+            from utils.population_io import _extract_north_star_score, load_analysis_population
+            from .clustering_mode import is_inc_dbscan_mode
+            from utils.evaluator_profiles import get_active_north_star
+
             total_pop = 0
             all_fitness = []
-            
-            if elites_path.exists():
-                try:
-                    with open(elites_path, 'r', encoding='utf-8') as f:
-                        elites_genomes = json.load(f)
-                    total_pop += len(elites_genomes)
-                    from utils.population_io import _extract_north_star_score
-                    for genome in elites_genomes:
-                        fitness = _extract_north_star_score(genome, _metric_from_state(state))
-                        if fitness > 0:
-                            all_fitness.append(float(fitness))
-                except Exception:
-                    pass
-            
-            if archive_path.exists():
-                try:
-                    with open(archive_path, 'r', encoding='utf-8') as f:
-                        archive_genomes = json.load(f)
-                    if isinstance(archive_genomes, list):
-                        total_pop += len(archive_genomes)
-                        from utils.population_io import _extract_north_star_score
-                        for genome in archive_genomes:
-                            fitness = _extract_north_star_score(genome, _metric_from_state(state))
-                            if fitness > 0:
-                                all_fitness.append(float(fitness))
-                except Exception:
-                    pass
-            
-            if total_pop == 0:
+            pop_genomes = load_analysis_population(outputs_path)
+            # Prefer active evaluator metric for IncDBSCAN: L–F module state may
+            # still hold the default "toxicity" if Inc path never called _init_state.
+            fitness_metric = (
+                get_active_north_star()
+                if (is_inc or is_inc_dbscan_mode(outputs_path=str(outputs_path)))
+                else _metric_from_state(state)
+            )
+            if pop_genomes:
+                total_pop = len(pop_genomes)
+                for genome in pop_genomes:
+                    fitness = _extract_north_star_score(genome, fitness_metric)
+                    if fitness > 0:
+                        all_fitness.append(float(fitness))
+                if is_inc or is_inc_dbscan_mode(outputs_path=str(outputs_path)):
+                    noise_n = sum(
+                        1 for g in pop_genomes
+                        if int(g.get("density_label", g.get("species_id", 0) or 0)) == -1
+                    )
+                    speciation_summary["density_size"] = total_pop
+                    speciation_summary["noise_count"] = noise_n
+                    speciation_summary["clustered_count"] = max(0, total_pop - noise_n)
+                    speciation_summary["population_mode"] = "inc_dbscan"
+                    # Archive panel unused; keep 0. Noise tracked separately.
+                    archive_size = 0
+                    speciation_summary["archive_size"] = 0
+
+            if total_pop == 0 and state is not None and not is_inc:
                 for sp in state.get("species", {}).values():
                     if hasattr(sp, 'members'):
                         all_fitness.extend([m.fitness for m in sp.members])
@@ -2654,6 +2682,9 @@ def update_evolution_tracker_with_speciation(
         evolution_tracker["speciation_summary"].update({
             "current_species_count": speciation_result.get("species_count", 0),
             "current_archive_size": archive_size,
+            "current_density_size": speciation_summary.get("density_size", 0),
+            "current_noise_count": speciation_summary.get("noise_count", 0),
+            "population_mode": speciation_summary.get("population_mode", "leader_follower"),
             "total_speciation_events": metrics_summary.get("total_speciation_events", 0),
             "total_merge_events": metrics_summary.get("total_merge_events", 0),
             "total_extinction_events": metrics_summary.get("total_extinction_events", 0),

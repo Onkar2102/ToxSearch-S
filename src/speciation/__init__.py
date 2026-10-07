@@ -38,6 +38,8 @@ from .run_speciation import (
     process_generation,
     phase8_redistribute_genomes,
 )
+from .run_inc_dbscan import run_inc_dbscan_speciation, process_generation_inc_dbscan
+from .clustering_mode import is_inc_dbscan_mode
 
 __all__ = [
     "SpeciationConfig",
@@ -70,4 +72,7 @@ __all__ = [
     "update_evolution_tracker_with_speciation",
     "process_generation",
     "phase8_redistribute_genomes",
+    "run_inc_dbscan_speciation",
+    "process_generation_inc_dbscan",
+    "is_inc_dbscan_mode",
 ]

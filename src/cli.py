@@ -36,7 +36,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--north-star-metric",
         type=str,
         default=None,
-        help="North-star score key for fitness (valid choices depend on --evaluator)",
+        help=(
+            "North-star score key for fitness; must be a native category of --evaluator "
+            "(google: toxicity, threat, …; openai: violence, hate, harassment, …). "
+            "No cross-evaluator aliases."
+        ),
     )
     parser.add_argument(
         "--openai-model",
@@ -170,7 +174,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         choices=["leader_follower", "dbscan"],
         default=defaults.clustering_method,
-        help="Niche clustering: leader_follower (default) or dbscan",
+        help=(
+            "Niche clustering: leader_follower (elites/archive) or dbscan "
+            "(incremental DBSCAN; temp.json = grow-only density memory, keeps noise)"
+        ),
     )
     parser.add_argument(
         "--dbscan-eps",
@@ -183,6 +190,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=defaults.dbscan_min_samples,
         help=f"DBSCAN min_samples (default: {defaults.dbscan_min_samples})",
+    )
+    parser.add_argument(
+        "--inc-dbscan-validate-every",
+        type=int,
+        default=getattr(defaults, "inc_dbscan_validate_every", 0),
+        help="Every N gens, check IncDBSCAN vs batch partition (0=off)",
     )
     parser.add_argument(
         "--distance-method",
@@ -263,9 +276,9 @@ def main(argv: list[str] | None = None) -> int:
     evaluator_name = args.evaluator or moderation_methods_to_evaluator(args.moderation_methods)
     profile = resolve_evaluator(evaluator_name)
     set_active_evaluator(profile.name)
-    north_star_metric = args.north_star_metric or profile.default_north_star
+    requested_north_star = args.north_star_metric or profile.default_north_star
     try:
-        north_star_metric = validate_north_star(profile, north_star_metric)
+        north_star_metric = validate_north_star(profile, requested_north_star)
     except ValueError as exc:
         parser.error(str(exc))
     set_active_north_star(north_star_metric)
@@ -287,6 +300,7 @@ def main(argv: list[str] | None = None) -> int:
             clustering_method=args.clustering_method,
             dbscan_eps=args.dbscan_eps,
             dbscan_min_samples=args.dbscan_min_samples,
+            inc_dbscan_validate_every=args.inc_dbscan_validate_every,
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
         )
@@ -408,6 +422,7 @@ def main(argv: list[str] | None = None) -> int:
             clustering_method=args.clustering_method,
             dbscan_eps=args.dbscan_eps,
             dbscan_min_samples=args.dbscan_min_samples,
+            inc_dbscan_validate_every=args.inc_dbscan_validate_every,
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
         )

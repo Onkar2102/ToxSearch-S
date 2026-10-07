@@ -41,15 +41,31 @@ def test_semantic_distances_batch_matches_scalar() -> None:
 def test_ensemble_distance_requires_unit_embeddings() -> None:
     e1 = _unit([1.0, 0.0])
     e2 = _unit([0.0, 1.0])
-    d = ensemble_distance(e1, e2, w_genotype=0.7, w_phenotype=0.3)
+    p = np.zeros(2, dtype=np.float32)
+    d = ensemble_distance(e1, e2, p, p, w_genotype=0.7, w_phenotype=0.3)
     assert 0.0 <= d <= 1.0
+
+
+def test_ensemble_distance_requires_objectives() -> None:
+    e1 = _unit([1.0, 0.0])
+    e2 = _unit([0.0, 1.0])
+    with pytest.raises(ValueError, match="objective"):
+        ensemble_distance(e1, e2, w_genotype=0.7, w_phenotype=0.3)
+
+
+def test_pair_distance_embedding_requires_embeddings() -> None:
+    from speciation.distance import pair_distance
+
+    with pytest.raises(ValueError, match="embedding"):
+        pair_distance("embedding", embedding_a=None, embedding_b=_unit([1.0, 0.0]))
 
 
 def test_ensemble_weights_must_sum_to_one() -> None:
     e1 = _unit([1.0, 0.0])
     e2 = _unit([0.0, 1.0])
+    p = np.zeros(2, dtype=np.float32)
     with pytest.raises(ValueError):
-        ensemble_distance(e1, e2, w_genotype=0.6, w_phenotype=0.3)
+        ensemble_distance(e1, e2, p, p, w_genotype=0.6, w_phenotype=0.3)
 
 
 def test_embedding_distance_is_half_semantic() -> None:

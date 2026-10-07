@@ -220,8 +220,8 @@ class ConceptAdditionOperator(VariationOperator):
                 return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed with error: {e}\nTrace: {traceback.format_exc()}")
-            raise RuntimeError(f"{self.name} concept addition generation failed: {e}") from e
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             try:
                 end_time = time.time()

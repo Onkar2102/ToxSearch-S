@@ -78,10 +78,11 @@ def _check_stop(comm, logger=None):
     return False
 
 
-def _load_existing_prompts(outputs_path, logger):
+def _load_existing_prompts(outputs_path, logger, use_inc_dbscan=False):
     
     existing = set()
-    for fname in ("elites.json", "archive.json"):
+    fnames = ("temp.json",) if use_inc_dbscan else ("elites.json", "archive.json")
+    for fname in fnames:
         fpath = outputs_path / fname
         if not fpath.exists():
             continue
@@ -108,9 +109,15 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
                 generation_id, K, total_buffered, buffer_snapshot)
     logger.debug("Merge drain: round-robin from buffers.")
 
-    existing_prompts = _load_existing_prompts(outputs_path, logger)
-    logger.debug("Loaded %d existing prompts for dedup (elites+archive)",
-                 len(existing_prompts))
+    from speciation.clustering_mode import is_inc_dbscan_mode
+    use_inc = is_inc_dbscan_mode(config=speciation_config)
+
+    existing_prompts = _load_existing_prompts(outputs_path, logger, use_inc_dbscan=use_inc)
+    logger.debug(
+        "Loaded %d existing prompts for dedup (%s)",
+        len(existing_prompts),
+        "temp.json D_t" if use_inc else "elites+archive",
+    )
     temp_prompts = set()
 
     sorted_ranks = sorted(buffers.keys())
@@ -157,9 +164,26 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
                 generation_id, next_genome_id)
 
     temp_path = outputs_path / "temp.json"
-    with open(temp_path, "w", encoding="utf-8") as f:
-        json.dump(accepted, f, indent=2, ensure_ascii=False)
-    logger.debug("Wrote %d genomes to temp.json", len(accepted))
+    if use_inc:
+        # Append newcomers into grow-only density memory
+        existing = []
+        if temp_path.exists():
+            try:
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    existing = json.load(f)
+                if not isinstance(existing, list):
+                    existing = []
+            except Exception:
+                existing = []
+        from speciation.density_memory import append_genomes
+        merged = append_genomes(existing, accepted, logger=logger)
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(merged, f, indent=2, ensure_ascii=False)
+        logger.debug("IncDBSCAN: appended %d genomes to temp.json (total %d)", len(accepted), len(merged))
+    else:
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(accepted, f, indent=2, ensure_ascii=False)
+        logger.debug("Wrote %d genomes to temp.json", len(accepted))
 
     speciation_start = time.time()
     speciation_result = {}
@@ -237,7 +261,7 @@ def _stub_speciation(outputs_path, temp_path, logger):
 
 def _select_parents(outputs_path, north_star_metric, generation_id, logger):
     
-    from ea.parent_selector import ParentSelector
+    from speciation.clustering_mode import is_inc_dbscan_mode
 
     op = str(outputs_path)
 
@@ -250,7 +274,12 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
         except Exception as e:
             logger.warning("Could not load EvolutionTracker for parent selection: %s", e)
 
-    selector = ParentSelector(north_star_metric)
+    if is_inc_dbscan_mode(outputs_path=op):
+        from ea.inc_dbscan_parent_selector import IncDBSCANParentSelector
+        selector = IncDBSCANParentSelector(north_star_metric)
+    else:
+        from ea.parent_selector import ParentSelector
+        selector = ParentSelector(north_star_metric)
     selector.adaptive_tournament_selection(
         evolution_tracker=evolution_tracker,
         outputs_path=op,
@@ -281,7 +310,7 @@ def _collect_operator_stats(accepted_genomes):
     return stats
 
 
-def _aggregate_parents_from_genomes(accepted_genomes):
+def _aggregate_parents_from_genomes(accepted_genomes, north_star_metric="toxicity"):
     
     by_id = {}
     for g in (accepted_genomes or []):
@@ -290,11 +319,18 @@ def _aggregate_parents_from_genomes(accepted_genomes):
             if pid is None:
                 continue
             key = str(pid)
-            score = p.get("score") or p.get("toxicity") or 0
-            if key not in by_id or (by_id[key].get("toxicity") or 0) < score:
-                by_id[key] = {"id": pid, "toxicity": score}
+            score = p.get("score")
+            if score is None:
+                score = p.get(north_star_metric)
+            if score is None:
+                score = 0
+            prev = by_id.get(key)
+            if prev is None or float(prev.get(north_star_metric) or 0) < float(score):
+                by_id[key] = {"id": pid, north_star_metric: score}
     parents_list = list(by_id.values())
-    top10_list = sorted(parents_list, key=lambda x: (x.get("toxicity") or 0), reverse=True)[:10]
+    top10_list = sorted(
+        parents_list, key=lambda x: float(x.get(north_star_metric) or 0), reverse=True
+    )[:10]
     return parents_list, top10_list
 
 
@@ -361,7 +397,9 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         )
 
         if accepted_genomes:
-            parents_list, top10_list = _aggregate_parents_from_genomes(accepted_genomes)
+            parents_list, top10_list = _aggregate_parents_from_genomes(
+                accepted_genomes, north_star_metric=north_star_metric
+            )
             gen_stats["parents"] = parents_list
             gen_stats["top_10"] = top10_list
         elif sent_parents_top10 is not None:
@@ -369,7 +407,10 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             gen_stats["top_10"] = sent_parents_top10.get("top_10", [])
         else:
             def _slim(g):
-                return {"id": g.get("id"), "toxicity": g.get("toxicity", 0)}
+                score = g.get(north_star_metric)
+                if score is None:
+                    score = g.get("score", 0)
+                return {"id": g.get("id"), north_star_metric: score}
             parents_list, top10_list = [], []
             try:
                 parents_path = outputs_path / "parents.json"
@@ -425,7 +466,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                 _extract_north_star_score(g, north_star_metric)
                 for g in accepted_genomes
             ]
-            valid_scores = [s for s in variant_scores if s > 0.0001]
+            valid_scores = [s for s in variant_scores if s >= 0.0001]
             if valid_scores:
                 gen_stats["max_score_variants"] = round(max(valid_scores), 4)
                 gen_stats["min_score_variants"] = round(min(valid_scores), 4)
@@ -446,7 +487,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             if tracker_path.exists():
                 with open(tracker_path, "r", encoding="utf-8") as f:
                     prev_tracker = json.load(f)
-                prev_max = prev_tracker.get("population_max_toxicity", 0.0)
+                prev_max = prev_tracker.get("population_max_fitness", 0.0)
         except Exception:
             pass
 
@@ -462,7 +503,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
 
         try:
             from utils.population_io import update_adaptive_selection_logic
-            current_max = gen_stats.get("population_max_toxicity", 0.0001)
+            current_max = gen_stats.get("population_max_fitness", 0.0001)
             stagnation_limit = (config_dict or {}).get("stagnation_limit", 5)
             update_adaptive_selection_logic(
                 outputs_path=str(outputs_path),
@@ -482,7 +523,7 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                      generation_id, total_evaluated, total_integrated, total_discarded,
                      gen_stats.get("elites_count", 0), gen_stats.get("archived_count", 0),
                      gen_stats.get("avg_fitness_generation", 0.0001),
-                     gen_stats.get("population_max_toxicity", 0.0001))
+                     gen_stats.get("population_max_fitness", 0.0001))
 
     except Exception as e:
         logger.error("EvolutionTracker full update failed: %s", e, exc_info=True)
@@ -785,7 +826,10 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         outputs_path, north_star_metric, generation_id, logger)
                     parent_sel_elapsed = time.time() - parent_sel_start
                     def _slim(g):
-                        return {"id": g.get("id"), "toxicity": g.get("toxicity", 0)}
+                        score = g.get(north_star_metric)
+                        if score is None:
+                            score = g.get("score", 0)
+                        return {"id": g.get("id"), north_star_metric: score}
                     sent_parents_top10_by_gen[generation_id] = {
                         "parents": [_slim(p) for p in parents] if parents else [],
                         "top_10": [_slim(t) for t in top_10] if top_10 else [],
@@ -1009,7 +1053,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         if tracker_path.exists():
             with open(tracker_path, "r", encoding="utf-8") as f:
                 tracker = json.load(f)
-            final_best = tracker.get("population_max_toxicity", 0.0)
+            final_best = tracker.get("population_max_fitness", 0.0)
     except Exception:
         pass
 

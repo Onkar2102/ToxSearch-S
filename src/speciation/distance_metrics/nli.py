@@ -99,7 +99,7 @@ def get_entailment_scorer(logger=None) -> EntailmentScorer:
 def entailment_probability(text_a: str, text_b: str, *, logger=None) -> float:
     """Directional P(entailment | premise=a, hypothesis=b) with caching."""
     if text_a is None or text_b is None:
-        return 0.0
+        raise ValueError("entailment_probability requires non-None texts on both sides")
     a = str(text_a)
     b = str(text_b)
     key = _cache_key(a, b)
@@ -116,7 +116,7 @@ def entailment_probability(text_a: str, text_b: str, *, logger=None) -> float:
 def nli_distance(text_a: str, text_b: str, *, logger=None) -> float:
     """Symmetrized entailment dissimilarity in ``[0, 1]``; ``d(u,u)=0``."""
     if text_a is None or text_b is None:
-        return 1.0
+        raise ValueError("nli_distance requires non-None texts on both sides")
     a = str(text_a)
     b = str(text_b)
     if a == b:

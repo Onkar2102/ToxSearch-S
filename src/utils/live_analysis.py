@@ -25,6 +25,54 @@ def _generations_chronological(tracker: Dict[str, Any]) -> List[Dict[str, Any]]:
     return sorted(gens, key=lambda g: int(g.get("generation_number", 0) or 0))
 
 
+def _is_inc_dbscan_tracker(tracker: Dict[str, Any], outputs_path: Optional[str] = None) -> bool:
+    summary = tracker.get("speciation_summary") or {}
+    if summary.get("population_mode") == "inc_dbscan":
+        return True
+    gens = tracker.get("generations") or []
+    for g in reversed(gens):
+        sp = g.get("speciation") or {}
+        if sp.get("population_mode") == "inc_dbscan" or sp.get("density_size"):
+            return True
+        if g.get("population_mode") == "inc_dbscan":
+            return True
+    if outputs_path:
+        try:
+            from speciation.clustering_mode import is_inc_dbscan_mode
+            return is_inc_dbscan_mode(outputs_path=outputs_path)
+        except Exception:
+            pass
+    return False
+
+
+def _cumulative_genome_counts(generations: List[Dict[str, Any]]) -> List[int]:
+    """X-axis values: cumulative genomes (total_population), not generation index."""
+    xs: List[int] = []
+    for i, g in enumerate(generations):
+        total = g.get("total_population")
+        if total is None:
+            dens = g.get("density_size")
+            if dens is not None:
+                total = dens
+            else:
+                elites = int(g.get("elites_count", 0) or 0)
+                archived = int(g.get("archived_count", 0) or 0)
+                total = elites + archived
+        xs.append(int(total or 0))
+    return xs
+
+
+def _max_total_genomes_xlim(tracker: Dict[str, Any], xs: List[int]) -> float:
+    meta = tracker.get("run_metadata") or {}
+    cap = meta.get("max_total_genomes")
+    if cap is not None:
+        try:
+            return max(float(cap), float(max(xs) if xs else 0))
+        except (TypeError, ValueError):
+            pass
+    return float(max(xs) if xs else 0)
+
+
 def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]:
     
     if outputs_path is None:
@@ -52,7 +100,7 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
         if not generations:
             return None
         
-        gen_nums = [int(g.get("generation_number", 0) or 0) for g in generations]
+        x_genomes = _cumulative_genome_counts(generations)
 
         max_scores = [float(g.get("max_score_variants", g.get("best_fitness", 0.0)) or 0.0) for g in generations]
         min_scores = [float(g.get("min_score_variants", 0.0) or 0.0) for g in generations]
@@ -65,17 +113,17 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
             cumulative_best.append(current_max)
         
         plt.figure(figsize=(10, 6))
-        plt.plot(gen_nums, max_scores, 'o-', label='Max Fitness', linewidth=2, markersize=6, color='#1f77b4')
-        plt.plot(gen_nums, min_scores, '^-', label='Min Fitness', linewidth=2, markersize=6, color='#2ca02c')
-        plt.plot(gen_nums, avg_scores, 's-', label='Avg Fitness', linewidth=2, markersize=6, color='#ff7f0e')
-        plt.plot(gen_nums, cumulative_best, '--', label='Cumulative Max Score', linewidth=2, color='red', alpha=0.75)
+        plt.plot(x_genomes, max_scores, 'o-', label='Max Fitness', linewidth=2, markersize=6, color='#1f77b4')
+        plt.plot(x_genomes, min_scores, '^-', label='Min Fitness', linewidth=2, markersize=6, color='#2ca02c')
+        plt.plot(x_genomes, avg_scores, 's-', label='Avg Fitness', linewidth=2, markersize=6, color='#ff7f0e')
+        plt.plot(x_genomes, cumulative_best, '--', label='Cumulative Max Score', linewidth=2, color='red', alpha=0.75)
         
-        plt.xlabel('Generation', fontsize=12)
+        plt.xlabel('Cumulative genomes', fontsize=12)
         plt.ylabel('Fitness Score', fontsize=12)
-        plt.title('Fitness Evolution Over Generations', fontsize=14, fontweight='bold')
+        plt.title('Fitness Evolution vs Cumulative Genomes', fontsize=14, fontweight='bold')
         plt.legend(fontsize=10)
         plt.grid(True, alpha=0.3)
-        plt.xlim(left=0)
+        plt.xlim(left=0, right=_max_total_genomes_xlim(tracker, x_genomes))
         plt.ylim(bottom=0)
         plt.tight_layout()
         
@@ -111,32 +159,52 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
         if not generations:
             return None
         
-        gen_nums = []
+        x_genomes = _cumulative_genome_counts(generations)
         species_counts = []
-        archive_panel = []
+        secondary_panel = []
+        use_inc = _is_inc_dbscan_tracker(tracker, outputs_path)
         
         for g in generations:
-            gen_nums.append(g.get("generation_number", 0))
             speciation = g.get("speciation") or {}
             species_counts.append(speciation.get("species_count", 0))
-            archive_panel.append(
-                int(speciation.get("archived_count", g.get("archived_count", 0)) or 0)
-            )
+            if use_inc:
+                secondary_panel.append(
+                    int(
+                        speciation.get("noise_count", g.get("noise_count", g.get("archived_count", 0)))
+                        or 0
+                    )
+                )
+            else:
+                # Cumulative dead pool: archive_size (not per-gen archived_count).
+                secondary_panel.append(
+                    int(
+                        speciation.get(
+                            "archive_size",
+                            g.get("archived_count", 0),
+                        )
+                        or 0
+                    )
+                )
         
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+        xlim_right = _max_total_genomes_xlim(tracker, x_genomes)
         
-        ax1.plot(gen_nums, species_counts, 'o-', color='#377eb8', linewidth=2, markersize=6)
+        ax1.plot(x_genomes, species_counts, 'o-', color='#377eb8', linewidth=2, markersize=6)
         ax1.set_ylabel('Species Count', fontsize=12)
-        ax1.set_title('Species Count Over Generations', fontsize=12, fontweight='bold')
-        ax1.set_xlim(left=0)
+        ax1.set_title('Species Count vs Cumulative Genomes', fontsize=12, fontweight='bold')
+        ax1.set_xlim(left=0, right=xlim_right)
         ax1.set_ylim(bottom=0)
         ax1.grid(True, alpha=0.3)
         
-        ax2.plot(gen_nums, archive_panel, 's-', color='#984ea3', linewidth=2, markersize=6)
-        ax2.set_xlabel('Generation', fontsize=12)
-        ax2.set_ylabel('Archive size (cumulative)', fontsize=12)
-        ax2.set_title('Non-elites (archive) Over Generations', fontsize=12, fontweight='bold')
-        ax2.set_xlim(left=0)
+        ax2.plot(x_genomes, secondary_panel, 's-', color='#984ea3', linewidth=2, markersize=6)
+        ax2.set_xlabel('Cumulative genomes', fontsize=12)
+        if use_inc:
+            ax2.set_ylabel('Noise count (in D_t)', fontsize=12)
+            ax2.set_title('DBSCAN Noise vs Cumulative Genomes', fontsize=12, fontweight='bold')
+        else:
+            ax2.set_ylabel('Archive size (cumulative)', fontsize=12)
+            ax2.set_title('Non-elites (archive) vs Cumulative Genomes', fontsize=12, fontweight='bold')
+        ax2.set_xlim(left=0, right=xlim_right)
         ax2.set_ylim(bottom=0)
         ax2.grid(True, alpha=0.3)
         
@@ -237,28 +305,41 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         if not generations:
             return None
         
-        gen_nums = [g.get("generation_number", 0) for g in generations]
-        elites_counts = [int(g.get("elites_count", 0) or 0) for g in generations]
-        archive_counts = [int(g.get("archived_count", 0) or 0) for g in generations]
+        x_genomes = _cumulative_genome_counts(generations)
+        use_inc = _is_inc_dbscan_tracker(tracker, outputs_path)
+        if use_inc:
+            top_counts = [
+                int(g.get("clustered_count", g.get("elites_count", 0)) or 0) for g in generations
+            ]
+            bottom_counts = [
+                int(g.get("noise_count", g.get("archived_count", 0)) or 0) for g in generations
+            ]
+            labels = ["Clustered (density)", "Noise (density)"]
+            title = "Population composition (IncDBSCAN: clustered + noise in D_t)"
+        else:
+            top_counts = [int(g.get("elites_count", 0) or 0) for g in generations]
+            bottom_counts = [int(g.get("archived_count", 0) or 0) for g in generations]
+            labels = ["Elites (cumulative)", "Archive (cumulative)"]
+            title = "Population composition (cumulative: elites + archive)"
         
         plt.figure(figsize=(10, 6))
         plt.stackplot(
-            gen_nums,
-            elites_counts,
-            archive_counts,
-            labels=["Elites (cumulative)", "Archive (cumulative)"],
+            x_genomes,
+            top_counts,
+            bottom_counts,
+            labels=labels,
             colors=["#377eb8", "#984ea3"],
             alpha=0.88,
         )
         
-        plt.xlabel("Generation", fontsize=12)
+        plt.xlabel("Cumulative genomes", fontsize=12)
         plt.ylabel("Cumulative genome count (per pool)", fontsize=12)
         plt.title(
-            "Population composition (cumulative: elites + archive)",
+            title,
             fontsize=14,
             fontweight="bold",
         )
-        plt.xlim(left=0)
+        plt.xlim(left=0, right=_max_total_genomes_xlim(tracker, x_genomes))
         plt.ylim(bottom=0)
         plt.legend(loc="upper left", fontsize=10)
         plt.grid(True, alpha=0.3, axis="y")
@@ -290,6 +371,7 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
     base = Path(outputs_path)
     elites_path = base / "elites.json"
     archive_path = base / "archive.json"
+    temp_path = base / "temp.json"
     figures_dir = base / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     try:
@@ -308,13 +390,23 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
                 err or "unknown",
             )
             return None
-        _, reduced = run_gdp_projection(
-            elites_path=elites_path,
-            output_dir=base,
-            archive_path=archive_path if archive_path.exists() else None,
-            reduced_size=2,
-            save_json=True,
-        )
+        use_inc = _is_inc_dbscan_tracker(load_evolution_tracker(outputs_path), outputs_path)
+        if use_inc and temp_path.exists():
+            _, reduced = run_gdp_projection(
+                elites_path=temp_path,
+                output_dir=base,
+                archive_path=None,
+                reduced_size=2,
+                save_json=True,
+            )
+        else:
+            _, reduced = run_gdp_projection(
+                elites_path=elites_path,
+                output_dir=base,
+                archive_path=archive_path if archive_path.exists() else None,
+                reduced_size=2,
+                save_json=True,
+            )
         if reduced is None:
             _logger.debug("No genomes with embeddings for GDP projection; skipping plot")
             return None

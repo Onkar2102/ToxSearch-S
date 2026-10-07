@@ -75,15 +75,17 @@ def validate_top_level_fields(tracker: Dict[str, Any], logger=None) -> Tuple[boo
         if selection_mode not in ["default", "exploit", "explore"]:
             errors.append(f"Invalid selection_mode: {selection_mode} (expected 'default', 'exploit', or 'explore')")
     
-    if "population_max_toxicity" not in tracker:
-        errors.append("Missing top-level field: population_max_toxicity")
+    from utils.population_io import get_population_max_fitness
+
+    if "population_max_fitness" not in tracker and "population_max_toxicity" not in tracker:
+        errors.append("Missing top-level field: population_max_fitness")
     else:
-        pop_max = tracker.get("population_max_toxicity")
+        pop_max = get_population_max_fitness(tracker, default=-1.0)
         if not isinstance(pop_max, (int, float)) or pop_max < 0:
-            errors.append(f"Invalid population_max_toxicity: {pop_max} (must be non-negative)")
+            errors.append(f"Invalid population_max_fitness: {pop_max} (must be non-negative)")
         
         generations = tracker.get("generations", [])
-        if generations:
+        if generations and pop_max >= 0:
             max_scores = []
             for gen in generations:
                 max_score = gen.get("max_score_variants", 0)
@@ -99,7 +101,7 @@ def validate_top_level_fields(tracker: Dict[str, Any], logger=None) -> Tuple[boo
                 expected_max = max(max_scores)
                 if pop_max < expected_max:
                     errors.append(
-                        f"population_max_toxicity={pop_max:.4f} is less than "
+                        f"population_max_fitness={pop_max:.4f} is less than "
                         f"max(max_score_variants)={expected_max:.4f} across generations"
                     )
     
@@ -197,7 +199,23 @@ def validate_per_generation_fields(tracker: Dict[str, Any], logger=None) -> Tupl
             elites = gen["elites_count"]
             archived = gen["archived_count"]
             expected_total = elites + archived
-            if total_pop != expected_total:
+            # IncDBSCAN: total = density_size (= clustered + noise); elites/archived are aliases
+            if gen.get("population_mode") == "inc_dbscan" or gen.get("density_size") is not None:
+                dens = gen.get("density_size", total_pop)
+                clustered = gen.get("clustered_count", elites)
+                noise = gen.get("noise_count", archived)
+                if dens is not None and clustered is not None and noise is not None:
+                    if int(dens) != int(clustered) + int(noise):
+                        errors.append(
+                            f"Generation {gen_num}: density_size={dens} != "
+                            f"clustered_count + noise_count={int(clustered) + int(noise)}"
+                        )
+                if total_pop != expected_total and total_pop != dens:
+                    errors.append(
+                        f"Generation {gen_num}: total_population={total_pop} inconsistent with "
+                        f"elites+archived={expected_total} / density_size={dens}"
+                    )
+            elif total_pop != expected_total:
                 errors.append(
                     f"Generation {gen_num}: total_population={total_pop} != "
                     f"elites_count + archived_count={elites + archived}"
@@ -340,7 +358,9 @@ def validate_field_consistency(tracker: Dict[str, Any], logger=None) -> Tuple[bo
     errors = []
     generations = tracker.get("generations", [])
     
-    pop_max = tracker.get("population_max_toxicity", 0)
+    from utils.population_io import get_population_max_fitness
+
+    pop_max = get_population_max_fitness(tracker, default=0)
     if pop_max > 0:
         max_scores = []
         for gen in generations:
@@ -352,7 +372,7 @@ def validate_field_consistency(tracker: Dict[str, Any], logger=None) -> Tuple[bo
             expected_max = max(max_scores)
             if pop_max < expected_max:
                 errors.append(
-                    f"population_max_toxicity={pop_max:.4f} < max(max_score_variants)={expected_max:.4f}"
+                    f"population_max_fitness={pop_max:.4f} < max(max_score_variants)={expected_max:.4f}"
                 )
     
     avg_fitness_history = tracker.get("avg_fitness_history", [])

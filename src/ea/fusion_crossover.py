@@ -183,8 +183,8 @@ Return only: <variant>YOUR_NEW_QUESTION_HERE</variant>"""
                 return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed with error: {e}\nTrace: {traceback.format_exc()}")
-            raise RuntimeError(f"{self.name} crossover generation failed: {e}") from e
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             end_time = time.time()
             operation_time = end_time - start_time

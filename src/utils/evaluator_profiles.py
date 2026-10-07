@@ -45,6 +45,7 @@ OPENAI_NORTH_STAR_CHOICES = [
 
 OPENAI_PHENOTYPE_SCORE_ORDER = list(OPENAI_NORTH_STAR_CHOICES)
 
+# Offline analysis of mixed/legacy runs only — NOT used by CLI validation or live scoring.
 OPENAI_METRIC_ALIASES: Dict[str, str] = {
     "toxicity": "harassment",
     "severe_toxicity": "harassment/threatening",
@@ -64,11 +65,10 @@ class EvaluatorProfile:
     default_north_star: str
     north_star_choices: tuple
     phenotype_score_order: tuple
-    metric_aliases: tuple = ()
 
     def resolve_metric_alias(self, metric: str) -> str:
-        aliases = dict(self.metric_aliases) if self.metric_aliases else {}
-        return aliases.get(metric, metric)
+        """No-op identity: north-star names must match the evaluator natively."""
+        return metric
 
 
 GOOGLE_PROFILE = EvaluatorProfile(
@@ -85,7 +85,6 @@ OPENAI_PROFILE = EvaluatorProfile(
     default_north_star="violence",
     north_star_choices=tuple(OPENAI_NORTH_STAR_CHOICES),
     phenotype_score_order=tuple(OPENAI_PHENOTYPE_SCORE_ORDER),
-    metric_aliases=tuple(OPENAI_METRIC_ALIASES.items()),
 )
 
 _PROFILES: Dict[str, EvaluatorProfile] = {
@@ -131,13 +130,14 @@ def get_active_north_star(fallback: Optional[str] = None) -> str:
 
 
 def validate_north_star(profile: EvaluatorProfile, metric: str) -> str:
-    if metric not in profile.north_star_choices:
-        choices = ", ".join(profile.north_star_choices)
-        raise ValueError(
-            f"Invalid --north-star-metric {metric!r} for evaluator {profile.name}; "
-            f"valid choices: {choices}"
-        )
-    return metric
+    """Require a metric name that exists on ``profile`` (no cross-evaluator aliases)."""
+    if metric in profile.north_star_choices:
+        return metric
+    choices = ", ".join(profile.north_star_choices)
+    raise ValueError(
+        f"Invalid --north-star-metric {metric!r} for evaluator {profile.name}; "
+        f"valid choices: {choices}"
+    )
 
 
 def moderation_methods_to_evaluator(methods: Optional[List[str]]) -> str:
@@ -161,6 +161,7 @@ __all__ = [
     "EvaluatorProfile",
     "GOOGLE_PROFILE",
     "OPENAI_PROFILE",
+    "OPENAI_METRIC_ALIASES",
     "resolve_evaluator",
     "set_active_evaluator",
     "get_active_evaluator",

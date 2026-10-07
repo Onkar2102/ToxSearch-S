@@ -206,8 +206,8 @@ Return only: <synonyms>synonym_word</synonyms>"""
                 return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: LLM synonym generation failed for {pos_tag}: {e}")
-            raise RuntimeError(f"{self.name} synonym generation failed for {pos_tag}: {e}") from e
+            self.logger.warning(f"{self.name}: LLM synonym generation failed for {pos_tag} (soft): {e}")
+            return []
 
     def _generate_synonyms_for_selected_pos(self, detected_pos: Dict[str, List[POSWord]], selected_pos: List[str], text: str) -> Dict[str, List[str]]:
         
@@ -338,8 +338,8 @@ Return only: <synonyms>synonym_word</synonyms>"""
                 return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed: {e}")
-            raise RuntimeError(f"{self.name} variant generation failed: {e}") from e
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             try:
                 end_time = time.time()

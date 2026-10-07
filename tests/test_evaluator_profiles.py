@@ -31,15 +31,20 @@ class TestEvaluatorProfiles(unittest.TestCase):
 
     def test_validate_north_star_per_profile(self):
         self.assertEqual(validate_north_star(GOOGLE_PROFILE, "threat"), "threat")
+        self.assertEqual(validate_north_star(GOOGLE_PROFILE, "toxicity"), "toxicity")
         self.assertEqual(validate_north_star(OPENAI_PROFILE, "violence"), "violence")
+        self.assertEqual(validate_north_star(OPENAI_PROFILE, "hate"), "hate")
         with self.assertRaises(ValueError):
             validate_north_star(GOOGLE_PROFILE, "violence")
         with self.assertRaises(ValueError):
             validate_north_star(OPENAI_PROFILE, "toxicity")
+        with self.assertRaises(ValueError):
+            validate_north_star(OPENAI_PROFILE, "not-a-real-metric")
 
-    def test_openai_metric_alias(self):
-        self.assertEqual(OPENAI_PROFILE.resolve_metric_alias("toxicity"), "harassment")
-        self.assertEqual(OPENAI_PROFILE.resolve_metric_alias("violence"), "violence")
+    def test_no_cross_evaluator_aliases(self):
+        self.assertEqual(OPENAI_PROFILE.resolve_metric_alias("toxicity"), "toxicity")
+        with self.assertRaises(ValueError):
+            validate_north_star(OPENAI_PROFILE, "threat")
 
     def test_moderation_methods_to_evaluator(self):
         self.assertEqual(moderation_methods_to_evaluator(["google"]), "google")

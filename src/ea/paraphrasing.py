@@ -1,13 +1,18 @@
 
-
 import os
-import traceback
+import re
 from typing import List, Optional, Dict, Any
 from .variation_operators import VariationOperator
 from utils import get_custom_logging
 from utils.population_io import _extract_north_star_score
 
+
 get_logger, _, _, _ = get_custom_logging()
+
+_PLACEHOLDER_RE = re.compile(
+    r"your[_\s-]*paraphrased[_\s-]*question[_\s-]*here",
+    re.IGNORECASE,
+)
 
 
 class LLMBasedParaphrasingOperator(VariationOperator):
@@ -52,6 +57,43 @@ Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
             from .evolution_engine import get_prompt_generator
             self.generator = get_prompt_generator()
 
+    @staticmethod
+    def _normalize_question(text: str) -> str:
+        return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+    def _is_placeholder(self, text: str) -> bool:
+        return bool(_PLACEHOLDER_RE.search(text or ""))
+
+    def _coerce_paraphrase(self, raw: str, original: str) -> str:
+        """Extract <paraphrase>…</paraphrase>, else first valid question-like line."""
+        extracted = self.generator._extract_content_from_xml_tags(raw, "paraphrase")
+        if extracted and not self._is_placeholder(extracted):
+            return extracted.strip()
+
+        # Fallback: model often returns a bare question (no XML) or tags with junk.
+        cleaned = (raw or "").strip()
+        cleaned = re.sub(r"</?paraphrase>", "", cleaned, flags=re.IGNORECASE).strip()
+        # Drop trailing numeric scores models sometimes append (e.g. "0.134")
+        cleaned = re.sub(r"\s+\d+\.\d+\s*$", "", cleaned).strip()
+        if self._is_placeholder(cleaned):
+            return ""
+
+        # Prefer the longest segment that ends with '?'
+        candidates = [s.strip() for s in re.split(r"(?<=[?？؟])\s+", cleaned) if s.strip()]
+        question_marks = ("?", "？", "؟")
+        questions = [c for c in candidates if c.endswith(question_marks)]
+        if not questions and cleaned.endswith(question_marks):
+            questions = [cleaned]
+        if not questions:
+            return ""
+
+        best = max(questions, key=len)
+        if len(best.split()) < 5:
+            return ""
+        if self._normalize_question(best) == self._normalize_question(original):
+            return ""
+        return best
+
     def apply(self, operator_input: Dict[str, Any]) -> List[str]:
         
         try:
@@ -77,7 +119,6 @@ Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
             self._last_genome = parent_data
             self._last_original_prompt = original_prompt
 
-            generated_output = ""
             current_score = _extract_north_star_score(parent_data, self.north_star_metric)
 
             messages = [
@@ -90,30 +131,35 @@ Return only: <paraphrase>YOUR_PARAPHRASED_QUESTION_HERE</paraphrase>"""
                 }
             ]
 
-            paraphrased_prompt = self.generator.model_interface.chat_completion(messages)
+            raw_response = self.generator.model_interface.chat_completion(messages)
 
-            if not paraphrased_prompt:
-                raise ValueError(f"{self.name}: Empty LLM response")
-
-            self.logger.warning(f"LLM Response: {paraphrased_prompt}")
-
-            extracted_paraphrase = self.generator._extract_content_from_xml_tags(paraphrased_prompt, "paraphrase")
-            if not extracted_paraphrase:
-                self.logger.warning(f"{self.name}: Failed to parse paraphrase from LLM response")
+            if not raw_response:
+                self.logger.warning(f"{self.name}: Empty LLM response")
                 return []
-            paraphrased_prompt = extracted_paraphrase
+
+            self.logger.debug(f"LLM Response: {raw_response[:300]}")
+
+            paraphrased_prompt = self._coerce_paraphrase(raw_response, original_prompt)
+            if not paraphrased_prompt:
+                self.logger.warning(
+                    f"{self.name}: Failed to obtain a distinct paraphrase "
+                    f"(parse/placeholder/same-as-parent). raw={raw_response[:200]!r}"
+                )
+                return []
 
             self._last_paraphrased_prompt = paraphrased_prompt
 
-            if paraphrased_prompt and paraphrased_prompt.lower() != original_prompt.lower():
-                self.logger.info(f"{self.name}: Generated paraphrased prompt")
-                return [paraphrased_prompt]
-            else:
-                raise ValueError(f"{self.name}: Paraphrasing returned same or empty text")
+            if self._normalize_question(paraphrased_prompt) == self._normalize_question(original_prompt):
+                self.logger.warning(f"{self.name}: Paraphrasing returned same text as parent")
+                return []
+
+            self.logger.info(f"{self.name}: Generated paraphrased prompt")
+            return [paraphrased_prompt]
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed with error: {e}\nTrace: {traceback.format_exc()}")
-            raise RuntimeError(f"{self.name} paraphrasing failed: {e}") from e
+            # Soft-fail like StylisticMutator: do not abort the mutation loop.
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             try:
                 end_time = time.time()

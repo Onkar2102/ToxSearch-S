@@ -197,12 +197,20 @@ class POSAwareAntonymReplacement(VariationOperator):
                 return []
 
             antonyms_data = self._parse_antonyms_from_response(response, pos_tag)
+            source_lower = {w.lower() for w in unique_words}
+            antonyms_data = [
+                a for a in antonyms_data
+                if a and a.lower() not in source_lower
+            ]
 
             if antonyms_data:
                 self.logger.info(f"{self.name}: Generated antonyms for {pos_tag}: {len(antonyms_data)} words")
                 return antonyms_data
             else:
-                self.logger.warning(f"{self.name}: Failed to parse antonyms for {pos_tag}")
+                self.logger.warning(
+                    f"{self.name}: No usable antonyms for {pos_tag} "
+                    f"(parse failed or LLM echoed source words {unique_words})"
+                )
                 return []
 
         except Exception as e:
@@ -334,12 +342,12 @@ class POSAwareAntonymReplacement(VariationOperator):
                 self.logger.info(f"{self.name}: Generated {len(variants)} variants successfully")
                 return variants
             else:
-                self.logger.error(f"{self.name}: No variants generated")
+                self.logger.warning(f"{self.name}: No variants generated (antonym same as source or empty)")
                 return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed: {e}")
-            raise RuntimeError(f"{self.name} variant generation failed: {e}") from e
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             try:
                 end_time = time.time()

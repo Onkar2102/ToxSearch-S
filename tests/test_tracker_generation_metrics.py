@@ -44,7 +44,7 @@ def test_evaluated_this_generation_increments_cumulative(tracker_path):
         "archived_count": 0,
         "total_population": 2,
         "avg_fitness_generation": 0.5,
-        "population_max_toxicity": 0.6,
+        "population_max_fitness": 0.6,
         "evaluated_this_generation": 10,
         "discarded_this_generation": 1,
         "api_calls": 10,

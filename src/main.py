@@ -46,6 +46,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64,
          evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest",
          clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
+         inc_dbscan_validate_every=0,
          distance_method="embedding", distance_alpha=0.7):
     
     
@@ -96,7 +97,9 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
 
     try:
         with PerformanceLogger(logger, "Initialize system", seed_file=seed_file):
-            response_generator, prompt_generator = initialize_system(logger, log_file, seed_file=seed_file, seed=seed)
+            response_generator, prompt_generator = initialize_system(
+                logger, log_file, seed_file=seed_file, seed=seed, clustering_method=clustering_method
+            )
     except Exception as e:
         logger.error("System initialization failed: %s", e, exc_info=True)
         return
@@ -164,6 +167,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                        refusal_stats.get("penalties_applied", 0))
     except Exception as e:
         logger.error("Gen 0: Refusal penalty application failed: %s", e, exc_info=True)
+        return
 
     avg_fitness_before_speciation = 0.0001
     try:
@@ -172,7 +176,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 str(get_outputs_path()), north_star_metric, include_temp=True, logger=logger, log_file=log_file
             )
     except Exception as e:
-        logger.warning("Gen 0: Failed to compute avg_fitness before speciation: %s", e)
+        logger.error("Gen 0: Failed to compute avg_fitness before speciation: %s", e, exc_info=True)
+        return
 
     speciation_config = SpeciationConfig(
         theta_sim=theta_sim,
@@ -187,6 +192,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         clustering_method=clustering_method,
         dbscan_eps=dbscan_eps,
         dbscan_min_samples=dbscan_min_samples,
+        inc_dbscan_validate_every=inc_dbscan_validate_every,
         distance_method=distance_method,
         distance_alpha=distance_alpha,
     )
@@ -328,7 +334,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 ),
             )
             
-            gen0_population_max = gen0_stats.get("population_max_toxicity", 0.0001)
+            gen0_population_max = gen0_stats.get("population_max_fitness", 0.0001)
             try:
                 adaptive_results = update_adaptive_selection_logic(
                     outputs_path=str(get_outputs_path()),
@@ -349,27 +355,56 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             logger.info("Gen0 metrics: elites=%d (avg=%.4f), archived=%d, total=%d, avg_gen=%.4f",
                         gen0_stats["elites_count"], gen0_stats["avg_fitness_elites"],
                         gen0_stats.get("archived_count", 0), gen0_stats["total_population"], gen0_stats["avg_fitness_generation"])
+
+            # Figures after Gen 0 so outputs are visible before the long Gen-1 evolution step.
+            try:
+                with PerformanceLogger(logger, "Gen 0: Live analysis (visualizations)"):
+                    from utils.live_analysis import run_live_analysis
+                    viz_results = run_live_analysis(outputs_path=str(get_outputs_path()), logger=logger)
+                if viz_results:
+                    successful_viz = sum(1 for v in viz_results.values() if v is not None)
+                    logger.info("Gen 0: Generated %d/%d visualizations", successful_viz, len(viz_results))
+            except Exception as viz_err:
+                logger.warning("Gen 0: Failed to generate visualizations: %s", viz_err)
     except Exception as e:
         logger.warning("Failed to update generation 0 metrics in EvolutionTracker: %s", e)
 
-    elites_path = get_outputs_path() / "elites.json"
+    from speciation.clustering_mode import is_inc_dbscan_mode
     has_population = False
-    
-    if elites_path.exists():
-        try:
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                elites_data = json.load(f)
-                if isinstance(elites_data, list) and len(elites_data) > 0:
+    if is_inc_dbscan_mode(clustering_method=clustering_method):
+        temp_check = get_outputs_path() / "temp.json"
+        if temp_check.exists():
+            try:
+                with open(temp_check, "r", encoding="utf-8") as f:
+                    temp_data = json.load(f)
+                if isinstance(temp_data, list) and len(temp_data) > 0:
                     has_population = True
-                    logger.info("Generation 0 validation: elites.json has %d genomes", len(elites_data))
-        except Exception as e:
-            logger.warning("Failed to read elites.json for validation: %s", e)
-    
-    if not has_population:
-        logger.error("Generation 0 failed: No genomes in elites.json after speciation.")
-        logger.error("This indicates that Generation 0 did not complete successfully.")
-        logger.error("Possible causes: empty temp.json, all genomes archived, or speciation failure.")
-        return
+                    logger.info(
+                        "Generation 0 validation: IncDBSCAN density memory temp.json has %d genomes",
+                        len(temp_data),
+                    )
+            except Exception as e:
+                logger.warning("Failed to read temp.json for IncDBSCAN validation: %s", e)
+        if not has_population:
+            logger.error("Generation 0 failed: empty temp.json after Incremental DBSCAN speciation.")
+            return
+    else:
+        elites_path = get_outputs_path() / "elites.json"
+        if elites_path.exists():
+            try:
+                with open(elites_path, 'r', encoding='utf-8') as f:
+                    elites_data = json.load(f)
+                    if isinstance(elites_data, list) and len(elites_data) > 0:
+                        has_population = True
+                        logger.info("Generation 0 validation: elites.json has %d genomes", len(elites_data))
+            except Exception as e:
+                logger.warning("Failed to read elites.json for validation: %s", e)
+
+        if not has_population:
+            logger.error("Generation 0 failed: No genomes in elites.json after speciation.")
+            logger.error("This indicates that Generation 0 did not complete successfully.")
+            logger.error("Possible causes: empty temp.json, all genomes archived, or speciation failure.")
+            return
 
     evolution_tracker_path = get_outputs_path() / "EvolutionTracker.json"
     if evolution_tracker_path.exists():
@@ -478,22 +513,51 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             if max_total_genomes is not None:
                 try:
                     from utils.population_io import trim_temp_to_budget, count_elites_and_archive
-                    kept = trim_temp_to_budget(
-                        str(get_outputs_path()),
-                        max_total_genomes,
-                        north_star_metric,
-                        logger=logger,
-                        log_file=log_file,
-                    )
-                    if kept == 0:
-                        elites_n, archive_n = count_elites_and_archive(str(get_outputs_path()))
-                        if elites_n + archive_n >= max_total_genomes:
-                            logger.info(
-                                "Gen %d: no remaining budget for new genomes (%d+%d >= %d); stopping before speciation",
-                                generation_count, elites_n, archive_n, max_total_genomes,
-                            )
-                            terminated_by_total_genomes = True
-                            break
+                    from speciation.clustering_mode import is_inc_dbscan_mode
+                    if is_inc_dbscan_mode(clustering_method=clustering_method):
+                        # Budget = |D_t|; trim newest unlabeled if over budget
+                        temp_p = get_outputs_path() / "temp.json"
+                        if temp_p.exists():
+                            with open(temp_p, "r", encoding="utf-8") as f:
+                                dens = json.load(f)
+                            if isinstance(dens, list) and len(dens) > max_total_genomes:
+                                # Keep labeled first, then highest fitness among rest
+                                labeled = [g for g in dens if g.get("density_label") is not None]
+                                unlabeled = [g for g in dens if g.get("density_label") is None]
+                                room = max(0, max_total_genomes - len(labeled))
+                                unlabeled.sort(
+                                    key=lambda g: _extract_north_star_score(g, north_star_metric),
+                                    reverse=True,
+                                )
+                                dens = labeled + unlabeled[:room]
+                                with open(temp_p, "w", encoding="utf-8") as f:
+                                    json.dump(dens, f, indent=2, ensure_ascii=False)
+                                logger.info(
+                                    "Gen %d: IncDBSCAN budget trim → %d genomes (max=%d)",
+                                    generation_count, len(dens), max_total_genomes,
+                                )
+                            if isinstance(dens, list) and len(dens) >= max_total_genomes and not any(
+                                g.get("density_label") is None for g in dens
+                            ):
+                                # No room for new unlabeled — stop if already at cap with all labeled
+                                pass
+                    else:
+                        kept = trim_temp_to_budget(
+                            str(get_outputs_path()),
+                            max_total_genomes,
+                            north_star_metric,
+                            logger=logger,
+                            log_file=log_file,
+                        )
+                        if kept == 0:
+                            elites_n, archive_n = count_elites_and_archive(str(get_outputs_path()))
+                            if elites_n + archive_n >= max_total_genomes:
+                                logger.info(
+                                    "Gen %d: no remaining budget for new genomes (%d+%d >= %d); stopping before speciation",
+                                    generation_count, elites_n, archive_n, max_total_genomes,
+                                )
+                                terminated_by_total_genomes = True
+                                break
                 except Exception as e:
                     logger.warning("Gen %d: trim_temp_to_budget failed: %s", generation_count, e)
             
@@ -725,13 +789,13 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             try:
                                 with open(evolution_tracker_path, 'r', encoding='utf-8') as f:
                                     tracker_before = json.load(f)
-                                previous_cumulative_population_max = tracker_before.get("population_max_toxicity", 0.0001)
-                                logger.debug(f"Previous cumulative population_max_toxicity: {previous_cumulative_population_max:.4f}")
+                                previous_cumulative_population_max = tracker_before.get("population_max_fitness", 0.0001)
+                                logger.debug(f"Previous cumulative population_max_fitness: {previous_cumulative_population_max:.4f}")
                             except Exception as e:
-                                logger.debug(f"Failed to read previous population_max_toxicity: {e}")
+                                logger.debug(f"Failed to read previous population_max_fitness: {e}")
                         
-                        current_population_max = gen_stats.get("population_max_toxicity", 0.0001)
-                        logger.debug(f"Gen {generation_count}: Extracted population_max_toxicity={current_population_max:.4f} from gen_stats")
+                        current_population_max = gen_stats.get("population_max_fitness", 0.0001)
+                        logger.debug(f"Gen {generation_count}: Extracted population_max_fitness={current_population_max:.4f} from gen_stats")
                         
                         if generation_count > 0 and current_population_max < previous_cumulative_population_max - 0.01:
                             logger.warning(f"Gen {generation_count}: current_population_max ({current_population_max:.4f}) < previous ({previous_cumulative_population_max:.4f}) - this shouldn't happen for cumulative max!")
@@ -742,13 +806,13 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             gen_stats.get("elites_count", 0) > 0 or gen_stats.get("archived_count", 0) > 0
                         ):
                             logger.warning(
-                                "Gen %d: population_max_toxicity is %s but we have genomes (elites=%d, archived=%d) - recalculating...",
+                                "Gen %d: population_max_fitness is %s but we have genomes (elites=%d, archived=%d) - recalculating...",
                                 generation_count,
                                 current_population_max,
                                 gen_stats.get("elites_count", 0),
                                 gen_stats.get("archived_count", 0),
                             )
-                            logger.warning(f"Gen {generation_count}: population_max_toxicity is 0.0 but we have genomes - this may indicate a calculation issue")
+                            logger.warning(f"Gen {generation_count}: population_max_fitness is 0.0 but we have genomes - this may indicate a calculation issue")
                             try:
                                 outputs_path = get_outputs_path()
                                 elites_path = outputs_path / "elites.json"
@@ -764,21 +828,23 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                                                 if 'moderation_result' in g:
                                                     mr = g['moderation_result']
                                                     if isinstance(mr, dict):
-                                                        if 'google' in mr and 'scores' in mr['google']:
-                                                            score = mr['google']['scores'].get(north_star_metric, 0)
+                                                        if 'google' in mr and isinstance(mr['google'], dict) and 'scores' in mr['google']:
+                                                            score = mr['google']['scores'].get(north_star_metric)
+                                                        elif 'openai' in mr and isinstance(mr['openai'], dict) and 'scores' in mr['openai']:
+                                                            score = mr['openai']['scores'].get(north_star_metric)
                                                         elif 'scores' in mr:
-                                                            score = mr['scores'].get(north_star_metric, 0)
+                                                            score = mr['scores'].get(north_star_metric)
                                                 if score is None:
-                                                    score = g.get(north_star_metric, 0)
-                                                if score and score > 0.0001:
-                                                    all_scores.append(score)
+                                                    score = g.get(north_star_metric)
+                                                if score is not None and float(score) >= 0.0001:
+                                                    all_scores.append(float(score))
                                 if all_scores:
                                     current_population_max = max(all_scores)
-                                    logger.info(f"Gen {generation_count}: Recalculated population_max_toxicity={current_population_max:.4f} from files")
+                                    logger.info(f"Gen {generation_count}: Recalculated population_max_fitness={current_population_max:.4f} from files")
                                     if generation_count > 0 and current_population_max < previous_cumulative_population_max - 0.01:
                                         logger.error(f"Recalculated value ({current_population_max:.4f}) still < previous ({previous_cumulative_population_max:.4f})!")
                             except Exception as e:
-                                logger.warning(f"Gen {generation_count}: Failed to recalculate population_max_toxicity: {e}")
+                                logger.warning(f"Gen {generation_count}: Failed to recalculate population_max_fitness: {e}")
                         
                         gen_stats["evaluated_this_generation"] = gen_stats.get("api_calls")
                         gen_stats["generation_duration_seconds"] = round(time.time() - gen_start, 3)

@@ -29,47 +29,67 @@ def calculate_table4_metrics(
         
         elites_path = outputs_dir / "elites.json"
         archive_path = outputs_dir / "archive.json"
+        temp_path = outputs_dir / "temp.json"
         tracker_path = outputs_dir / "EvolutionTracker.json"
         
         all_variants = []
-        
-        if elites_path.exists():
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                elites_genomes = json.load(f)
-                current_gen_elites = [
-                    g for g in elites_genomes 
+        from speciation.clustering_mode import is_inc_dbscan_mode
+        use_inc = is_inc_dbscan_mode(outputs_path=str(outputs_dir))
+
+        if use_inc:
+            if temp_path.exists():
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    dens = json.load(f)
+                dens = dens if isinstance(dens, list) else []
+                current_gen = [
+                    g for g in dens
                     if g and g.get("generation") == current_generation
                 ]
-                all_variants.extend(current_gen_elites)
-                _logger.info(f"Found {len(current_gen_elites)} variants in elites.json for generation {current_generation} (total elites: {len(elites_genomes)})")
-        else:
-            _logger.debug(f"elites.json not found at {elites_path}")
-        
-        if archive_path.exists():
-            try:
-                with open(archive_path, 'r', encoding='utf-8') as f:
-                    archive_genomes = json.load(f)
-                if not isinstance(archive_genomes, list):
-                    if isinstance(archive_genomes, dict):
-                        _logger.warning("archive.json is a dict (expected list), converting to list")
-                        archive_genomes = list(archive_genomes.values()) if len(archive_genomes) > 0 else []
-                    else:
-                        _logger.warning("archive.json has unexpected format, treating as empty")
-                        archive_genomes = []
-                
-                current_gen_archived = [
-                    g for g in archive_genomes 
-                    if g and g.get("generation") == current_generation
-                ]
-                all_variants.extend(current_gen_archived)
+                all_variants.extend(current_gen)
                 _logger.info(
-                    "Found %d variants in archive.json for generation %d (total archived: %d)",
-                    len(current_gen_archived), current_generation, len(archive_genomes),
+                    "IncDBSCAN: found %d variants in temp.json for generation %d (density=%d)",
+                    len(current_gen), current_generation, len(dens),
                 )
-            except Exception as e:
-                _logger.warning(f"Failed to load archive.json: {e}")
+            else:
+                _logger.debug("IncDBSCAN: temp.json not found at %s", temp_path)
         else:
-            _logger.debug(f"archive.json not found at {archive_path}")
+            if elites_path.exists():
+                with open(elites_path, 'r', encoding='utf-8') as f:
+                    elites_genomes = json.load(f)
+                    current_gen_elites = [
+                        g for g in elites_genomes 
+                        if g and g.get("generation") == current_generation
+                    ]
+                    all_variants.extend(current_gen_elites)
+                    _logger.info(f"Found {len(current_gen_elites)} variants in elites.json for generation {current_generation} (total elites: {len(elites_genomes)})")
+            else:
+                _logger.debug(f"elites.json not found at {elites_path}")
+            
+            if archive_path.exists():
+                try:
+                    with open(archive_path, 'r', encoding='utf-8') as f:
+                        archive_genomes = json.load(f)
+                    if not isinstance(archive_genomes, list):
+                        if isinstance(archive_genomes, dict):
+                            _logger.warning("archive.json is a dict (expected list), converting to list")
+                            archive_genomes = list(archive_genomes.values()) if len(archive_genomes) > 0 else []
+                        else:
+                            _logger.warning("archive.json has unexpected format, treating as empty")
+                            archive_genomes = []
+                    
+                    current_gen_archived = [
+                        g for g in archive_genomes 
+                        if g and g.get("generation") == current_generation
+                    ]
+                    all_variants.extend(current_gen_archived)
+                    _logger.info(
+                        "Found %d variants in archive.json for generation %d (total archived: %d)",
+                        len(current_gen_archived), current_generation, len(archive_genomes),
+                    )
+                except Exception as e:
+                    _logger.warning(f"Failed to load archive.json: {e}")
+            else:
+                _logger.debug(f"archive.json not found at {archive_path}")
         
         _logger.info(f"Total variants found for generation {current_generation}: {len(all_variants)}")
         

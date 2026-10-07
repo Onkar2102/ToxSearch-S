@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Optional
 
 from utils import get_custom_logging
 
@@ -54,6 +53,24 @@ def _patch_yaml_section_model_name(config_path: Path, section: str, new_name: st
     raise ValueError(f"No 'name:' key found under '{section}' in {config_path}")
 
 
+def _resolve_exact_gguf(value: str, *, get_project_root) -> str:
+    """Require an existing ``.gguf`` file path — no quantization / directory fallbacks."""
+    if not value or not str(value).strip():
+        raise ValueError("Model path is empty; pass an existing .gguf via --rg / --pg")
+    value = str(value).strip()
+    if not _is_gguf_path(value):
+        raise ValueError(
+            f"Model path must be an existing .gguf file (got {value!r}). "
+            "Example: models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_S.gguf"
+        )
+    p = Path(value)
+    if not p.is_absolute():
+        p = get_project_root() / value
+    if not p.is_file():
+        raise FileNotFoundError(f"GGUF not found: {value} (resolved: {p})")
+    return value
+
+
 def update_model_configs(
     rg_model: str,
     pg_model: str,
@@ -62,85 +79,26 @@ def update_model_configs(
     get_project_root,
     get_config_path,
 ) -> None:
-    """Resolve GGUF paths and write ``name`` fields under RG/PG YAML sections."""
+    """Write exact ``--rg`` / ``--pg`` GGUF paths into RG/PG YAML (fail if missing)."""
     try:
         logger.info("Updating config files with models: RG=%s, PG=%s", rg_model, pg_model)
 
-        pref_order = [
-            "f32", "Q8_0", "Q8_K", "Q8_K_M", "Q4_K_M", "Q4_K_S", "Q4_0", "Q5_K_M", "Q5_K_S", "Q4_K", "Q3_K_M", "Q3_K_L", "Q2_K"
-        ]
-
-        def resolve_model_entry(value: str) -> Optional[str]:
-            if not value:
-                return None
-            requested_path = None
-            if _is_gguf_path(value):
-                p = Path(value)
-                if not p.is_absolute():
-                    p = get_project_root() / value
-                if p.exists():
-                    return value
-                parent = p.parent
-                if parent.exists():
-                    requested_path = value
-                    alias = str(Path(value).parent).replace("\\", "/")
-                    value = alias
-                else:
-                    logger.warning("Model file not found and parent dir missing: %s", value)
-                    return None
-
-            alias = value
-            if str(alias).startswith("models/") or Path(alias).is_absolute():
-                base_dir = get_project_root() / alias if not Path(alias).is_absolute() else Path(alias)
-            else:
-                base_dir = get_project_root() / "models" / alias
-            if not base_dir.exists():
-                logger.warning("Model alias directory not found: %s", base_dir)
-                return None
-            ggufs = sorted([p for p in base_dir.glob("*.gguf")], key=lambda p: p.name)
-            if not ggufs:
-                logger.warning("No GGUF files found under: %s", base_dir)
-                return None
-            order = pref_order
-            if requested_path:
-                preferred = [q for q in pref_order if q in requested_path]
-                if preferred:
-                    order = preferred + [p for p in pref_order if p not in preferred]
-                    logger.info("Preferring quantization from requested path: %s", preferred[0])
-            for pref in order:
-                for f in ggufs:
-                    if pref in f.name:
-                        rel = (Path(alias) / f.name) if str(alias).startswith("models/") else (Path("./models") / alias / f.name)
-                        logger.info("Resolved %s -> %s", alias, rel)
-                        return str(rel)
-            return None
-
-        rg_file = resolve_model_entry(rg_model)
-        pg_file = resolve_model_entry(pg_model)
-
-        if not rg_file and not pg_file:
-            logger.error("No models could be resolved for RG=%s, PG=%s", rg_model, pg_model)
-            raise ValueError(f"No models could be resolved for RG={rg_model}, PG={pg_model}")
+        rg_file = _resolve_exact_gguf(rg_model, get_project_root=get_project_root)
+        pg_file = _resolve_exact_gguf(pg_model, get_project_root=get_project_root)
 
         rg_config_path = get_config_path() / "RGConfig.yaml"
-        if rg_config_path.exists() and rg_file:
-            _patch_yaml_section_model_name(rg_config_path, "response_generator", rg_file)
-            logger.info("Config updated from script (--rg): RGConfig.yaml response_generator.name = %s", rg_file)
-        elif rg_config_path.exists() and not rg_file:
-            logger.warning("Skipped RGConfig.yaml update; no file resolved for alias '%s'", rg_model)
+        if not rg_config_path.exists():
+            raise FileNotFoundError(f"Missing {rg_config_path}")
+        _patch_yaml_section_model_name(rg_config_path, "response_generator", rg_file)
+        logger.info("Config updated from script (--rg): RGConfig.yaml response_generator.name = %s", rg_file)
 
         pg_config_path = get_config_path() / "PGConfig.yaml"
-        if pg_config_path.exists() and pg_file:
-            _patch_yaml_section_model_name(pg_config_path, "prompt_generator", pg_file)
-            logger.info("Config updated from script (--pg): PGConfig.yaml prompt_generator.name = %s", pg_file)
-        elif pg_config_path.exists() and not pg_file:
-            logger.warning("Skipped PGConfig.yaml update; no file resolved for alias '%s'", pg_model)
+        if not pg_config_path.exists():
+            raise FileNotFoundError(f"Missing {pg_config_path}")
+        _patch_yaml_section_model_name(pg_config_path, "prompt_generator", pg_file)
+        logger.info("Config updated from script (--pg): PGConfig.yaml prompt_generator.name = %s", pg_file)
 
-        logger.info(
-            "Project configs updated from script parameters: RG=%s, PG=%s",
-            rg_file or "(unchanged)",
-            pg_file or "(unchanged)",
-        )
+        logger.info("Project configs updated from script parameters: RG=%s, PG=%s", rg_file, pg_file)
 
     except Exception as e:
         logger.error("Failed to update model configurations: %s", e)

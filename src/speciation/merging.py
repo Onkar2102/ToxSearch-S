@@ -2,8 +2,8 @@
 
 from typing import Dict, List, Tuple, Optional
 
-from .species import Individual, Species, generate_species_id
-from .distance import ensemble_distance
+from .species import Individual, Species
+from .distance import pair_distance
 
 from utils import get_custom_logging
 get_logger, _, _, _ = get_custom_logging()
@@ -38,20 +38,24 @@ def merge_islands(
         new_leader = max([sp1.leader, sp2.leader], key=lambda x: x.fitness)
     else:
         new_leader = combined[0]
-    
-    
+
+    # Keep oldest (smallest) parent ID — IDs are assigned ascending.
+    survivor_id = min(sp1.id, sp2.id)
+    older = sp1 if sp1.id <= sp2.id else sp2
+    parent_ids = sorted([sp1.id, sp2.id])
+
     merged = Species(
-        id=generate_species_id(),
+        id=survivor_id,
         leader=new_leader,
         members=combined,
         radius=theta_sim,
         stagnation=0,
         max_fitness=new_leader.fitness,
         species_state="active",
-        created_at=current_generation,
+        created_at=older.created_at,
         last_improvement=current_generation,
         cluster_origin="merge",
-        parent_ids=[sp1.id, sp2.id]
+        parent_ids=parent_ids,
     )
     
     for m in combined:
@@ -106,7 +110,11 @@ def merge_islands(
     except Exception as e:
         logger.debug(f"Could not update genome tracker during merge: {e}")
     
-    logger.info(f"Merged species {sp1.id} + {sp2.id} -> {merged.id} ({merged.size} members, no filtering applied - enforced later)")
+    absorbed = max(sp1.id, sp2.id)
+    logger.info(
+        f"Merged species {sp1.id} + {sp2.id} -> survivor {merged.id} "
+        f"(absorbed {absorbed}, {merged.size} members, no filtering applied - enforced later)"
+    )
     return merged, []
 
 
@@ -119,7 +127,9 @@ def process_merges(
     w_genotype: float = 0.7,
     w_phenotype: float = 0.3,
     historical_species: Optional[Dict[int, Species]] = None,
-    logger=None
+    logger=None,
+    distance_method: str = "embedding",
+    distance_alpha: float = 0.7,
 ) -> Tuple[Dict[int, Species], List[Dict], List[Individual], Dict[int, Species]]:
     
     if logger is None:
@@ -146,13 +156,18 @@ def process_merges(
                 if not sp1.leader or not sp2.leader:
                     logger.debug(f"Skipping merge check for {id1}+{id2}: one or both species have no leader")
                     continue
-                if sp1.leader.embedding is None or sp2.leader.embedding is None:
-                    logger.debug(f"Skipping merge check for {id1}+{id2}: one or both leaders have no embedding")
-                    continue
-                dist = ensemble_distance(
-                    sp1.leader.embedding, sp2.leader.embedding,
-                    sp1.leader.phenotype, sp2.leader.phenotype,
-                    w_genotype, w_phenotype
+                dist = pair_distance(
+                    distance_method,
+                    embedding_a=sp1.leader.embedding,
+                    embedding_b=sp2.leader.embedding,
+                    objective_a=sp1.leader.phenotype,
+                    objective_b=sp2.leader.phenotype,
+                    text_a=sp1.leader.prompt or "",
+                    text_b=sp2.leader.prompt or "",
+                    alpha=distance_alpha,
+                    w_genotype=w_genotype,
+                    w_phenotype=w_phenotype,
+                    logger=logger,
                 )
                 if dist < theta_merge:
                     sp1_stable = (current_gen - sp1.created_at) >= min_stability_gens
@@ -176,6 +191,9 @@ def process_merges(
             continue
         
         merged, outliers = merge_islands(sp1, sp2, current_gen, theta_sim, w_genotype, w_phenotype, logger)
+        survivor = merged.id
+        absorbed_id = id2 if survivor == id1 else id1
+        absorbed_sp = sp2 if survivor == id1 else sp1
         
         species.pop(id1, None)
         species.pop(id2, None)
@@ -185,12 +203,12 @@ def process_merges(
         species[merged.id] = merged
         all_species_for_merging[merged.id] = merged
         
-        sp1.species_state = "extinct"
-        sp2.species_state = "extinct"
-        
-        extinct_parents[id1] = sp1
-        extinct_parents[id2] = sp2
-        logger.info(f"Parent species {id1} and {id2} became extinct via merge -> new species {merged.id}")
+        # Only the absorbed (newer) parent becomes extinct; survivor keeps its ID.
+        absorbed_sp.species_state = "extinct"
+        extinct_parents[absorbed_id] = absorbed_sp
+        logger.info(
+            f"Parent species {absorbed_id} became extinct via merge -> survivor species {merged.id}"
+        )
         
         if outliers:
             all_outliers.extend(outliers)
@@ -200,8 +218,9 @@ def process_merges(
             "generation": current_gen,
             "merged": (id1, id2),
             "result_id": merged.id,
+            "absorbed_id": absorbed_id,
             "cluster_origin": "merge",
-            "parent_ids": [id1, id2]
+            "parent_ids": sorted([id1, id2]),
         })
         logger.info(f"Completed merge {len(events)}: {id1}+{id2}->{merged.id} (total merges so far: {len(events)})")
     

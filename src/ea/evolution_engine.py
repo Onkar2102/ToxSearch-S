@@ -51,7 +51,7 @@ def get_prompt_generator():
 
 class EvolutionEngine:
 
-    def __init__(self, north_star_metric, log_file, current_cycle=None, max_variants=3, adaptive_selection_after=5, max_num_parents=4, operators="all", outputs_path=None):
+    def __init__(self, north_star_metric, log_file, current_cycle=None, max_variants=3, adaptive_selection_after=5, max_num_parents=4, operators="all", outputs_path=None, clustering_method=None):
         self._genomes_loaded = False
         self._genomes_cache = []
         self.next_id = 0
@@ -64,20 +64,32 @@ class EvolutionEngine:
         self.outputs_path = outputs_path
         get_logger, _, _, _ = get_custom_logging()
         self.logger = get_logger("EvolutionEngine", log_file)
-        self.parent_selector = ParentSelector(north_star_metric, log_file)
+        from speciation.clustering_mode import is_inc_dbscan_mode
+        self.use_inc_dbscan = is_inc_dbscan_mode(
+            clustering_method=clustering_method, outputs_path=str(outputs_path) if outputs_path else None
+        )
+        if self.use_inc_dbscan:
+            from .inc_dbscan_parent_selector import IncDBSCANParentSelector
+            self.parent_selector = IncDBSCANParentSelector(north_star_metric, log_file)
+        else:
+            self.parent_selector = ParentSelector(north_star_metric, log_file)
         self.prompt_generator = get_prompt_generator()
         self.response_generator = get_response_generator()
 
         self.operator_stats = OperatorStatistics()
 
-        self.logger.debug(f"EvolutionEngine initialized with next_id={self.next_id}, north_star_metric={north_star_metric}, current_cycle={current_cycle}, max_variants={max_variants}, adaptive_selection_after={adaptive_selection_after}, max_num_parents={max_num_parents}, operators={operators}, use_steady_state=True")
+        self.logger.debug(f"EvolutionEngine initialized with next_id={self.next_id}, north_star_metric={north_star_metric}, current_cycle={current_cycle}, max_variants={max_variants}, adaptive_selection_after={adaptive_selection_after}, max_num_parents={max_num_parents}, operators={operators}, use_steady_state=True, use_inc_dbscan={self.use_inc_dbscan}")
 
     @property
     def genomes(self):
         
         if not self._genomes_loaded:
             from utils.population_io import load_population
-            self._genomes_cache = load_population(str(self.outputs_path), logger=self.logger)
+            if self.use_inc_dbscan:
+                temp_path = Path(self.outputs_path) / "temp.json"
+                self._genomes_cache = load_population(str(temp_path), logger=self.logger)
+            else:
+                self._genomes_cache = load_population(str(self.outputs_path), logger=self.logger)
             self._genomes_loaded = True
             self.logger.debug(f"Lazy loaded {len(self._genomes_cache)} genomes")
         return self._genomes_cache
@@ -109,17 +121,14 @@ class EvolutionEngine:
 
         if variant_type == "mutation":
             if not parents:
-                return 0.0001
-            parent_score = _extract_north_star_score(parents[0], self.north_star_metric)
-            return max(round(parent_score, 4), 0.0001)
-        elif variant_type == "crossover":
+                raise ValueError("mutation parent score requires at least one parent")
+            return round(_extract_north_star_score(parents[0], self.north_star_metric), 4)
+        if variant_type == "crossover":
             if not parents:
-                return 0.0001
-            scores = [max(_extract_north_star_score(p, self.north_star_metric), 0.0001) for p in parents]
-            avg_score = sum(scores) / len(scores)
-            return round(avg_score, 4)
-
-        return 0.0001
+                raise ValueError("crossover parent score requires parents")
+            scores = [_extract_north_star_score(p, self.north_star_metric) for p in parents]
+            return round(sum(scores) / len(scores), 4)
+        raise ValueError(f"Unknown variant_type={variant_type!r} for parent score")
 
     def _create_child_genome(self, prompt: str, operator: Any, parents: List[Dict], variant_type: str) -> Dict:
         
@@ -268,22 +277,29 @@ class EvolutionEngine:
         except Exception as e:
             self.logger.error(f"Failed to empty top_10 file: {e}")
 
-    def _generate_variants_cm_mode(self, evolution_tracker: Dict[str, Any] = None) -> None:
-        
-
+    def _require_breeding_population(self) -> None:
+        if self.use_inc_dbscan:
+            temp_path = Path(self.outputs_path) / "temp.json"
+            if not temp_path.exists():
+                raise RuntimeError("IncDBSCAN: missing temp.json density memory — evolution cannot continue.")
+            with open(temp_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list) or not data:
+                raise RuntimeError("IncDBSCAN: empty temp.json — evolution cannot continue.")
+            return
         elites_path = Path(self.outputs_path) / "elites.json"
         if elites_path.exists():
             with open(elites_path, 'r', encoding='utf-8') as f:
                 elites = json.load(f)
             if not elites:
                 self.logger.critical("elites.json exists but is empty - evolution cannot continue")
-                self.logger.error("Evolution cannot continue without elites. Stopping immediately.")
                 raise RuntimeError("Empty elites.json - evolution cannot continue. This indicates a critical system failure.")
         else:
             self.logger.critical("elites.json does not exist - evolution cannot continue")
-            self.logger.error("Evolution cannot continue without elites. Stopping immediately.")
             raise RuntimeError("Missing elites.json - evolution cannot continue. This indicates a critical system failure.")
 
+    def _generate_variants_cm_mode(self, evolution_tracker: Dict[str, Any] = None) -> None:
+        self._require_breeding_population()
         self.parent_selector.adaptive_tournament_selection(evolution_tracker, outputs_path=str(self.outputs_path))
 
         parents = self._load_parents_from_file()
@@ -303,25 +319,7 @@ class EvolutionEngine:
             self._run_mutation_operators(parents, single_parent_operators)
 
     def _generate_variants_all_mode(self, evolution_tracker: Dict[str, Any] = None) -> None:
-        
-
-        elites_path = Path(self.outputs_path) / "elites.json"
-        
-        has_elites = False
-        
-        if elites_path.exists():
-            try:
-                elites_data = json.loads(elites_path.read_text())
-                has_elites = isinstance(elites_data, list) and len(elites_data) > 0
-            except (json.JSONDecodeError, Exception) as e:
-                self.logger.warning(f"Failed to read elites.json: {e}")
-                has_elites = False
-        
-        if not has_elites:
-            self.logger.critical("No genomes in elites.json - evolution cannot continue")
-            self.logger.error("Evolution cannot continue without elite breeding population. Stopping immediately.")
-            raise RuntimeError("No elite genomes found - evolution cannot continue.")
-
+        self._require_breeding_population()
         self.parent_selector.adaptive_tournament_selection(evolution_tracker, outputs_path=str(self.outputs_path))
 
         parents = self._load_parents_from_file()

@@ -438,7 +438,18 @@ class LlamaCppChatInterface(ModelInterface):
                 top_p=generation_kwargs.get("top_p", 0.9),
                 top_k=generation_kwargs.get("top_k", 40),
                 repeat_penalty=generation_kwargs.get("repetition_penalty", 1.1),
-                stop=["</s>", "<|endoftext|>", "User:", "System:"],
+                stop=[
+                    "</s>",
+                    "<|endoftext|>",
+                    "User:",
+                    "System:",
+                    # Cut post-XML chatty refusals / follow-ups (operators emit short tagged answers).
+                    "\nNote:",
+                    "\nWould you like",
+                    "Is there anything else I can help",
+                    "If you’d like",
+                    "If you'd like",
+                ],
                 seed=generation_kwargs["seed"] if "seed" in generation_kwargs else random.randint(0, 2**31 - 1),
                 echo=False,
             )

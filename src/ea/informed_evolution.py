@@ -190,19 +190,21 @@ class InformedEvolutionOperator(VariationOperator):
                 top_10_examples = self._load_top_10_examples()
             self._last_top_10_examples = top_10_examples
 
-            if top_10_examples:
-                scores = [max(_extract_north_star_score(ex, self.north_star_metric), 0.0001) for ex in top_10_examples]
-                self.top_10_avg_score = round(sum(scores) / len(scores), 4)
-                max_score = max(scores) if scores else 0.0001
-                min_score = min(scores) if scores else 0.0001
-                self.logger.info(f"{self.name}: Top 10 scores - max: {max_score:.4f}, min: {min_score:.4f}, avg: {self.top_10_avg_score:.4f} (from {len(scores)} examples)")
-                self.logger.debug(f"{self.name}: Individual top 10 scores: {[round(s, 4) for s in scores]}")
-            else:
-                self.top_10_avg_score = 0.0001
-                self.logger.warning(f"{self.name}: No top_10 examples available, using default score 0.0001")
-
             if not top_10_examples:
-                self.logger.error(f"{self.name}: No top 10 examples available, falling back to basic mutation")
+                raise ValueError(
+                    f"{self.name}: No top_10 examples available "
+                    "(refusing silent default score / basic-mutation fallback)"
+                )
+
+            scores = [_extract_north_star_score(ex, self.north_star_metric) for ex in top_10_examples]
+            self.top_10_avg_score = round(sum(scores) / len(scores), 4)
+            max_score = max(scores)
+            min_score = min(scores)
+            self.logger.info(
+                f"{self.name}: Top 10 scores - max: {max_score:.4f}, min: {min_score:.4f}, "
+                f"avg: {self.top_10_avg_score:.4f} (from {len(scores)} examples)"
+            )
+            self.logger.debug(f"{self.name}: Individual top 10 scores: {[round(s, 4) for s in scores]}")
 
             messages = self._create_informed_evolution_prompt(original_question, top_10_examples)
             self._last_informed_evolution_prompt = messages
@@ -235,8 +237,8 @@ class InformedEvolutionOperator(VariationOperator):
                 return []
 
         except Exception as e:
-            self.logger.error(f"{self.name}: apply failed with error: {e}\nTrace: {traceback.format_exc()}")
-            raise RuntimeError(f"{self.name} informed evolution generation failed: {e}") from e
+            self.logger.warning(f"{self.name}: apply failed (soft): {e}")
+            return []
         finally:
             try:
                 end_time = time.time()
