@@ -225,3 +225,9 @@ verifier/
 
 notes/
 docs/*
+
+genetic_distance_projection_main/
+rainbowplus_main/
+exaqc_main/
+
+notebooks/
