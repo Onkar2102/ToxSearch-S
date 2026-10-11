@@ -1,11 +1,6 @@
 import sys
 import time
 import json
-import os
-
-from typing import Optional
-from pathlib import Path
-from datetime import datetime
 
 from utils.device_utils import get_optimal_device, get_device_info
 
@@ -18,13 +13,11 @@ from utils.population_io import (
     update_adaptive_selection_logic,
     calculate_average_fitness,
     calculate_generation_statistics,
-    update_evolution_tracker_with_statistics
+    update_evolution_tracker_with_statistics,
 )
 from speciation.config import SpeciationConfig
 from gne import get_run_moderation_on_population
-from utils import get_population_io
 from ea.run_evolution import run_evolution
-from ea import get_create_final_statistics_with_tracker
 
 from utils import get_system_utils
 get_project_root, get_config_path, get_data_path, get_outputs_path, _extract_north_star_score, initialize_system, set_outputs_path = get_system_utils()
@@ -47,7 +40,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
          evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest",
          clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
          inc_dbscan_validate_every=0,
-         distance_method="embedding", distance_alpha=0.7):
+         distance_method="embedding", distance_alpha=0.7,
+         nli_model="facebook/bart-large-mnli"):
     
     
     get_logger, get_log_filename, log_system_info, PerformanceLogger = get_custom_logging()
@@ -194,6 +188,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         inc_dbscan_validate_every=inc_dbscan_validate_every,
         distance_method=distance_method,
         distance_alpha=distance_alpha,
+        nli_model=nli_model,
     )
 
     temp_path_obj = get_outputs_path() / "temp.json"

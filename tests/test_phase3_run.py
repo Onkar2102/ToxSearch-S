@@ -61,8 +61,18 @@ def main():
     mock_rg.model_name = "mock"
 
     mock_eval = MagicMock()
+    mock_eval.profile.backend_key = "google"
+    mock_eval.profile.name = "google"
     mock_eval._evaluate_text_hybrid.return_value = {"google": {"scores": {"toxicity": 0.6}}}
-    mock_eval._last_evaluation_time = {"duration": 0.01}
+    mock_eval._last_evaluation_time = {
+        "duration": 0.01,
+        "retries": 0,
+        "attempt_durations": [],
+        "api_wait_seconds": 0.0,
+    }
+    mock_eval.select_key = MagicMock()
+    mock_eval._api_keys = ["key0"]
+    mock_eval._active_key_index = 0
 
     original_gsv = ee_module.generate_single_variant
     ee_module.generate_single_variant = _mock_generate_single_variant
@@ -72,9 +82,10 @@ def main():
 
         run(logger, K=4, outputs_path=os.path.join(tmpdir, "outputs"),
             north_star_metric="toxicity", max_generations=2,
+            max_total_genomes=8,
             seed_file=seed_csv, moderation_methods=["google"],
             response_generator=mock_rg, prompt_generator=MagicMock(),
-            evaluator=mock_eval)
+            evaluator=mock_eval, perspective_api_keys=["key0"])
     finally:
         ee_module.generate_single_variant = original_gsv
 
@@ -107,6 +118,11 @@ def main():
         logger.info("=" * 60)
 
         shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def test_phase3_full_run(comm, rank, size, logger):
+    """Pytest entry point for the legacy MPI end-to-end run script."""
+    main()
 
 
 if __name__ == "__main__":

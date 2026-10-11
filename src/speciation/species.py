@@ -89,11 +89,11 @@ class Individual:
 
 @dataclass
 class Species:
-    """Breeding group of semantically similar individuals.
+    """Mature breeding niche (``id >= 1``).
 
-    Species IDs are ``>= 1``. Non-elites live in ``archive.json`` with
-    ``species_id == -1`` (not a Species object). States: active, frozen,
-    incubator (dissolved → archive), extinct (after merge).
+    Singleton/noise genomes share ``species_id == 0`` and are not Species
+    objects. Archive uses ``species_id == -1``. States: ``active``, ``frozen``,
+    ``extinct`` (after merge). ``incubator`` may appear in old state files only.
     """
     id: int
     leader: Individual

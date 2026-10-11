@@ -6,7 +6,13 @@ from typing import Dict, List, Optional, Set, Tuple, Union
 
 import numpy as np
 
-from ..distance import distances_to_query, normalize_distance_method, pair_distance
+from ..distance import (
+    method_uses_embeddings,
+    distances_to_query,
+    normalize_distance_method,
+    pair_distance,
+    parse_distance_components,
+)
 from ..species import Individual, Species, generate_species_id
 from ._io import (
     ARCHIVE_SPECIES_ID,
@@ -23,14 +29,25 @@ from utils import get_custom_logging
 
 get_logger, _, _, _ = get_custom_logging()
 
-# sid, embedding, phenotype
-LeaderRow = Tuple[int, np.ndarray, Optional[np.ndarray]]
+# sid, embedding (optional for nli-only), phenotype
+LeaderRow = Tuple[int, Optional[np.ndarray], Optional[np.ndarray]]
 # Provisional singleton leaders share species_id=0; keyed by list index during clustering.
 ProvKey = Tuple[str, int]  # ("prov", index)
 
 
 def _dist_kw(alpha: float, w_g: float, w_p: float, logger) -> dict:
     return dict(alpha=alpha, w_genotype=w_g, w_phenotype=w_p, logger=logger)
+
+
+def _usable_for_method(ind: Individual, method: str) -> bool:
+    comps = parse_distance_components(method)
+    if "embedding" in comps and ind.embedding is None:
+        return False
+    if "nli" in comps and not (ind.prompt or "").strip():
+        return False
+    if "objective" in comps and ind.phenotype is None:
+        return False
+    return True
 
 
 def _nearest_target(
@@ -42,20 +59,24 @@ def _nearest_target(
     **dkw,
 ) -> Tuple[Optional[Union[int, ProvKey]], float]:
     """Nearest mature leader (sid>0) or provisional singleton; return key and distance."""
+    need_emb = method_uses_embeddings(method)
     keys: List[Union[int, ProvKey]] = []
-    emb_list: List[np.ndarray] = []
+    emb_list: List[Optional[np.ndarray]] = []
     pheno: List[Optional[np.ndarray]] = []
     texts: List[str] = []
 
     for sid, emb, ph in leaders:
+        leader = species[sid].leader if sid in species else None
+        if leader is not None and not _usable_for_method(leader, method):
+            continue
+        if need_emb and emb is None:
+            continue
         keys.append(sid)
         emb_list.append(emb)
         pheno.append(ph)
-        texts.append(
-            species[sid].leader.prompt if sid in species and species[sid].leader else ""
-        )
+        texts.append(leader.prompt if leader else "")
     for i, prov in enumerate(provisional):
-        if prov.embedding is None:
+        if not _usable_for_method(prov, method):
             continue
         keys.append(("prov", i))
         emb_list.append(prov.embedding)
@@ -74,10 +95,13 @@ def _nearest_target(
         )
         return keys[0], d
 
-    emb = np.array(emb_list)
+    emb_arg = None
+    if need_emb:
+        emb_arg = np.array(emb_list)
     dists = distances_to_query(
         method,
-        query_embedding=ind.embedding, embeddings=emb,
+        query_embedding=ind.embedding if need_emb else None,
+        embeddings=emb_arg,
         query_objective=ind.phenotype, objectives=pheno,
         query_text=ind.prompt, texts=texts, **dkw,
     )
@@ -208,13 +232,13 @@ def leader_follower_clustering(
         log.error("Temp file missing or empty: %s", temp_p)
         return {}, set()
 
-    population = individuals_from_genomes(genomes, log)
+    population = individuals_from_genomes(genomes, log, distance_method=method)
     if not population:
-        log.error("No individuals with embeddings")
+        log.error("No individuals usable for distance_method=%s", method)
         return {}, set()
 
     species = load_species_state(state_p, theta_sim, logger=log)
-    # Drop any legacy size-1 entries from state; singletons live in pool 0 only.
+    # Speciation state only persists mature species (sid > 0).
     for sid in list(species.keys()):
         if sid <= 0:
             species.pop(sid, None)
@@ -222,7 +246,7 @@ def leader_follower_clustering(
     leaders: List[LeaderRow] = [
         (sid, sp.leader.embedding, sp.leader.phenotype)
         for sid, sp in species.items()
-        if sid > 0 and sp.leader and sp.leader.embedding is not None
+        if sid > 0 and sp.leader and _usable_for_method(sp.leader, method)
     ]
 
     # Prior elite singletons (species_id=0) are provisional niche seeds.
@@ -239,7 +263,7 @@ def leader_follower_clustering(
         except Exception as e:
             log.debug("Skip elite singleton id=%s: %s", g.get("id"), e)
             continue
-        if ind.embedding is None:
+        if not _usable_for_method(ind, method):
             continue
         ind.species_id = SINGLETON_SPECIES_ID
         provisional.append(ind)

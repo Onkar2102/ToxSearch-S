@@ -5,8 +5,6 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Any
 import numpy as np
 
-from .species import Species
-
 from utils import get_custom_logging
 get_logger, _, _, _ = get_custom_logging()
 
@@ -156,109 +154,6 @@ def validate_speciation_consistency(
         
     except Exception as e:
         error_msg = f"Validation failed with exception: {e}"
-        logger.error(error_msg, exc_info=True)
-        return False, [error_msg]
-
-
-def validate_flow2_speciation(
-    outputs_path: Path,
-    generation: int,
-    newly_formed_species_ids: List[int],
-    logger=None
-) -> Tuple[bool, List[str]]:
-    
-    if logger is None:
-        logger = get_logger("Flow2Validation")
-    
-    errors: List[str] = []
-    
-    if not newly_formed_species_ids:
-        return True, errors
-    
-    state_file_path = outputs_path / "speciation_state.json"
-    elites_path = outputs_path / "elites.json"
-    
-    try:
-        if not state_file_path.exists():
-            if generation == 0:
-                logger.debug("speciation_state.json not found for Generation 0 Flow 2 validation (will be created)")
-                return True, []
-            errors.append("speciation_state.json not found for Flow 2 validation")
-            return False, errors
-        
-        with open(state_file_path, 'r', encoding='utf-8') as f:
-            state_file = json.load(f)
-        
-        elites = []
-        if elites_path.exists():
-            with open(elites_path, 'r', encoding='utf-8') as f:
-                elites = json.load(f)
-        
-        species_dict = state_file.get("species", {})
-        
-        for sid in newly_formed_species_ids:
-            sid_str = str(sid)
-            if sid_str not in species_dict:
-                errors.append(f"Newly formed species {sid} not found in speciation_state.json")
-                continue
-            
-            sp_dict = species_dict[sid_str]
-            
-            leader_id = sp_dict.get("leader_id") or (sp_dict.get("leader", {}).get("id") if isinstance(sp_dict.get("leader"), dict) else None)
-            member_ids = sp_dict.get("member_ids", [])
-            
-            if leader_id is None:
-                errors.append(f"Species {sid}: leader ID is None (checked both 'leader_id' and 'leader.id')")
-                continue
-            
-            if leader_id not in member_ids:
-                errors.append(f"Species {sid}: leader {leader_id} not in member_ids {member_ids[:5]}...")
-            
-            elites_for_species = [g for g in elites if g.get("species_id") == sid]
-            elites_member_ids = {g.get("id") for g in elites_for_species}
-            
-            temp_path = outputs_path / "temp.json"
-            other_member_ids = set()
-            
-            if temp_path.exists():
-                try:
-                    with open(temp_path, 'r', encoding='utf-8') as f:
-                        temp_genomes = json.load(f)
-                    for g in temp_genomes:
-                        gid = g.get("id")
-                        if gid in member_ids:
-                            other_member_ids.add(gid)
-                except Exception:
-                    pass
-            
-            missing_in_all = set(member_ids) - elites_member_ids - other_member_ids
-            if missing_in_all:
-                errors.append(f"Species {sid}: {len(missing_in_all)} member_ids not found in any population file (elites/temp/archive): {list(missing_in_all)[:5]}...")
-            elif set(member_ids) - elites_member_ids:
-                logger.debug(f"Species {sid}: {len(set(member_ids) - elites_member_ids)} member_ids not yet in elites.json (will be distributed in Phase 7)")
-            
-            expected_size = len(member_ids)
-            if "size" in sp_dict and sp_dict["size"] != expected_size:
-                errors.append(f"Species {sid}: size mismatch - expected {expected_size} (from member_ids), got {sp_dict['size']} (from state.size)")
-            
-            cluster_origin = sp_dict.get("cluster_origin")
-            if cluster_origin != "natural":
-                errors.append(f"Species {sid}: cluster_origin is '{cluster_origin}', expected 'natural' for newly formed species")
-            
-            created_at = sp_dict.get("created_at")
-            if created_at != generation:
-                errors.append(f"Species {sid}: created_at={created_at}, expected {generation}")
-        
-        is_valid = len(errors) == 0
-        if is_valid:
-            logger.debug(f"Flow 2 validation passed for {len(newly_formed_species_ids)} newly formed species")
-        else:
-            logger.warning(f"Flow 2 validation found {len(errors)} errors for {len(newly_formed_species_ids)} newly formed species")
-        
-        return is_valid, errors
-        
-    except Exception as e:
-        error_msg = f"Flow 2 validation failed with exception: {e}"
         logger.error(error_msg, exc_info=True)
         return False, [error_msg]
 

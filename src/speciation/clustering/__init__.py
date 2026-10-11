@@ -7,7 +7,7 @@ from typing import Dict, Optional, Set, Tuple
 from ..config import SpeciationConfig
 from ..species import Species
 from ._io import ARCHIVE_SPECIES_ID, SINGLETON_SPECIES_ID
-from .dbscan import dbscan_cluster_population, dbscan_precomputed
+from .dbscan import dbscan_precomputed
 from .leader_follower import leader_follower_clustering
 
 from utils import get_custom_logging
@@ -83,6 +83,5 @@ __all__ = [
     "SINGLETON_SPECIES_ID",
     "cluster",
     "dbscan_precomputed",
-    "dbscan_cluster_population",
     "leader_follower_clustering",
 ]

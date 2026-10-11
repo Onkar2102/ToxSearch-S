@@ -1,9 +1,8 @@
 
 
-from typing import Dict, List, Tuple, Optional
+from typing import List, Tuple
 
 from .species import Individual, Species, SpeciesIdGenerator
-from .distance import pair_distance
 
 from utils import get_custom_logging
 get_logger, _, _, _ = get_custom_logging()
@@ -16,33 +15,42 @@ def merge_islands(
     theta_sim: float = 0.2,
     w_genotype: float = 0.7,
     w_phenotype: float = 0.3,
-    logger=None
+    logger=None,
 ) -> Tuple[Species, List[Individual]]:
-    
+    """Merge two species onto the oldest ID (``min(sp1.id, sp2.id)``).
+
+    ``w_genotype`` / ``w_phenotype`` are unused (kept for call-site compatibility).
+    Returns ``(merged_species, outliers)``; outliers is always empty (radius
+    cleanup happens in the orchestration layer).
+    """
+    del w_genotype, w_phenotype
     if logger is None:
         logger = get_logger("IslandMerging")
-    
+
     seen = set()
     combined = []
     for m in sp1.members + sp2.members:
         if m.id not in seen:
             combined.append(m)
             seen.add(m.id)
-    
+
     combined.sort(key=lambda x: x.fitness, reverse=True)
-    
+
     if not combined:
         if not sp1.leader or not sp2.leader:
-            logger.error(f"Cannot merge species {sp1.id} and {sp2.id}: both have no members and at least one has no leader")
-            raise ValueError(f"Cannot merge species {sp1.id} and {sp2.id}: insufficient members and leaders")
+            logger.error(
+                f"Cannot merge species {sp1.id} and {sp2.id}: "
+                "both have no members and at least one has no leader"
+            )
+            raise ValueError(
+                f"Cannot merge species {sp1.id} and {sp2.id}: "
+                "insufficient members and leaders"
+            )
         new_leader = max([sp1.leader, sp2.leader], key=lambda x: x.fitness)
     else:
         new_leader = combined[0]
 
-    # Survivor keeps the oldest parent ID (lowest ID; IDs are assigned ascending).
-    # The higher parent is absorbed (marked extinct by the caller); its ID must
-    # not be reused for a later new species. note_id only advances the high-water
-    # mark — it does not change species_state.
+    # Survivor keeps the oldest parent ID; absorbed ID is noted so it is not reused.
     survivor_id = min(sp1.id, sp2.id)
     older = sp1 if sp1.id <= sp2.id else sp2
     parent_ids = sorted([sp1.id, sp2.id])
@@ -120,115 +128,3 @@ def merge_islands(
         f"(absorbed {absorbed}, {merged.size} members, no filtering applied - enforced later)"
     )
     return merged, []
-
-
-def process_merges(
-    species: Dict[int, Species],
-    theta_merge: float = 0.1,
-    theta_sim: float = 0.2,
-    min_stability_gens: int = 5,
-    current_gen: int = 0,
-    w_genotype: float = 0.7,
-    w_phenotype: float = 0.3,
-    historical_species: Optional[Dict[int, Species]] = None,
-    logger=None,
-    distance_method: str = "embedding",
-    distance_alpha: float = 0.7,
-) -> Tuple[Dict[int, Species], List[Dict], List[Individual], Dict[int, Species]]:
-    
-    if logger is None:
-        logger = get_logger("IslandMerging")
-    
-    events = []
-    all_outliers = []
-    extinct_parents = {}
-    
-    all_species_for_merging = {}
-    for sid, sp in species.items():
-        if sp.leader is not None and sp.species_state != "incubator":
-            all_species_for_merging[sid] = sp
-        elif sp.species_state == "incubator":
-            logger.debug(f"Skipping species {sid} from merge candidates: incubator state (no leader)")
-        elif sp.leader is None:
-            logger.warning(f"Skipping species {sid} from merge candidates: no leader (state={sp.species_state})")
-    
-    while True:
-        merge_pairs = []
-        species_list = list(all_species_for_merging.items())
-        for i, (id1, sp1) in enumerate(species_list):
-            for j, (id2, sp2) in enumerate(species_list[i + 1:], start=i + 1):
-                if not sp1.leader or not sp2.leader:
-                    logger.debug(f"Skipping merge check for {id1}+{id2}: one or both species have no leader")
-                    continue
-                dist = pair_distance(
-                    distance_method,
-                    embedding_a=sp1.leader.embedding,
-                    embedding_b=sp2.leader.embedding,
-                    objective_a=sp1.leader.phenotype,
-                    objective_b=sp2.leader.phenotype,
-                    text_a=sp1.leader.prompt or "",
-                    text_b=sp2.leader.prompt or "",
-                    alpha=distance_alpha,
-                    w_genotype=w_genotype,
-                    w_phenotype=w_phenotype,
-                    logger=logger,
-                )
-                if dist < theta_merge:
-                    sp1_stable = (current_gen - sp1.created_at) >= min_stability_gens
-                    sp2_stable = (current_gen - sp2.created_at) >= min_stability_gens
-                    if sp1_stable and sp2_stable:
-                        merge_pairs.append((id1, id2, sp1.species_state, sp2.species_state))
-        
-        if not merge_pairs:
-            break
-        
-        id1, id2, state1, state2 = merge_pairs[0]
-        sp1 = all_species_for_merging.get(id1)
-        sp2 = all_species_for_merging.get(id2)
-        
-        if not sp1 or not sp2:
-            logger.warning(f"Skipping merge {id1}+{id2}: one or both species not found in all_species_for_merging")
-            continue
-        
-        if not sp1.leader or not sp2.leader:
-            logger.warning(f"Skipping merge {id1}+{id2}: one or both species have no leader (sp1.leader={sp1.leader is not None}, sp2.leader={sp2.leader is not None})")
-            continue
-        
-        merged, outliers = merge_islands(sp1, sp2, current_gen, theta_sim, w_genotype, w_phenotype, logger)
-        survivor = merged.id
-        absorbed_id = id2 if survivor == id1 else id1
-        absorbed_sp = sp2 if survivor == id1 else sp1
-        
-        species.pop(id1, None)
-        species.pop(id2, None)
-        all_species_for_merging.pop(id1, None)
-        all_species_for_merging.pop(id2, None)
-        
-        species[merged.id] = merged
-        all_species_for_merging[merged.id] = merged
-        
-        # Only the absorbed (newer) parent becomes extinct; survivor keeps its ID.
-        absorbed_sp.species_state = "extinct"
-        extinct_parents[absorbed_id] = absorbed_sp
-        logger.info(
-            f"Parent species {absorbed_id} became extinct via merge -> survivor species {merged.id}"
-        )
-        
-        if outliers:
-            all_outliers.extend(outliers)
-            logger.debug(f"Merge {id1}+{id2}->{merged.id}: {len(outliers)} outliers need to be moved to cluster 0")
-        
-        events.append({
-            "generation": current_gen,
-            "merged": (id1, id2),
-            "result_id": merged.id,
-            "absorbed_id": absorbed_id,
-            "cluster_origin": "merge",
-            "parent_ids": sorted([id1, id2]),
-        })
-        logger.info(f"Completed merge {len(events)}: {id1}+{id2}->{merged.id} (total merges so far: {len(events)})")
-    
-    logger.info(f"Merge process complete: {len(events)} merges performed in generation {current_gen}")
-    if extinct_parents:
-        logger.info(f"{len(extinct_parents)} parent species became extinct via merging: {sorted(extinct_parents.keys())}")
-    return species, events, all_outliers, extinct_parents

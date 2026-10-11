@@ -45,10 +45,20 @@ def _make_mock_rg():
 
 def _make_mock_evaluator():
     ev = MagicMock()
+    ev.profile.backend_key = "google"
+    ev.profile.name = "google"
     ev._evaluate_text_hybrid.return_value = {
         "google": {"scores": {"toxicity": 0.55}}
     }
-    ev._last_evaluation_time = {"duration": 0.01}
+    ev._last_evaluation_time = {
+        "duration": 0.01,
+        "retries": 0,
+        "attempt_durations": [],
+        "api_wait_seconds": 0.0,
+    }
+    ev.select_key = MagicMock()
+    ev._api_keys = ["key0"]
+    ev._active_key_index = 0
     return ev
 
 
@@ -107,6 +117,7 @@ def test_phase4(comm, rank, size, logger):
             speciation_config=None,
             log_file=None,
             max_generations=MAX_GENS,
+            max_total_genomes=8,
             run_speciation_fn=None,
             operators_mode="all",
             seed_file=seed_csv,
@@ -114,6 +125,7 @@ def test_phase4(comm, rank, size, logger):
             response_generator=mock_rg,
             prompt_generator=mock_pg,
             evaluator=mock_evaluator,
+            perspective_api_keys=["key0"],
         )
 
         if rank == 0:

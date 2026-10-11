@@ -6,6 +6,7 @@ import argparse
 import sys
 
 from speciation.config import SpeciationConfig
+from speciation.distance import DISTANCE_METHODS
 from utils import get_custom_logging, get_system_utils
 from utils.model_config_patch import update_model_configs as patch_model_configs
 from utils.rng import init_run_rng
@@ -192,12 +193,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Every N gens, check IncDBSCAN vs batch partition (0=off)",
     )
     parser.add_argument(
+        "--distance",
         "--distance-method",
+        dest="distance_method",
         type=str,
         default=defaults.distance_method,
+        choices=list(DISTANCE_METHODS),
+        metavar="METHOD",
         help=(
-            "Distance metric: embedding | objective | nli | nli+embedding | embedding+objective "
-            f"(default: {defaults.distance_method})"
+            "Clustering distance for L-F / IncDBSCAN ablation "
+            f"({' | '.join(DISTANCE_METHODS)}; default: {defaults.distance_method}). "
+            "Alias: --distance-method."
         ),
     )
     parser.add_argument(
@@ -207,6 +213,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "Alpha for nli+embedding hybrid: d_H = alpha*d_E + (1-alpha)*d_N "
             f"(default: {defaults.distance_alpha})"
+        ),
+    )
+    parser.add_argument(
+        "--nli-model",
+        type=str,
+        default=defaults.nli_model,
+        help=(
+            "HuggingFace MNLI model for --distance nli / nli+embedding "
+            f"(default: {defaults.nli_model})"
         ),
     )
     return parser
@@ -296,6 +311,7 @@ def main(argv: list[str] | None = None) -> int:
             inc_dbscan_validate_every=args.inc_dbscan_validate_every,
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
+            nli_model=args.nli_model,
         )
     except (AssertionError, ValueError) as exc:
         parser.error(str(exc))
@@ -417,6 +433,7 @@ def main(argv: list[str] | None = None) -> int:
             inc_dbscan_validate_every=args.inc_dbscan_validate_every,
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
+            nli_model=args.nli_model,
         )
         return 0
     except KeyboardInterrupt:

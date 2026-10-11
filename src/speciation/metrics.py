@@ -3,7 +3,7 @@
 import json
 import numpy as np
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from .species import Individual, Species

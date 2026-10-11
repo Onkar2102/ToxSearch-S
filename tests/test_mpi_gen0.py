@@ -34,16 +34,24 @@ class MockPromptGenerator:
     pass
 
 
+class _MockProfile:
+    backend_key = "google"
+    name = "google"
+
+
 class MockEvaluator:
+    profile = _MockProfile()
     _last_evaluation_time = {
         "duration": 0.01,
         "retries": 0,
         "attempt_durations": [],
         "api_wait_seconds": 0.0,
     }
+    _api_keys = ["dummy-key-for-test"]
+    _active_key_index = 0
 
     def select_key(self, idx):
-        pass
+        self._active_key_index = idx
 
     def _evaluate_text_hybrid(self, text, genome_id, moderation_methods=None):
         return {"google": {"scores": {"toxicity": 0.42}}}
@@ -80,16 +88,15 @@ def run_mpi_gen0_pull_based_test():
 
     kwargs = dict(
         logger=logger,
-        K=5,
+        K=4,
         outputs_path=str(out_path),
-        max_total_genomes=1,
+        max_total_genomes=10,
         run_speciation_fn=None,
         operators_mode="cm",
         seed_file=seed_path,
         speciation_config=SpeciationConfig(),
         log_file=None,
         perspective_api_keys=["dummy-key-for-test"],
-        gen0_batch_size=4,
     )
     if rank != 0:
         kwargs["response_generator"] = MockResponseGenerator()
@@ -141,16 +148,15 @@ def run_mpi_gen0_small_queue_test():
 
     kwargs = dict(
         logger=logger,
-        K=5,
+        K=10,
         outputs_path=str(out_path),
-        max_total_genomes=1,
+        max_total_genomes=5,
         run_speciation_fn=None,
         operators_mode="cm",
         seed_file=seed_path,
         speciation_config=SpeciationConfig(),
         log_file=None,
         perspective_api_keys=["dummy-key-for-test"],
-        gen0_batch_size=10,
     )
     if rank != 0:
         kwargs["response_generator"] = MockResponseGenerator()

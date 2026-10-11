@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence  # Optional used by individuals_from_genomes
 
 import numpy as np
 
@@ -52,7 +52,33 @@ def save_json(path: Path, payload: Any) -> None:
         json.dump(payload, f, indent=2, ensure_ascii=False)
 
 
-def individuals_from_genomes(genomes: Sequence[dict], logger=None) -> List[Individual]:
+def individuals_from_genomes(
+    genomes: Sequence[dict],
+    logger=None,
+    distance_method: Optional[str] = None,
+) -> List[Individual]:
+    """Build individuals that have the features required by ``distance_method``.
+
+    When ``distance_method`` is omitted, require embeddings (historical default).
+    Otherwise keep genomes that have the features used by that method
+    (e.g. prompt text for ``nli``, embeddings for ``embedding``).
+    """
+    from ..distance import (
+        method_uses_embeddings,
+        method_uses_objectives,
+        method_uses_texts,
+        normalize_distance_method,
+    )
+
+    need_emb = True
+    need_txt = False
+    need_obj = False
+    if distance_method is not None:
+        method = normalize_distance_method(distance_method)
+        need_emb = method_uses_embeddings(method)
+        need_txt = method_uses_texts(method)
+        need_obj = method_uses_objectives(method)
+
     out: List[Individual] = []
     for g in genomes:
         try:
@@ -61,8 +87,16 @@ def individuals_from_genomes(genomes: Sequence[dict], logger=None) -> List[Indiv
             if logger:
                 logger.warning("Skipping genome id=%s: %s", g.get("id"), e)
             continue
-        if ind.embedding is not None:
-            out.append(ind)
+        if need_emb and ind.embedding is None:
+            continue
+        if need_txt and not (ind.prompt or "").strip():
+            continue
+        if need_obj and ind.phenotype is None:
+            continue
+        # At least one usable signal when method omitted extras
+        if not need_emb and not need_txt and not need_obj and ind.embedding is None:
+            continue
+        out.append(ind)
     return out
 
 

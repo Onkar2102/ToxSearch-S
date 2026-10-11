@@ -22,3 +22,21 @@ def test_to_dict_from_dict_roundtrip() -> None:
     restored = SpeciationConfig.from_dict(cfg.to_dict())
     assert restored.theta_sim == 0.3
     assert restored.species_capacity == 50
+
+
+def test_clustering_and_distance_fields_roundtrip() -> None:
+    cfg = SpeciationConfig(
+        clustering_method="dbscan",
+        distance_method="nli+embedding",
+        distance_alpha=0.55,
+        dbscan_eps=0.2,
+        dbscan_min_samples=3,
+        theta_sim=0.25,
+        theta_merge=0.2,
+    )
+    restored = SpeciationConfig.from_dict(cfg.to_dict())
+    assert restored.clustering_method == "dbscan"
+    assert restored.distance_method == "nli+embedding"
+    assert restored.distance_alpha == pytest.approx(0.55)
+    assert restored.dbscan_eps == pytest.approx(0.2)
+    assert restored.dbscan_min_samples == 3

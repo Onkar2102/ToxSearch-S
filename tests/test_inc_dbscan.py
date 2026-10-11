@@ -14,7 +14,6 @@ from speciation.clustering.inc_dbscan import (
     seed_from_batch,
     process_unlabeled,
     validate_against_batch,
-    IncDBSCANState,
 )
 from speciation.density_memory import NOISE_LABEL, is_labeled, set_density_label
 from speciation.distance import pairwise_embedding_matrix

@@ -27,7 +27,24 @@ EntailmentScorer = Callable[[str, str], float]
 _scorer_lock = threading.Lock()
 _entailment_scorer: Optional[EntailmentScorer] = None
 _default_model_name = "facebook/bart-large-mnli"
+_model_name: str = _default_model_name
 _pair_cache: Dict[Tuple[str, str], float] = {}
+
+
+def set_nli_model_name(model_name: Optional[str]) -> None:
+    """Set HuggingFace MNLI model id used by the default scorer (clears cache/scorer)."""
+    global _model_name, _entailment_scorer, _pair_cache
+    name = (model_name or _default_model_name).strip()
+    with _scorer_lock:
+        if name != _model_name:
+            _model_name = name
+            _entailment_scorer = None
+            _pair_cache = {}
+
+
+def get_nli_model_name() -> str:
+    with _scorer_lock:
+        return _model_name
 
 
 def set_entailment_scorer(scorer: Optional[EntailmentScorer]) -> None:
@@ -63,8 +80,9 @@ def _load_default_scorer(logger=None) -> EntailmentScorer:
             "(and a torch backend). Install transformers or pass set_entailment_scorer()."
         ) from e
 
-    log.info("Loading NLI model %s (zero-shot / MNLI entailment)", _default_model_name)
-    clf = pipeline("text-classification", model=_default_model_name, truncation=True)
+    model_name = get_nli_model_name()
+    log.info("Loading NLI model %s (MNLI entailment for d_N)", model_name)
+    clf = pipeline("text-classification", model=model_name, truncation=True)
 
     def _score(premise: str, hypothesis: str) -> float:
         # MNLI-style: premise=text_a, hypothesis=text_b
@@ -152,6 +170,8 @@ def pairwise_nli_matrix(texts: Sequence[str], *, logger=None) -> np.ndarray:
 __all__ = [
     "EntailmentScorer",
     "set_entailment_scorer",
+    "set_nli_model_name",
+    "get_nli_model_name",
     "clear_nli_cache",
     "entailment_probability",
     "nli_distance",

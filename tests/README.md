@@ -10,11 +10,14 @@ From the **repository root**, with `src` on the Python path (or after `pip insta
 # Recommended for local / CI-like runs (skip MPI suite)
 PYTHONPATH=src python -m pytest tests/ -v -m "not mpi"
 
-# Full suite including MPI (needs mpi4py + mpiexec)
-PYTHONPATH=src python -m pytest tests/ -v
+# MPI-only (must launch under mpiexec; fixtures need >= 2 ranks)
+PYTHONPATH=src mpiexec -n 3 python -m pytest tests/ -v -m mpi
 
-# MPI-only
-PYTHONPATH=src python -m pytest tests/ -v -m mpi
+# MPI gen0 small-queue test needs 4 ranks
+PYTHONPATH=src mpiexec -n 4 python -m pytest tests/test_mpi_gen0.py -v -m mpi
+
+# phase8 serialization needs exactly 2 ranks
+PYTHONPATH=src mpiexec -n 2 python -m pytest tests/test_phase8_serialization.py -v -m mpi
 ```
 
 `conftest.py` adds `src` to `sys.path`, stubs `mpi4py` when missing, and skips MPI-heavy modules so collection succeeds in lightweight environments.

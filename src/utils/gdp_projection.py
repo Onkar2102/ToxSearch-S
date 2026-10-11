@@ -339,8 +339,6 @@ def build_genome_data_from_elites_archive(
 
 
 # Backward-compatible alias
-build_genome_data_from_elites_reserves = build_genome_data_from_elites_archive
-
 
 def run_gdp_projection(
     elites_path: Path,

@@ -38,6 +38,8 @@ from .distance_metrics import (
     semantic_distance,
     semantic_distances_batch,
     set_entailment_scorer,
+    set_nli_model_name,
+    get_nli_model_name,
     unit_normalize_rows,
 )
 
@@ -111,6 +113,43 @@ def parse_distance_components(method: str) -> Tuple[str, ...]:
     if m == "embedding+objective":
         return ("embedding", "objective")
     raise ValueError(f"Unknown distance_method={method!r}")
+
+
+def method_uses_embeddings(method: str) -> bool:
+    """True only when ``method`` includes the embedding component (e.g. embedding, nli+embedding)."""
+    return "embedding" in parse_distance_components(method)
+
+
+def method_uses_texts(method: str) -> bool:
+    """True only when ``method`` includes NLI (needs prompt text)."""
+    return "nli" in parse_distance_components(method)
+
+
+def method_uses_objectives(method: str) -> bool:
+    """True only when ``method`` includes the objective/score-vector component."""
+    return "objective" in parse_distance_components(method)
+
+
+def apply_distance_runtime_config(
+    *,
+    distance_method: str,
+    nli_model: Optional[str] = None,
+    logger=None,
+) -> str:
+    """Apply runtime side-effects for the selected distance method.
+
+    For ``nli`` / ``nli+embedding``, sets the HuggingFace MNLI model id used by
+    ``distance_metrics.nli``. Returns the normalized method name.
+    """
+    m = normalize_distance_method(distance_method)
+    if method_uses_texts(m) and nli_model:
+        set_nli_model_name(nli_model)
+        if logger is not None:
+            logger.info(
+                "Distance runtime: method=%s nli_model=%s",
+                m, get_nli_model_name(),
+            )
+    return m
 
 
 def _blend(parts: Sequence[float], weights: Sequence[float]) -> float:
@@ -332,6 +371,10 @@ __all__ = [
     "DISTANCE_METHODS",
     "normalize_distance_method",
     "parse_distance_components",
+    "method_uses_embeddings",
+    "method_uses_texts",
+    "method_uses_objectives",
+    "apply_distance_runtime_config",
     "pair_distance",
     "distances_to_query",
     "pairwise_distance_matrix",
@@ -354,6 +397,8 @@ __all__ = [
     "nli_distances_batch",
     "pairwise_nli_matrix",
     "set_entailment_scorer",
+    "set_nli_model_name",
+    "get_nli_model_name",
     "clear_nli_cache",
     "entailment_probability",
     "ensemble_distance",

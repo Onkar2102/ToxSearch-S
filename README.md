@@ -1,6 +1,6 @@
 # ToxSearch-S
 
-Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The loop is quality–diversity style: fitness comes from an external moderation API (Google [Perspective](https://developers.perspectiveapi.com/) or OpenAI omni-moderation) applied to model outputs, and **semantic speciation** keeps diversity by clustering prompts in embedding space.
+Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The loop is quality–diversity style: fitness comes from an external moderation API (Google [Perspective](https://developers.perspectiveapi.com/) or OpenAI omni-moderation) applied to model outputs, and **semantic speciation** keeps diversity by clustering prompts under a selectable distance (`embedding`, `nli`, …).
 
 **Index**
 
@@ -111,7 +111,9 @@ Defaults follow [`SpeciationConfig`](src/speciation/config.py) and [`src/cli.py`
 | Parameter | Meaning |
 |-----------|---------|
 | Max total genomes | Stop when elites + archive reach this count (required termination). Set with `--max-total-genomes`. |
-| Theta similarity | Species assignment radius in **ensemble** (genotype + phenotype) distance; followers join a leader within this radius. Set with `--theta-sim` (default **0.25**). |
+| Theta similarity | Species assignment radius under `--distance-method`; followers join a leader within this radius. Set with `--theta-sim` (default **0.25**). |
+| Distance method | Clustering distance ablation: `embedding` (default), `nli`, `nli+embedding`, `objective`, `embedding+objective`. Set with `--distance-method`. |
+| NLI model | HuggingFace MNLI model for `nli` / `nli+embedding` (default `facebook/bart-large-mnli`). Set with `--nli-model`. |
 | Theta merge | Two species whose leaders are closer than this may merge; must be ≤ `--theta-sim`. Set with `--theta-merge`. |
 | Min stability generations | Both species must be at least this old before they are allowed to merge. Set with `--min-stability-gens`. |
 | Species capacity | Maximum individuals kept per species (excess archived by fitness). Set with `--species-capacity`. |
@@ -148,7 +150,7 @@ Always run commands from the **repository root** so `config/`, `data/`, and `.en
 export PYTHONPATH=src   # skip if you used pip install -e .
 ```
 
-**Termination:** `--max-total-genomes` is **required**. The run stops when elites + archive reach that cap. Active breeding population is `elites.json` only (`species_id > 0`); `archive.json` holds non-elites (`species_id = -1`).
+**Termination:** `--max-total-genomes` is **required**. The run stops when elites + archive reach that cap. Breeding population is `elites.json` (mature `species_id > 0` + singleton pool `0`); `archive.json` holds non-elites (`species_id = -1`).
 
 ### Local experiment script
 

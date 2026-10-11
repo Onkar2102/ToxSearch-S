@@ -1,9 +1,8 @@
 """Grow-only density memory for Incremental DBSCAN.
 
-For ``clustering_method=dbscan``, ``temp.json`` *is* D_t: all discovered
-genomes (density clusters + singleton species promoted from residual noise).
-Never delete rows. Leader-follower continues to treat ``temp.json`` as staging
-and is unaffected by these helpers.
+For ``clustering_method=dbscan``, ``temp.json`` *is* D_t: mature density
+clusters plus the shared singleton pool (``species_id=0``). Never delete rows.
+Leader-follower continues to treat ``temp.json`` as staging.
 """
 
 from __future__ import annotations

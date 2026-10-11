@@ -48,6 +48,8 @@ _eval_call_count = 0
 
 def _make_failing_evaluator():
     ev = MagicMock()
+    ev.profile.backend_key = "google"
+    ev.profile.name = "google"
 
     def _eval_hybrid(text, genome_id, moderation_methods=None):
         global _eval_call_count
@@ -57,7 +59,12 @@ def _make_failing_evaluator():
         return {"google": {"scores": {"toxicity": 0.55}}}
 
     ev._evaluate_text_hybrid.side_effect = _eval_hybrid
-    ev._last_evaluation_time = {"duration": 0.01}
+    ev._last_evaluation_time = {
+        "duration": 0.01,
+        "retries": 0,
+        "attempt_durations": [],
+        "api_wait_seconds": 0.0,
+    }
     ev.select_key = MagicMock()
     ev._api_keys = ["key0", "key1"]
     ev._active_key_index = 0
@@ -122,6 +129,7 @@ def test_phase5(comm, rank, size, logger):
             speciation_config=None,
             log_file=None,
             max_generations=MAX_GENS,
+            max_total_genomes=8,
             run_speciation_fn=None,
             operators_mode="all",
             seed_file=seed_csv,

@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from .distance import DISTANCE_METHODS, normalize_distance_method
+from .distance import (
+    DISTANCE_METHODS,
+    apply_distance_runtime_config,
+    normalize_distance_method,
+)
 
 
 @dataclass
@@ -35,6 +39,8 @@ class SpeciationConfig:
 
     # Distance used for membership / merge / DBSCAN matrix
     distance_method: str = "embedding"
+    # HuggingFace MNLI model for distance_method=nli / nli+embedding
+    nli_model: str = "facebook/bart-large-mnli"
 
     def __post_init__(self):
         assert 0 <= self.theta_sim <= 1, f"theta_sim must be in [0, 1]"
@@ -69,6 +75,13 @@ class SpeciationConfig:
 
         self.distance_method = normalize_distance_method(self.distance_method)
         assert self.distance_method in DISTANCE_METHODS
+        if not (self.nli_model or "").strip():
+            self.nli_model = "facebook/bart-large-mnli"
+        # Ensure MNLI scorer picks up --nli-model for nli / nli+embedding ablations.
+        apply_distance_runtime_config(
+            distance_method=self.distance_method,
+            nli_model=self.nli_model,
+        )
 
     def to_dict(self) -> dict:
         return {
@@ -88,6 +101,7 @@ class SpeciationConfig:
             "dbscan_min_samples": self.dbscan_min_samples,
             "inc_dbscan_validate_every": self.inc_dbscan_validate_every,
             "distance_method": self.distance_method,
+            "nli_model": self.nli_model,
         }
 
     @classmethod

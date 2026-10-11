@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Any
 
 from utils import get_custom_logging
 get_logger, _, _, _ = get_custom_logging()

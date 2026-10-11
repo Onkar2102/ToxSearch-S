@@ -23,7 +23,7 @@ _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 class IncDBSCANParentSelector:
-    """Species-aware tournament over full density memory (clusters + noise pool)."""
+    """Species-aware tournament over density memory (mature clusters + singleton pool)."""
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None):
         self.north_star_metric = north_star_metric

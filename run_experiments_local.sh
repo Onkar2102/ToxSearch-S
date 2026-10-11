@@ -32,7 +32,8 @@
 #   EMBEDDING_MODEL=all-MiniLM-L6-v2
 #   EMBEDDING_DIM=384
 #   EMBEDDING_BATCH_SIZE=64
-#   DISTANCE_METHOD=embedding
+#   DISTANCE_METHOD=embedding     # embedding | nli | nli+embedding | ...
+#   NLI_MODEL=facebook/bart-large-mnli
 #   DISTANCE_ALPHA=0.7
 #   DBSCAN_EPS=                 defaults to THETA_SIM when empty
 #   DBSCAN_MIN_SAMPLES=2
@@ -95,13 +96,14 @@ EMBEDDING_BATCH_SIZE="${EMBEDDING_BATCH_SIZE:-64}"
 
 DISTANCE_METHOD="${DISTANCE_METHOD:-embedding}"
 DISTANCE_ALPHA="${DISTANCE_ALPHA:-0.7}"
+NLI_MODEL="${NLI_MODEL:-facebook/bart-large-mnli}"
 
 DBSCAN_EPS="${DBSCAN_EPS:-}"
 DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-1}"
 INC_DBSCAN_VALIDATE_EVERY="${INC_DBSCAN_VALIDATE_EVERY:-0}"
 
-RG_MODEL="${RG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_S.gguf}"
-PG_MODEL="${PG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-Q4_K_S.gguf}"
+RG_MODEL="${RG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf}"
+PG_MODEL="${PG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf}"
 
 RUN_TS="$(date +%Y%m%d_%H%M%S)"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-2}"
@@ -165,6 +167,7 @@ build_common_args() {
         --embedding-batch-size "$EMBEDDING_BATCH_SIZE"
         --distance-method "$DISTANCE_METHOD"
         --distance-alpha "$DISTANCE_ALPHA"
+        --nli-model "$NLI_MODEL"
     )
     if [ -n "$NORTH_STAR_METRIC" ]; then
         ARGS_ARR+=(--north-star-metric "$NORTH_STAR_METRIC")
@@ -224,7 +227,7 @@ run_clustering_method() {
     echo "  evaluator=${EVALUATOR}"
     echo "  north_star_metric=${NORTH_STAR_METRIC:-<profile default>}"
     echo "  theta_sim=${THETA_SIM}  theta_merge=${THETA_MERGE}"
-    echo "  distance_method=${DISTANCE_METHOD}  distance_alpha=${DISTANCE_ALPHA}"
+    echo "  distance_method=${DISTANCE_METHOD}  distance_alpha=${DISTANCE_ALPHA}  nli_model=${NLI_MODEL}"
     if [ "$method" = "dbscan" ]; then
         echo "  dbscan_eps=${DBSCAN_EPS:-$THETA_SIM}  dbscan_min_samples=${DBSCAN_MIN_SAMPLES}"
         echo "  inc_dbscan_validate_every=${INC_DBSCAN_VALIDATE_EVERY}"

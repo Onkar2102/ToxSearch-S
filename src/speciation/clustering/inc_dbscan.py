@@ -19,6 +19,9 @@ from ..density_memory import (
     set_density_label,
 )
 from ..distance import (
+    method_uses_embeddings,
+    method_uses_objectives,
+    method_uses_texts,
     distances_to_query,
     normalize_distance_method,
     pairwise_distance_matrix,
@@ -129,21 +132,29 @@ def seed_from_batch(
     """Run batch DBSCAN once; assign mature IDs (>=1); promote noise → shared pool 0."""
     log = logger or get_logger("IncDBSCAN")
     method = normalize_distance_method(distance_method)
-    individuals = individuals_from_genomes(genomes, log)
+    individuals = individuals_from_genomes(genomes, log, distance_method=method)
     if not individuals:
         state = IncDBSCANState(eps=eps, min_samples=min_samples, distance_method=method,
                                distance_alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype)
         return state, {}, {"new_species": 0, "noise": 0, "singletons": 0, "n": 0}
 
-    # Align genomes list to individuals with embeddings (same filter as individuals_from_genomes)
+    # Align genomes list to individuals (same filter as individuals_from_genomes)
     id_to_genome = {g.get("id"): g for g in genomes if g.get("id") is not None}
     ordered_genomes = [id_to_genome[ind.id] for ind in individuals if ind.id in id_to_genome]
 
-    emb = stack_unit_embeddings(individuals)
-    objectives = stack_objectives(individuals) if method in ("objective", "embedding+objective") else None
-    texts = [ind.prompt or "" for ind in individuals] if "nli" in method else [""] * len(individuals)
+    need_emb = method_uses_embeddings(method)
+    need_obj = method_uses_objectives(method)
+    need_txt = method_uses_texts(method)
+    # Keep embeddings when present even for pure nli (optional; used by GDP / hybrid resume).
+    have_all_emb = all(ind.embedding is not None for ind in individuals)
+    emb = stack_unit_embeddings(individuals) if (need_emb or have_all_emb) else None
+    objectives = stack_objectives(individuals) if need_obj else None
+    texts = [ind.prompt or "" for ind in individuals] if need_txt else [""] * len(individuals)
     dist = pairwise_distance_matrix(
-        method, embeddings=emb, objectives=objectives, texts=texts if "nli" in method else None,
+        method,
+        embeddings=emb,
+        objectives=objectives,
+        texts=texts if need_txt else None,
         alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype, logger=log,
     )
     raw = dbscan_precomputed(dist, eps=eps, min_samples=min_samples)
@@ -172,7 +183,7 @@ def seed_from_batch(
     # Sync unlabeled genomes that lacked embeddings: leave unlabeled
     species = _build_species_from_state(state, ordered_genomes, individuals, current_generation, eps, origin="inc_dbscan_init")
     n_noise_raw = int(sum(1 for x in persistent if x == NOISE_LABEL))
-    # Residual DBSCAN noise → shared singleton pool (species_id=0), not unique IDs / archive.
+    # Residual DBSCAN noise → shared singleton pool (species_id=0).
     n_singletons = promote_noise_to_singleton_species(
         state, ordered_genomes, species, current_generation=current_generation, logger=log
     )
@@ -271,15 +282,29 @@ def insert_point(
     log = logger or get_logger("IncDBSCAN")
     method = state.distance_method
     dkw = _dkw(state, log)
+    need_emb = method_uses_embeddings(method)
+    need_txt = method_uses_texts(method)
 
-    emb_row = np.asarray(individual.embedding, dtype=np.float64)
-    nrm = float(np.linalg.norm(emb_row))
-    if nrm > 0:
-        emb_row = emb_row / nrm
+    emb_row = None
+    if individual.embedding is not None:
+        emb_row = np.asarray(individual.embedding, dtype=np.float64)
+        nrm = float(np.linalg.norm(emb_row))
+        if nrm > 0:
+            emb_row = emb_row / nrm
+    if need_emb and emb_row is None:
+        raise ValueError(
+            f"IncDBSCAN insert requires embedding for distance_method={method!r} "
+            f"(genome id={individual.id})"
+        )
+    if need_txt and not (individual.prompt or "").strip():
+        raise ValueError(
+            f"IncDBSCAN insert requires prompt text for distance_method={method!r} "
+            f"(genome id={individual.id})"
+        )
 
-    if state.embeddings is None or state.n_points() == 0:
+    if state.n_points() == 0:
         # First point after empty state
-        state.embeddings = emb_row.reshape(1, -1)
+        state.embeddings = emb_row.reshape(1, -1) if emb_row is not None else None
         if individual.phenotype is not None:
             state.objectives = np.asarray(individual.phenotype, dtype=np.float64).reshape(1, -1)
         state.texts = [individual.prompt or ""]
@@ -303,12 +328,12 @@ def insert_point(
     # Distances from new point to existing
     dists = distances_to_query(
         method,
-        query_embedding=emb_row,
-        embeddings=state.embeddings,
+        query_embedding=emb_row if (need_emb or state.embeddings is not None) else None,
+        embeddings=state.embeddings if (need_emb or state.embeddings is not None) else None,
         query_objective=individual.phenotype,
         objectives=state.objectives,
         query_text=individual.prompt or "",
-        texts=state.texts if "nli" in method else None,
+        texts=state.texts if need_txt else None,
         **dkw,
     )
     n_old = state.n_points()
@@ -316,7 +341,13 @@ def insert_point(
     new_idx = n_old
 
     # Append point
-    state.embeddings = np.vstack([state.embeddings, emb_row.reshape(1, -1)])
+    if state.embeddings is not None:
+        if emb_row is None:
+            emb_row = np.zeros((state.embeddings.shape[1],), dtype=np.float64)
+        state.embeddings = np.vstack([state.embeddings, emb_row.reshape(1, -1)])
+    elif emb_row is not None:
+        # Resume path where prior state had no embeddings
+        state.embeddings = emb_row.reshape(1, -1)
     if state.objectives is not None:
         ph = individual.phenotype
         if ph is None:
@@ -625,9 +656,13 @@ def process_unlabeled(
     logger=None,
     events_tracker=None,
 ) -> List[Dict[str, Any]]:
-    """Insert every unlabeled genome (with embedding) into ``state``."""
+    """Insert every unlabeled genome with features required by ``state.distance_method``."""
     log = logger or get_logger("IncDBSCAN")
     events: List[Dict[str, Any]] = []
+    method = state.distance_method
+    need_emb = method_uses_embeddings(method)
+    need_txt = method_uses_texts(method)
+    need_obj = method_uses_objectives(method)
     # Fitness-descending for reproducibility
     idxs = [i for i, g in enumerate(genomes) if not is_labeled(g)]
     idxs.sort(
@@ -645,8 +680,14 @@ def process_unlabeled(
         except Exception as e:
             log.warning("IncDBSCAN skip genome id=%s: %s", g.get("id"), e)
             continue
-        if ind.embedding is None:
-            log.warning("IncDBSCAN skip genome id=%s: no embedding", g.get("id"))
+        if need_emb and ind.embedding is None:
+            log.warning("IncDBSCAN skip genome id=%s: no embedding (required by %s)", g.get("id"), method)
+            continue
+        if need_txt and not (ind.prompt or "").strip():
+            log.warning("IncDBSCAN skip genome id=%s: empty prompt (required by %s)", g.get("id"), method)
+            continue
+        if need_obj and ind.phenotype is None:
+            log.warning("IncDBSCAN skip genome id=%s: no objective vector (required by %s)", g.get("id"), method)
             continue
         ev = insert_point(
             state, g, ind,
@@ -658,7 +699,7 @@ def process_unlabeled(
         events.append(ev)
     sync_genomes_from_state(genomes, state)
     # Rebuild species members from full state
-    individuals = individuals_from_genomes(genomes, log)
+    individuals = individuals_from_genomes(genomes, log, distance_method=method)
     rebuilt = _build_species_from_state(
         state, genomes, individuals, current_generation, state.eps,
         origin="inc_dbscan_growth", existing=species,

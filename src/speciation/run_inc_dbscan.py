@@ -34,6 +34,7 @@ from .density_memory import (
     save_density_memory,
     unlabeled_indices,
 )
+from .distance import method_uses_embeddings
 from .embeddings import compute_and_save_embeddings
 from .events_tracker import EventsTracker
 from .genome_tracker import GenomeTracker
@@ -198,12 +199,18 @@ def process_generation_inc_dbscan(
         current_generation, eps, cfg.dbscan_min_samples, cfg.distance_method,
     )
 
-    with PerformanceLogger(logger, "IncDBSCAN: embeddings"):
-        compute_and_save_embeddings(
-            temp_path=temp_p,
-            model_name=cfg.embedding_model,
-            batch_size=cfg.embedding_batch_size,
-            logger=logger,
+    if method_uses_embeddings(cfg.distance_method):
+        with PerformanceLogger(logger, "IncDBSCAN: embeddings"):
+            compute_and_save_embeddings(
+                temp_path=temp_p,
+                model_name=cfg.embedding_model,
+                batch_size=cfg.embedding_batch_size,
+                logger=logger,
+            )
+    else:
+        logger.info(
+            "IncDBSCAN: skipping embedding encode (distance_method=%s)",
+            cfg.distance_method,
         )
 
     genomes = load_density_memory(temp_p, logger=logger)

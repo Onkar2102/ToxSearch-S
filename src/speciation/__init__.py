@@ -18,12 +18,10 @@ from .clustering import (
     SINGLETON_SPECIES_ID,
     cluster,
     dbscan_precomputed,
-    dbscan_cluster_population,
     leader_follower_clustering,
 )
 
-
-from .merging import process_merges
+from .merging import merge_islands
 from .metrics import (
     GenerationMetrics, SpeciationMetricsTracker, compute_diversity_metrics,
     get_species_statistics, log_generation_summary
@@ -37,7 +35,7 @@ from .run_speciation import (
     get_speciation_statistics,
     update_evolution_tracker_with_speciation,
     process_generation,
-    phase8_redistribute_genomes,
+    redistribute_genomes,
 )
 from .run_inc_dbscan import run_inc_dbscan_speciation, process_generation_inc_dbscan
 from .clustering_mode import is_inc_dbscan_mode
@@ -56,13 +54,13 @@ __all__ = [
     "extract_phenotype_vector", "phenotype_distance", "phenotype_distances_batch", "PHENOTYPE_SCORE_ORDER",
     
     "leader_follower_clustering",
-    "dbscan_precomputed", "dbscan_cluster_population", "cluster",
-    
+    "dbscan_precomputed", "cluster",
+
     "ARCHIVE_SPECIES_ID",
     "SINGLETON_SPECIES_ID",
-    
-    "process_merges",
-    
+
+    "merge_islands",
+
     "GenerationMetrics", "SpeciationMetricsTracker", "compute_diversity_metrics",
     "get_species_statistics", "log_generation_summary",
     
@@ -73,7 +71,7 @@ __all__ = [
     "get_speciation_statistics",
     "update_evolution_tracker_with_speciation",
     "process_generation",
-    "phase8_redistribute_genomes",
+    "redistribute_genomes",
     "run_inc_dbscan_speciation",
     "process_generation_inc_dbscan",
     "is_inc_dbscan_mode",

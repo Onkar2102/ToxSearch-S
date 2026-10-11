@@ -24,10 +24,12 @@ from .objective import (
 from .nli import (
     clear_nli_cache,
     entailment_probability,
+    get_nli_model_name,
     nli_distance,
     nli_distances_batch,
     pairwise_nli_matrix,
     set_entailment_scorer,
+    set_nli_model_name,
 )
 
 __all__ = [
@@ -47,8 +49,10 @@ __all__ = [
     "phenotype_distances_batch",
     "clear_nli_cache",
     "entailment_probability",
+    "get_nli_model_name",
     "nli_distance",
     "nli_distances_batch",
     "pairwise_nli_matrix",
     "set_entailment_scorer",
+    "set_nli_model_name",
 ]

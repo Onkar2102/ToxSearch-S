@@ -2,27 +2,7 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
-
 import numpy as np
-
-from ..distance import normalize_distance_method, pairwise_distance_matrix
-from ..species import Individual, Species, generate_species_id
-from ._io import (
-    SINGLETON_SPECIES_ID,
-    default_paths,
-    individuals_from_genomes,
-    load_json_list,
-    load_species_state,
-    stack_objectives,
-    stack_unit_embeddings,
-    write_species_state,
-)
-
-from utils import get_custom_logging
-
-get_logger, _, _, _ = get_custom_logging()
 
 
 def dbscan_precomputed(dist: np.ndarray, eps: float, min_samples: int = 2) -> np.ndarray:
@@ -46,7 +26,8 @@ def dbscan_precomputed(dist: np.ndarray, eps: float, min_samples: int = 2) -> np
         labels[i] = cid
         j = 0
         while j < len(seed):
-            q = int(seed[j]); j += 1
+            q = int(seed[j])
+            j += 1
             if labels[q] == -1:
                 labels[q] = cid
             if is_core[q]:
@@ -57,115 +38,3 @@ def dbscan_precomputed(dist: np.ndarray, eps: float, min_samples: int = 2) -> np
                         seed.append(r)
         cid += 1
     return labels
-
-
-def dbscan_cluster_population(
-    temp_path: Optional[str] = None,
-    elites_path: Optional[str] = None,
-    speciation_state_path: Optional[str] = None,
-    eps: float = 0.25,
-    min_samples: int = 2,
-    current_generation: int = 0,
-    include_elites: bool = True,
-    distance_method: str = "embedding",
-    distance_alpha: float = 0.7,
-    w_genotype: float = 0.7,
-    w_phenotype: float = 0.3,
-    logger=None,
-    genome_tracker=None,
-    events_tracker=None,
-) -> Tuple[Dict[int, Species], Set[int]]:
-    log = logger or get_logger("DBSCANClustering")
-    method = normalize_distance_method(distance_method)
-    temp_p, elites_p, state_p = default_paths(temp_path, elites_path, speciation_state_path)
-
-    # Advance id generator from prior state (ignore returned species — DBSCAN rebuilds)
-    load_species_state(state_p, eps, logger=log)
-
-    seen: set = set()
-    genomes: List[dict] = []
-    for path in ((temp_p,) + ((elites_p,) if include_elites else ())):
-        for g in load_json_list(path, log):
-            key = str(g.get("id")) if g.get("id") is not None else None
-            if key is None or key in seen:
-                continue
-            seen.add(key)
-            genomes.append(g)
-
-    individuals = individuals_from_genomes(genomes, log)
-    if not individuals:
-        log.warning("DBSCAN: no genomes with embeddings")
-        return {}, set()
-
-    emb = stack_unit_embeddings(individuals)
-    objectives = stack_objectives(individuals) if method in ("objective", "embedding+objective") else None
-    texts = [ind.prompt or "" for ind in individuals] if "nli" in method else None
-    dist = pairwise_distance_matrix(
-        method, embeddings=emb, objectives=objectives, texts=texts,
-        alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype, logger=log,
-    )
-    raw = dbscan_precomputed(dist, eps=eps, min_samples=min_samples)
-
-    # Mature density clusters → unique sid >= 1; noise → shared singleton pool 0
-    groups: Dict[int, List[Individual]] = defaultdict(list)
-    for ind, lab in zip(individuals, raw):
-        key = SINGLETON_SPECIES_ID if int(lab) < 0 else int(lab)
-        groups[key].append(ind)
-
-    species: Dict[int, Species] = {}
-    touched: Set[int] = set()
-    tracker_updates: Dict[str, int] = {}
-
-    for local_lab, members in groups.items():
-        members = sorted(members, key=lambda x: x.fitness, reverse=True)
-        if local_lab == SINGLETON_SPECIES_ID:
-            for m in members:
-                m.species_id = SINGLETON_SPECIES_ID
-                tracker_updates[str(m.id)] = SINGLETON_SPECIES_ID
-                if events_tracker is not None:
-                    events_tracker.log(
-                        m.id, "dbscan_singleton_pool",
-                        {"species_id": SINGLETON_SPECIES_ID, "eps": eps},
-                    )
-            continue
-        champ = members[0]
-        sid = generate_species_id()
-        for m in members:
-            m.species_id = sid
-            tracker_updates[str(m.id)] = sid
-        species[sid] = Species(
-            id=sid, leader=champ, members=list(members), radius=eps,
-            stagnation=0, max_fitness=champ.fitness, species_state="active",
-            created_at=current_generation, last_improvement=current_generation,
-            fitness_history=[champ.fitness], labels=[], label_history=[],
-            cluster_origin="dbscan",
-            parent_ids=None, leader_distance=0.0,
-        )
-        touched.add(sid)
-        if events_tracker is not None:
-            for m in members:
-                events_tracker.log(m.id, "dbscan_assignment", {"species_id": sid, "eps": eps})
-
-    if genome_tracker is not None and tracker_updates:
-        genome_tracker.batch_update(tracker_updates, current_generation, "dbscan_assignment")
-
-    write_species_state(state_p, species, current_generation, extra={
-        "clustering_method": "dbscan",
-        "dbscan_eps": eps,
-        "dbscan_min_samples": min_samples,
-        "distance_method": method,
-        "distance_alpha": distance_alpha,
-    })
-    if genome_tracker is not None:
-        try:
-            genome_tracker.save()
-        except Exception as e:
-            log.warning("DBSCAN: genome_tracker.save failed: %s", e)
-
-    n_noise = int(np.sum(raw < 0))
-    n_dense = int(raw.max() + 1) if raw.size and raw.max() >= 0 else 0
-    log.info(
-        "DBSCAN: n=%d eps=%.4f min_samples=%d distance_method=%s → density=%d noise=%d groups=%d",
-        len(individuals), eps, min_samples, method, n_dense, n_noise, len(species),
-    )
-    return species, touched
