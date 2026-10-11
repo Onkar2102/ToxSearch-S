@@ -39,7 +39,15 @@ def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
         node = item.nodeid.lower()
-        if "mpi" in node or "phase3_mpi" in node or "phase4_mpi" in node:
+        # phase8_* are MPI payload tests (need comm/rank fixtures under mpiexec).
+        if (
+            "mpi" in node
+            or "phase3_mpi" in node
+            or "phase4_mpi" in node
+            or "phase8_integration" in node
+            or "phase8_serialization" in node
+            or "phase3_run" in node
+        ):
             item.add_marker(pytest.mark.mpi)
     if not _REAL_MPI:
         skip_mpi = pytest.mark.skip(reason="mpi4py not installed")

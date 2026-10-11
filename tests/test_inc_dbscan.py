@@ -19,6 +19,7 @@ from speciation.clustering.inc_dbscan import (
 from speciation.density_memory import NOISE_LABEL, is_labeled, set_density_label
 from speciation.distance import pairwise_embedding_matrix
 from speciation.species import Individual, SpeciesIdGenerator
+from utils.evaluator_profiles import set_active_evaluator, set_active_north_star
 
 
 def _unit(v):
@@ -27,6 +28,17 @@ def _unit(v):
 
 
 def _genome(gid, emb, fitness=0.5, prompt=None):
+    # Full Google phenotype vector required by extract_phenotype_vector (fail-fast).
+    google_scores = {
+        "toxicity": fitness,
+        "threat": max(0.0001, fitness * 0.5),
+        "profanity": max(0.0001, fitness * 0.4),
+        "sexually_explicit": max(0.0001, fitness * 0.3),
+        "identity_attack": max(0.0001, fitness * 0.2),
+        "flirtation": max(0.0001, fitness * 0.1),
+        "insult": max(0.0001, fitness * 0.45),
+        "severe_toxicity": max(0.0001, fitness * 0.25),
+    }
     return {
         "id": gid,
         "prompt": prompt or f"prompt-{gid}",
@@ -35,12 +47,16 @@ def _genome(gid, emb, fitness=0.5, prompt=None):
         "toxicity": fitness,
         "generation": 0,
         "status": "complete",
+        "moderation_result": {"google": {"scores": google_scores}},
     }
 
 
 class TestIncDBSCANSeedAndNoise(unittest.TestCase):
     def setUp(self):
         SpeciesIdGenerator.reset(0)
+        # Isolate from other tests that leave openai/violence as active north-star.
+        set_active_evaluator("google")
+        set_active_north_star("toxicity")
 
     def test_seed_keeps_noise_as_minus_one(self):
         a, b = _unit([1, 0, 0]), _unit([0.99, 0.1, 0])
@@ -134,6 +150,11 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
 
 
 class TestLeaderFollowerMergeKeepsOldest(unittest.TestCase):
+    def setUp(self):
+        set_active_evaluator("google")
+        set_active_north_star("toxicity")
+        SpeciesIdGenerator.reset(0)
+
     def test_merge_islands_survivor_is_min_id(self):
         from speciation.merging import merge_islands
         from speciation.species import Species

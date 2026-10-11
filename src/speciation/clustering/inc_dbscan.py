@@ -387,9 +387,12 @@ def insert_point(
             events_tracker.log(individual.id, ev["event"], ev)
         return ev
 
-    # Merge multiple species: keep oldest (smallest) parent ID (Ester / IPD convention).
+    # Survivor = oldest parent (lowest ID). Higher parents are absorbed.
+    # Advance high-water past every parent ID so absorbed IDs are not re-issued.
     parents = sorted(core_cluster_ids)
     survivor = parents[0]
+    for pid in parents:
+        SpeciesIdGenerator.note_id(pid)
     assigned = _expand_cluster(state, new_idx, survivor)
     # Relabel all points of parent clusters onto the survivor
     for i, lab in enumerate(state.labels):

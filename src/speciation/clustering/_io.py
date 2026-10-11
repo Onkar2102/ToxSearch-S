@@ -65,7 +65,7 @@ def individuals_from_genomes(genomes: Sequence[dict], logger=None) -> List[Indiv
 
 
 def load_species_state(path: Path, theta_sim: float, logger=None) -> Dict[int, Species]:
-    """Load species with id > 0 from speciation_state.json; advances SpeciesIdGenerator."""
+    """Load live species (id > 0) and restore the species-ID high-water mark."""
     if not path.exists():
         return {}
     try:
@@ -110,8 +110,23 @@ def load_species_state(path: Path, theta_sim: float, logger=None) -> Dict[int, S
             parent_ids=sp_dict.get("parent_ids"),
             leader_distance=sp_dict.get("leader_distance", 0.0),
         )
+    high_water = 0
     if species:
-        SpeciesIdGenerator.set_min_id(max(species) + 1)
+        high_water = max(high_water, max(species))
+    for sid in state.get("extinct") or []:
+        try:
+            high_water = max(high_water, int(sid))
+        except (TypeError, ValueError):
+            continue
+    for sid in state.get("incubators") or []:
+        try:
+            high_water = max(high_water, int(sid))
+        except (TypeError, ValueError):
+            continue
+    if state.get("next_species_id") is not None:
+        SpeciesIdGenerator.restore_next(int(state["next_species_id"]))
+    elif high_water > 0:
+        SpeciesIdGenerator.set_min_id(high_water + 1)
     return species
 
 
@@ -124,18 +139,45 @@ def write_species_state(
     payload = {
         "species": {str(sid): sp.to_dict() for sid, sp in species.items()},
         "generation": generation,
+        "next_species_id": SpeciesIdGenerator.peek_next(),
     }
+    existing: dict = {}
     if path.exists():
         try:
             with open(path, "r", encoding="utf-8") as f:
                 existing = json.load(f)
-            for key in ("global_best_id", "metrics", "archive_count"):
+            for key in ("global_best_id", "metrics", "archive_count", "extinct", "incubators"):
                 if key in existing and key not in payload:
                     payload[key] = existing[key]
         except Exception:
-            pass
+            existing = {}
     if extra:
         payload.update(extra)
+
+    # Keep extinct list = prior extinct ∪ parent IDs referenced by merges but not alive.
+    extinct_ids = set()
+    for sid in payload.get("extinct") or []:
+        try:
+            extinct_ids.add(int(sid))
+        except (TypeError, ValueError):
+            continue
+    for sp in species.values():
+        for pid in sp.parent_ids or []:
+            try:
+                pid_int = int(pid)
+            except (TypeError, ValueError):
+                continue
+            if pid_int > 0 and pid_int not in species:
+                extinct_ids.add(pid_int)
+                SpeciesIdGenerator.note_id(pid_int)
+    if extinct_ids:
+        payload["extinct"] = sorted(extinct_ids)
+
+    # Prefer generator high-water over any stale next_species_id in extras.
+    payload["next_species_id"] = max(
+        int(payload.get("next_species_id") or 1),
+        SpeciesIdGenerator.peek_next(),
+    )
     save_json(path, payload)
 
 

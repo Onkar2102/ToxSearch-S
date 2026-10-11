@@ -831,6 +831,7 @@ def load_and_initialize_population(
                         "extinct": [],
                         "archive_count": 0,
                         "global_best_id": None,
+                        "next_species_id": 1,
                         "metrics": {"history": [], "summary": {"total_speciation_events": 0, "total_merge_events": 0, "total_extinction_events": 0}},
                         "config": config_dict
                     }

@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Tuple, Optional
 
-from .species import Individual, Species
+from .species import Individual, Species, SpeciesIdGenerator
 from .distance import pair_distance
 
 from utils import get_custom_logging
@@ -39,10 +39,14 @@ def merge_islands(
     else:
         new_leader = combined[0]
 
-    # Keep oldest (smallest) parent ID — IDs are assigned ascending.
+    # Survivor keeps the oldest parent ID (lowest ID; IDs are assigned ascending).
+    # The higher parent is absorbed (marked extinct by the caller); its ID must
+    # not be reused for a later new species. note_id only advances the high-water
+    # mark — it does not change species_state.
     survivor_id = min(sp1.id, sp2.id)
     older = sp1 if sp1.id <= sp2.id else sp2
     parent_ids = sorted([sp1.id, sp2.id])
+    SpeciesIdGenerator.note_id(max(sp1.id, sp2.id))
 
     merged = Species(
         id=survivor_id,

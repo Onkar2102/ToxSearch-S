@@ -411,7 +411,11 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
             _logger.debug("No genomes with embeddings for GDP projection; skipping plot")
             return None
         result_path = None
-        plot_3d_gen_path = figures_dir / "genetic_distance_projection_3d_toxicity_by_generation.png"
+        tracker_for_name = load_evolution_tracker(outputs_path) or {}
+        metric_tag = str(
+            (tracker_for_name.get("run_metadata") or {}).get("north_star_metric") or "fitness"
+        )
+        plot_3d_gen_path = figures_dir / f"genetic_distance_projection_3d_{metric_tag}_by_generation.png"
         if generate_gdp_3d_toxicity_figure(
             reduced,
             str(plot_3d_gen_path),
@@ -421,7 +425,9 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
         ):
             _logger.info("Generated GDP 3D (species + archive): %s", plot_3d_gen_path)
             result_path = str(plot_3d_gen_path)
-        plot_3d_gen_axis_path = figures_dir / "genetic_distance_projection_3d_generation_axis_toxicity_color.png"
+        plot_3d_gen_axis_path = (
+            figures_dir / f"genetic_distance_projection_3d_generation_axis_{metric_tag}_color.png"
+        )
         if generate_gdp_3d_generation_axis_toxicity_color(
             reduced,
             str(plot_3d_gen_axis_path),

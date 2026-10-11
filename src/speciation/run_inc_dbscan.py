@@ -267,8 +267,7 @@ def process_generation_inc_dbscan(
             events_tracker.log("population", "inc_dbscan_init", seed_ev)
     else:
         species = load_species_state(state_path, eps, logger=logger)
-        if species:
-            SpeciesIdGenerator.set_min_id(max(species) + 1)
+        # Cursor restored from next_species_id (and extinct/alive IDs as fallback).
         n_unlabeled = len(unlabeled_indices(genomes))
         if n_unlabeled > 0:
             with PerformanceLogger(logger, f"IncDBSCAN: insert {n_unlabeled} newcomers"):

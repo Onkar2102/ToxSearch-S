@@ -108,7 +108,7 @@ def apply_refusal_penalties(
         
     except Exception as e:
         logger.error("Failed to apply refusal penalties: %s", e, exc_info=True)
-        return {"total_genomes": 0, "refusals_detected": 0, "penalties_applied": 0}
+        raise
 
 
 def apply_refusal_penalty_single(genome, north_star_metric="toxicity"):

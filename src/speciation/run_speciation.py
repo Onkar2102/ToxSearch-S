@@ -1014,14 +1014,18 @@ def process_generation(current_generation: int,
                     with open(speciation_state_path, 'r', encoding='utf-8') as f:
                         existing_state = json.load(f)
                     
+                    extinct = list(existing_state.get("extinct", []) or [])
+                    if absorbed_id not in extinct:
+                        extinct.append(absorbed_id)
                     state_dict = {
                         "species": {str(sid): sp.to_dict() for sid, sp in state["species"].items()},
-                        "generation": current_generation
+                        "generation": current_generation,
+                        "global_best_id": existing_state.get("global_best_id"),
+                        "metrics": existing_state.get("metrics", {}),
+                        "incubators": existing_state.get("incubators", []),
+                        "extinct": sorted(extinct),
+                        "next_species_id": SpeciesIdGenerator.peek_next(),
                     }
-                    state_dict["global_best_id"] = existing_state.get("global_best_id")
-                    state_dict["metrics"] = existing_state.get("metrics", {})
-                    state_dict["incubators"] = existing_state.get("incubators", [])
-                    state_dict["extinct"] = existing_state.get("extinct", [])
                     
                     with open(speciation_state_path, 'w', encoding='utf-8') as f:
                         json.dump(state_dict, f, indent=2, ensure_ascii=False)
@@ -1150,12 +1154,13 @@ def process_generation(current_generation: int,
                 
                 state_dict = {
                     "species": {str(sid): sp.to_dict() for sid, sp in state["species"].items()},
-                    "generation": current_generation
+                    "generation": current_generation,
+                    "global_best_id": existing_state.get("global_best_id"),
+                    "metrics": existing_state.get("metrics", {}),
+                    "incubators": existing_state.get("incubators", []),
+                    "extinct": existing_state.get("extinct", []),
+                    "next_species_id": SpeciesIdGenerator.peek_next(),
                 }
-                state_dict["global_best_id"] = existing_state.get("global_best_id")
-                state_dict["metrics"] = existing_state.get("metrics", {})
-                state_dict["incubators"] = existing_state.get("incubators", [])
-                state_dict["extinct"] = existing_state.get("extinct", [])
                 
                 with open(speciation_state_path, 'w', encoding='utf-8') as f:
                     json.dump(state_dict, f, indent=2, ensure_ascii=False)
@@ -1854,7 +1859,9 @@ def save_state(path: str) -> None:
         "archive_count": archive_count,
         "global_best_id": state["global_best"].id if state["global_best"] else None,
         "metrics": state["metrics_tracker"].to_dict(),
-        "config": state["config"].to_dict()
+        "config": state["config"].to_dict(),
+        # Next free species ID (high-water + 1); survives absorbed/extinct IDs.
+        "next_species_id": SpeciesIdGenerator.peek_next(),
     }
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(state_dict, f, indent=2, ensure_ascii=False)
@@ -2009,7 +2016,19 @@ def load_state(path: str) -> bool:
                 f"Restored historical_species from file: {len(incubator_ids)} incubator, {len(extinct_ids)} extinct"
             )
         
-        SpeciesIdGenerator.set_min_id(max_species_id + 1)
+        if loaded_state.get("next_species_id") is not None:
+            SpeciesIdGenerator.restore_next(int(loaded_state["next_species_id"]))
+            # Also cover any larger ID still listed in the file (alive/extinct/incubator).
+            if max_species_id > 0:
+                SpeciesIdGenerator.note_id(max_species_id)
+        elif max_species_id > 0:
+            SpeciesIdGenerator.set_min_id(max_species_id + 1)
+        logger.debug(
+            "SpeciesIdGenerator restored: next=%d (file_next=%s, max_seen_in_file=%d)",
+            SpeciesIdGenerator.peek_next(),
+            loaded_state.get("next_species_id"),
+            max_species_id,
+        )
         
         if "metrics" in loaded_state:
             metrics_dict = loaded_state["metrics"]
@@ -2365,6 +2384,8 @@ def run_speciation(
         if "_genome_tracker" in state:
             stats = state["_genome_tracker"].get_distribution_stats()
             by_sid = stats.get("by_species_id", {})
+            # Totals after redistribute (not per-gen deltas). Per-gen archival is
+            # result["archived_count"] / tracker speciation.archived_count.
             elites_count = sum(int(v) for k, v in by_sid.items() if k.isdigit() and int(k) > 0)
             result.update({
                 "elites_moved": elites_count,

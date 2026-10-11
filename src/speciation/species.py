@@ -200,12 +200,16 @@ class Species:
 
 
 class SpeciesIdGenerator:
-    """Thread-safe species ID generator (singleton pattern).
+    """Monotonic counter for new species IDs (never re-issues a past ID).
 
-    Ensures unique species IDs across the evolution run. IDs are sequential
-    integers starting from 1. ID 0 is unused (legacy cluster-0 / reserves).
+    IDs are sequential integers starting from 1. ID 0 is unused (legacy
+    cluster-0 / reserves). On merge, the surviving species keeps the oldest
+    (lowest) parent ID; the absorbed parent's ID is gone from the live set
+    but must still block reuse. Persist ``peek_next()`` as ``next_species_id``
+    in speciation_state.json so reloads do not reconstruct the cursor from
+    alive IDs alone (which would re-issue an absorbed high ID).
     """
-    _current_id: int = 0
+    _current_id: int = 0  # high-water: largest ID ever issued or noted
     
     @classmethod
     def next_id(cls) -> int:
@@ -214,17 +218,36 @@ class SpeciesIdGenerator:
     
     @classmethod
     def reset(cls, start: int = 0) -> None:
-        cls._current_id = start
+        cls._current_id = int(start)
+    
+    @classmethod
+    def note_id(cls, sid: int) -> None:
+        """Raise the high-water mark to at least ``sid`` (no species_state change)."""
+        if sid is None:
+            return
+        sid_int = int(sid)
+        if sid_int > 0:
+            cls._current_id = max(cls._current_id, sid_int)
+    
+    @classmethod
+    def peek_next(cls) -> int:
+        """Value the next ``next_id()`` call will return (for persistence)."""
+        return cls._current_id + 1
     
     @classmethod
     def set_min_id(cls, min_id: int) -> None:
         """Ensure the next ``next_id()`` return is ``>= min_id``.
 
-        Callers pass ``max_existing_id + 1``. Because ``next_id`` pre-increments,
+        Callers pass ``max_seen_id + 1``. Because ``next_id`` pre-increments,
         the cursor is stored as ``min_id - 1`` (not ``min_id``), otherwise the
         first allocated ID would skip ``min_id``.
         """
-        cls._current_id = max(cls._current_id, min_id - 1)
+        cls._current_id = max(cls._current_id, int(min_id) - 1)
+
+    @classmethod
+    def restore_next(cls, next_species_id: int) -> None:
+        """Reload cursor so the next ``next_id()`` returns ``next_species_id``."""
+        cls.set_min_id(int(next_species_id))
 
 
 def generate_species_id() -> int:

@@ -543,6 +543,149 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
         ) from e
 
 
+def _ensure_tracking_artifacts(outputs_path, logger, config_dict=None):
+    """Create tracker/event/op-effectiveness stubs before first speciation (seq parity)."""
+    from datetime import datetime
+
+    outputs_path = Path(outputs_path)
+    outputs_path.mkdir(parents=True, exist_ok=True)
+    created = []
+
+    for fname in ("temp.json", "elites.json", "archive.json", "parents.json", "top_10.json"):
+        fpath = outputs_path / fname
+        if not fpath.exists():
+            with open(fpath, "w", encoding="utf-8") as f:
+                json.dump([], f)
+            created.append(fname)
+
+    tracker_path = outputs_path / "EvolutionTracker.json"
+    if not tracker_path.exists():
+        run_meta = {"num_workers": None, "run_mode": "parallel"}
+        if config_dict:
+            for k in (
+                "max_total_genomes",
+                "evaluator",
+                "north_star_metric",
+                "openai_model",
+                "theta_sim",
+                "species_capacity",
+            ):
+                if config_dict.get(k) is not None:
+                    run_meta[k] = config_dict[k]
+        tracker = {
+            "status": "not_complete",
+            "total_generations": 0,
+            "generations_since_improvement": 0,
+            "avg_fitness_history": [],
+            "slope_of_avg_fitness": 0.0,
+            "selection_mode": "default",
+            "run_metadata": run_meta,
+            "generations": [],
+        }
+        with open(tracker_path, "w", encoding="utf-8") as f:
+            json.dump(tracker, f, indent=2, ensure_ascii=False)
+        created.append("EvolutionTracker.json")
+
+    genome_tracker_path = outputs_path / "genome_tracker.json"
+    if not genome_tracker_path.exists():
+        with open(genome_tracker_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "version": "2.0",
+                    "genomes": {},
+                    "summary": {
+                        "total_genomes": 0,
+                        "by_species_id": {},
+                        "last_updated": datetime.now().isoformat(),
+                    },
+                    "metadata": {
+                        "last_updated": datetime.now().isoformat(),
+                        "total_genomes": 0,
+                    },
+                },
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
+        created.append("genome_tracker.json")
+
+    events_path = outputs_path / "events_tracker.json"
+    if not events_path.exists():
+        with open(events_path, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "generations": [],
+                    "summary": {
+                        "total_generations": 0,
+                        "total_events": 0,
+                        "last_updated": datetime.now().isoformat(),
+                    },
+                },
+                f,
+                indent=2,
+                ensure_ascii=False,
+            )
+        created.append("events_tracker.json")
+
+    csv_path = outputs_path / "operator_effectiveness_cumulative.csv"
+    if not csv_path.exists():
+        cols = [
+            "generation", "operator", "NE", "EHR", "IR", "cEHR", "Δμ", "Δσ",
+            "total_variants", "elite_count", "non_elite_count", "rejections", "duplicates",
+        ]
+        pd.DataFrame(columns=cols).to_csv(csv_path, index=False, na_rep="")
+        created.append("operator_effectiveness_cumulative.csv")
+
+    if created:
+        logger.info("Initialized tracking artifacts: %s", ", ".join(created))
+
+
+def _update_operator_effectiveness(outputs_path, generation_id, north_star_metric, logger,
+                                   operator_statistics=None):
+    """Mirror sequential main.py operator-effectiveness CSV + viz after each merge."""
+    try:
+        from utils.operator_effectiveness import (
+            calculate_table4_metrics,
+            save_operator_effectiveness_cumulative,
+            generate_operator_effectiveness_visualizations,
+        )
+
+        metrics_df = calculate_table4_metrics(
+            outputs_path=str(outputs_path),
+            current_generation=generation_id,
+            north_star_metric=north_star_metric,
+            operator_statistics=operator_statistics,
+            logger=logger,
+        )
+        if metrics_df is None:
+            metrics_df = pd.DataFrame()
+        save_operator_effectiveness_cumulative(
+            metrics_df=metrics_df,
+            outputs_path=str(outputs_path),
+            current_generation=generation_id,
+            logger=logger,
+        )
+        if not metrics_df.empty:
+            viz_paths = generate_operator_effectiveness_visualizations(
+                outputs_path=str(outputs_path),
+                current_generation=generation_id,
+                logger=logger,
+            )
+            logger.info(
+                "Gen %d: operator effectiveness saved (%d operators, %d visualizations)",
+                generation_id,
+                len(metrics_df),
+                len(viz_paths) if viz_paths else 0,
+            )
+        else:
+            logger.info(
+                "Gen %d: operator effectiveness CSV updated (no operator variants this gen)",
+                generation_id,
+            )
+    except Exception as e:
+        logger.warning("Gen %d: operator effectiveness update failed (non-fatal): %s", generation_id, e)
+
+
 def _run_live_analysis(outputs_path, logger):
     
     try:
@@ -641,32 +784,33 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
     comm.bcast(config_dict, root=0)
     logger.info("Broadcast config to workers: %s", list((config_dict or {}).keys()))
+    evaluator_name = str((config_dict or {}).get("evaluator") or "google").lower()
     num_perspective_keys = len((config_dict or {}).get("perspective_api_keys", []))
-    if num_perspective_keys:
-        logger.info("Perspective API: %d key(s) loaded; worker rank R uses key index (R-1) %% %d",
-                    num_perspective_keys, num_perspective_keys)
-        assignments = [f"worker {r} → key index {(r - 1) % num_perspective_keys}" for r in range(1, size)]
-        logger.info("Perspective API key assignment: %s", ", ".join(assignments))
-    else:
-        logger.warning("No Perspective API keys in config; workers will not receive key_index")
-        logger.error(
-            "Parallel mode requires at least one Perspective API key. Set one of: "
-            "PERSPECTIVE_API_KEY=<key> or PERSPECTIVE_API_KEYS=<key1>,<key2> (e.g. in your job script: "
-            "export PERSPECTIVE_API_KEY=your_key_here). Aborting."
+    if evaluator_name in ("google", "perspective"):
+        if num_perspective_keys:
+            logger.info(
+                "Perspective API: %d key(s) loaded; worker rank R uses key index (R-1) %% %d",
+                num_perspective_keys, num_perspective_keys,
+            )
+            assignments = [
+                f"worker {r} → key index {(r - 1) % num_perspective_keys}"
+                for r in range(1, size)
+            ]
+            logger.info("Perspective API key assignment: %s", ", ".join(assignments))
+        else:
+            logger.error(
+                "Parallel mode with --evaluator google requires at least one Perspective API key. "
+                "Set PERSPECTIVE_API_KEY or PERSPECTIVE_API_KEYS. Aborting."
+            )
+            comm.Abort(1)
+    elif num_perspective_keys:
+        logger.info(
+            "Perspective keys present but evaluator=%s; key_index still broadcast for hybrid use",
+            evaluator_name,
         )
-        comm.Abort(1)
 
     outputs_path = Path(outputs_path)
-    outputs_path.mkdir(parents=True, exist_ok=True)
-    created = []
-    for fname in ("temp.json", "elites.json", "archive.json"):
-        fpath = outputs_path / fname
-        if not fpath.exists():
-            with open(fpath, "w", encoding="utf-8") as f:
-                json.dump([], f)
-            created.append(fname)
-    if created:
-        logger.info("Initialized output files: %s", ", ".join(created))
+    _ensure_tracking_artifacts(outputs_path, logger, config_dict=config_dict)
 
     buffers = defaultdict(list)
     generation_id = 0
@@ -940,6 +1084,13 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                                 batch_size_K=tracker_batch_k, speciation_config=speciation_config, config_dict=config_dict,
                                 evaluated_this_generation=eval_this_gen,
                                 discarded_this_generation=discarded)
+                _update_operator_effectiveness(
+                    outputs_path,
+                    generation_id,
+                    north_star_metric,
+                    logger,
+                    operator_statistics=_collect_operator_stats(accepted_genomes),
+                )
                 snap_evaluated = total_evaluated
                 snap_discarded = total_discarded
                 gen_start = time.time()
@@ -1022,6 +1173,13 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                         batch_size_K=drain_batch_k, speciation_config=speciation_config, config_dict=config_dict,
                         evaluated_this_generation=eval_this_gen,
                         discarded_this_generation=discarded)
+        _update_operator_effectiveness(
+            outputs_path,
+            generation_id,
+            north_star_metric,
+            logger,
+            operator_statistics=_collect_operator_stats(accepted_genomes),
+        )
         snap_evaluated = total_evaluated
         snap_discarded = total_discarded
         _run_live_analysis(outputs_path, logger)
@@ -1246,6 +1404,13 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     apply_refusal_penalty_single(genome, north_star_metric)
                     gen0_ok += 1
                 except Exception as exc:
+                    from gne.evaluator import PerspectiveAuthError
+                    if isinstance(exc, PerspectiveAuthError):
+                        logger.error(
+                            "Perspective auth/config failure on worker %d (gen0): %s — aborting MPI job",
+                            rank, exc, exc_info=True,
+                        )
+                        comm.Abort(1)
                     logger.error("Pipeline error (gen0) local_variant_id=%s: %s",
                                  local_variant_id, exc, exc_info=True)
                     genome["status"] = "error"
@@ -1339,6 +1504,13 @@ def worker_main(comm, rank, size, logger, config_dict=None,
                     apply_refusal_penalty_single(variant, north_star_metric)
                     cycle_ok += 1
                 except Exception as exc:
+                    from gne.evaluator import PerspectiveAuthError
+                    if isinstance(exc, PerspectiveAuthError):
+                        logger.error(
+                            "Perspective auth/config failure on worker %d: %s — aborting MPI job",
+                            rank, exc, exc_info=True,
+                        )
+                        comm.Abort(1)
                     logger.error("Pipeline error local_variant_id=%s: %s",
                                  local_variant_id, exc, exc_info=True)
                     variant["status"] = "error"

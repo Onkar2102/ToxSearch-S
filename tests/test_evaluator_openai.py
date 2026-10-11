@@ -48,22 +48,36 @@ def _make_openai_evaluator():
 
 
 def _make_google_evaluator():
+    """Stub REST Perspective client (discovery client removed)."""
     evaluator = HybridModerationEvaluator.__new__(HybridModerationEvaluator)
     evaluator.profile = resolve_evaluator("google")
     evaluator.google_available = True
     evaluator.openai_available = False
     evaluator.logger = MagicMock()
-    evaluator.google_client = MagicMock()
-    evaluator.google_client.comments.return_value.analyze.return_value.execute.return_value = {
+    evaluator._api_keys = ["test-key"]
+    evaluator._active_key_index = 0
+    evaluator.google_client = "requests"
+    fake_resp = MagicMock()
+    fake_resp.status_code = 200
+    fake_resp.text = ""
+    fake_resp.json.return_value = {
         "attributeScores": {
             "TOXICITY": {"summaryScore": {"value": 0.42}},
             "THREAT": {"summaryScore": {"value": 0.1}},
         }
     }
+    session = MagicMock()
+    session.post.return_value = fake_resp
+    HybridModerationEvaluator._perspective_session = session
     return evaluator
 
 
 class TestEvaluatorOpenAI(unittest.TestCase):
+    def tearDown(self):
+        set_active_evaluator("google")
+        set_active_north_star("toxicity")
+        HybridModerationEvaluator._perspective_session = None
+
     def test_evaluate_with_openai_normalizes_scores(self):
         evaluator = _make_openai_evaluator()
         result, _info = evaluator._evaluate_with_openai("harmful text", "g1")
@@ -94,13 +108,15 @@ class TestEvaluatorOpenAI(unittest.TestCase):
 
     def test_hybrid_evaluate_text_stamps_openai_backend(self):
         evaluator = _make_openai_evaluator()
-        out = evaluator._evaluate_text_hybrid("text", "g2")
+        out = evaluator._evaluate_text_hybrid("openai-unique-text", "g2")
         self.assertIn("openai", out)
         self.assertNotIn("error", out)
 
     def test_google_path_unchanged(self):
+        set_active_evaluator("google")
+        set_active_north_star("toxicity")
         evaluator = _make_google_evaluator()
-        out = evaluator._evaluate_text_hybrid("text", "g3")
+        out = evaluator._evaluate_text_hybrid("google-unique-text", "g3")
         self.assertIn("google", out)
         genome = {
             "evaluator": "google",
