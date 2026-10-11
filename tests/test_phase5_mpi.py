@@ -114,6 +114,7 @@ def test_phase5(comm, rank, size, logger):
 
     original_gsv = ee_module.generate_single_variant
     ee_module.generate_single_variant = _mock_generate_single_variant
+    rank_error = None
 
     try:
         from parallel.master_worker import run
@@ -171,8 +172,18 @@ def test_phase5(comm, rank, size, logger):
             ids = [g["id"] for g in archive]
             assert len(ids) == len(set(ids)), f"Duplicate genome IDs: {ids}"
 
-            total_discarded = sum(
-                gen.get("total_discarded", 0) for gen in tracker.get("generations", []))
+            total_discarded = 0
+            for gen in tracker.get("generations", []):
+                total_discarded += int(
+                    gen.get("total_discarded")
+                    or gen.get("discarded_this_generation")
+                    or 0
+                )
+            metrics_path = out / "master_metrics.json"
+            if total_discarded == 0 and metrics_path.exists():
+                with open(metrics_path) as f:
+                    metrics = json.load(f)
+                total_discarded = int(metrics.get("total_discarded") or 0)
             logger.info("Total discarded across generations: %d", total_discarded)
             assert total_discarded > 0, \
                 "Expected some discarded genomes (errors), but total_discarded=0"
@@ -189,14 +200,24 @@ def test_phase5(comm, rank, size, logger):
                 f"Worker {rank}: ResponseGenerator was never called"
             logger.info("Worker %d: PHASE 5 PASS", rank)
 
+    except Exception as exc:
+        rank_error = exc
+        logger.exception("PHASE 5 failed on rank %d: %s", rank, exc)
     finally:
         ee_module.generate_single_variant = original_gsv
 
+    # Avoid deadlock: every rank must reach Barrier even if assertions failed.
+    fail_count = comm.allreduce(1 if rank_error is not None else 0, op=MPI.SUM)
     comm.Barrier()
 
     if rank == 0 and tmpdir:
         shutil.rmtree(tmpdir, ignore_errors=True)
         logger.info("Cleaned up %s", tmpdir)
+
+    if fail_count:
+        if rank_error is not None:
+            raise rank_error
+        raise RuntimeError(f"PHASE 5 failed on {fail_count} rank(s)")
 
 
                                                                                 

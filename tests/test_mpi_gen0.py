@@ -82,9 +82,13 @@ def run_mpi_gen0_pull_based_test():
         _write_seed_csv(Path(seed_path), unique + unique + unique)
     seed_path = comm.bcast(seed_path, root=0)
 
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(
+        level=logging.INFO,
+        format=f"[rank {rank}] %(levelname)s %(name)s: %(message)s",
+        force=True,
+    )
     logger = logging.getLogger(f"test_mpi_gen0_r{rank}")
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.INFO)
 
     kwargs = dict(
         logger=logger,
@@ -142,9 +146,13 @@ def run_mpi_gen0_small_queue_test():
         _write_seed_csv(Path(seed_path), [f"small_q_{i}" for i in range(5)])
     seed_path = comm.bcast(seed_path, root=0)
 
-    logging.basicConfig(level=logging.WARNING)
+    logging.basicConfig(
+        level=logging.INFO,
+        format=f"[rank {rank}] %(levelname)s %(name)s: %(message)s",
+        force=True,
+    )
     logger = logging.getLogger(f"test_mpi_gen0_small_r{rank}")
-    logger.setLevel(logging.WARNING)
+    logger.setLevel(logging.INFO)
 
     kwargs = dict(
         logger=logger,

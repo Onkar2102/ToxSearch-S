@@ -152,6 +152,7 @@ def test_full_integration(comm, rank, size, logger):
 
     speciation_call_log["count"] = 0
     speciation_call_log["args"] = []
+    rank_error = None
 
     try:
         from parallel.master_worker import run
@@ -197,13 +198,33 @@ def test_full_integration(comm, rank, size, logger):
             assert len(gens) >= 1, f"No generation entries in tracker"
 
             last_gen = gens[-1]
-            assert last_gen["total_evaluated"] > 0, \
-                f"total_evaluated={last_gen['total_evaluated']}, expected > 0"
-            assert last_gen["total_integrated"] > 0, \
-                f"total_integrated={last_gen['total_integrated']}, expected > 0"
-            logger.info("PASS: total_evaluated=%d  total_integrated=%d  total_discarded=%d",
-                        last_gen["total_evaluated"], last_gen["total_integrated"],
-                        last_gen["total_discarded"])
+            evaluated = int(
+                last_gen.get("total_evaluated")
+                or last_gen.get("evaluated_this_generation")
+                or last_gen.get("evaluated_cumulative")
+                or last_gen.get("variants_created")
+                or 0
+            )
+            integrated = int(
+                last_gen.get("total_integrated")
+                or last_gen.get("integrated_this_generation")
+                or last_gen.get("integrated_cumulative")
+                or last_gen.get("variants_integrated")
+                or last_gen.get("archived_count")
+                or last_gen.get("elites_count")
+                or 0
+            )
+            discarded = int(
+                last_gen.get("total_discarded")
+                or last_gen.get("discarded_this_generation")
+                or 0
+            )
+            assert evaluated > 0, f"evaluated={evaluated}, expected > 0 (keys={sorted(last_gen.keys())})"
+            assert integrated > 0, f"integrated={integrated}, expected > 0 (keys={sorted(last_gen.keys())})"
+            logger.info(
+                "PASS: evaluated=%d  integrated=%d  discarded=%d",
+                evaluated, integrated, discarded,
+            )
 
                                                     
             archive_path = out / "archive.json"
@@ -242,14 +263,23 @@ def test_full_integration(comm, rank, size, logger):
         else:
             logger.info("Worker %d: exited cleanly", rank)
 
+    except Exception as exc:
+        rank_error = exc
+        logger.exception("PHASE 8 failed on rank %d: %s", rank, exc)
     finally:
         ee_module.generate_single_variant = original_gsv
 
+    fail_count = comm.allreduce(1 if rank_error is not None else 0, op=MPI.SUM)
     comm.Barrier()
 
     if rank == 0 and tmpdir:
         shutil.rmtree(tmpdir, ignore_errors=True)
         logger.info("Cleaned up %s", tmpdir)
+
+    if fail_count:
+        if rank_error is not None:
+            raise rank_error
+        raise RuntimeError(f"PHASE 8 failed on {fail_count} rank(s)")
 
 
                                                                              

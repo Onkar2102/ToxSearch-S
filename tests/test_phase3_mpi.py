@@ -112,7 +112,7 @@ def test_dedup(comm, rank, size, logger):
         {"prompt": "unique_A", "toxicity": 0.8, "request_id": "1_3", "local_variant_id": "1_3"},
     ]
 
-    accepted, discarded, nid, _ = _merge_and_speciate(
+    accepted, discarded, nid, _, _ = _merge_and_speciate(
         buffers, 10, outputs, 0, 1, "toxicity", None, None, logger)
 
     assert accepted == 2, f"Expected 2 accepted, got {accepted}"
@@ -205,7 +205,7 @@ def test_phase3(comm, rank, size, logger):
 
                 total_buf = sum(len(b) for b in buffers.values())
                 if total_buf >= K:
-                    accepted, discarded, next_genome_id, spec = _merge_and_speciate(
+                    accepted, discarded, next_genome_id, spec, _ = _merge_and_speciate(
                         buffers, K, outputs, generation_id, next_genome_id,
                         "toxicity", None, None, logger)
                     total_integrated += accepted

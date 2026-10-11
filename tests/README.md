@@ -10,13 +10,11 @@ From the **repository root**, with `src` on the Python path (or after `pip insta
 # Recommended for local / CI-like runs (skip MPI suite)
 PYTHONPATH=src python -m pytest tests/ -v -m "not mpi"
 
-# MPI-only (must launch under mpiexec; fixtures need >= 2 ranks)
-PYTHONPATH=src mpiexec -n 3 python -m pytest tests/ -v -m mpi
+# Full MPI integration suite (scripts under mpiexec; preferred)
+bash scripts/run_mpi_tests.sh
 
-# MPI gen0 small-queue test needs 4 ranks
-PYTHONPATH=src mpiexec -n 4 python -m pytest tests/test_mpi_gen0.py -v -m mpi
-
-# phase8 serialization needs exactly 2 ranks
+# Lightweight MPI pytest modules only
+PYTHONPATH=src mpiexec -n 3 python -m pytest tests/test_mpi_speciation_config.py -v -m mpi
 PYTHONPATH=src mpiexec -n 2 python -m pytest tests/test_phase8_serialization.py -v -m mpi
 ```
 

@@ -1136,6 +1136,10 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     for w in range(1, size):
                         send_payload(comm, w, STOP, None, logger=logger)
                     logger.info("Sent STOP to all %d worker(s) (immediate broadcast).", size - 1)
+                    # STOP is authoritative: workers may exit their request loop without
+                    # another PARENTS_REQUEST, so do not block waiting to count them.
+                    finished_workers = n_workers
+                    break
 
     logger.info("All workers finished requesting. recv_count=%d", recv_count)
 
