@@ -821,7 +821,7 @@ def load_and_initialize_population(
                     except Exception:
                         config_dict = {
                             "theta_sim": 0.25, "theta_merge": 0.1,
-                            "species_capacity": 100, "min_island_size": 2, "species_stagnation": 20,
+                            "species_capacity": 100, "species_stagnation": 20,
                             "embedding_model": "all-MiniLM-L6-v2", "embedding_dim": 384,
                             "embedding_batch_size": 64, "w_genotype": 0.7, "w_phenotype": 0.3
                         }
@@ -1762,18 +1762,23 @@ def calculate_generation_statistics(
                     _seen.add(k)
                     uniq.append(g)
             dens = uniq
-            noise = [g for g in dens if _density_label_of(g) == -1]
-            clustered = [g for g in dens if (_density_label_of(g) or 0) > 0]
-            # Compat: elites_count ↔ clustered, archived_count ↔ noise (for legacy figure fields)
-            stats["clustered_count"] = len(clustered)
-            stats["noise_count"] = len(noise)
+            # After promotion: mature sid > 0, singleton pool sid == 0; residual raw noise == -1.
+            residual_noise = [g for g in dens if _density_label_of(g) == -1]
+            mature = [g for g in dens if (_density_label_of(g) or 0) > 0]
+            singletons = [g for g in dens if _density_label_of(g) == 0]
+            labeled = mature + singletons
+            stats["clustered_count"] = len(mature)
+            stats["noise_count"] = len(residual_noise)
+            stats["singleton_species_count"] = len(singletons)
             stats["density_size"] = len(dens)
-            stats["elites_count"] = len(clustered)
-            stats["archived_count"] = len(noise)
+            # Breeding pool = mature clusters + singleton pool.
+            stats["elites_count"] = len(labeled)
+            # IncDBSCAN has no archive.json dead pool — never alias pool 0 as archived.
+            stats["archived_count"] = 0
             stats["total_population"] = len(dens)
 
             clustered_scores = [
-                s for g in clustered
+                s for g in labeled
                 if (s := _extract_north_star_score(g, north_star_metric)) >= 0.0001
             ]
             if clustered_scores:
@@ -1801,11 +1806,11 @@ def calculate_generation_statistics(
             if current_generation == 0:
                 stats["initial_population_size"] = stats["total_population"]
             budget_metrics = calculate_budget_metrics(
-                clustered, noise, this_gen, current_generation, _logger
+                labeled, residual_noise, this_gen, current_generation, _logger
             )
             stats.update(budget_metrics)
             _logger.info(
-                "Gen %d IncDBSCAN stats: density=%d clustered=%d noise=%d avg_fit=%.4f max=%.4f",
+                "Gen %d IncDBSCAN stats: density=%d labeled=%d residual_noise=%d avg_fit=%.4f max=%.4f",
                 current_generation, stats["density_size"], stats["clustered_count"],
                 stats["noise_count"], stats["avg_fitness_generation"],
                 stats.get("population_max_fitness", 0.0001),

@@ -170,7 +170,10 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
             if use_inc:
                 secondary_panel.append(
                     int(
-                        speciation.get("noise_count", g.get("noise_count", g.get("archived_count", 0)))
+                        speciation.get(
+                            "singleton_species_count",
+                            g.get("singleton_species_count", 0),
+                        )
                         or 0
                     )
                 )
@@ -199,8 +202,12 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
         ax2.plot(x_genomes, secondary_panel, 's-', color='#984ea3', linewidth=2, markersize=6)
         ax2.set_xlabel('Cumulative genomes', fontsize=12)
         if use_inc:
-            ax2.set_ylabel('Noise count (in D_t)', fontsize=12)
-            ax2.set_title('DBSCAN Noise vs Cumulative Genomes', fontsize=12, fontweight='bold')
+            ax2.set_ylabel('Singleton species count', fontsize=12)
+            ax2.set_title(
+                'Singleton Species (ex-noise) vs Cumulative Genomes',
+                fontsize=12,
+                fontweight='bold',
+            )
         else:
             ax2.set_ylabel('Archive size (cumulative)', fontsize=12)
             ax2.set_title('Non-elites (archive) vs Cumulative Genomes', fontsize=12, fontweight='bold')
@@ -308,14 +315,14 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         x_genomes = _cumulative_genome_counts(generations)
         use_inc = _is_inc_dbscan_tracker(tracker, outputs_path)
         if use_inc:
+            # All D_t genomes are species members (multi-member + singleton); no archive alias.
             top_counts = [
-                int(g.get("clustered_count", g.get("elites_count", 0)) or 0) for g in generations
+                int(g.get("clustered_count", g.get("elites_count", g.get("density_size", 0))) or 0)
+                for g in generations
             ]
-            bottom_counts = [
-                int(g.get("noise_count", g.get("archived_count", 0)) or 0) for g in generations
-            ]
-            labels = ["Clustered (density)", "Noise (density)"]
-            title = "Population composition (IncDBSCAN: clustered + noise in D_t)"
+            bottom_counts = [0 for _ in generations]
+            labels = ["Species members (D_t)", ""]
+            title = "Population composition (IncDBSCAN: all genomes as species in D_t)"
         else:
             top_counts = [int(g.get("elites_count", 0) or 0) for g in generations]
             bottom_counts = [int(g.get("archived_count", 0) or 0) for g in generations]
@@ -323,14 +330,18 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
             title = "Population composition (cumulative: elites + archive)"
         
         plt.figure(figsize=(10, 6))
-        plt.stackplot(
-            x_genomes,
-            top_counts,
-            bottom_counts,
-            labels=labels,
-            colors=["#377eb8", "#984ea3"],
-            alpha=0.88,
-        )
+        if use_inc:
+            plt.plot(x_genomes, top_counts, color="#377eb8", linewidth=2.0, label=labels[0])
+            plt.fill_between(x_genomes, top_counts, color="#377eb8", alpha=0.25)
+        else:
+            plt.stackplot(
+                x_genomes,
+                top_counts,
+                bottom_counts,
+                labels=labels,
+                colors=["#377eb8", "#984ea3"],
+                alpha=0.88,
+            )
         
         plt.xlabel("Cumulative genomes", fontsize=12)
         plt.ylabel("Cumulative genome count (per pool)", fontsize=12)
@@ -377,11 +388,14 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
     try:
         from utils.gdp_projection import (
             run_gdp_projection,
-            generate_gdp_3d_toxicity_figure,
-            generate_gdp_3d_generation_axis_toxicity_color,
-            DEFAULT_VIEW_ANGLES,
+            generate_gdp_3d_generation_axis_fitness_color,
+            generate_gdp_3d_plotly_generation_axis_fitness_color,
+            GENERATION_AXIS_VIEW_ANGLES,
             is_gdp_available,
             get_gdp_import_error,
+            metric_display_label,
+            metric_file_tag,
+            resolve_north_star_metric,
         )
         if not is_gdp_available():
             err = get_gdp_import_error()
@@ -390,58 +404,91 @@ def generate_gdp_projection_plot(outputs_path: Optional[str] = None, logger=None
                 err or "unknown",
             )
             return None
-        use_inc = _is_inc_dbscan_tracker(load_evolution_tracker(outputs_path), outputs_path)
+        tracker_for_name = load_evolution_tracker(outputs_path) or {}
+        metric = resolve_north_star_metric(
+            (tracker_for_name.get("run_metadata") or {}).get("north_star_metric")
+            or tracker_for_name.get("north_star_metric")
+        )
+        metric_tag = metric_file_tag(metric)
+        metric_label = metric_display_label(metric)
+        use_inc = _is_inc_dbscan_tracker(tracker_for_name, outputs_path)
         if use_inc and temp_path.exists():
-            _, reduced = run_gdp_projection(
+            payload, reduced = run_gdp_projection(
                 elites_path=temp_path,
                 output_dir=base,
                 archive_path=None,
                 reduced_size=2,
                 save_json=True,
+                incremental=True,
+                north_star_metric=metric,
             )
         else:
-            _, reduced = run_gdp_projection(
+            payload, reduced = run_gdp_projection(
                 elites_path=elites_path,
                 output_dir=base,
                 archive_path=archive_path if archive_path.exists() else None,
                 reduced_size=2,
                 save_json=True,
+                incremental=True,
+                north_star_metric=metric,
             )
         if reduced is None:
             _logger.debug("No genomes with embeddings for GDP projection; skipping plot")
             return None
-        result_path = None
-        tracker_for_name = load_evolution_tracker(outputs_path) or {}
-        metric_tag = str(
-            (tracker_for_name.get("run_metadata") or {}).get("north_star_metric") or "fitness"
-        )
-        plot_3d_gen_path = figures_dir / f"genetic_distance_projection_3d_{metric_tag}_by_generation.png"
-        if generate_gdp_3d_toxicity_figure(
-            reduced,
-            str(plot_3d_gen_path),
-            color_by="species_archive",
-            publication_style=True,
-            view_angles=DEFAULT_VIEW_ANGLES,
-        ):
-            _logger.info("Generated GDP 3D (species + archive): %s", plot_3d_gen_path)
-            result_path = str(plot_3d_gen_path)
+        if payload and payload.get("incremental"):
+            _logger.info(
+                "GDP incremental update: reused=%s new=%s metric=%s",
+                payload.get("reused_positions"),
+                payload.get("new_positions"),
+                metric,
+            )
         plot_3d_gen_axis_path = (
             figures_dir / f"genetic_distance_projection_3d_generation_axis_{metric_tag}_color.png"
         )
-        if generate_gdp_3d_generation_axis_toxicity_color(
+        # Remove legacy Z=fitness / species-archive GDP figure if present.
+        legacy = figures_dir / f"genetic_distance_projection_3d_{metric_tag}_by_generation.png"
+        if legacy.exists():
+            try:
+                legacy.unlink()
+            except OSError:
+                pass
+        png_ok = generate_gdp_3d_generation_axis_fitness_color(
             reduced,
             str(plot_3d_gen_axis_path),
-            view_angles=DEFAULT_VIEW_ANGLES,
-        ):
-            _logger.info("Generated GDP 3D (Z=generation, color=toxicity): %s", plot_3d_gen_axis_path)
-        return result_path
+            view_angles=GENERATION_AXIS_VIEW_ANGLES,
+            metric_label=metric_label,
+            north_star_metric=metric,
+        )
+        if png_ok:
+            _logger.info(
+                "Generated GDP 3D (Z=generation, color=%s): %s",
+                metric_label,
+                plot_3d_gen_axis_path,
+            )
+        # Interactive HTML (drag to rotate) alongside the static PNG.
+        plot_html_path = (
+            figures_dir / f"genetic_distance_projection_3d_generation_axis_{metric_tag}_color.html"
+        )
+        html_ok = generate_gdp_3d_plotly_generation_axis_fitness_color(
+            reduced,
+            save_fpath=str(plot_html_path),
+            metric_label=metric_label,
+            north_star_metric=metric,
+        )
+        if html_ok:
+            _logger.info("Generated rotatable GDP 3D (HTML): %s", plot_html_path)
+        if png_ok:
+            return str(plot_3d_gen_axis_path)
+        if html_ok:
+            return str(plot_html_path)
+        return None
     except Exception as e:
         _logger.warning("Failed to generate GDP projection plot (non-fatal): %s", e)
     return None
 
 
 def run_live_analysis(outputs_path: Optional[str] = None, logger=None) -> Dict[str, Optional[str]]:
-    
+    """Regenerate all per-generation figures (fitness, speciation, operators, composition, GDP)."""
     _logger = logger or get_logger("LiveAnalysis")
     
     _logger.info("Running live analysis and generating visualizations...")

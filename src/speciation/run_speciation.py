@@ -385,7 +385,7 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
     genome_tracker = state["_genome_tracker"]
     
     stats = genome_tracker.get_distribution_stats()
-    has_archived = int(stats["by_species_id"].get("-1", 0)) > 0 or int(stats["by_species_id"].get("0", 0)) > 0
+    has_archived = int(stats["by_species_id"].get("-1", 0)) > 0
     
     logger.info("Phase 7: Steps 1-3 - Updating species_id from tracker")
     elites_genomes = _load_json_file(elites_path, logger, [])
@@ -459,20 +459,15 @@ def phase8_redistribute_genomes(temp_path: Optional[str] = None, current_generat
                 )
             species_id = genome_tracker.get_species_id(gid)
             genome["species_id"] = species_id
-        if species_id == 0:
-            raise ValueError(
-                f"Genome {gid} has legacy species_id=0 (cluster-0/reserves removed). "
-                "Expected species_id > 0 (elite) or -1 (archive)."
-            )
-        
-        if species_id > 0:
+        if species_id >= 0:
+            # Mature elites (sid > 0) and singleton/noise pool (sid == 0)
             new_file = "elites"
         elif species_id == -1:
             new_file = "archive"
         else:
             raise ValueError(
                 f"Genome {gid} has invalid species_id={species_id!r}; "
-                "expected > 0 (elite) or -1 (archive)"
+                "expected >= 0 (elite/singleton pool) or -1 (archive)"
             )
         
         old_file = next((f for f, (_, ids) in file_sources.items() if gid in ids), None)
@@ -1546,12 +1541,10 @@ def process_generation(current_generation: int,
         _save_tracker_if_dirty(state)
         state["logger"].info(f"Step 10: Frozen {frozen_count} species (trackers updated)")
     
-    state["logger"].info("=== Phase 5: Step 11 - Incubate Small Species (disabled) ===")
+    state["logger"].info("=== Phase 5: Step 11 - Incubate Small Species (removed) ===")
     state["logger"].info(
-        "Step 11 skipped: singleton elite species are allowed; "
-        "undersized niches are no longer dissolved to archive/incubator "
-        "(min_island_size=%d retained in config for compatibility only)",
-        state["config"].min_island_size,
+        "Step 11 removed: singleton elite species are kept in elites.json; "
+        "no minimum island size / incubation dissolve"
     )
     
     _save_tracker_if_dirty(state)
@@ -1834,19 +1827,12 @@ def save_state(path: str) -> None:
                 logger.debug(f"Validation error for species {sid_str}: {e}")
                 continue
 
-    min_island_size = state["config"].min_island_size
     for sid_str, sp_dict in species_dict.items():
         mids = sp_dict.get("member_ids", [])
         n = len(mids)
         if sp_dict.get("size") != n:
             logger.warning(f"Species {sid_str}: size={sp_dict.get('size')} != len(member_ids)={n}; setting size={n}")
             sp_dict["size"] = n
-        if n < min_island_size:
-            logger.debug(
-                "Species %s has size %d < min_island_size %d (count from tracker); "
-                "singleton elites are allowed (incubation dissolve disabled).",
-                sid_str, n, min_island_size
-            )
 
     archive_path = outputs_path / "archive.json"
     archive_genomes = _load_json_file(archive_path, logger, [])

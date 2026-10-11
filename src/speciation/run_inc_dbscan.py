@@ -18,13 +18,14 @@ from typing import Any, Dict, Optional, Set
 from .clustering.inc_dbscan import (
     load_inc_state,
     process_unlabeled,
+    promote_noise_to_singleton_species,
     save_inc_state,
     seed_from_batch,
     sync_genomes_from_state,
     validate_against_batch,
     write_species_and_config,
 )
-from .clustering._io import load_species_state
+from .clustering._io import SINGLETON_SPECIES_ID, load_species_state
 from .config import SpeciationConfig
 from .density_memory import (
     NOISE_LABEL,
@@ -287,6 +288,15 @@ def process_generation_inc_dbscan(
                         merge_events += 1
 
     sync_genomes_from_state(genomes, inc_state)
+    # Noise is not an archive: promote to shared singleton pool (species_id=0).
+    promote_noise_to_singleton_species(
+        inc_state,
+        genomes,
+        species,
+        current_generation=current_generation,
+        logger=logger,
+        events_tracker=events_tracker,
+    )
     save_density_memory(genomes, temp_p, logger=logger)
     save_inc_state(inc_path, inc_state)
 
@@ -344,8 +354,12 @@ def process_generation_inc_dbscan(
         1 for g in genomes
         if int(g.get("density_label", NOISE_LABEL) if g.get("density_label") is not None else NOISE_LABEL) == NOISE_LABEL
     )
-    active = len([sp for sp in species.values() if sp.species_state == "active"])
-    frozen = len([sp for sp in species.values() if sp.species_state == "frozen"])
+    singleton_count = sum(
+        1 for g in genomes
+        if int(g.get("density_label", NOISE_LABEL) if g.get("density_label") is not None else NOISE_LABEL) == SINGLETON_SPECIES_ID
+    )
+    active = len([sp for sp in species.values() if sp.species_state == "active" and sp.id > 0])
+    frozen = len([sp for sp in species.values() if sp.species_state == "frozen" and sp.id > 0])
 
     result = {
         "success": True,
@@ -354,9 +368,11 @@ def process_generation_inc_dbscan(
         "active_species_count": active,
         "frozen_species_count": frozen,
         "archive_size": 0,
+        # After promotion, residual raw noise (-1) should be 0; pool 0 holds singletons.
         "noise_count": noise_count,
+        "singleton_species_count": singleton_count,
         "density_size": len(genomes),
-        "clustered_count": max(0, len(genomes) - noise_count),
+        "clustered_count": len(genomes) - noise_count - singleton_count,
         "largest_species_size": max((sp.size for sp in species.values()), default=0),
         "average_species_size": (
             sum(sp.size for sp in species.values()) / len(species) if species else 0.0
@@ -364,6 +380,7 @@ def process_generation_inc_dbscan(
         "speciation_events": speciation_events,
         "merge_events": merge_events,
         "extinction_events": frozen_this_gen,
+        # IncDBSCAN has no archive pool; never alias noise as archived.
         "archived_count": 0,
         "genomes_updated": genomes_updated,
         "elites_moved": 0,
@@ -371,8 +388,8 @@ def process_generation_inc_dbscan(
         "error": None,
     }
     logger.info(
-        "IncDBSCAN done: density=%d species=%d noise=%d new=%d merges=%d frozen=%d",
-        result["density_size"], result["species_count"], noise_count,
+        "IncDBSCAN done: density=%d species=%d singletons=%d residual_noise=%d new=%d merges=%d frozen=%d",
+        result["density_size"], result["species_count"], singleton_count, noise_count,
         speciation_events, merge_events, frozen_this_gen,
     )
     return result

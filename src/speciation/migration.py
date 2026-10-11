@@ -73,8 +73,11 @@ def migrate_genome_tracker_from_files(
             skipped_count += 1
             continue
         
-        if species_id is None or species_id <= 0:
+        if species_id is None:
             species_id = -1
+        else:
+            species_id = int(species_id)
+            # elites: mature (>0) or singleton pool (0); never coerce 0 → archive
         
         genome_id_str = str(genome_id)
         generation = genome.get("generation", 0)

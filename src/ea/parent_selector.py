@@ -14,7 +14,10 @@ _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 class ParentSelector:
-    """Parent selection from elites.json only (species_id > 0). Category 1 = active species; Category 2 = frozen when Category 1 is empty."""
+    """Parent selection from elites.json (mature sid > 0 and singleton pool sid == 0).
+
+    Category 1 = active mature species (+ singleton pool); Category 2 = frozen when Category 1 is empty.
+    """
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None):
         
@@ -47,11 +50,14 @@ class ParentSelector:
                 frozen_ids.add(sid)
         
         if all_species_in_genomes is not None:
-            all_in_genomes = {sid for sid in all_species_in_genomes if sid is not None and sid > 0}
+            all_in_genomes = {sid for sid in all_species_in_genomes if sid is not None and sid >= 0}
         else:
             all_in_genomes = {int(s) for s in species_dict.keys() if int(s) > 0} - frozen_ids
         
         category1_ids = all_in_genomes - frozen_ids
+        # Singleton pool (0) is always breedable when present in genomes
+        if all_species_in_genomes is not None and 0 in all_species_in_genomes:
+            category1_ids.add(0)
 
         self.logger.debug(f"Category1 (active elites): {sorted(category1_ids)}, Frozen: {sorted(frozen_ids)}")
         
@@ -62,7 +68,7 @@ class ParentSelector:
         species_groups = defaultdict(list)
         for genome in genomes:
             species_id = genome.get("species_id")
-            if species_id is not None and species_id > 0:
+            if species_id is not None and species_id >= 0:
                 species_groups[species_id].append(genome)
         return dict(species_groups)
 
@@ -209,10 +215,10 @@ class ParentSelector:
             elites_path = str(Path(outputs_path) / "elites.json")
 
             elites = load_elites(elites_path, log_file=None)
-            elites = [g for g in elites if g.get("species_id") is not None and g.get("species_id", 0) > 0]
+            elites = [g for g in elites if g.get("species_id") is not None and g.get("species_id", -1) >= 0]
 
             if not elites:
-                self.logger.critical("No genomes in elites.json with species_id > 0 - evolution cannot continue")
+                self.logger.critical("No genomes in elites.json with species_id >= 0 - evolution cannot continue")
                 raise RuntimeError("No elite genomes available - evolution cannot continue.")
 
             species_groups = self._group_by_species(elites)

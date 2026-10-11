@@ -1197,14 +1197,6 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
         merge_k_history=merge_k_history,
     )
 
-    try:
-        from utils.live_analysis import generate_gdp_projection_plot
-        gdp_path = generate_gdp_projection_plot(outputs_path=str(outputs_path), logger=logger)
-        if gdp_path:
-            logger.info("Final GDP diagram: %s", gdp_path)
-    except Exception as e:
-        logger.warning("GDP diagram at end of run failed (non-fatal): %s", e)
-
     final_best = 0.0
     try:
         tracker_path = outputs_path / "EvolutionTracker.json"

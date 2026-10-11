@@ -1,8 +1,9 @@
 """Parent selection from IncDBSCAN density memory (temp.json = D_t).
 
-All genomes are eligible for default mode, including noise (species_id / density_label = -1).
-Does not read elites.json / archive.json.
-Exploit / explore prefer active (non-frozen) clusters with label > 0.
+All genomes are eligible for default mode, including the singleton pool
+(species_id / density_label = 0). Does not read elites.json / archive.json.
+Exploit / explore prefer active (non-frozen) mature clusters with label > 0;
+singleton pool is a last-resort fallback.
 """
 
 from __future__ import annotations
@@ -94,7 +95,7 @@ class IncDBSCANParentSelector:
         groups: Dict[int, List[Dict[str, Any]]],
         frozen_ids: Set[int],
     ) -> List[Tuple[int, List[Dict[str, Any]], float]]:
-        """Active clusters (label > 0, not frozen); fallback to frozen; then any non-empty pool."""
+        """Active mature clusters (label > 0); fallback frozen; then singleton pool / any."""
         active = {
             sid: gs for sid, gs in groups.items()
             if sid > 0 and sid not in frozen_ids and gs
@@ -110,7 +111,7 @@ class IncDBSCANParentSelector:
         if pools:
             self.logger.warning("IncDBSCAN: no active species — falling back to frozen clusters")
             return pools
-        # Last resort: include noise / anything labeled
+        # Last resort: singleton pool (0) and any residual labels
         return self._sorted_pools(groups)
 
     def _select_default(self, groups: Dict[int, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:

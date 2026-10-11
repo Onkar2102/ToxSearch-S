@@ -13,8 +13,8 @@ class Individual:
     Bridges raw genome dicts and speciation internals: genotype embedding,
     objective (phenotype) vector, fitness, and species assignment.
 
-    ``species_id``: ``> 0`` elite member; ``-1`` archive (non-elite); ``None`` unassigned.
-    ``0`` is legacy (old cluster-0 / reserves) and raises on redistribute.
+    ``species_id``: ``> 0`` mature species; ``0`` singleton/noise pool (elite / D_t);
+    ``-1`` archive (non-elite); ``None`` unassigned.
     """
     id: int
     prompt: str
@@ -202,12 +202,13 @@ class Species:
 class SpeciesIdGenerator:
     """Monotonic counter for new species IDs (never re-issues a past ID).
 
-    IDs are sequential integers starting from 1. ID 0 is unused (legacy
-    cluster-0 / reserves). On merge, the surviving species keeps the oldest
-    (lowest) parent ID; the absorbed parent's ID is gone from the live set
-    but must still block reuse. Persist ``peek_next()`` as ``next_species_id``
-    in speciation_state.json so reloads do not reconstruct the cursor from
-    alive IDs alone (which would re-issue an absorbed high ID).
+    IDs are sequential integers starting from 1 (mature multi-member species).
+    ID 0 is reserved for the shared singleton/noise pool and is never issued
+    here. On merge, the surviving species keeps the oldest (lowest) parent ID;
+    the absorbed parent's ID is gone from the live set but must still block
+    reuse. Persist ``peek_next()`` as ``next_species_id`` in
+    speciation_state.json so reloads do not reconstruct the cursor from alive
+    IDs alone (which would re-issue an absorbed high ID).
     """
     _current_id: int = 0  # high-water: largest ID ever issued or noted
     

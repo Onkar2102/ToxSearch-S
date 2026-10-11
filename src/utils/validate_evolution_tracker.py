@@ -199,21 +199,37 @@ def validate_per_generation_fields(tracker: Dict[str, Any], logger=None) -> Tupl
             elites = gen["elites_count"]
             archived = gen["archived_count"]
             expected_total = elites + archived
-            # IncDBSCAN: total = density_size (= clustered + noise); elites/archived are aliases
+            # IncDBSCAN: D_t = mature (>0) + singleton pool (0) + residual noise (-1); archived=0
             if gen.get("population_mode") == "inc_dbscan" or gen.get("density_size") is not None:
                 dens = gen.get("density_size", total_pop)
-                clustered = gen.get("clustered_count", elites)
-                noise = gen.get("noise_count", archived)
+                clustered = gen.get("clustered_count")
+                noise = gen.get("noise_count")
+                singletons = gen.get("singleton_species_count")
                 if dens is not None and clustered is not None and noise is not None:
-                    if int(dens) != int(clustered) + int(noise):
+                    parts = int(clustered) + int(noise)
+                    if singletons is not None:
+                        parts += int(singletons)
+                    if int(dens) != parts:
                         errors.append(
                             f"Generation {gen_num}: density_size={dens} != "
-                            f"clustered_count + noise_count={int(clustered) + int(noise)}"
+                            f"clustered + singleton_pool + noise={parts}"
                         )
-                if total_pop != expected_total and total_pop != dens:
+                # elites_count = mature + pool 0 (= density - residual noise); archived_count = 0
+                if dens is not None and noise is not None and int(elites) != int(dens) - int(noise):
+                    errors.append(
+                        f"Generation {gen_num}: elites_count={elites} != "
+                        f"density_size - noise_count={int(dens) - int(noise)} "
+                        f"(mature + singleton pool)"
+                    )
+                if int(archived) != 0:
+                    errors.append(
+                        f"Generation {gen_num}: archived_count={archived} != 0 "
+                        f"(IncDBSCAN has no archive; noise → singleton pool 0)"
+                    )
+                if total_pop != int(dens) and total_pop != expected_total:
                     errors.append(
                         f"Generation {gen_num}: total_population={total_pop} inconsistent with "
-                        f"elites+archived={expected_total} / density_size={dens}"
+                        f"density_size={dens} / elites+archived={expected_total}"
                     )
             elif total_pop != expected_total:
                 errors.append(

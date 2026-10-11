@@ -10,6 +10,7 @@ import numpy as np
 from ..distance import normalize_distance_method, pairwise_distance_matrix
 from ..species import Individual, Species, generate_species_id
 from ._io import (
+    SINGLETON_SPECIES_ID,
     default_paths,
     individuals_from_genomes,
     load_json_list,
@@ -105,45 +106,48 @@ def dbscan_cluster_population(
     )
     raw = dbscan_precomputed(dist, eps=eps, min_samples=min_samples)
 
-    # Remap noise (-1) → singleton local labels after density clusters
-    labels = raw.copy()
-    next_lab = int(raw.max()) + 1 if raw.size and raw.max() >= 0 else 0
-    for i, lab in enumerate(labels):
-        if lab < 0:
-            labels[i] = next_lab
-            next_lab += 1
-
+    # Mature density clusters → unique sid >= 1; noise → shared singleton pool 0
     groups: Dict[int, List[Individual]] = defaultdict(list)
-    for ind, lab in zip(individuals, labels):
-        groups[int(lab)].append(ind)
+    for ind, lab in zip(individuals, raw):
+        key = SINGLETON_SPECIES_ID if int(lab) < 0 else int(lab)
+        groups[key].append(ind)
 
     species: Dict[int, Species] = {}
     touched: Set[int] = set()
-    raw_by_id = {ind.id: int(raw[i]) for i, ind in enumerate(individuals)}
+    tracker_updates: Dict[str, int] = {}
 
-    for members in groups.values():
+    for local_lab, members in groups.items():
         members = sorted(members, key=lambda x: x.fitness, reverse=True)
+        if local_lab == SINGLETON_SPECIES_ID:
+            for m in members:
+                m.species_id = SINGLETON_SPECIES_ID
+                tracker_updates[str(m.id)] = SINGLETON_SPECIES_ID
+                if events_tracker is not None:
+                    events_tracker.log(
+                        m.id, "dbscan_singleton_pool",
+                        {"species_id": SINGLETON_SPECIES_ID, "eps": eps},
+                    )
+            continue
         champ = members[0]
         sid = generate_species_id()
         for m in members:
             m.species_id = sid
-        noise = raw_by_id.get(champ.id, 0) < 0 and len(members) == 1
+            tracker_updates[str(m.id)] = sid
         species[sid] = Species(
             id=sid, leader=champ, members=list(members), radius=eps,
             stagnation=0, max_fitness=champ.fitness, species_state="active",
             created_at=current_generation, last_improvement=current_generation,
             fitness_history=[champ.fitness], labels=[], label_history=[],
-            cluster_origin="dbscan_noise" if noise else "dbscan",
+            cluster_origin="dbscan",
             parent_ids=None, leader_distance=0.0,
         )
         touched.add(sid)
-        if genome_tracker is not None:
-            genome_tracker.batch_update(
-                {str(m.id): sid for m in members}, current_generation, "dbscan_assignment"
-            )
         if events_tracker is not None:
             for m in members:
                 events_tracker.log(m.id, "dbscan_assignment", {"species_id": sid, "eps": eps})
+
+    if genome_tracker is not None and tracker_updates:
+        genome_tracker.batch_update(tracker_updates, current_generation, "dbscan_assignment")
 
     write_species_state(state_p, species, current_generation, extra={
         "clustering_method": "dbscan",

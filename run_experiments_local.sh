@@ -28,7 +28,6 @@
 #   THETA_MERGE=0.1             must be <= THETA_SIM
 #   MIN_STABILITY_GENS=5
 #   SPECIES_CAPACITY=100
-#   MIN_ISLAND_SIZE=2
 #   SPECIES_STAGNATION=20
 #   EMBEDDING_MODEL=all-MiniLM-L6-v2
 #   EMBEDDING_DIM=384
@@ -88,7 +87,6 @@ THETA_SIM="${THETA_SIM:-0.25}"
 THETA_MERGE="${THETA_MERGE:-0.25}"
 MIN_STABILITY_GENS="${MIN_STABILITY_GENS:-5}"
 SPECIES_CAPACITY="${SPECIES_CAPACITY:-10}"
-MIN_ISLAND_SIZE="${MIN_ISLAND_SIZE:-1}"
 SPECIES_STAGNATION="${SPECIES_STAGNATION:-5}"
 
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-all-MiniLM-L6-v2}"
@@ -161,7 +159,6 @@ build_common_args() {
         --theta-merge "$THETA_MERGE"
         --min-stability-gens "$MIN_STABILITY_GENS"
         --species-capacity "$SPECIES_CAPACITY"
-        --min-island-size "$MIN_ISLAND_SIZE"
         --species-stagnation "$SPECIES_STAGNATION"
         --embedding-model "$EMBEDDING_MODEL"
         --embedding-dim "$EMBEDDING_DIM"

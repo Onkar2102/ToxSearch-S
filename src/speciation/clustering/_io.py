@@ -16,6 +16,8 @@ from utils import get_system_utils
 _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 ARCHIVE_SPECIES_ID = -1
+# Shared pool for singleton / noise genomes (not mature niches). Mature species IDs start at 1.
+SINGLETON_SPECIES_ID = 0
 
 
 def default_paths(

@@ -6,7 +6,7 @@ from typing import Dict, Optional, Set, Tuple
 
 from ..config import SpeciationConfig
 from ..species import Species
-from ._io import ARCHIVE_SPECIES_ID
+from ._io import ARCHIVE_SPECIES_ID, SINGLETON_SPECIES_ID
 from .dbscan import dbscan_cluster_population, dbscan_precomputed
 from .leader_follower import leader_follower_clustering
 
@@ -51,7 +51,6 @@ def cluster(
             w_phenotype=cfg.w_phenotype,
             distance_method=cfg.distance_method,
             distance_alpha=cfg.distance_alpha,
-            min_island_size=cfg.min_island_size,
             logger=log,
             genome_tracker=genome_tracker,
             events_tracker=events_tracker,
@@ -81,6 +80,7 @@ def cluster(
 
 __all__ = [
     "ARCHIVE_SPECIES_ID",
+    "SINGLETON_SPECIES_ID",
     "cluster",
     "dbscan_precomputed",
     "dbscan_cluster_population",

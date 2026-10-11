@@ -26,6 +26,7 @@ from ..distance import (
 from ..species import Individual, Species, SpeciesIdGenerator, generate_species_id
 from .dbscan import dbscan_precomputed
 from ._io import (
+    SINGLETON_SPECIES_ID,
     individuals_from_genomes,
     stack_objectives,
     stack_unit_embeddings,
@@ -125,14 +126,14 @@ def seed_from_batch(
     w_phenotype: float = 0.3,
     logger=None,
 ) -> Tuple[IncDBSCANState, Dict[int, Species], Dict[str, Any]]:
-    """Run batch DBSCAN once; assign persistent IDs; keep noise as ``-1``."""
+    """Run batch DBSCAN once; assign mature IDs (>=1); promote noise → shared pool 0."""
     log = logger or get_logger("IncDBSCAN")
     method = normalize_distance_method(distance_method)
     individuals = individuals_from_genomes(genomes, log)
     if not individuals:
         state = IncDBSCANState(eps=eps, min_samples=min_samples, distance_method=method,
                                distance_alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype)
-        return state, {}, {"new_species": 0, "noise": 0, "n": 0}
+        return state, {}, {"new_species": 0, "noise": 0, "singletons": 0, "n": 0}
 
     # Align genomes list to individuals with embeddings (same filter as individuals_from_genomes)
     id_to_genome = {g.get("id"): g for g in genomes if g.get("id") is not None}
@@ -170,15 +171,26 @@ def seed_from_batch(
 
     # Sync unlabeled genomes that lacked embeddings: leave unlabeled
     species = _build_species_from_state(state, ordered_genomes, individuals, current_generation, eps, origin="inc_dbscan_init")
+    n_noise_raw = int(sum(1 for x in persistent if x == NOISE_LABEL))
+    # Residual DBSCAN noise → shared singleton pool (species_id=0), not unique IDs / archive.
+    n_singletons = promote_noise_to_singleton_species(
+        state, ordered_genomes, species, current_generation=current_generation, logger=log
+    )
+    if ordered_genomes is not genomes:
+        n_singletons += promote_noise_to_singleton_species(
+            state, genomes, species, current_generation=current_generation, logger=log
+        )
     events = {
         "new_species": len(species),
-        "noise": int(sum(1 for x in persistent if x == NOISE_LABEL)),
+        "noise": 0,
+        "noise_before_singleton_promotion": n_noise_raw,
+        "singletons": n_singletons,
         "n": len(persistent),
         "event": "inc_dbscan_init",
     }
     log.info(
-        "IncDBSCAN seed: n=%d eps=%.4f min_samples=%d → species=%d noise=%d",
-        events["n"], eps, min_samples, events["new_species"], events["noise"],
+        "IncDBSCAN seed: n=%d eps=%.4f min_samples=%d → mature_species=%d (noise→pool0: %d)",
+        events["n"], eps, min_samples, events["new_species"], n_singletons,
     )
     return state, species, events
 
@@ -195,7 +207,11 @@ def _build_species_from_state(
     by_id = {ind.id: ind for ind in individuals}
     groups: Dict[int, List[Individual]] = defaultdict(list)
     for gid, lab in zip(state.genome_ids, state.labels):
-        if lab == NOISE_LABEL:
+        # Mature species only (sid > 0). Noise (-1) and singleton pool (0) are not Species entries.
+        if lab is None or int(lab) <= 0:
+            ind = by_id.get(gid)
+            if ind is not None and int(lab) == SINGLETON_SPECIES_ID:
+                ind.species_id = SINGLETON_SPECIES_ID
             continue
         ind = by_id.get(gid)
         if ind is None:
@@ -272,15 +288,11 @@ def insert_point(
         state.neighbors = [{0}]
         state.is_core = [state.min_samples <= 1]
         if state.is_core[0]:
-            sid = generate_species_id()
-            state.labels[0] = sid
-            set_density_label(genome, sid)
-            species[sid] = Species(
-                id=sid, leader=individual, members=[individual], radius=state.eps,
-                created_at=current_generation, last_improvement=current_generation,
-                cluster_origin="inc_dbscan_from_noise", max_fitness=individual.fitness,
-            )
-            ev = {"event": "inc_dbscan_new_species", "species_id": sid}
+            # Size-1 cannot be mature; park in singleton pool until a second member joins.
+            state.labels[0] = SINGLETON_SPECIES_ID
+            set_density_label(genome, SINGLETON_SPECIES_ID)
+            individual.species_id = SINGLETON_SPECIES_ID
+            ev = {"event": "inc_dbscan_singleton_pool", "species_id": SINGLETON_SPECIES_ID}
         else:
             set_density_label(genome, NOISE_LABEL)
             ev = {"event": "inc_dbscan_insert_noise"}
@@ -329,11 +341,12 @@ def insert_point(
     for i in affected:
         state.is_core[i] = len(state.neighbors[i]) >= state.min_samples
 
-    # Clusters of core neighbors (excluding new point for now)
+    # Clusters of mature core neighbors (sid > 0 only; pool 0 / noise are not niches)
     core_cluster_ids: Set[int] = set()
     for j in nbrs:
-        if state.is_core[j] and state.labels[j] != NOISE_LABEL:
-            core_cluster_ids.add(state.labels[j])
+        lab_j = int(state.labels[j])
+        if state.is_core[j] and lab_j > 0:
+            core_cluster_ids.add(lab_j)
 
     new_is_core = state.is_core[new_idx]
 
@@ -359,12 +372,25 @@ def insert_point(
 
     # new point is core
     if len(core_cluster_ids) == 0:
-        # Form new species: expand from new_idx through cores/noise in ε-graph
+        # Expand through noise / singleton-pool neighbors; mature only if size >= 2.
+        reachable = _collect_reachable(state, new_idx)
+        if len(reachable) < 2:
+            for i in reachable:
+                state.labels[i] = SINGLETON_SPECIES_ID
+            set_density_label(genome, SINGLETON_SPECIES_ID)
+            individual.species_id = SINGLETON_SPECIES_ID
+            ev = {
+                "event": "inc_dbscan_singleton_pool",
+                "species_id": SINGLETON_SPECIES_ID,
+                "assigned": len(reachable),
+            }
+            if events_tracker:
+                events_tracker.log(individual.id, ev["event"], ev)
+            return ev
         sid = generate_species_id()
         assigned = _expand_cluster(state, new_idx, sid)
         set_density_label(genome, sid)
         members = [individual]
-        # Update genome labels for assigned noise indices — caller syncs genomes list
         species[sid] = Species(
             id=sid, leader=individual, members=members, radius=state.eps,
             created_at=current_generation, last_improvement=current_generation,
@@ -435,8 +461,34 @@ def insert_point(
     return ev
 
 
+def _is_absorbable_label(lab: int, sid: Optional[int] = None) -> bool:
+    """Noise / singleton pool (lab <= 0), or already in mature ``sid``, can be walked."""
+    if lab <= 0:
+        return True
+    return sid is not None and lab == sid
+
+
+def _collect_reachable(state: IncDBSCANState, seed: int) -> Set[int]:
+    """Density-reachable indices from ``seed`` through noise/singleton-pool."""
+    q = deque([seed])
+    seen = {seed}
+    assigned: Set[int] = set()
+    while q:
+        i = q.popleft()
+        assigned.add(i)
+        if not state.is_core[i]:
+            continue
+        for j in state.neighbors[i]:
+            if j in seen:
+                continue
+            seen.add(j)
+            if _is_absorbable_label(int(state.labels[j])):
+                q.append(j)
+    return assigned
+
+
 def _expand_cluster(state: IncDBSCANState, seed: int, sid: int) -> Set[int]:
-    """Assign density-reachable points from seed core to ``sid`` (noise + same seed component)."""
+    """Assign density-reachable points from seed core to ``sid`` (noise + singleton pool)."""
     q = deque([seed])
     seen = {seed}
     assigned: Set[int] = set()
@@ -450,10 +502,7 @@ def _expand_cluster(state: IncDBSCANState, seed: int, sid: int) -> Set[int]:
             if j in seen:
                 continue
             seen.add(j)
-            # Absorb noise or unlabeled; also walk through points already in sid
-            if state.labels[j] in (NOISE_LABEL, sid) or state.labels[j] < 0:
-                q.append(j)
-            elif state.is_core[j] and state.labels[j] == sid:
+            if _is_absorbable_label(int(state.labels[j]), sid):
                 q.append(j)
     return assigned
 
@@ -491,6 +540,80 @@ def sync_genomes_from_state(genomes: List[Dict[str, Any]], state: IncDBSCANState
         gid = g.get("id")
         if gid in id_to_label:
             set_density_label(g, id_to_label[gid])
+
+
+def promote_noise_to_singleton_species(
+    state: IncDBSCANState,
+    genomes: List[Dict[str, Any]],
+    species: Dict[int, Species],
+    current_generation: int,
+    logger=None,
+    events_tracker=None,
+) -> int:
+    """Promote DBSCAN noise (-1) to the shared singleton pool (``species_id=0``).
+
+    All singleton/noise genomes share id 0 so the mature-species counter (1…)
+    does not grow per outlier. No per-genome ``Species`` entries are created.
+    Also demotes any accidental size-1 mature labels to the pool.
+    """
+    log = logger or get_logger("IncDBSCAN")
+    id_to_idx = {gid: i for i, gid in enumerate(state.genome_ids)}
+    promoted = 0
+    for g in genomes:
+        lab = get_density_label(g)
+        if lab is None or int(lab) != NOISE_LABEL:
+            continue
+        gid = g.get("id")
+        set_density_label(g, SINGLETON_SPECIES_ID)
+        if gid in id_to_idx:
+            state.labels[id_to_idx[gid]] = SINGLETON_SPECIES_ID
+        promoted += 1
+        if events_tracker:
+            events_tracker.log(
+                gid, "inc_dbscan_singleton_pool",
+                {"species_id": SINGLETON_SPECIES_ID, "generation": current_generation},
+            )
+    # Demote size-1 mature labels → pool 0 (keeps ID counter honest for future minting).
+    demoted = _demote_size1_labels_to_pool(state, genomes, species, log)
+    if promoted or demoted:
+        log.info(
+            "IncDBSCAN: %d noise → singleton pool 0; demoted %d size-1 mature labels",
+            promoted, demoted,
+        )
+    return promoted + demoted
+
+
+def _demote_size1_labels_to_pool(
+    state: IncDBSCANState,
+    genomes: List[Dict[str, Any]],
+    species: Dict[int, Species],
+    logger=None,
+) -> int:
+    """Relabel any positive species_id with only one member to singleton pool 0."""
+    log = logger or get_logger("IncDBSCAN")
+    counts: Dict[int, int] = defaultdict(int)
+    for lab in state.labels:
+        if int(lab) > 0:
+            counts[int(lab)] += 1
+    size1 = {sid for sid, n in counts.items() if n == 1}
+    if not size1:
+        return 0
+    demoted = 0
+    id_to_g = {g.get("id"): g for g in genomes if g.get("id") is not None}
+    for i, lab in enumerate(state.labels):
+        if int(lab) not in size1:
+            continue
+        state.labels[i] = SINGLETON_SPECIES_ID
+        gid = state.genome_ids[i]
+        g = id_to_g.get(gid)
+        if g is not None:
+            set_density_label(g, SINGLETON_SPECIES_ID)
+        demoted += 1
+    for sid in size1:
+        species.pop(sid, None)
+    if demoted:
+        log.debug("Demoted %d genomes from size-1 mature labels → pool 0", demoted)
+    return demoted
 
 
 def process_unlabeled(
@@ -563,28 +686,39 @@ def validate_against_batch(state: IncDBSCANState, logger=None) -> bool:
         logger=log,
     )
     raw = dbscan_precomputed(dist, eps=state.eps, min_samples=state.min_samples)
-    # Build maps: cluster -> frozenset of indices
-    def _parts(labels):
+
+    def _parts_inc(labels):
+        """Inc labels: >0 mature; 0 pool + -1 noise → anonymous singletons."""
         groups = defaultdict(set)
-        noise = set()
+        for i, lab in enumerate(labels):
+            lab = int(lab)
+            if lab <= 0:
+                groups[("singleton", i)].add(i)
+            else:
+                groups[("sid", lab)].add(i)
+        return {frozenset(m) for m in groups.values()}
+
+    def _parts_batch(labels):
+        """Batch DBSCAN local labels: >=0 are clusters (0 is valid); -1 → singleton."""
+        groups = defaultdict(set)
         for i, lab in enumerate(labels):
             lab = int(lab)
             if lab < 0:
-                noise.add(i)
+                groups[("singleton", i)].add(i)
             else:
-                groups[lab].add(i)
-        return set(frozenset(s) for s in groups.values()), frozenset(noise)
+                groups[("sid", lab)].add(i)
+        return {frozenset(m) for m in groups.values()}
 
-    inc_c, inc_n = _parts(state.labels)
-    bat_c, bat_n = _parts(raw)
-    ok = inc_c == bat_c and inc_n == bat_n
+    inc_p = _parts_inc(state.labels)
+    bat_p = _parts_batch(raw)
+    ok = inc_p == bat_p
     if not ok:
         log.warning(
-            "IncDBSCAN validation mismatch: inc_clusters=%d batch_clusters=%d inc_noise=%d batch_noise=%d",
-            len(inc_c), len(bat_c), len(inc_n), len(bat_n),
+            "IncDBSCAN validation mismatch: inc_parts=%d batch_parts=%d",
+            len(inc_p), len(bat_p),
         )
     else:
-        log.info("IncDBSCAN validation OK (n=%d clusters=%d noise=%d)", n, len(inc_c), len(inc_n))
+        log.info("IncDBSCAN validation OK (n=%d parts=%d)", n, len(inc_p))
     return ok
 
 
@@ -627,7 +761,9 @@ def write_species_and_config(
         "inc_dbscan": True,
         # IncDBSCAN never enforces species_capacity (grow-only density memory).
         "species_capacity_enforced": False,
+        # After promotion, residual raw noise (-1) should be 0; pool 0 holds singletons.
         "noise_count": sum(1 for x in state.labels if x == NOISE_LABEL),
+        "singleton_species_count": sum(1 for x in state.labels if int(x) == SINGLETON_SPECIES_ID),
         "density_size": state.n_points(),
     }
     if extra:

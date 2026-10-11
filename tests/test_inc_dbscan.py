@@ -58,7 +58,9 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
         set_active_evaluator("google")
         set_active_north_star("toxicity")
 
-    def test_seed_keeps_noise_as_minus_one(self):
+    def test_seed_promotes_noise_to_singleton_pool(self):
+        from speciation.clustering._io import SINGLETON_SPECIES_ID
+
         a, b = _unit([1, 0, 0]), _unit([0.99, 0.1, 0])
         c, d = _unit([0, 1, 0]), _unit([0.1, 0.99, 0])
         noise = _unit([0, 0, 1])
@@ -72,14 +74,21 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
         state, species, ev = seed_from_batch(
             genomes, eps=0.05, min_samples=2, current_generation=0, distance_method="embedding"
         )
-        self.assertEqual(ev["noise"], 1)
+        self.assertEqual(ev["noise"], 0)
+        self.assertEqual(ev["noise_before_singleton_promotion"], 1)
+        self.assertEqual(ev["singletons"], 1)
+        # 2 mature multi-member clusters; noise shares pool 0 (not a Species entry)
         self.assertEqual(len(species), 2)
+        self.assertTrue(all(sid > 0 for sid in species))
         noise_g = next(g for g in genomes if g["id"] == 5)
         self.assertTrue(is_labeled(noise_g))
-        self.assertEqual(noise_g["density_label"], NOISE_LABEL)
-        self.assertEqual(noise_g["species_id"], NOISE_LABEL)
-        # Noise not a Species entry
-        self.assertNotIn(NOISE_LABEL, species)
+        self.assertEqual(int(noise_g["density_label"]), SINGLETON_SPECIES_ID)
+        self.assertEqual(noise_g["species_id"], SINGLETON_SPECIES_ID)
+        self.assertNotIn(SINGLETON_SPECIES_ID, species)
+        self.assertNotIn(NOISE_LABEL, state.labels)
+        # Mature IDs start at 1; pool 0 does not consume the ID counter
+        self.assertEqual(sorted(species.keys()), [1, 2])
+        self.assertEqual(SpeciesIdGenerator.peek_next(), 3)
 
     def test_sequential_inserts_match_batch_partition(self):
         """Insert one-by-one then compare partition to batch DBSCAN (label permutation)."""
@@ -175,8 +184,9 @@ class TestLeaderFollowerMergeKeepsOldest(unittest.TestCase):
 
 
 class TestIncDBSCANParentSelector(unittest.TestCase):
-    def test_noise_is_parent_eligible(self):
+    def test_singleton_pool_is_parent_eligible(self):
         from ea.inc_dbscan_parent_selector import IncDBSCANParentSelector
+        from speciation.clustering._io import SINGLETON_SPECIES_ID
 
         with tempfile.TemporaryDirectory() as td:
             td = Path(td)
@@ -187,7 +197,7 @@ class TestIncDBSCANParentSelector(unittest.TestCase):
             ]
             set_density_label(genomes[0], 1)
             set_density_label(genomes[1], 1)
-            set_density_label(genomes[2], NOISE_LABEL)
+            set_density_label(genomes[2], SINGLETON_SPECIES_ID)
             import json
             with open(td / "temp.json", "w") as f:
                 json.dump(genomes, f)

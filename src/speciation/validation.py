@@ -71,8 +71,11 @@ def validate_speciation_consistency(
         
         for g in elites:
             sid = g.get("species_id")
-            if sid is None or sid <= 0:
-                errors.append(f"Elite genome id={g.get('id')} has species_id={sid} (must be > 0)")
+            if sid is None or sid < 0:
+                errors.append(
+                    f"Elite genome id={g.get('id')} has species_id={sid} "
+                    f"(must be >= 0; 0=singleton pool, >0=mature)"
+                )
         
         for g in archive:
             sid = g.get("species_id")

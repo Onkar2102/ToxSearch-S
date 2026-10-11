@@ -115,10 +115,7 @@ Defaults follow [`SpeciationConfig`](src/speciation/config.py) and [`src/cli.py`
 | Theta merge | Two species whose leaders are closer than this may merge; must be ≤ `--theta-sim`. Set with `--theta-merge`. |
 | Min stability generations | Both species must be at least this old before they are allowed to merge. Set with `--min-stability-gens`. |
 | Species capacity | Maximum individuals kept per species (excess archived by fitness). Set with `--species-capacity`. |
-| Cluster-0 max capacity | *(deprecated)* legacy flag; reserves pool removed — non-elites live in archive. |
-| Cluster-0 min cluster size | *(deprecated)* legacy reserves speciation; unused in steady state. |
-| Min island size | Islands smaller than this are treated as extinct. Set with `--min-island-size`. |
-| Species stagnation | Generations without improvement after which a species can go extinct. Set with `--species-stagnation`. |
+| Species stagnation | Generations without improvement after which a species can freeze. Set with `--species-stagnation`. |
 | Embedding model | Sentence-transformer name for prompt embeddings in speciation. Set with `--embedding-model`. |
 | Embedding dimension | Vector size for embeddings (must match the model). Set with `--embedding-dim`. |
 | Embedding batch size | Batch size when computing embeddings. Set with `--embedding-batch-size`. |

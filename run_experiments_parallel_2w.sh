@@ -63,9 +63,6 @@ ARGS_ARR=(
     --stagnation-limit 5
     --min-stability-gens 5
     --species-capacity 100
-    --cluster0-max-capacity 1000
-    --cluster0-min-cluster-size 1
-    --min-island-size 3
     --species-stagnation 20
     --embedding-model all-MiniLM-L6-v2
     --embedding-dim 384

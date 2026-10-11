@@ -42,7 +42,7 @@ def update_model_configs(rg_model, pg_model, logger):
 def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", pg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
          max_total_genomes=None, seed=None,
          theta_sim=0.25, theta_merge=0.1, min_stability_gens=5, species_capacity=100,
-         min_island_size=2, species_stagnation=20,
+         species_stagnation=20,
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64,
          evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest",
          clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
@@ -184,7 +184,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         theta_merge=theta_merge,
         min_stability_gens=min_stability_gens,
         species_capacity=species_capacity,
-        min_island_size=min_island_size,
         species_stagnation=species_stagnation,
         embedding_model=embedding_model,
         embedding_dim=embedding_dim,
@@ -690,16 +689,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 logger.error("Gen %d: Failed to calculate operator effectiveness metrics: %s", generation_count, e, exc_info=True)
             
             try:
-                with PerformanceLogger(logger, "Gen %d: Live analysis (visualizations)" % generation_count):
-                    from utils.live_analysis import run_live_analysis
-                    viz_results = run_live_analysis(outputs_path=str(get_outputs_path()), logger=logger)
-                if viz_results:
-                    successful_viz = sum(1 for v in viz_results.values() if v is not None)
-                    logger.info("Gen %d: Generated %d/%d visualizations", generation_count, successful_viz, len(viz_results))
-            except Exception as e:
-                logger.warning("Gen %d: Failed to generate visualizations: %s", generation_count, e)
-            
-            try:
                 with PerformanceLogger(logger, "Gen %d: Update EvolutionTracker with generation data" % generation_count):
                     from ea import get_update_evolution_tracker_with_generation_global
                     update_evolution_tracker_with_generation_global = get_update_evolution_tracker_with_generation_global()
@@ -884,13 +873,20 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                                     gen_stats.get("archived_count", 0), max_score_variants, min_score_variants, avg_fitness_variants)
                         
                         try:
-                            from utils.live_analysis import run_live_analysis
-                            run_live_analysis(
-                                outputs_path=str(get_outputs_path()),
-                                logger=logger
-                            )
+                            with PerformanceLogger(logger, "Gen %d: Live analysis (visualizations)" % generation_count):
+                                from utils.live_analysis import run_live_analysis
+                                viz_results = run_live_analysis(
+                                    outputs_path=str(get_outputs_path()),
+                                    logger=logger,
+                                )
+                            if viz_results:
+                                successful_viz = sum(1 for v in viz_results.values() if v is not None)
+                                logger.info(
+                                    "Gen %d: Generated %d/%d visualizations (incl. GDP)",
+                                    generation_count, successful_viz, len(viz_results),
+                                )
                         except Exception as e:
-                            logger.warning("Failed to run live analysis: %s", e)
+                            logger.warning("Gen %d: Failed to generate visualizations: %s", generation_count, e)
                         
                         if max_total_genomes is not None and total_genomes >= max_total_genomes:
                             logger.info("Evolution completed: Total genomes limit reached (%d >= %d).", total_genomes, max_total_genomes)
@@ -934,15 +930,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         )
     except Exception as e:
         logger.warning("Failed to update run metadata at end (non-fatal): %s", e)
-
-    try:
-        with PerformanceLogger(logger, "Final GDP projection plot"):
-            from utils.live_analysis import generate_gdp_projection_plot
-            gdp_path = generate_gdp_projection_plot(outputs_path=str(get_outputs_path()), logger=logger)
-            if gdp_path:
-                logger.info("Final GDP diagram: %s", gdp_path)
-    except Exception as e:
-        logger.warning("GDP diagram at end of run failed (non-fatal): %s", e)
 
 
 if __name__ == "__main__":

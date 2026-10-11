@@ -13,7 +13,6 @@ class SpeciationConfig:
     min_stability_gens: int = 5
 
     species_capacity: int = 100
-    min_island_size: int = 2
     species_stagnation: int = 20
 
     embedding_model: str = "all-MiniLM-L6-v2"
@@ -77,7 +76,6 @@ class SpeciationConfig:
             "theta_merge": self.theta_merge,
             "min_stability_gens": self.min_stability_gens,
             "species_capacity": self.species_capacity,
-            "min_island_size": self.min_island_size,
             "species_stagnation": self.species_stagnation,
             "embedding_model": self.embedding_model,
             "embedding_dim": self.embedding_dim,

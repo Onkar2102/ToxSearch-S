@@ -11,7 +11,11 @@ get_logger, _, _, _ = get_custom_logging()
 
 
 class GenomeTracker:
-    """Master registry of all genomes and their current species_id. species_id > 0 → elites.json; species_id == -1 (or legacy 0) → archive.json. Tracker is authoritative over file contents."""
+    """Master registry of all genomes and their current species_id.
+
+    ``species_id > 0`` → mature elites; ``species_id == 0`` → singleton/noise pool
+    (also elites / D_t); ``species_id == -1`` → archive.json. Tracker is authoritative.
+    """
     
     def __init__(self, logger=None):
         
@@ -62,7 +66,7 @@ class GenomeTracker:
                 self.logger.debug(f"Genome {genome_id}: {old_species_id} → {new_species_id} ({reason})")
             
             reassignment_info = None
-            if old_species_id == -1 and new_species_id > 0:
+            if old_species_id == -1 and new_species_id >= 0:
                 reassignment_info = (genome_id, old_species_id, new_species_id)
                 self.logger.debug(f"Genome {genome_id} reassigned from archive to species {new_species_id}")
             
@@ -205,10 +209,10 @@ class GenomeTracker:
             species_id = data["species_id"]
             if not isinstance(species_id, int):
                 errors.append(f"Genome {genome_id} has invalid species_id type: {type(species_id)}, expected int")
-            elif species_id < -1 or species_id == 0:
+            elif species_id < -1:
                 errors.append(
                     f"Genome {genome_id} has invalid species_id value: {species_id} "
-                    f"(must be -1 archive or >0 elite; 0/reserves removed)"
+                    f"(must be -1 archive, 0 singleton pool, or >0 mature elite)"
                 )
             
             if "created_generation" in data:
@@ -234,10 +238,7 @@ class GenomeTracker:
             errors.extend(internal_errors)
         
         stats = self.get_distribution_stats()
-        has_archived = (
-            int(stats["by_species_id"].get("-1", 0)) > 0
-            or int(stats["by_species_id"].get("0", 0)) > 0
-        )
+        has_archived = int(stats["by_species_id"].get("-1", 0)) > 0
         
         elites_genomes = []
         archive_genomes = []
@@ -269,8 +270,6 @@ class GenomeTracker:
         
         for genome_id, data in self.genomes.items():
             tracker_species_id = data["species_id"]
-            if tracker_species_id == 0:
-                tracker_species_id = -1
             
             if genome_id in all_file_genomes:
                 file_location, file_species_id = all_file_genomes[genome_id]
@@ -281,7 +280,7 @@ class GenomeTracker:
                         f"but {file_location}.json shows {file_species_id} (tracker is authoritative)"
                     )
                 
-                if tracker_species_id > 0:
+                if tracker_species_id >= 0:
                     expected_location = "elites"
                 else:
                     expected_location = "archive"

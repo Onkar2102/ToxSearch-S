@@ -86,16 +86,10 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Maximum individuals per species (default: {defaults.species_capacity})",
     )
     parser.add_argument(
-        "--min-island-size",
-        type=int,
-        default=defaults.min_island_size,
-        help=f"Minimum island size before extinction (default: {defaults.min_island_size})",
-    )
-    parser.add_argument(
         "--species-stagnation",
         type=int,
         default=defaults.species_stagnation,
-        help=f"Generations before species extinction (default: {defaults.species_stagnation})",
+        help=f"Generations before species freeze (default: {defaults.species_stagnation})",
     )
     parser.add_argument(
         "--embedding-model",
@@ -292,7 +286,6 @@ def main(argv: list[str] | None = None) -> int:
             theta_merge=args.theta_merge,
             min_stability_gens=args.min_stability_gens,
             species_capacity=args.species_capacity,
-            min_island_size=args.min_island_size,
             species_stagnation=args.species_stagnation,
             embedding_model=args.embedding_model,
             embedding_dim=args.embedding_dim,
@@ -411,7 +404,6 @@ def main(argv: list[str] | None = None) -> int:
             theta_merge=args.theta_merge,
             min_stability_gens=args.min_stability_gens,
             species_capacity=args.species_capacity,
-            min_island_size=args.min_island_size,
             species_stagnation=args.species_stagnation,
             embedding_model=args.embedding_model,
             embedding_dim=args.embedding_dim,

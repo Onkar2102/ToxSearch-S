@@ -15,6 +15,7 @@ from .distance import (
 )
 from .clustering import (
     ARCHIVE_SPECIES_ID,
+    SINGLETON_SPECIES_ID,
     cluster,
     dbscan_precomputed,
     dbscan_cluster_population,
@@ -58,6 +59,7 @@ __all__ = [
     "dbscan_precomputed", "dbscan_cluster_population", "cluster",
     
     "ARCHIVE_SPECIES_ID",
+    "SINGLETON_SPECIES_ID",
     
     "process_merges",
     
