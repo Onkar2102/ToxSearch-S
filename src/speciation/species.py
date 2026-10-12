@@ -151,13 +151,6 @@ class Species:
         if individual not in self.members:
             self.members.append(individual)
     
-    def remove_member(self, individual: Individual) -> bool:
-        
-        if individual in self.members:
-            self.members.remove(individual)
-            individual.species_id = None
-            return True
-        return False
     
     def record_fitness(self, generation: int, was_selected_as_parent: bool = False, max_fitness_increased: bool = False) -> None:
         

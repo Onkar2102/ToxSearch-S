@@ -175,41 +175,6 @@ def compute_and_save_embeddings(
         logger.info(f"Successfully computed and saved embeddings for {len(genomes)} genomes")
 
 
-def backfill_embeddings_for_genomes(
-    genomes: List[dict],
-    model_name: str = "all-MiniLM-L6-v2",
-    batch_size: int = 64,
-    show_progress: bool = False,
-    logger=None,
-) -> int:
-    
-    if logger is None:
-        logger = get_logger("Embeddings")
-    need_emb = [
-        (i, g) for i, g in enumerate(genomes)
-        if isinstance(g, dict)
-        and g.get("prompt") is not None
-        and (not g.get("prompt_embedding") or (isinstance(g.get("prompt_embedding"), list) and len(g.get("prompt_embedding", [])) == 0))
-    ]
-    if not need_emb:
-        return 0
-    indices = [x[0] for x in need_emb]
-    prompt_genomes = [x[1] for x in need_emb]
-    prompts = [g.get("prompt", "") for g in prompt_genomes]
-    model = get_embedding_model(model_name=model_name)
-    try:
-        embeddings = model.encode(prompts, batch_size=batch_size, show_progress=show_progress)
-    except Exception as e:
-        logger.error("Backfill embeddings failed: %s", e, exc_info=True)
-        raise
-    count = 0
-    for j, (idx, genome) in enumerate(need_emb):
-        if j < len(embeddings) and embeddings[j] is not None and len(embeddings[j]) > 0:
-            genome["prompt_embedding"] = embeddings[j].tolist()
-            count += 1
-    logger.info("Backfilled prompt_embedding for %d/%d genomes", count, len(need_emb))
-    return count
-
 
 def remove_embeddings_from_temp(
     temp_path: Optional[str] = None,

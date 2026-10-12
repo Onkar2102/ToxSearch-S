@@ -3,16 +3,13 @@ gdp_projection.py
 
 Genetic Distance Projection (GDP) integration for ToxSearch-S.
 Maps elites.json + archive.json (non-elites) to GDP's GenomeData format.
-- MDS-GDP: cosine-MDS reduction (cosine distance in embedding space).
-- NN-GDP: neural-network reduction (Euclidean distance in embedding space; requires torch).
-- UMAP-GDP: UMAP reduction (cosine metric in embedding space; requires umap-learn).
-Labels and coloring use the active north-star metric (any evaluator/metric), not toxicity-only.
+Uses cosine-MDS reduction in embedding space.
+Labels and coloring use the active north-star metric (any evaluator/metric).
 Per-generation updates freeze prior genome coordinates and place new genomes out-of-sample.
-Generates 2D/3D figures for MDS, NN, and UMAP. Does not modify core evolution or speciation.
+Does not modify core evolution or speciation.
 """
 
 import json
-import os
 import re
 import sys
 import warnings
@@ -30,12 +27,11 @@ if _gdp_root.exists() and str(_gdp_root) not in sys.path:
 _GDP_AVAILABLE = False
 _GDP_IMPORT_ERROR: Optional[str] = None
 try:
-    from gdp import GenomeData, ReducedGenomeData, GenomeVisualizer
+    from gdp import GenomeData, ReducedGenomeData
     _GDP_AVAILABLE = True
 except ImportError as e:
     GenomeData = None
     ReducedGenomeData = None
-    GenomeVisualizer = None
     _GDP_IMPORT_ERROR = str(e)
 
 # For cosine-MDS we use sklearn (already used in experiments)
@@ -43,14 +39,6 @@ from sklearn.manifold import MDS
 from sklearn.metrics.pairwise import cosine_distances
 
 from .population_io import _extract_north_star_score
-
-_UMAP_AVAILABLE = False
-try:
-    import umap
-    _UMAP_AVAILABLE = True
-except ImportError:
-    umap = None
-
 
 def _metric_display_label(metric: Optional[str]) -> str:
     """Human-readable north-star label for axes/legends (evaluator-agnostic)."""
@@ -211,34 +199,6 @@ def _reduce_using_cosine_mds_incremental(
         except Exception:
             out[i] = y0.astype(np.float32)
     return out
-
-
-def _reduce_using_umap(
-    genes_matrix: np.ndarray,
-    reduced_size: int = 2,
-    random_state: int = 42,
-    n_neighbors: int = 15,
-    min_dist: float = 0.1,
-) -> np.ndarray:
-    """
-    Reduce embedding matrix to 2D using UMAP with cosine metric.
-    Signature matches GDP's dim_reduction_function: (genes_matrix) -> (n, reduced_size).
-    """
-    n = genes_matrix.shape[0]
-    if n < 2 or not _UMAP_AVAILABLE:
-        return np.zeros((n, reduced_size), dtype=np.float32)
-    k = min(n_neighbors, max(2, n - 1))
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=RuntimeWarning)
-        reducer = umap.UMAP(
-            n_components=reduced_size,
-            metric="cosine",
-            random_state=random_state,
-            n_neighbors=k,
-            min_dist=min_dist,
-        )
-        out = reducer.fit_transform(genes_matrix)
-    return out.astype(np.float32)
 
 
 def _load_genomes_from_json(path: Path) -> List[Dict[str, Any]]:
@@ -409,189 +369,6 @@ def run_gdp_projection(
     return payload, reduced
 
 
-def run_gdp_projection_nn(
-    elites_path: Path,
-    output_dir: Path,
-    archive_path: Optional[Path] = None,
-    save_json: bool = True,
-    model_save_fname: str = "gdp_nn_model.pt",
-    reserves_path: Optional[Path] = None,  # legacy alias for archive_path
-) -> Tuple[Optional[Dict], Optional[Any]]:
-    """Run GDP NN projection over elites + archive."""
-    if archive_path is None:
-        archive_path = reserves_path
-    genome_data, genomes, genome_ids = build_genome_data_from_elites_archive(
-        elites_path, archive_path=archive_path
-    )
-    if not genomes:
-        return None, None
-    if not _GDP_AVAILABLE or genome_data is None:
-        return None, None
-
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    saved_models = output_dir / "saved_models"
-    saved_models.mkdir(parents=True, exist_ok=True)
-    old_cwd = os.getcwd()
-    try:
-        os.chdir(output_dir)
-        reduced = ReducedGenomeData.perform_reduction_nn(
-            source=genome_data,
-            model_save_fname=model_save_fname,
-        )
-    finally:
-        os.chdir(old_cwd)
-
-    positions_2d = [reduced.reduced_positions[gid].tolist() for gid in genome_ids]
-    payload = {
-        "genome_ids": genome_ids,
-        "positions_2d": positions_2d,
-        "method": "nn",
-    }
-
-    if save_json:
-        out_path = output_dir / "gdp_projection_nn.json"
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-
-    return payload, reduced
-
-
-def run_gdp_projection_umap(
-    elites_path: Path,
-    output_dir: Path,
-    archive_path: Optional[Path] = None,
-    reduced_size: int = 2,
-    save_json: bool = True,
-    random_state: int = 42,
-    n_neighbors: int = 15,
-    min_dist: float = 0.1,
-    reserves_path: Optional[Path] = None,  # legacy alias for archive_path
-) -> Tuple[Optional[Dict], Optional[Any]]:
-    """Run GDP UMAP projection over elites + archive."""
-    if archive_path is None:
-        archive_path = reserves_path
-    genome_data, genomes, genome_ids = build_genome_data_from_elites_archive(
-        elites_path, archive_path=archive_path
-    )
-    if not genomes:
-        return None, None
-    if not _GDP_AVAILABLE or genome_data is None or not _UMAP_AVAILABLE:
-        return None, None
-
-    def _umap_fn(genes_matrix: np.ndarray) -> np.ndarray:
-        return _reduce_using_umap(
-            genes_matrix,
-            reduced_size=reduced_size,
-            random_state=random_state,
-            n_neighbors=n_neighbors,
-            min_dist=min_dist,
-        )
-
-    reduced = ReducedGenomeData.perform_reduction(source=genome_data, dim_reduction_function=_umap_fn)
-    positions_2d = [reduced.reduced_positions[gid].tolist() for gid in genome_ids]
-    payload = {
-        "genome_ids": genome_ids,
-        "positions_2d": positions_2d,
-        "method": "umap",
-    }
-
-    if save_json:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        out_path = output_dir / "gdp_projection_umap.json"
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
-
-    return payload, reduced
-
-
-def load_gdp_projection(projection_path: Path) -> Optional[Dict[str, Any]]:
-    """
-    Load cached gdp_projection.json for use in experiments (e.g. rq1, rq2).
-    Returns dict with genome_ids, positions_2d, method, or None if file missing/invalid.
-    """
-    path = Path(projection_path)
-    if path.is_dir():
-        path = path / "gdp_projection.json"
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def load_gdp_projection_nn(projection_path: Path) -> Optional[Dict[str, Any]]:
-    """
-    Load cached gdp_projection_nn.json (NN-GDP output).
-    Returns dict with genome_ids, positions_2d, method "nn", or None if missing/invalid.
-    """
-    path = Path(projection_path)
-    if path.is_dir():
-        path = path / "gdp_projection_nn.json"
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def load_gdp_projection_umap(projection_path: Path) -> Optional[Dict[str, Any]]:
-    """
-    Load cached gdp_projection_umap.json (UMAP-GDP output).
-    Returns dict with genome_ids, positions_2d, method "umap", or None if missing/invalid.
-    """
-    path = Path(projection_path)
-    if path.is_dir():
-        path = path / "gdp_projection_umap.json"
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def generate_gdp_figure(
-    reduced_genome_data: Any,
-    save_fpath: str,
-    color_by: str = "alive",
-    **kwargs: Any,
-) -> bool:
-    """
-    Build GenomeVisualizer from reduced data, set colors, and save 2D figure.
-    color_by: "alive" (elites vs archive), "species_id", or "fitness".
-    Returns True on success, False if GDP unavailable or visualization fails.
-    """
-    if not _GDP_AVAILABLE or reduced_genome_data is None:
-        return False
-    try:
-        viz = GenomeVisualizer(source=reduced_genome_data)
-        if color_by == "alive":
-            viz.set_genome_colors_by_group(group_key="alive")
-        elif color_by == "species_id":
-            viz.set_genome_colors_by_group(group_key="species_id")
-        else:
-            viz.set_colors_by_fitness((0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
-        viz.visualize_genomes2D(
-            save_fpath=save_fpath,
-            vis_image_type="png",
-            node_size=kwargs.get("node_size", 10),
-            trace_best=kwargs.get("trace_best", False),
-            trace_gene_origins=kwargs.get("trace_gene_origins", False),
-            transform_to_01=kwargs.get("transform_to_01", False),
-        )
-        return True
-    except Exception:
-        return False
-
-
-# Default MDS-GDP 3D viewing angles (elev, azim).
 ELEV_DEFAULT = 22.0
 # Three orbital views ~120° apart; avoid exact 270° (reads as a flat side-on squash).
 DEFAULT_VIEW_ANGLES: List[Tuple[float, float]] = [
@@ -600,149 +377,6 @@ DEFAULT_VIEW_ANGLES: List[Tuple[float, float]] = [
     (ELEV_DEFAULT, 255.0),
 ]
 GENERATION_AXIS_VIEW_ANGLES: List[Tuple[float, float]] = list(DEFAULT_VIEW_ANGLES)
-
-
-def generate_gdp_3d_fitness_figure(
-    reduced_genome_data: Any,
-    save_fpath: str,
-    color_by: str = "alive",
-    publication_style: bool = False,
-    view_angles: Optional[List[Tuple[float, float]]] = None,
-    metric_label: Optional[str] = None,
-    north_star_metric: Optional[str] = None,
-) -> bool:
-    """
-    Save a 3D figure: X = MDS1, Y = MDS2, Z = north-star fitness.
-    color_by: "alive", "species_id", "generation", "species_archive", or "fitness".
-    species_archive: archive = very small dark blue dots; alive = colored by species_id.
-    publication_style: serif fonts, larger labels, high dpi, clean layout (used for species_archive).
-    view_angles: for species_archive, list of (elev, azim) to render multiple panels in one figure.
-                 None = single view; use DEFAULT_VIEW_ANGLES for two panels (minimum diagrams, max clarity).
-    """
-    if reduced_genome_data is None:
-        return False
-    z_label = metric_label or _metric_display_label(_resolve_north_star_metric(north_star_metric))
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        from mpl_toolkits.mplot3d import Axes3D
-
-        positions = reduced_genome_data.reduced_positions
-        population_info = reduced_genome_data._population_info
-        if not positions or not population_info:
-            return False
-
-        ids = list(positions.keys())
-        xy = np.array([positions[i] for i in ids])
-        x = xy[:, 0]
-        y = xy[:, 1]
-        z = np.array([float(population_info.get(i, {}).get("fitness", 0.0)) for i in ids])
-
-        use_pub_style = publication_style or (color_by == "species_archive")
-        if use_pub_style:
-            plt.rcParams.update({
-                "font.family": "serif",
-                "font.serif": ["Times New Roman", "DejaVu Serif", "serif"],
-                "font.size": 11,
-                "axes.titlesize": 14,
-                "axes.labelsize": 12,
-                "xtick.labelsize": 10,
-                "ytick.labelsize": 10,
-                "legend.fontsize": 10,
-            })
-
-        if color_by == "species_archive":
-            # Archive: very small dark blue dots; Alive: color by species_id
-            alive = np.array([population_info.get(i, {}).get("alive", "archived") == "alive" for i in ids])
-            species_ids = np.array([population_info.get(i, {}).get("species_id", 0) for i in ids])
-            dark_blue = (0.05, 0.05, 0.35)
-            uniq_species = sorted(set(species_ids[alive]))
-            n_species = len(uniq_species) or 1
-            species_to_idx = {s: i for i, s in enumerate(uniq_species)}
-            cmap = plt.cm.tab20
-            denom = max(len(uniq_species) - 1, 1)
-            alive_colors = [cmap(species_to_idx.get(s, 0) / denom) for s in species_ids[alive]] if np.any(alive) else []
-            mask_arch = ~alive
-
-            angles = view_angles if view_angles else [(ELEV_DEFAULT, 0.0)]
-            n_views = len(angles)
-            fig, axes = plt.subplots(
-                1, n_views,
-                subplot_kw={"projection": "3d"},
-                figsize=(7 * n_views, 6),
-                facecolor="white",
-            )
-            if n_views == 1:
-                axes = [axes]
-            for ax, (elev, azim) in zip(axes, angles):
-                ax.set_facecolor("white")
-                if np.any(mask_arch):
-                    ax.scatter(
-                        x[mask_arch], y[mask_arch], z[mask_arch],
-                        c=dark_blue, s=2, alpha=0.7, depthshade=True
-                    )
-                if np.any(alive):
-                    ax.scatter(
-                        x[alive], y[alive], z[alive],
-                        c=alive_colors, s=28, alpha=0.85, depthshade=True
-                    )
-                ax.set_xlabel("MDS 1")
-                ax.set_ylabel("MDS 2")
-                ax.set_zlabel(z_label)
-                ax.view_init(elev=elev, azim=azim)
-            plt.tight_layout()
-            plt.savefig(save_fpath, dpi=300, bbox_inches="tight", facecolor="white")
-            plt.close()
-            return True
-
-        if color_by == "alive":
-            source = [population_info.get(i, {}).get("alive", "archived") for i in ids]
-            col_map = {"alive": (0.2, 0.6, 0.2), "archived": (0.7, 0.3, 0.3)}
-            colors = [col_map.get(s, (0.5, 0.5, 0.5)) for s in source]
-        elif color_by == "species_id":
-            species_ids = [population_info.get(i, {}).get("species_id", 0) for i in ids]
-            uniq = sorted(set(species_ids))
-            cmap = plt.cm.tab20
-            colors = [cmap((uniq.index(s) % 20) / 19.0) for s in species_ids]
-        elif color_by == "generation":
-            gens = np.array([int(population_info.get(i, {}).get("generation", 0)) for i in ids])
-            norm = plt.Normalize(vmin=gens.min(), vmax=max(gens.max(), 1))
-            sm = plt.cm.ScalarMappable(norm=norm, cmap=plt.cm.plasma)
-            colors = sm.to_rgba(gens)
-        else:
-            norm = plt.Normalize(vmin=z.min(), vmax=z.max())
-            cmap = plt.cm.ScalarMappable(norm=norm, cmap=plt.cm.viridis)
-            colors = cmap.to_rgba(z)
-
-        fig = plt.figure(figsize=(9, 7) if use_pub_style else (8, 6), facecolor="white" if use_pub_style else None)
-        ax = fig.add_subplot(111, projection="3d", facecolor="white" if use_pub_style else None)
-        ax.scatter(x, y, z, c=colors, s=20, alpha=0.8)
-        ax.set_xlabel("MDS 1")
-        ax.set_ylabel("MDS 2")
-        ax.set_zlabel(z_label)
-        title = f"Genetic distance (gen 0 → final) + {z_label} (Z)"
-        if color_by == "alive":
-            title += " [color = alive vs archived]"
-        elif color_by == "generation":
-            title += " [color = generation: purple = early, yellow = late]"
-            fig.colorbar(sm, ax=ax, shrink=0.6, label="Generation")
-        ax.set_title(title)
-        plt.tight_layout()
-        plt.savefig(
-            save_fpath,
-            dpi=300 if use_pub_style else 150,
-            bbox_inches="tight",
-            facecolor="white" if use_pub_style else None,
-        )
-        plt.close()
-        return True
-    except Exception:
-        return False
-
-
-# Backward-compatible alias (toxicity was the historical default north-star).
-generate_gdp_3d_toxicity_figure = generate_gdp_3d_fitness_figure
 
 
 def generate_gdp_3d_generation_axis_fitness_color(
@@ -926,7 +560,6 @@ def generate_gdp_3d_generation_axis_fitness_color(
         return False
 
 
-generate_gdp_3d_generation_axis_toxicity_color = generate_gdp_3d_generation_axis_fitness_color
 
 
 # ============================================================================
@@ -1238,11 +871,6 @@ def generate_gdp_3d_plotly_generation_axis_fitness_color(
         return True
     except Exception:
         return False
-
-
-generate_gdp_3d_plotly_generation_axis_toxicity_color = (
-    generate_gdp_3d_plotly_generation_axis_fitness_color
-)
 
 
 def is_gdp_available() -> bool:

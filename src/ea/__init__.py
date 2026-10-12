@@ -25,7 +25,7 @@ def get_LLM_POSAwareSynonymReplacement():
     from ea.synonym_replacement import LLM_POSAwareSynonymReplacement
     return LLM_POSAwareSynonymReplacement
 
-def get_POSAwareAntonymReplacement():
+def get_LLM_POSAwareAntonymReplacement():
     
     from ea.antonym_replacement import POSAwareAntonymReplacement
     return POSAwareAntonymReplacement

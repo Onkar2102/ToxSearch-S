@@ -138,7 +138,7 @@ Defaults follow [`SpeciationConfig`](src/speciation/config.py) and [`src/cli.py`
 | Generations | Legacy generation cap; termination is still only by `--max-total-genomes`. Set with `--generations`. |
 | Profile | Write `cProfile` stats next to the run outputs. Set with `--profile`. |
 
-**Weights (ensemble distance, not on CLI):** genotype and phenotype weights sum to 1. Defaults: `SpeciationConfig.w_genotype` = `0.7`, `w_phenotype` = `0.3`. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`verfier/`](verfier/).
+**Weights (ensemble distance, not on CLI):** genotype and phenotype weights sum to 1. Defaults: `SpeciationConfig.w_genotype` = `0.7`, `w_phenotype` = `0.3`. See [`docs/SPECIATION.md`](docs/SPECIATION.md) and [`verifier/`](verifier/).
 
 ---
 
@@ -209,8 +209,8 @@ Details: [`tests/README.md`](tests/README.md).
 | `results/manifests/` | SHA256 study manifests (tracked) |
 | `scripts/` | Helpers (e.g. `validate_run_outputs.py`) |
 | `data/outputs/` | Live evolution runs (gitignored) |
-| `verfier/` | Lean formal audit of distance / speciation maths |
-| `docs/` | Architecture and related notes |
+| `verifier/` | Lean formal audit of distance / speciation maths |
+| `docs/` | Speciation and Incremental DBSCAN notes |
 | `.github/workflows/` | CI (pytest non-MPI + ruff on new modules) |
 
 ---
@@ -270,12 +270,11 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 
 | Doc | Contents |
 |-----|----------|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Packages, data flow, distances, configs |
 | [`docs/SPECIATION.md`](docs/SPECIATION.md) | Live speciation + next scientific report plan |
-| [`docs/README.md`](docs/README.md) | Documentation index |
+| [`docs/INCREMENTAL_DBSCAN_PLAN.md`](docs/INCREMENTAL_DBSCAN_PLAN.md) | Incremental DBSCAN population path |
 | [`tests/README.md`](tests/README.md) | How to run and interpret tests |
 | [`results/manifests/README.md`](results/manifests/README.md) | Artifact manifests |
-| [`verfier/README.md`](verfier/README.md) | Lean verifier |
+| [`verifier/README.md`](verifier/README.md) | Lean verifier |
 | [`data/dataset.md`](data/dataset.md) | Shared dataset link |
 
 Doxygen build outputs under `docs/html/` and `docs/latex/` are generated and gitignored; regenerate with the root [`Doxyfile`](Doxyfile) if needed.

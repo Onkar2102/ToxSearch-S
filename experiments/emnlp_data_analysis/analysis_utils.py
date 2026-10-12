@@ -36,7 +36,8 @@ from utils.evaluator_profiles import (  # noqa: E402
 
 PERSPECTIVE_AXIS_ORDER = list(GOOGLE_NORTH_STAR_CHOICES)
 OPENAI_AXIS_ORDER = list(OPENAI_NORTH_STAR_CHOICES)
-POP_FILES = ("elites.json", "reserves.json", "archive.json", "temp.json")
+# Live stores first; reserves.json kept for legacy run dirs only.
+POP_FILES = ("elites.json", "archive.json", "temp.json", "reserves.json")
 _logger = logging.getLogger("emnlp.analysis")
 DEFAULT_PRIMARY_RUN = REPO_ROOT / "data/outputs/20260211_2122"
 RESULTS_DIR = REPO_ROOT / "results" / "emnlp2026"
@@ -2448,8 +2449,11 @@ def smoke_validate_run(
     min_objective_frac: float = 0.95,
 ) -> Dict[str, Any]:
     """Gate 0: genome count, topics, Google objectives (no OpenAI)."""
-    required_files = ("elites.json", "reserves.json", "archive.json")
-    missing_files = [f for f in required_files if not (run_path / f).is_file()]
+    # L–F: elites (+ archive). IncDBSCAN: temp.json as D_t. reserves.json is legacy-only.
+    has_elites = (run_path / "elites.json").is_file()
+    has_temp = (run_path / "temp.json").is_file()
+    has_archive = (run_path / "archive.json").is_file()
+    population_present = has_elites or has_temp or has_archive
 
     rows, stats = load_unified_genomes(
         run_path,
@@ -2468,12 +2472,16 @@ def smoke_validate_run(
 
     checks = {
         "run_exists": run_path.is_dir(),
-        "required_files_present": len(missing_files) == 0,
+        "required_files_present": population_present,
         "min_genomes": len(rows) >= min_genomes,
         "min_large_topics": n_large_topics >= min_topics,
         "min_objective_frac": frac_obj >= min_objective_frac,
     }
 
+    missing_files = [
+        name for name in ("elites.json", "archive.json", "temp.json")
+        if not (run_path / name).is_file()
+    ]
     return {
         "pass": all(checks.values()),
         "checks": checks,

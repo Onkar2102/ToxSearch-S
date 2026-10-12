@@ -5,7 +5,6 @@ import os
 import json
 from pathlib import Path
 from utils import get_custom_logging
-from utils.constants import FileConstants
 from utils import get_population_io
 from gne import get_ResponseGenerator, get_PromptGenerator
 from datetime import datetime
@@ -399,95 +398,14 @@ def update_population_index_single_file(base_dir: str, total_genomes: int, *, lo
         _logger.warning("Failed to update EvolutionTracker population metadata: %s", e)
 
 
-def load_population_generation(generation: int, base_dir: str = "outputs", 
-                              *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
-    
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    with PerformanceLogger(_logger, f"Load Generation {generation} from Single File"):
-        try:
-            all_genomes = load_population(base_dir, logger=_logger, log_file=log_file)
-            
-            generation_genomes = [g for g in all_genomes if g and g.get("generation") == generation]
-            
-            _logger.info("Loaded generation %d: %d genomes from active population file", generation, len(generation_genomes))
-            return generation_genomes
-            
-        except Exception as e:
-            _logger.error("Failed to load generation %d: %s", generation, e, exc_info=True)
-            return []
 
 
-def load_population_range(start_gen: int, end_gen: int, base_dir: str = "outputs",
-                         *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
-    
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    with PerformanceLogger(_logger, f"Load Generations {start_gen}-{end_gen} from Single File"):
-        try:
-            all_genomes = load_population(base_dir, logger=_logger, log_file=log_file)
-            
-            range_genomes = [g for g in all_genomes if g and start_gen <= g.get("generation", 0) <= end_gen]
-            
-            _logger.info("Loaded generations %d-%d: %d genomes from active population file", start_gen, end_gen, len(range_genomes))
-            return range_genomes
-            
-        except Exception as e:
-            _logger.error("Failed to load generation range: %s", e, exc_info=True)
-            return []
 
 
-def load_population_lazy(base_dir: str = "outputs", max_gens: Optional[int] = None,
-                        *, logger=None, log_file: Optional[str] = None):
-    
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    try:
-        all_genomes = load_population(base_dir, logger=_logger, log_file=log_file)
-        
-        if max_gens is not None:
-            all_genomes = [g for g in all_genomes if g and g.get("generation", 0) < max_gens]
-        
-        _logger.info("Lazy loading %d genomes from active population file", len(all_genomes))
-        
-        for genome in all_genomes:
-            yield genome
-            
-    except Exception as e:
-        _logger.error("Failed to load population lazily: %s", e, exc_info=True)
-        return
 
 
-def save_population_generation(genomes: List[Dict[str, Any]], generation: int, 
-                              base_dir: str = "outputs", *, logger=None, log_file: Optional[str] = None):
-    
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    with PerformanceLogger(_logger, f"Save Generation {generation} to Single File"):
-        try:
-            existing_population = load_population(base_dir, logger=_logger, log_file=log_file)
-            
-            filtered_population = [g for g in existing_population if g and g.get("generation") != generation]
-            
-            filtered_population.extend(genomes)
-            
-            save_population(filtered_population, base_dir, logger=_logger, log_file=log_file)
-            
-            _logger.info("Updated active population file with generation %d: %d genomes", generation, len(genomes))
-            
-        except Exception as e:
-            _logger.error("Failed to save generation %d: %s", generation, e, exc_info=True)
-            raise
 
 
-def get_latest_generation(base_dir: str = "outputs") -> int:
-    
-    info = get_population_files_info(base_dir)
-    return info["total_generations"] - 1 if info["total_generations"] > 0 else 0
 
 
 def load_population(pop_path: str = "data/outputs/elites.json", *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -872,48 +790,6 @@ def load_and_initialize_population(
             raise
 
 
-def validate_population_file(population_path: str, *, log_file: Optional[str] = None) -> Dict[str, Any]:
-    
-
-    get_logger, _, _, PerformanceLogger = get_custom_logging()
-    logger = get_logger("validate_population", log_file)
-
-    with PerformanceLogger(logger, "Validate Population File", file_path=population_path):
-        population = load_population(population_path, logger=logger)
-
-        stats: Dict[str, Any] = {
-            "generations": set(),
-            "statuses": {},
-            "prompt_lengths": [],
-            "errors": [],
-        }
-
-        for genome in population:
-            for field in ("id", "prompt", "generation", "status"):
-                if field not in genome:
-                    stats["errors"].append(
-                        f"Missing required field '{field}' in genome {genome.get('id', '?')}"
-                    )
-
-            stats["generations"].add(genome.get("generation", -1))
-            status = genome.get("status", "unknown")
-            stats["statuses"][status] = stats["statuses"].get(status, 0) + 1
-            stats["prompt_lengths"].append(len(genome.get("prompt", "")))
-
-        if stats["prompt_lengths"]:
-            stats["avg_prompt_length"] = sum(stats["prompt_lengths"]) / len(
-                stats["prompt_lengths"]
-            )
-            stats["min_prompt_length"] = min(stats["prompt_lengths"])
-            stats["max_prompt_length"] = max(stats["prompt_lengths"])
-
-        stats["generations"] = sorted(stats["generations"])
-
-        logger.info("Validation complete – %d genomes analysed", len(population))
-        if stats["errors"]:
-            logger.warning("Found %d schema issues", len(stats["errors"]))
-
-        return stats
 
 
 def sort_population_json(
@@ -989,182 +865,12 @@ def sort_population_json(
         return pop_list
 
 
-def load_genome_by_id(genome_id: str, generation: int, base_dir: str = "outputs", 
-                      *, logger=None, log_file: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    with PerformanceLogger(_logger, f"Load Genome by ID", genome_id=genome_id, generation=generation):
-        try:
-            genomes = load_population_generation(generation, base_dir, logger=_logger, log_file=log_file)
-            
-            for genome in genomes:
-                if genome.get("id") == genome_id:
-                    _logger.info(f"Found genome {genome_id} in generation {generation}")
-                    return genome
-            
-            _logger.warning(f"Genome {genome_id} not found in generation {generation}")
-            return None
-            
-        except Exception as e:
-            _logger.error(f"Failed to load genome {genome_id} from generation {generation}: {e}", exc_info=True)
-            return None
 
 
-def load_genomes_by_ids(genome_ids: List[str], generations: List[int], base_dir: str = "outputs",
-                        *, logger=None, log_file: Optional[str] = None) -> List[Dict[str, Any]]:
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    with PerformanceLogger(_logger, f"Load Genomes by IDs", count=len(genome_ids)):
-        try:
-            generation_groups = {}
-            for genome_id, generation in zip(genome_ids, generations):
-                if generation not in generation_groups:
-                    generation_groups[generation] = []
-                generation_groups[generation].append(genome_id)
-            
-            found_genomes = []
-            
-            for generation, ids_in_gen in generation_groups.items():
-                genomes = load_population_generation(generation, base_dir, logger=_logger, log_file=log_file)
-                
-                genome_lookup = {g.get("id"): g for g in genomes}
-                
-                for genome_id in ids_in_gen:
-                    if genome_id in genome_lookup:
-                        found_genomes.append(genome_lookup[genome_id])
-                    else:
-                        _logger.warning(f"Genome {genome_id} not found in generation {generation}")
-            
-            _logger.info(f"Loaded {len(found_genomes)} out of {len(genome_ids)} requested genomes")
-            return found_genomes
-            
-        except Exception as e:
-            _logger.error(f"Failed to load genomes by IDs: {e}", exc_info=True)
-            return []
 
 
-def consolidate_generations_to_single_file(base_dir: str = "outputs", 
-                                         output_file: str = "non_elites.json",
-                                         *, logger=None, log_file: Optional[str] = None) -> bool:
-    
-    _logger = logger or get_logger("consolidate_generations", log_file)
-    
-    with PerformanceLogger(_logger, "Consolidate Generations to Single File"):
-        try:
-            base_path = Path(base_dir).resolve()
-            output_path = base_path / output_file
-            
-            info = get_population_files_info(str(base_path))
-            
-            if not info["generation_counts"]:
-                _logger.warning("No generation counts found to consolidate")
-                return False
-            
-            _logger.info(f"Found {len(info['generation_counts'])} generations to consolidate")
-            _logger.info(f"Population metadata updated for {len(info['generation_counts'])} generations")
-            
-            generation_order = sorted(info['generation_counts'].keys())
-            
-            all_genomes = load_population(str(base_path), logger=_logger, log_file=log_file)
-            
-            if not all_genomes:
-                _logger.error("No genomes loaded from consolidated population source")
-                return False
-            
-            all_genomes = clean_population(all_genomes, logger=_logger, log_file=log_file)
-            
-            all_genomes.sort(key=lambda g: (
-                g.get("generation", 0),
-                g.get("id", "0")
-            ))
-            
-            try:
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    json.dump(all_genomes, f, indent=2, ensure_ascii=False)
-                
-                size_mb = output_path.stat().st_size / (1024 * 1024)
-                _logger.info(f"Successfully consolidated {len(all_genomes)} genomes into {output_file}")
-                _logger.info(f"File size: {size_mb:.2f} MB")
-                
-                backup_dir = base_path / "generations_backup"
-                backup_dir.mkdir(exist_ok=True)
-                
-                for gen_num in generation_order:
-                    gen_file = base_path / f"gen{gen_num}.json"
-                    if gen_file.exists():
-                        backup_file = backup_dir / f"gen{gen_num}.json"
-                        import shutil
-                        shutil.copy2(gen_file, backup_file)
-                
-                _logger.info(f"Backed up original generation files to {backup_dir}")
-                
-                return True
-                
-            except Exception as e:
-                _logger.error(f"Failed to save consolidated population file: {e}")
-                return False
-                
-        except Exception as e:
-            _logger.error(f"Failed to consolidate generations: {e}", exc_info=True)
-            return False
 
 
-def migrate_from_split_to_single(base_dir: str = "outputs", 
-                                *, logger=None, log_file: Optional[str] = None) -> bool:
-    
-    _logger = logger or get_logger("migrate_to_single", log_file)
-    
-    with PerformanceLogger(_logger, "Migrate from Split to Single File"):
-        try:
-            if not consolidate_generations_to_single_file(base_dir, "elites.json", logger=_logger, log_file=log_file):
-                _logger.error("Failed to consolidate generation files")
-                return False
-            
-            base_path = Path(base_dir).resolve()
-            evolution_tracker_file = base_path / "EvolutionTracker.json"
-            
-            if evolution_tracker_file.exists():
-                try:
-                    with open(evolution_tracker_file, 'r', encoding='utf-8') as f:
-                        tracker = json.load(f)
-                    
-                    tracker["population_metadata"] = {
-                        "single_file_mode": True,
-                        "population_file": "elites.json",
-                        "elites_file": "elites.json",
-                        "migration_note": "Migrated from split files to single elites.json"
-                    }
-                    
-                    with open(evolution_tracker_file, 'w', encoding='utf-8') as f:
-                        json.dump(tracker, f, indent=2)
-                    _logger.info("Updated EvolutionTracker for single file architecture")
-                    
-                except Exception as e:
-                    _logger.warning(f"Failed to update EvolutionTracker: {e}")
-            
-            population_file = base_path / "elites.json"
-            if population_file.exists():
-                try:
-                    with open(population_file, 'r', encoding='utf-8') as f:
-                        consolidated_genomes = json.load(f)
-                    
-                    _logger.info(f"Migration successful! elites.json contains {len(consolidated_genomes)} genomes")
-                    _logger.info("You can now use the single file approach")
-                    
-                    return True
-                    
-                except Exception as e:
-                    _logger.error(f"Failed to verify consolidated file: {e}")
-                    return False
-            else:
-                _logger.error("elites.json was not created during consolidation")
-                return False
-                
-        except Exception as e:
-            _logger.error(f"Migration failed: {e}", exc_info=True)
-            return False
 
 
 
@@ -1226,27 +932,6 @@ def save_elites(elites: List[Dict[str, Any]], elites_file_path: str = "data/outp
 
 
 
-def get_population_stats_steady_state(population_file_path: str = FileConstants.DEFAULT_ELITES_FILE,
-                                     elites_file_path: str = FileConstants.DEFAULT_ELITES_FILE,
-                                     *, logger=None, log_file: Optional[str] = None) -> Dict[str, Any]:
-    
-    _logger = logger or get_logger("population_io", log_file)
-    
-    try:
-        population = load_population(population_file_path, logger=_logger, log_file=log_file)
-        
-        elites = load_elites(elites_file_path, logger=_logger, log_file=log_file)
-        
-        return {
-            "elites_count": len(elites),
-            "steady_state_mode": True
-        }
-    except Exception as e:
-        _logger.error(f"Failed to get population stats: {e}")
-        return {
-            "steady_state_mode": True,
-            "error": str(e)
-        }
 
 
 
@@ -1505,32 +1190,6 @@ def calculate_budget_metrics(
         return budget
 
 
-def update_generation_avg_fitness(generation_number: int, avg_fitness: float, evolution_tracker_path: str, logger=None, log_file: Optional[str] = None) -> None:
-    
-    _logger = logger or get_logger("update_generation_avg_fitness", log_file)
-    
-    try:
-        with open(evolution_tracker_path, 'r', encoding='utf-8') as f:
-            tracker = json.load(f)
-        
-        generation_updated = False
-        for gen in tracker.get("generations", []):
-            if gen["generation_number"] == generation_number:
-                gen["avg_fitness"] = round(avg_fitness, 4)
-                generation_updated = True
-                _logger.info(f"Updated generation {generation_number} avg_fitness to {avg_fitness:.4f}")
-                break
-        
-        if not generation_updated:
-            _logger.warning(f"Generation {generation_number} not found in EvolutionTracker")
-            return
-        
-        with open(evolution_tracker_path, 'w', encoding='utf-8') as f:
-            json.dump(tracker, f, indent=4, ensure_ascii=False)
-            
-    except Exception as e:
-        _logger.error(f"Failed to update generation avg_fitness: {e}", exc_info=True)
-        raise
 
 
 def calculate_slope(values: List[float]) -> float:
@@ -2381,87 +2040,27 @@ def compute_run_summary(tracker: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def write_run_summary_and_termination(
-    evolution_tracker_path: str,
-    run_duration_seconds: float,
-    run_mode: str,
-    termination_threshold: Optional[int] = None,
-    logger=None,
-    log_file: Optional[str] = None,
-) -> bool:
-    
-    _logger = logger or get_logger("WriteRunSummary", log_file)
-    try:
-        path = Path(evolution_tracker_path)
-        if not path.exists():
-            _logger.warning("EvolutionTracker.json not found at %s", evolution_tracker_path)
-            return False
-        with open(path, "r", encoding="utf-8") as f:
-            tracker = json.load(f)
-        tracker.setdefault("run_metadata", {}).update({
-            "run_duration_seconds": round(run_duration_seconds, 2),
-            "run_mode": run_mode,
-        })
-        run_summary = compute_run_summary(tracker)
-        tracker["run_summary"] = run_summary
-        if termination_threshold is not None:
-            te = run_summary.get("total_evaluated", 0)
-            tracker["termination_metrics"] = {
-                "termination_criterion": "max_total_genomes",
-                "termination_threshold": termination_threshold,
-                "final_evaluated": te,
-                "final_integrated": run_summary.get("total_integrated", 0),
-                "overshoot_evaluated": max(0, te - termination_threshold),
-            }
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(tracker, f, indent=2, ensure_ascii=False)
-        _logger.debug("Wrote run_summary and run_metadata (termination_metrics=%s)",
-                     termination_threshold is not None)
-        return True
-    except Exception as e:
-        _logger.warning("Failed to write run_summary/termination: %s", e, exc_info=True)
-        return False
 
 
 __all__ = [
     "load_population",
     "save_population",
-    
     "get_population_files_info",
-    "load_population_generation",
-    "load_population_range", 
-    "load_population_lazy",
-    "save_population_generation",
     "update_population_index_single_file",
-    "get_latest_generation",
-    
-    "load_genome_by_id",
-    "load_genomes_by_ids",
-    
     "load_and_initialize_population",
-    "validate_population_file",
     "sort_population_json",
     "clean_population",
-    
     "calculate_average_fitness",
     "count_elites_and_archive",
     "trim_temp_to_budget",
-    "update_generation_avg_fitness",
     "calculate_slope",
     "update_adaptive_selection_logic",
-    
-    "consolidate_generations_to_single_file",
-    "migrate_from_split_to_single",
-    
     "sort_population_by_elite_criteria",
     "load_elites",
     "save_elites",
-    "get_population_stats_steady_state",
-    
     "calculate_generation_statistics",
     "update_evolution_tracker_with_statistics",
     "load_analysis_population",
     "update_run_metadata_at_end",
     "compute_run_summary",
-    "write_run_summary_and_termination",
 ]

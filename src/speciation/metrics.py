@@ -359,12 +359,11 @@ def get_species_statistics(species: Dict[int, Species], elites_path: Optional[st
     
     if not species:
         return {
-            "count": 0, 
+            "count": 0,
             "total_population": 0,
             "sizes": [],
             "avg_size": 0.0,
             "fitness": {"global_best": 0.0, "global_avg": 0.0},
-            "modes": {"DEFAULT": 0, "EXPLORE": 0, "EXPLOIT": 0}
         }
     
     sizes = [sp.size for sp in species.values()]

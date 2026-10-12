@@ -34,9 +34,6 @@ class LlamaCppChatInterface(ModelInterface):
         self.logger = get_logger("LlamaCppChatInterface", log_file)
         self.model_cfg = model_cfg
         
-        self.generation_count = 0
-        self.total_tokens_generated = 0
-        self.total_generation_time = 0.0
         
         model_path = model_cfg["name"]
         
@@ -61,14 +58,6 @@ class LlamaCppChatInterface(ModelInterface):
         self.last_memory_check = time.time()
         self.memory_check_interval = 60
     
-    @classmethod
-    def clear_model_cache(cls):
-        
-        logger = get_logger("LlamaCppChatInterface")
-        with cls._MODEL_CACHE_LOCK:
-            cls._MODEL_CACHE.clear()
-            cls._MODEL_CACHE_ACCESS_COUNT.clear()
-            logger.info("Model cache cleared - all models will be reloaded")
 
     @classmethod
     def close_and_clear_model_cache(cls):
@@ -245,36 +234,7 @@ class LlamaCppChatInterface(ModelInterface):
             device_config["n_batch"] = config["n_batch"]
         return device_config
     
-    @classmethod
-    def get_cache_stats(cls) -> Dict[str, Any]:
-        
-        return {
-            "cached_models": len(cls._MODEL_CACHE),
-            "model_paths": list(cls._MODEL_CACHE.keys()),
-            "access_counts": dict(cls._MODEL_CACHE_ACCESS_COUNT),
-            "total_accesses": sum(cls._MODEL_CACHE_ACCESS_COUNT.values())
-        }
-    
-    @classmethod
-    def clear_cache(cls, preserve_main_models: bool = True):
-        
-        if preserve_main_models:
-            main_models = {}
-            main_access_counts = {}
-            for model_path in cls._MODEL_CACHE.keys():
-                if any(keyword in model_path.lower() for keyword in ['q4_k_m', 'q3_k_s', 'q8_0', 'q8_k']):
-                    main_models[model_path] = cls._MODEL_CACHE[model_path]
-                    main_access_counts[model_path] = cls._MODEL_CACHE_ACCESS_COUNT.get(model_path, 0)
-            
-            cls._MODEL_CACHE.clear()
-            cls._MODEL_CACHE_ACCESS_COUNT.clear()
-            
-            cls._MODEL_CACHE.update(main_models)
-            cls._MODEL_CACHE_ACCESS_COUNT.update(main_access_counts)
-        else:
-            cls._MODEL_CACHE.clear()
-            cls._MODEL_CACHE_ACCESS_COUNT.clear()
-    
+
     def _check_memory_usage(self):
         
         current_time = time.time()
@@ -406,8 +366,6 @@ class LlamaCppChatInterface(ModelInterface):
     
     def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> str:
         
-        start_time = time.time()
-        
         try:
             self._check_memory_usage()
 
@@ -464,32 +422,10 @@ class LlamaCppChatInterface(ModelInterface):
             
             generated_text = generated_text.strip()
             
-            self.generation_count += 1
-            self.total_tokens_generated += len(generated_text.split())
-            
             self.logger.debug(f"Generated chat completion: {generated_text[:100]}...")
             return generated_text
             
         except Exception as e:
             self.logger.error(f"Chat completion failed: {e}", exc_info=True)
             return ""
-        finally:
-            end_time = time.time()
-            generation_time = end_time - start_time
-            self.total_generation_time += generation_time
     
-    def get_performance_stats(self) -> Dict[str, Any]:
-        
-        return {
-            "generation_count": self.generation_count,
-            "total_tokens_generated": self.total_tokens_generated,
-            "total_generation_time": self.total_generation_time,
-            "average_tokens_per_generation": (
-                self.total_tokens_generated / self.generation_count 
-                if self.generation_count > 0 else 0
-            ),
-            "average_time_per_generation": (
-                self.total_generation_time / self.generation_count 
-                if self.generation_count > 0 else 0
-            )
-        }

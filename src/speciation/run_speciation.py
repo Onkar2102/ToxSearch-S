@@ -787,8 +787,7 @@ def process_generation(current_generation: int,
         
         species_count_before_clustering = len(state["species"])
         method = state["config"].clustering_method
-        # DBSCAN reclusters elites∪temp; L–F assigns temp onto existing leaders
-        include_elites = method == "dbscan"
+        # process_generation is L–F only; IncDBSCAN is dispatched in run_speciation().
 
         with PerformanceLogger(state["logger"], f"Speciation Phase 1: {method} clustering"):
             state["species"], _ = run_clustering(
@@ -797,7 +796,7 @@ def process_generation(current_generation: int,
                 speciation_state_path=speciation_state_path,
                 current_generation=current_generation,
                 config=state["config"],
-                include_elites=include_elites,
+                include_elites=False,
                 logger=state["logger"],
                 genome_tracker=state.get("_genome_tracker"),
                 events_tracker=state.get("_events_tracker"),
@@ -813,9 +812,7 @@ def process_generation(current_generation: int,
                 species_count_before_clustering, species_count_after_clustering,
             )
 
-        # Leader-radius cleanup is L–F only (not meaningful for DBSCAN density clusters)
-        if method == "leader_follower":
-          with PerformanceLogger(state["logger"], "Speciation Phase 1: Radius enforcement"):
+        with PerformanceLogger(state["logger"], "Speciation Phase 1: Radius enforcement"):
             import numpy as np
             from .distance import extract_phenotype_vector, pair_distance
 
@@ -897,8 +894,6 @@ def process_generation(current_generation: int,
                     if sp.leader and str(sp.leader.id) in {str(x) for x in updated_member_ids}:
                         if not any(m.id == sp.leader.id for m in sp.members):
                             sp.members = [sp.leader] + list(sp.members)
-        else:
-            state["logger"].info("Phase 1: skipping radius enforcement (clustering_method=dbscan)")
 
         _save_tracker_if_dirty(state)
         _validate_tracker_consistency(state, "Phase 1")
@@ -1058,10 +1053,7 @@ def process_generation(current_generation: int,
     import numpy as np
     state["logger"].info("=== Phase 2: Radius Enforcement (after merge) ===")
 
-    if state["config"].clustering_method == "dbscan":
-        state["logger"].info("Phase 2 radius enforcement skipped (clustering_method=dbscan)")
-    else:
-      with PerformanceLogger(state["logger"], "Speciation Phase 2: Radius enforcement"):
+    with PerformanceLogger(state["logger"], "Speciation Phase 2: Radius enforcement"):
         import numpy as np
         from .distance import extract_phenotype_vector, pair_distance
 

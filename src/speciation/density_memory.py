@@ -101,6 +101,3 @@ def append_genomes(
         log.info("Density memory append: +%d (total=%d)", added, len(out))
     return out
 
-
-def prompts_in_memory(genomes: Sequence[Dict[str, Any]]) -> Set[str]:
-    return {g["prompt"] for g in genomes if isinstance(g, dict) and g.get("prompt")}

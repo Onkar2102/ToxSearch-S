@@ -141,17 +141,6 @@ def log_system_info(logger: logging.Logger):
                and k not in sensitive_vars}
     logger.debug("Environment Variables: %s", env_vars)
 
-def log_performance_metrics(logger: logging.Logger, operation: str, start_time: float, 
-                          end_time: Optional[float] = None, **kwargs):
-    
-    if end_time is None:
-        end_time = datetime.datetime.now().timestamp()
-    
-    duration = end_time - start_time
-    logger.info("PERFORMANCE: %s completed in %.3f seconds", operation, duration)
-    
-    if kwargs:
-        logger.debug("PERFORMANCE_DETAILS: %s - %s", operation, kwargs)
 
 class PerformanceLogger:
     """Context manager for logging operation performance"""

@@ -6,7 +6,7 @@ for a single run directory: data/outputs/20260211_2122 (no model response text).
 Score columns follow the API (moderation_result.google.scores): severe_toxicity,
 identity_attack, toxicity, flirtation, threat, sexually_explicit, profanity, insult.
 
-Reads elites.json, reserves.json, archive.json, and temp.json when present in that folder.
+Reads elites.json, archive.json, and temp.json when present (reserves.json if legacy).
 Run from repo root (optional: output CSV, then run directory):
 
   python experiments/cluster_analysis/combine_toxsearch_s_prompts_responses.py
@@ -31,7 +31,7 @@ if str(_SRC) not in sys.path:
 from utils.evaluator_profiles import PERSPECTIVE_AXIS_ORDER  # noqa: E402
 
 DEFAULT_RUN_DIR = REPO_ROOT / "data" / "outputs" / "20260211_2122"
-POP_FILES = ("elites.json", "reserves.json", "archive.json", "temp.json")
+POP_FILES = ("elites.json", "archive.json", "temp.json", "reserves.json")
 DEFAULT_OUT = Path(__file__).resolve().parent / "toxsearch_s_unified_prompts_responses_scores.csv"
 
 # Canonical axis order (matches src/utils/evaluator_profiles.py).

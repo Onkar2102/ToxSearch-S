@@ -3,7 +3,6 @@ from .config import SpeciationConfig
 from .species import Individual, Species, generate_species_id, SpeciesIdGenerator
 from .embeddings import (
     EmbeddingModel, compute_and_save_embeddings, remove_embeddings_from_temp, get_embedding_model,
-    backfill_embeddings_for_genomes,
 )
 from .distance import (
     semantic_distance, semantic_distances_batch,
@@ -45,7 +44,6 @@ __all__ = [
     "Individual", "Species", "generate_species_id", "SpeciesIdGenerator",
     
     "EmbeddingModel", "compute_and_save_embeddings", "remove_embeddings_from_temp", "get_embedding_model",
-    "backfill_embeddings_for_genomes",
     
     "semantic_distance", "semantic_distances_batch",
     "ensemble_distance", "ensemble_distances_batch",

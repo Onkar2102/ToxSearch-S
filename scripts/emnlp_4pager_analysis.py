@@ -34,7 +34,7 @@ from utils.objectives import (
     normalize_per_front,
 )
 
-POP_FILES = ("elites.json", "reserves.json", "archive.json", "temp.json")
+POP_FILES = ("elites.json", "archive.json", "temp.json", "reserves.json")
 
 
 # src/analytics/unified_table.py

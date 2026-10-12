@@ -313,46 +313,10 @@ def calculate_cluster_quality_metrics(
         return metrics
 
 
-def save_cluster_quality_to_tracker(
-    outputs_path: Optional[str] = None,
-    logger=None
-) -> bool:
-    
-    _logger = logger or get_logger("ClusterQuality")
-    
-    try:
-        if outputs_path is None:
-            outputs_path = str(get_outputs_path())
-        
-        outputs_dir = Path(outputs_path)
-        tracker_path = outputs_dir / "EvolutionTracker.json"
-        
-        if not tracker_path.exists():
-            _logger.warning("EvolutionTracker.json not found")
-            return False
-        
-        metrics = calculate_cluster_quality_metrics(outputs_path, _logger)
-        
-        with open(tracker_path, 'r', encoding='utf-8') as f:
-            tracker = json.load(f)
-        
-        tracker["cluster_quality"] = metrics
-        
-        with open(tracker_path, 'w', encoding='utf-8') as f:
-            json.dump(tracker, f, indent=2, ensure_ascii=False)
-        
-        _logger.info("Saved cluster quality metrics to EvolutionTracker.json")
-        return True
-        
-    except Exception as e:
-        _logger.error(f"Failed to save cluster quality metrics: {e}", exc_info=True)
-        return False
-
 
 __all__ = [
     "calculate_silhouette_score",
     "calculate_davies_bouldin_index",
     "calculate_calinski_harabasz_index",
     "calculate_cluster_quality_metrics",
-    "save_cluster_quality_to_tracker"
 ]

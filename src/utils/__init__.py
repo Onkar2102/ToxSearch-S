@@ -7,32 +7,24 @@ def get_custom_logging():
 def get_population_io():
     
     from .population_io import (
-        load_and_initialize_population, 
-        get_population_files_info, 
-        load_population, 
-        save_population, 
-        sort_population_json, 
-        load_genome_by_id,
-        consolidate_generations_to_single_file,
-        migrate_from_split_to_single,
+        load_and_initialize_population,
+        get_population_files_info,
+        load_population,
+        save_population,
+        sort_population_json,
         sort_population_by_elite_criteria,
         load_elites,
         save_elites,
-        get_population_stats_steady_state
     )
     return (
-        load_and_initialize_population, 
-        get_population_files_info, 
-        load_population, 
-        save_population, 
-        sort_population_json, 
-        load_genome_by_id,
-        consolidate_generations_to_single_file,
-        migrate_from_split_to_single,
+        load_and_initialize_population,
+        get_population_files_info,
+        load_population,
+        save_population,
+        sort_population_json,
         sort_population_by_elite_criteria,
         load_elites,
         save_elites,
-        get_population_stats_steady_state
     )
 
 def get_system_utils():
@@ -56,27 +48,9 @@ def get_system_utils():
         set_outputs_path,
     )
 
-def get_cluster_quality():
-    
-    from .cluster_quality import (
-        calculate_silhouette_score,
-        calculate_davies_bouldin_index,
-        calculate_calinski_harabasz_index,
-        calculate_cluster_quality_metrics,
-        save_cluster_quality_to_tracker
-    )
-    return (
-        calculate_silhouette_score,
-        calculate_davies_bouldin_index,
-        calculate_calinski_harabasz_index,
-        calculate_cluster_quality_metrics,
-        save_cluster_quality_to_tracker
-    )
-
 
 __all__ = [
     "get_custom_logging",
     "get_population_io",
     "get_system_utils",
-    "get_cluster_quality",
 ]

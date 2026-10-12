@@ -48,7 +48,8 @@ def validate_run(run_dir: Path, expected_evaluator: str) -> list[str]:
                 )
 
     total_pop = 0
-    for fname in ("elites.json", "reserves.json", "archive.json"):
+    # Live stores: elites + archive (L–F); temp (IncDBSCAN D_t). reserves.json is legacy-only.
+    for fname in ("elites.json", "archive.json", "temp.json", "reserves.json"):
         pop = _load_json(run_dir / fname)
         if not isinstance(pop, list):
             continue
@@ -71,6 +72,9 @@ def validate_run(run_dir: Path, expected_evaluator: str) -> list[str]:
         if checked and bad:
             errors.append(f"{fname}: {bad}/{checked} sample genomes failed evaluator/vector/backend checks")
 
+    if total_pop == 0:
+        errors.append("no genomes found in elites.json / archive.json / temp.json")
+
     pm = _load_json(run_dir / "p_mating.json")
     if isinstance(pm, list) and pm:
         bad_pm = sum(
@@ -84,7 +88,7 @@ def validate_run(run_dir: Path, expected_evaluator: str) -> list[str]:
     if not figures.is_dir():
         errors.append("figures/ directory missing")
     else:
-        for fig in ("objective_evolution.png", "alpha_knob.png"):
+        for fig in ("fitness_evolution.png", "speciation_evolution.png"):
             if not (figures / fig).is_file():
                 errors.append(f"missing figure: figures/{fig}")
 
