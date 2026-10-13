@@ -239,11 +239,85 @@ def export_topk_for_cross_scoring(df: pd.DataFrame, k: int, out_csv: Path) -> pd
     return out
 
 
-def rescore_topk(topk_csv: Path, out_csv: Path, measure_oracles: Sequence[str] = ("google", "openai")) -> None:
-    """TODO: re-answer each prompt with theta_rg (same RG config, fixed seed), score the new response
-    with every oracle in ``measure_oracles`` (north star of each), write columns
-    [run_dir, search_oracle, measure_oracle, genome_id, measure_score]. Add 'laya' once M2 is live."""
-    raise NotImplementedError
+def rescore_topk(
+    topk_csv: Path,
+    out_csv: Path,
+    measure_oracles: Sequence[str] = ("google", "openai"),
+    *,
+    rg_config: str = "config/RGConfig.yaml",
+    seed: int = 42,
+    openai_model: str = "omni-moderation-latest",
+) -> pd.DataFrame:
+    """Re-answer each top-k prompt with \(\theta_{rg}\) and score under each measure oracle.
+
+    Writes columns:
+    ``run_dir, search_oracle, measure_oracle, distance, clustering, seed, genome_id,
+    prompt, measure_score, north_star_metric``.
+
+    Laya (``laya``) is rejected until a live evaluator path exists.
+    """
+    from gne.evaluator import HybridModerationEvaluator, evaluate_single_genome
+    from gne.response_generator import ResponseGenerator
+    from utils.evaluator_profiles import resolve_evaluator
+    from utils.population_io import _extract_north_star_score
+
+    topk_csv, out_csv = Path(topk_csv), Path(out_csv)
+    src = pd.read_csv(topk_csv)
+    if src.empty:
+        raise ValueError(f"Empty top-k CSV: {topk_csv}")
+    if "prompt" not in src.columns:
+        raise ValueError(f"{topk_csv} missing prompt column")
+
+    oracles = [str(o).strip().lower() for o in measure_oracles]
+    if "laya" in oracles:
+        raise NotImplementedError("Laya (M2) is not wired yet; omit 'laya' from measure_oracles")
+
+    rg = ResponseGenerator(config_path=rg_config, seed=seed)
+    evaluators = {}
+    for o in oracles:
+        if o == "openai":
+            evaluators[o] = HybridModerationEvaluator(evaluator="openai", openai_model=openai_model)
+        elif o == "google":
+            evaluators[o] = HybridModerationEvaluator(evaluator="google")
+        else:
+            raise ValueError(f"Unknown measure oracle: {o}")
+
+    # Cache responses so the same prompt is answered once.
+    response_cache: Dict[str, str] = {}
+    rows = []
+    for i, r in enumerate(src.itertuples(index=False)):
+        prompt = str(r.prompt)
+        if prompt not in response_cache:
+            text, _ = rg.generate_response(prompt)
+            if not (text or "").strip():
+                raise RuntimeError(f"rescore_topk: empty RG response for row {i}")
+            response_cache[prompt] = text
+        response = response_cache[prompt]
+        for o, ev in evaluators.items():
+            genome = {"id": getattr(r, "genome_id", i), "generated_output": response}
+            evaluate_single_genome(ev, genome, moderation_methods=[o])
+            if genome.get("status") != "complete":
+                raise RuntimeError(f"rescore_topk: {o} failed for row {i}: {genome.get('error')}")
+            profile = resolve_evaluator(o)
+            metric = profile.default_north_star
+            score = _extract_north_star_score(genome, metric)
+            rows.append({
+                "run_dir": getattr(r, "run_dir", None),
+                "search_oracle": getattr(r, "search_oracle", None),
+                "measure_oracle": o,
+                "distance": getattr(r, "distance", None),
+                "clustering": getattr(r, "clustering", None),
+                "seed": getattr(r, "seed", None),
+                "genome_id": getattr(r, "genome_id", None),
+                "prompt": prompt,
+                "measure_score": score,
+                "north_star_metric": metric,
+            })
+
+    out = pd.DataFrame(rows)
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    out.to_csv(out_csv, index=False)
+    return out
 
 
 def rq4_cross_scoring(cross_csv: Path) -> pd.DataFrame:

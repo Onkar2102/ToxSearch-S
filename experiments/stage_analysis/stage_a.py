@@ -19,11 +19,114 @@ from .metrics import d_e_matrix
 W_G, W_P = 0.7, 0.3
 
 
-def build_p0(prompts: Sequence[str], out_path: str) -> None:
-    """TODO: sample one response per prompt with the Stage C RG config, score with both oracles,
-    embed with all-MiniLM-L6-v2, and write the P0 table. Use held-out prompts from the seed corpora,
-    disjoint from data/prompt_100.csv."""
-    raise NotImplementedError
+def _score_vector(scores: Dict[str, float], order: Sequence[str]) -> List[float]:
+    missing = [k for k in order if k not in scores or scores[k] is None]
+    if missing:
+        raise ValueError(f"Missing phenotype scores: {missing}")
+    return [float(scores[k]) for k in order]
+
+
+def build_p0(
+    prompts: Sequence[str],
+    out_path: str,
+    *,
+    rg_config: str = "config/RGConfig.yaml",
+    seed: int = 42,
+    embedding_model: str = "all-MiniLM-L6-v2",
+    openai_model: str = "omni-moderation-latest",
+) -> pd.DataFrame:
+    """Sample one response per prompt, score with both live oracles, embed, write ``out_path``.
+
+    Output columns: ``prompt``, ``response``, ``emb``, ``scores_google``, ``scores_openai``.
+    Prefer ``.parquet`` or ``.pkl``; ``.json``/``.jsonl`` also supported (lists for vectors).
+    """
+    from pathlib import Path
+
+    from gne.evaluator import HybridModerationEvaluator, evaluate_single_genome
+    from gne.response_generator import ResponseGenerator
+    from speciation.embeddings import get_embedding_model
+    from utils.evaluator_profiles import GOOGLE_PHENOTYPE_SCORE_ORDER, OPENAI_PHENOTYPE_SCORE_ORDER
+
+    prompts = [str(p).strip() for p in prompts if str(p).strip()]
+    if not prompts:
+        raise ValueError("build_p0: empty prompt list")
+
+    rg = ResponseGenerator(config_path=rg_config, seed=seed)
+    ev_g = HybridModerationEvaluator(evaluator="google")
+    ev_o = HybridModerationEvaluator(evaluator="openai", openai_model=openai_model)
+    emb_model = get_embedding_model(model_name=embedding_model)
+
+    rows: List[Dict] = []
+    for i, prompt in enumerate(prompts):
+        response, _ = rg.generate_response(prompt)
+        if not (response or "").strip():
+            raise RuntimeError(f"build_p0: empty response for prompt index {i}")
+
+        g_g = {"id": f"p0_{i}", "generated_output": response}
+        g_o = {"id": f"p0_{i}", "generated_output": response}
+        evaluate_single_genome(ev_g, g_g, moderation_methods=["google"])
+        evaluate_single_genome(ev_o, g_o, moderation_methods=["openai"])
+        if g_g.get("status") != "complete" or g_o.get("status") != "complete":
+            raise RuntimeError(
+                f"build_p0: moderation failed for prompt index {i}: "
+                f"google={g_g.get('error')}, openai={g_o.get('error')}"
+            )
+
+        sg = (g_g.get("moderation_result") or {}).get("google") or {}
+        so = (g_o.get("moderation_result") or {}).get("openai") or {}
+        scores_g = sg.get("scores") if isinstance(sg, dict) else None
+        scores_o = so.get("scores") if isinstance(so, dict) else None
+        if not isinstance(scores_g, dict) or not isinstance(scores_o, dict):
+            raise RuntimeError(f"build_p0: missing score dicts for prompt index {i}")
+
+        rows.append({
+            "prompt": prompt,
+            "response": response,
+            "emb": emb_model.encode(prompt).tolist(),
+            "scores_google": _score_vector(scores_g, GOOGLE_PHENOTYPE_SCORE_ORDER),
+            "scores_openai": _score_vector(scores_o, OPENAI_PHENOTYPE_SCORE_ORDER),
+        })
+
+    df = pd.DataFrame(rows)
+    path = Path(out_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.suffix == ".parquet":
+        df.to_parquet(path, index=False)
+    elif path.suffix in (".pkl", ".pickle"):
+        df.to_pickle(path)
+    elif path.suffix == ".jsonl":
+        df.to_json(path, orient="records", lines=True)
+    else:
+        df.to_json(path, orient="records", indent=2)
+    return df
+
+
+def load_p0(path: str) -> pd.DataFrame:
+    """Load a P0 table written by ``build_p0``."""
+    from pathlib import Path
+
+    p = Path(path)
+    if p.suffix == ".parquet":
+        df = pd.read_parquet(p)
+    elif p.suffix in (".pkl", ".pickle"):
+        df = pd.read_pickle(p)
+    elif p.suffix == ".jsonl":
+        df = pd.read_json(p, lines=True)
+    else:
+        df = pd.read_json(p)
+    required = {"prompt", "response", "emb", "scores_google", "scores_openai"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"P0 table missing columns: {sorted(missing)}")
+    return df
+
+
+def load_prompts_csv(path: str, column: str = "questions") -> List[str]:
+    """Load prompts from a seed-style CSV (``questions`` column by default)."""
+    df = pd.read_csv(path)
+    if column not in df.columns:
+        raise ValueError(f"CSV {path} has no column {column!r}; columns={list(df.columns)}")
+    return [str(x).strip() for x in df[column].tolist() if str(x).strip()]
 
 
 def d_p_matrix(scores: np.ndarray) -> np.ndarray:
