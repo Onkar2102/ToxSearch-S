@@ -271,6 +271,7 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 | Doc | Contents |
 |-----|----------|
 | [`docs/SPECIATION.md`](docs/SPECIATION.md) | Live speciation + next scientific report plan |
+| [`docs/EXPERIMENTATION_EXECUTION.md`](docs/EXPERIMENTATION_EXECUTION.md) | Experiment stages, runners, and RQ ↔ step map |
 | [`docs/INCREMENTAL_DBSCAN_PLAN.md`](docs/INCREMENTAL_DBSCAN_PLAN.md) | Incremental DBSCAN population path |
 | [`tests/README.md`](tests/README.md) | How to run and interpret tests |
 | [`results/manifests/README.md`](results/manifests/README.md) | Artifact manifests |
