@@ -25,11 +25,13 @@ from .nli import (
     clear_nli_cache,
     entailment_probability,
     get_nli_model_name,
+    nli_class_probabilities,
     nli_distance,
     nli_distances_batch,
     pairwise_nli_matrix,
     set_entailment_scorer,
     set_nli_model_name,
+    set_nli_scorer,
 )
 
 __all__ = [
@@ -50,9 +52,11 @@ __all__ = [
     "clear_nli_cache",
     "entailment_probability",
     "get_nli_model_name",
+    "nli_class_probabilities",
     "nli_distance",
     "nli_distances_batch",
     "pairwise_nli_matrix",
     "set_entailment_scorer",
     "set_nli_model_name",
+    "set_nli_scorer",
 ]

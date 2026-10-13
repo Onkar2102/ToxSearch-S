@@ -119,60 +119,78 @@ def compute_and_save_embeddings(
     if not genomes:
         logger.warning("No genomes found in temp.json")
         return
-    
-    if all("prompt_embedding" in g for g in genomes):
+
+    def _has_embedding(g: dict) -> bool:
+        emb = g.get("prompt_embedding")
+        return emb is not None and len(emb) > 0
+
+    missing_idx = [i for i, g in enumerate(genomes) if not _has_embedding(g)]
+    if not missing_idx:
         logger.info("Embeddings already exist in temp.json, skipping computation")
         return
-    
-    with PerformanceLogger(logger, "Embeddings: Compute and save", path=temp_path, num_genomes=len(genomes)):
-        prompts = [g.get("prompt", "") for g in genomes]
-        
+
+    with PerformanceLogger(
+        logger,
+        "Embeddings: Compute and save",
+        path=temp_path,
+        num_genomes=len(missing_idx),
+    ):
+        prompts = [genomes[i].get("prompt", "") for i in missing_idx]
         model = get_embedding_model(model_name=model_name)
-        
-        logger.info(f"Computing embeddings for {len(prompts)} prompts...")
-        
+        logger.info(
+            "Computing embeddings for %d/%d genomes missing prompt_embedding...",
+            len(prompts),
+            len(genomes),
+        )
+
         success_count = 0
         failure_count = 0
-        embeddings = None
-        
         try:
             embeddings = model.encode(
                 prompts,
                 batch_size=batch_size,
-                show_progress=show_progress
+                show_progress=show_progress,
             )
         except Exception as e:
             logger.error(f"Failed to compute embeddings batch: {e}", exc_info=True)
             raise
-        
-        for i, genome in enumerate(genomes):
+
+        for j, i in enumerate(missing_idx):
+            genome = genomes[i]
+            genome_id = genome.get("id", "unknown")
             try:
-                if embeddings is not None and i < len(embeddings):
-                    embedding = embeddings[i]
+                if embeddings is not None and j < len(embeddings):
+                    embedding = embeddings[j]
                     if embedding is not None and len(embedding) > 0:
                         genome["prompt_embedding"] = embedding.tolist()
                         success_count += 1
                     else:
                         failure_count += 1
-                        genome_id = genome.get("id", "unknown")
-                        logger.warning(f"Embedding computation returned None/empty for genome {genome_id}")
+                        logger.warning(
+                            f"Embedding computation returned None/empty for genome {genome_id}"
+                        )
                 else:
                     failure_count += 1
-                    genome_id = genome.get("id", "unknown")
-                    logger.warning(f"Embedding missing for genome {genome_id} (index {i} out of range)")
+                    logger.warning(
+                        f"Embedding missing for genome {genome_id} (index {j} out of range)"
+                    )
             except Exception as e:
                 failure_count += 1
-                genome_id = genome.get("id", "unknown")
                 logger.warning(f"Failed to add embedding for genome {genome_id}: {e}")
-        
+
         logger.info(f"Embedding computation: {success_count} success, {failure_count} failures")
         if failure_count > 0:
-            logger.warning(f"Population reduced by {failure_count} genomes due to embedding failures")
-        
+            logger.warning(
+                f"{failure_count} genomes still missing embeddings after encode attempt"
+            )
+
         with open(temp_path_obj, 'w', encoding='utf-8') as f:
             json.dump(genomes, f, indent=2, ensure_ascii=False)
-        
-        logger.info(f"Successfully computed and saved embeddings for {len(genomes)} genomes")
+
+        logger.info(
+            f"Successfully computed and saved embeddings for {success_count} genomes "
+            f"({len(genomes) - len(missing_idx)} already present)"
+        )
 
 
 

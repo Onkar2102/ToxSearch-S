@@ -113,13 +113,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--rg",
         type=str,
-        default="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf",
+        default="models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf",
         help="Response generator model path or models/ alias",
     )
     parser.add_argument(
         "--pg",
         type=str,
-        default="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf",
+        default="models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf",
         help="Prompt generator model path or models/ alias",
     )
     parser.add_argument(
@@ -405,7 +405,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if prof is not None:
             prof.enable()
-        main_module.main(
+        rc = main_module.main(
             max_generations=args.generations,
             moderation_methods=args.moderation_methods,
             rg_model=args.rg,
@@ -435,7 +435,7 @@ def main(argv: list[str] | None = None) -> int:
             distance_alpha=args.distance_alpha,
             nli_model=args.nli_model,
         )
-        return 0
+        return int(rc or 0)
     except KeyboardInterrupt:
         print("\nPipeline interrupted by user.")
         return 1

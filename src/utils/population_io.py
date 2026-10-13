@@ -1702,7 +1702,18 @@ def update_evolution_tracker_with_statistics(
             "density_size": statistics.get("density_size", gen_entry.get("density_size", 0)),
             "noise_count": statistics.get("noise_count", gen_entry.get("noise_count", 0)),
             "clustered_count": statistics.get("clustered_count", gen_entry.get("clustered_count", 0)),
+            "singleton_species_count": statistics.get(
+                "singleton_species_count",
+                gen_entry.get("singleton_species_count", 0),
+            ),
             "population_mode": statistics.get("population_mode", gen_entry.get("population_mode", "leader_follower")),
+            "population_max_fitness": round(
+                statistics.get(
+                    "population_max_fitness",
+                    gen_entry.get("population_max_fitness", gen_entry.get("best_fitness", 0.0001)),
+                ),
+                4,
+            ),
             "generation_duration_seconds": round(statistics["generation_duration_seconds"], 3) if statistics.get("generation_duration_seconds") is not None else None,
             "best_fitness": round(statistics.get("population_max_fitness", gen_entry.get("best_fitness", 0.0001)), 4),
             "max_score_variants": round(statistics.get("max_score_variants", gen_entry.get("max_score_variants", 0.0001)), 4),
@@ -1712,6 +1723,17 @@ def update_evolution_tracker_with_statistics(
             "avg_fitness": round(statistics.get("avg_fitness", statistics.get("avg_fitness_generation", gen_entry.get("avg_fitness", 0.0001))), 4),
             "avg_fitness_elites": round(statistics.get("avg_fitness_elites", gen_entry.get("avg_fitness_elites", 0.0001)), 4),
         })
+        # Keep speciation block in sync for IncDBSCAN singleton panel in live analysis.
+        if isinstance(gen_entry.get("speciation"), dict) and statistics.get("singleton_species_count") is not None:
+            gen_entry["speciation"]["singleton_species_count"] = statistics["singleton_species_count"]
+            if statistics.get("density_size") is not None:
+                gen_entry["speciation"]["density_size"] = statistics["density_size"]
+            if statistics.get("noise_count") is not None:
+                gen_entry["speciation"]["noise_count"] = statistics["noise_count"]
+            if statistics.get("clustered_count") is not None:
+                gen_entry["speciation"]["clustered_count"] = statistics["clustered_count"]
+            if statistics.get("population_mode"):
+                gen_entry["speciation"]["population_mode"] = statistics["population_mode"]
         if statistics.get("generation_duration_scope") is not None:
             gen_entry["generation_duration_scope"] = statistics["generation_duration_scope"]
         

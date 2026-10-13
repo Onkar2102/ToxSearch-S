@@ -132,6 +132,7 @@ def test_pure_nli_distance_no_embeddings() -> None:
     assert method_uses_embeddings("nli") is False
     assert method_uses_embeddings("embedding") is True
 
+    # Legacy entailment inject maps remainder to contradiction → same as old 1-P_E.
     # Symmetric entailment 1.0 → d_N = 0; identical texts already 0
     set_entailment_scorer(lambda a, b: 1.0 if a != b else 1.0)
     try:
@@ -150,6 +151,37 @@ def test_pure_nli_distance_no_embeddings() -> None:
         assert mat[0, 1] == pytest.approx(0.5)
     finally:
         set_entailment_scorer(None)
+        clear_nli_cache()
+
+
+def test_nli_distance_qiu_expected_squared() -> None:
+    """d_N = mean(P_C) + 0.5 * mean(P_N) (Qiu Eq. 9, symmetrized)."""
+    from speciation.distance import clear_nli_cache, nli_distance, set_nli_scorer
+
+    # Pure contradiction both ways → d_N = 1
+    set_nli_scorer(lambda a, b: (0.0, 0.0, 1.0))
+    try:
+        assert nli_distance("a", "b") == pytest.approx(1.0)
+        # Pure neutral both ways → d_N = 0.5
+        set_nli_scorer(lambda a, b: (0.0, 1.0, 0.0))
+        assert nli_distance("a", "b") == pytest.approx(0.5)
+        # Pure entailment both ways → d_N = 0
+        set_nli_scorer(lambda a, b: (1.0, 0.0, 0.0))
+        assert nli_distance("a", "b") == pytest.approx(0.0)
+        # Mixed / asymmetric: ab=(0.2,0.3,0.5), ba=(0.4,0.1,0.5)
+        # d_ab = 0.5 + 0.5*0.3 = 0.65; d_ba = 0.5 + 0.5*0.1 = 0.55; mean = 0.6
+        def _mixed(a: str, b: str):
+            if a == "u" and b == "v":
+                return (0.2, 0.3, 0.5)
+            if a == "v" and b == "u":
+                return (0.4, 0.1, 0.5)
+            return (1.0 / 3.0,) * 3
+
+        set_nli_scorer(_mixed)
+        assert nli_distance("u", "v") == pytest.approx(0.6)
+        assert nli_distance("same", "same") == pytest.approx(0.0)
+    finally:
+        set_nli_scorer(None)
         clear_nli_cache()
 
 

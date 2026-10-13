@@ -279,14 +279,30 @@ def build_genome_data_from_elites_archive(
     # Prefer elites over archive on id collision
     all_raw = list(elites) + list(archive)
     seen: Dict[int, Dict[str, Any]] = {}
+    skipped_no_emb = 0
+    skipped_no_id = 0
     for g in all_raw:
         gid = g.get("id")
-        if gid is None or g.get("prompt_embedding") is None:
+        if gid is None:
+            skipped_no_id += 1
+            continue
+        if g.get("prompt_embedding") is None:
+            skipped_no_emb += 1
             continue
         gid = int(gid)
         if gid not in seen:
             seen[gid] = g
     genomes = list(seen.values())
+    if skipped_no_emb or skipped_no_id:
+        try:
+            from utils import get_custom_logging
+            get_logger, _, _, _ = get_custom_logging()
+            get_logger("GDPProjection").warning(
+                "GDP skipped genomes without embeddings/id: no_embedding=%d no_id=%d kept=%d",
+                skipped_no_emb, skipped_no_id, len(genomes),
+            )
+        except Exception:
+            pass
     if not genomes:
         return None, [], []
 

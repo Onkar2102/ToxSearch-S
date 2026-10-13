@@ -95,3 +95,24 @@ def write_run_config(outputs_path: Path, config: RunConfig) -> Path:
     out = outputs_path / "run_config.json"
     out.write_text(json.dumps(config.to_dict(), indent=2), encoding="utf-8")
     return out
+
+
+def speciation_tracker_metadata(speciation_config: SpeciationConfig) -> dict[str, Any]:
+    """Fields mirrored into EvolutionTracker.run_metadata for matrix filtering."""
+    cfg = speciation_config.to_dict()
+    return {
+        "clustering_method": cfg.get("clustering_method"),
+        "distance_method": cfg.get("distance_method"),
+        "nli_model": cfg.get("nli_model"),
+        "distance_alpha": cfg.get("distance_alpha"),
+        "theta_sim": cfg.get("theta_sim"),
+        "theta_merge": cfg.get("theta_merge"),
+        "species_capacity": cfg.get("species_capacity"),
+        "species_stagnation": cfg.get("species_stagnation"),
+        "dbscan_eps": cfg.get("dbscan_eps"),
+        "dbscan_min_samples": cfg.get("dbscan_min_samples"),
+        "inc_dbscan_validate_every": cfg.get("inc_dbscan_validate_every"),
+        "embedding_model": cfg.get("embedding_model"),
+        "w_genotype": cfg.get("w_genotype"),
+        "w_phenotype": cfg.get("w_phenotype"),
+    }

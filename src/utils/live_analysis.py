@@ -29,14 +29,29 @@ def _is_inc_dbscan_tracker(tracker: Dict[str, Any], outputs_path: Optional[str] 
     summary = tracker.get("speciation_summary") or {}
     if summary.get("population_mode") == "inc_dbscan":
         return True
+    meta = tracker.get("run_metadata") or {}
+    if meta.get("clustering_method") == "dbscan":
+        return True
+    if meta.get("population_mode") == "inc_dbscan":
+        return True
     gens = tracker.get("generations") or []
     for g in reversed(gens):
         sp = g.get("speciation") or {}
-        if sp.get("population_mode") == "inc_dbscan" or sp.get("density_size"):
+        if sp.get("population_mode") == "inc_dbscan":
             return True
         if g.get("population_mode") == "inc_dbscan":
             return True
     if outputs_path:
+        try:
+            run_cfg = Path(outputs_path) / "run_config.json"
+            if run_cfg.is_file():
+                with open(run_cfg, encoding="utf-8") as f:
+                    rc = json.load(f)
+                clustering = (rc.get("speciation") or {}).get("clustering_method")
+                if clustering == "dbscan":
+                    return True
+        except Exception:
+            pass
         try:
             from speciation.clustering_mode import is_inc_dbscan_mode
             return is_inc_dbscan_mode(outputs_path=outputs_path)
@@ -102,7 +117,16 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
         
         x_genomes = _cumulative_genome_counts(generations)
 
-        max_scores = [float(g.get("max_score_variants", g.get("best_fitness", 0.0)) or 0.0) for g in generations]
+        # Population max/avg over durable store; this-gen min from variant cohort.
+        max_scores = [
+            float(
+                g.get("population_max_fitness")
+                or g.get("best_fitness")
+                or g.get("max_score_variants")
+                or 0.0
+            )
+            for g in generations
+        ]
         min_scores = [float(g.get("min_score_variants", 0.0) or 0.0) for g in generations]
         avg_scores = [float(g.get("avg_fitness_generation", g.get("avg_fitness", 0.0)) or 0.0) for g in generations]
         
@@ -113,9 +137,9 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
             cumulative_best.append(current_max)
         
         plt.figure(figsize=(10, 6))
-        plt.plot(x_genomes, max_scores, 'o-', label='Max Fitness', linewidth=2, markersize=6, color='#1f77b4')
-        plt.plot(x_genomes, min_scores, '^-', label='Min Fitness', linewidth=2, markersize=6, color='#2ca02c')
-        plt.plot(x_genomes, avg_scores, 's-', label='Avg Fitness', linewidth=2, markersize=6, color='#ff7f0e')
+        plt.plot(x_genomes, max_scores, 'o-', label='Max Fitness (population)', linewidth=2, markersize=6, color='#1f77b4')
+        plt.plot(x_genomes, min_scores, '^-', label='Min Fitness (this gen)', linewidth=2, markersize=6, color='#2ca02c')
+        plt.plot(x_genomes, avg_scores, 's-', label='Avg Fitness (population)', linewidth=2, markersize=6, color='#ff7f0e')
         plt.plot(x_genomes, cumulative_best, '--', label='Cumulative Max Score', linewidth=2, color='red', alpha=0.75)
         
         plt.xlabel('Cumulative genomes', fontsize=12)
@@ -235,11 +259,82 @@ def generate_speciation_plot(outputs_path: Optional[str] = None, logger=None) ->
         return None
 
 
+def _load_population_list(path: Path) -> List[Dict[str, Any]]:
+    if not path.exists():
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def _operator_usage_from_population(outputs_path: str, tracker: Dict[str, Any]) -> Dict[str, int]:
+    """Count accepted variants by ``genome['operator']`` (ground-truth usage)."""
+    base = Path(outputs_path)
+    counts: Dict[str, int] = defaultdict(int)
+    use_inc = _is_inc_dbscan_tracker(tracker, outputs_path)
+    if use_inc:
+        paths = [base / "temp.json"]
+    else:
+        # L–F: elites + archive hold the durable population; temp is transient.
+        paths = [base / "elites.json", base / "archive.json", base / "temp.json"]
+    seen_ids = set()
+    for path in paths:
+        for genome in _load_population_list(path):
+            if not genome:
+                continue
+            gid = genome.get("id")
+            if gid is not None:
+                if gid in seen_ids:
+                    continue
+                seen_ids.add(gid)
+            op = genome.get("operator")
+            if not op or op in ("initial", "seed", "None"):
+                continue
+            counts[str(op)] += 1
+    return dict(counts)
+
+
+def _operator_usage_from_tracker(generations: List[Dict[str, Any]]) -> Dict[str, int]:
+    """Fallback: sum per-gen operator_statistics usage-like fields."""
+    counts: Dict[str, int] = defaultdict(int)
+    usage_keys = (
+        "count",
+        "variants_created",
+        "total_variants",
+        "accepted",
+        "variants_integrated",
+    )
+    for g in generations:
+        op_stats = g.get("operator_statistics") or {}
+        if not isinstance(op_stats, dict):
+            continue
+        for op_name, stats in op_stats.items():
+            if isinstance(stats, dict):
+                n = 0
+                for key in usage_keys:
+                    if stats.get(key) is not None:
+                        try:
+                            n = int(stats.get(key) or 0)
+                        except (TypeError, ValueError):
+                            n = 0
+                        break
+                counts[str(op_name)] += max(0, n)
+            elif isinstance(stats, (int, float)):
+                counts[str(op_name)] += int(stats)
+    return {k: v for k, v in counts.items() if v > 0}
+
+
 def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger=None) -> Optional[str]:
     
     _logger = logger or get_logger("LiveAnalysis")
     
     try:
+        if outputs_path is None:
+            outputs_path = str(get_outputs_path())
+
         tracker = load_evolution_tracker(outputs_path)
         if not tracker or "generations" not in tracker:
             _logger.warning("No generation data found for operator statistics plot")
@@ -248,20 +343,15 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
         generations = _generations_chronological(tracker)
         if not generations:
             return None
-        
-        operator_counts = defaultdict(int)
-        
-        for g in generations:
-            op_stats = g.get("operator_statistics") or {}
-            if isinstance(op_stats, dict):
-                for op_name, stats in op_stats.items():
-                    if isinstance(stats, dict):
-                        operator_counts[op_name] += stats.get("count", 0)
-                    else:
-                        operator_counts[op_name] += int(stats) if isinstance(stats, (int, float)) else 0
+
+        # Prefer genome.operator counts: EvolutionTracker.operator_statistics only
+        # records duplicates/rejections (no "count"), which produced empty bars.
+        operator_counts = _operator_usage_from_population(outputs_path, tracker)
+        if not operator_counts:
+            operator_counts = _operator_usage_from_tracker(generations)
         
         if not operator_counts:
-            _logger.warning("No operator statistics found")
+            _logger.warning("No operator usage found in population or tracker")
             return None
         
         operators = sorted(operator_counts.keys(), key=lambda o: operator_counts[o], reverse=True)
@@ -269,19 +359,28 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
         
         x = np.arange(len(operators))
         fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(x, counts, width=0.6, color='#377eb8', label='Count')
+        bars = ax.bar(x, counts, width=0.6, color='#377eb8', label='Accepted variants')
+        for rect, val in zip(bars, counts):
+            ax.annotate(
+                str(val),
+                xy=(rect.get_x() + rect.get_width() / 2, rect.get_height()),
+                xytext=(0, 3),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+            )
         
         ax.set_xlabel('Operator', fontsize=12)
-        ax.set_ylabel('Count', fontsize=12)
+        ax.set_ylabel('Accepted variants', fontsize=12)
         ax.set_title('Operator Usage (Cumulative)', fontsize=14, fontweight='bold')
         ax.set_xticks(x)
         ax.set_xticklabels(operators, rotation=45, ha='right')
+        ax.set_ylim(bottom=0)
         ax.grid(True, alpha=0.3, axis='y')
+        ax.legend(loc='upper right')
         
         plt.tight_layout()
-        
-        if outputs_path is None:
-            outputs_path = str(get_outputs_path())
         
         figures_dir = Path(outputs_path) / "figures"
         figures_dir.mkdir(parents=True, exist_ok=True)
@@ -290,7 +389,12 @@ def generate_operator_statistics_plot(outputs_path: Optional[str] = None, logger
         plt.savefig(plot_path, dpi=150, bbox_inches='tight')
         plt.close()
         
-        _logger.info("Generated operator statistics plot: %s", plot_path)
+        _logger.info(
+            "Generated operator statistics plot: %s (%d operators, %d accepted)",
+            plot_path,
+            len(operators),
+            sum(counts),
+        )
         return str(plot_path)
         
     except Exception as e:
@@ -315,14 +419,19 @@ def generate_population_composition_plot(outputs_path: Optional[str] = None, log
         x_genomes = _cumulative_genome_counts(generations)
         use_inc = _is_inc_dbscan_tracker(tracker, outputs_path)
         if use_inc:
-            # All D_t genomes are species members (multi-member + singleton); no archive alias.
+            # Prefer full density memory size; clustered_count is mature-only.
             top_counts = [
-                int(g.get("clustered_count", g.get("elites_count", g.get("density_size", 0))) or 0)
+                int(
+                    g.get("density_size")
+                    or g.get("elites_count")
+                    or g.get("total_population")
+                    or 0
+                )
                 for g in generations
             ]
             bottom_counts = [0 for _ in generations]
-            labels = ["Species members (D_t)", ""]
-            title = "Population composition (IncDBSCAN: all genomes as species in D_t)"
+            labels = ["Density memory D_t", ""]
+            title = "Population composition (IncDBSCAN: |D_t|)"
         else:
             top_counts = [int(g.get("elites_count", 0) or 0) for g in generations]
             bottom_counts = [int(g.get("archived_count", 0) or 0) for g in generations]

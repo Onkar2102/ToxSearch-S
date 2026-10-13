@@ -170,6 +170,10 @@ class Species:
             "leader_id": self.leader.id,
             "leader_prompt": self.leader.prompt,
             "leader_embedding": self.leader.embedding.tolist() if self.leader.embedding is not None else None,
+            "leader_phenotype": (
+                np.asarray(self.leader.phenotype, dtype=float).tolist()
+                if self.leader.phenotype is not None else None
+            ),
             "leader_fitness": round(float(self.leader.fitness), 4),
             "leader_distance": round(float(self.leader_distance), 4),
             "member_ids": [m.id for m in self.members],

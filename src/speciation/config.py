@@ -40,7 +40,7 @@ class SpeciationConfig:
     # Distance used for membership / merge / DBSCAN matrix
     distance_method: str = "embedding"
     # HuggingFace MNLI model for distance_method=nli / nli+embedding
-    nli_model: str = "facebook/bart-large-mnli"
+    nli_model: str = "cross-encoder/nli-deberta-v3-small"
 
     def __post_init__(self):
         assert 0 <= self.theta_sim <= 1, f"theta_sim must be in [0, 1]"
@@ -76,7 +76,7 @@ class SpeciationConfig:
         self.distance_method = normalize_distance_method(self.distance_method)
         assert self.distance_method in DISTANCE_METHODS
         if not (self.nli_model or "").strip():
-            self.nli_model = "facebook/bart-large-mnli"
+            self.nli_model = "cross-encoder/nli-deberta-v3-small"
         # Ensure MNLI scorer picks up --nli-model for nli / nli+embedding ablations.
         apply_distance_runtime_config(
             distance_method=self.distance_method,

@@ -91,7 +91,7 @@ Download weights and place them under `models/`. The CLI flags **`--rg`** (respo
 Default paths in `src/cli.py` currently expect something like:
 
 ```text
-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf
+models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf
 ```
 
 If your files differ, pass explicit paths, for example:
@@ -113,7 +113,7 @@ Defaults follow [`SpeciationConfig`](src/speciation/config.py) and [`src/cli.py`
 | Max total genomes | Stop when elites + archive reach this count (required termination). Set with `--max-total-genomes`. |
 | Theta similarity | Species assignment radius under `--distance-method`; followers join a leader within this radius. Set with `--theta-sim` (default **0.25**). |
 | Distance method | Clustering distance ablation: `embedding` (default), `nli`, `nli+embedding`, `objective`, `embedding+objective`. Set with `--distance-method`. |
-| NLI model | HuggingFace MNLI model for `nli` / `nli+embedding` (default `facebook/bart-large-mnli`). Set with `--nli-model`. |
+| NLI model | HuggingFace MNLI model for `nli` / `nli+embedding` (default `cross-encoder/nli-deberta-v3-small`). Set with `--nli-model`. |
 | Theta merge | Two species whose leaders are closer than this may merge; must be ≤ `--theta-sim`. Set with `--theta-merge`. |
 | Min stability generations | Both species must be at least this old before they are allowed to merge. Set with `--min-stability-gens`. |
 | Species capacity | Maximum individuals kept per species (excess archived by fitness). Set with `--species-capacity`. |

@@ -4,7 +4,8 @@ Select via ``SpeciationConfig.distance_method`` / CLI ``--distance-method``:
 
 - ``embedding`` — prompt embedding cosine dissimilarity \(d_E \in [0,1]\)
 - ``objective`` — moderation score-vector Euclidean \(d_P \in [0,1]\)
-- ``nli`` — symmetrized entailment dissimilarity \(d_N \in [0,1]\)
+- ``nli`` — symmetrized expected-squared NLI dissimilarity
+  \(d_N=\bar p_C+\tfrac12\bar p_N\in[0,1]\)
 - ``nli+embedding`` — hybrid \(d_H = \alpha d_E + (1-\alpha) d_N\)
 - ``embedding+objective`` — legacy blend \(w_g d_E + w_p d_P\)
 
@@ -26,6 +27,7 @@ from .distance_metrics import (
     entailment_probability,
     extract_objective_vector,
     extract_phenotype_vector,
+    nli_class_probabilities,
     nli_distance,
     nli_distances_batch,
     objective_distance,
@@ -39,6 +41,7 @@ from .distance_metrics import (
     semantic_distances_batch,
     set_entailment_scorer,
     set_nli_model_name,
+    set_nli_scorer,
     get_nli_model_name,
     unit_normalize_rows,
 )
@@ -396,7 +399,9 @@ __all__ = [
     "nli_distance",
     "nli_distances_batch",
     "pairwise_nli_matrix",
+    "nli_class_probabilities",
     "set_entailment_scorer",
+    "set_nli_scorer",
     "set_nli_model_name",
     "get_nli_model_name",
     "clear_nli_cache",

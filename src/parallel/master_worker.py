@@ -353,8 +353,8 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
     if batch_size_K is not None:
         run_meta["batch_size"] = batch_size_K
     if speciation_config is not None:
-        run_meta["theta_sim"] = getattr(speciation_config, "theta_sim", None)
-        run_meta["species_capacity"] = getattr(speciation_config, "species_capacity", None)
+        from utils.run_config import speciation_tracker_metadata
+        run_meta.update(speciation_tracker_metadata(speciation_config))
     if config_dict is not None:
         keys_list = config_dict.get("perspective_api_keys") or []
         run_meta["num_perspective_keys"] = len(keys_list) if isinstance(keys_list, list) else 0
@@ -362,6 +362,13 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
             run_meta["max_total_genomes"] = config_dict["max_total_genomes"]
         if config_dict.get("evaluator"):
             run_meta["evaluator"] = config_dict["evaluator"]
+            try:
+                from utils.evaluator_profiles import resolve_evaluator
+                _prof = resolve_evaluator(config_dict["evaluator"])
+                run_meta["num_objectives"] = len(_prof.phenotype_score_order)
+                run_meta["axis_order"] = list(_prof.phenotype_score_order)
+            except Exception:
+                pass
         if config_dict.get("north_star_metric"):
             run_meta["north_star_metric"] = config_dict["north_star_metric"]
         if config_dict.get("openai_model"):
@@ -1121,10 +1128,22 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             logger=logger,
                             log_file=log_file,
                         )
-                        total_genomes = (
-                            gen_stats.get("elites_count", 0)
-                            + gen_stats.get("archived_count", 0)
-                        )
+                        # IncDBSCAN budget = |D_t|; L–F = elites + archive.
+                        if (
+                            gen_stats.get("population_mode") == "inc_dbscan"
+                            or gen_stats.get("density_size") is not None
+                        ):
+                            total_genomes = int(
+                                gen_stats.get("density_size")
+                                or gen_stats.get("total_population")
+                                or gen_stats.get("elites_count", 0)
+                                or 0
+                            )
+                        else:
+                            total_genomes = (
+                                gen_stats.get("elites_count", 0)
+                                + gen_stats.get("archived_count", 0)
+                            )
                         if total_genomes >= max_total:
                             shutdown = True
                             in_flight_at_stop = _total_buffered()

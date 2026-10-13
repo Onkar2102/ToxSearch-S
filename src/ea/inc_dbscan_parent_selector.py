@@ -221,15 +221,45 @@ class IncDBSCANParentSelector:
         )
 
         # top_10 from full density memory
-        ranked = sorted(eligible, key=self._score, reverse=True)[:10]
-        top_path = Path(outputs_path) / "top_10.json"
-        with open(top_path, "w", encoding="utf-8") as f:
-            json.dump(
-                [
-                    slim_selection_genome(g, self.north_star_metric, include_prompt=True, include_species_id=True)
-                    for g in ranked
-                ],
-                f,
-                indent=2,
-                ensure_ascii=False,
-            )
+        self._save_top_10_by_toxicity(
+            str(Path(outputs_path) / "temp.json"),
+            str(Path(outputs_path) / "top_10.json"),
+        )
+
+    def _save_top_10_by_toxicity(self, density_path: str = None, output_path: str = None) -> None:
+        """Write top_10.json from density memory (temp.json); sid/density_label >= 0."""
+        try:
+            if density_path is None:
+                density_path = str(get_outputs_path() / "temp.json")
+            if output_path is None:
+                output_path = str(get_outputs_path() / "top_10.json")
+            path = Path(density_path)
+            genomes: List[Dict[str, Any]] = []
+            if path.exists():
+                with open(path, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
+                genomes = raw if isinstance(raw, list) else []
+            else:
+                self.logger.warning("Density file not found: %s", density_path)
+            eligible = [g for g in genomes if g and self._label(g) >= 0]
+            if not eligible:
+                self.logger.error("No density genomes found for top_10")
+                return
+            ranked = sorted(eligible, key=self._score, reverse=True)[:10]
+            out = Path(output_path)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            with open(out, "w", encoding="utf-8") as f:
+                json.dump(
+                    [
+                        slim_selection_genome(
+                            g, self.north_star_metric, include_prompt=True, include_species_id=True
+                        )
+                        for g in ranked
+                    ],
+                    f,
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            self.logger.debug("Saved top 10 from density memory to %s", output_path)
+        except Exception as e:
+            self.logger.error("Failed to save top 10 from density memory: %s", e)

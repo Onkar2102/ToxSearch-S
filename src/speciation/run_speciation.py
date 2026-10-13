@@ -329,7 +329,9 @@ def _load_species_leaders_from_state(outputs_path: Path, logger) -> Dict[int, Tu
             )
             
             leader_phenotype = None
-            if sp_dict.get("leader_genome_data"):
+            if sp_dict.get("leader_phenotype") is not None:
+                leader_phenotype = np.array(sp_dict["leader_phenotype"], dtype=np.float32)
+            elif sp_dict.get("leader_genome_data"):
                 from .distance import extract_phenotype_vector
                 leader_phenotype = extract_phenotype_vector(sp_dict["leader_genome_data"], logger=logger)
             
@@ -696,18 +698,19 @@ def process_generation(current_generation: int,
 
         temp_path_obj = Path(temp_path)
         if temp_path_obj.exists():
-            if method_uses_embeddings(state["config"].distance_method):
-                compute_and_save_embeddings(
-                    temp_path=temp_path,
-                    model_name=state["config"].embedding_model,
-                    batch_size=state["config"].embedding_batch_size,
-                    logger=state["logger"]
-                )
-            else:
+            # Always encode for GDP/viz; clustering may ignore embeddings (e.g. nli).
+            if not method_uses_embeddings(state["config"].distance_method):
                 state["logger"].info(
-                    "Skipping embedding encode (distance_method=%s uses other signals)",
+                    "Encoding embeddings for GDP/viz (distance_method=%s; "
+                    "not used for clustering)",
                     state["config"].distance_method,
                 )
+            compute_and_save_embeddings(
+                temp_path=temp_path,
+                model_name=state["config"].embedding_model,
+                batch_size=state["config"].embedding_batch_size,
+                logger=state["logger"]
+            )
 
             speciation_state_path = str(get_outputs_path() / "speciation_state.json")
             method = state["config"].clustering_method
@@ -768,18 +771,19 @@ def process_generation(current_generation: int,
             outputs_path = get_outputs_path()
             temp_path = str(outputs_path / "temp.json")
         
-        if method_uses_embeddings(state["config"].distance_method):
-            with PerformanceLogger(state["logger"], "Speciation Phase 1: Compute and save embeddings"):
-                compute_and_save_embeddings(
-                    temp_path=temp_path,
-                    model_name=state["config"].embedding_model,
-                    batch_size=state["config"].embedding_batch_size,
-                    logger=state["logger"]
-                )
-        else:
+        # Always encode for GDP/viz; clustering may ignore embeddings (e.g. nli).
+        if not method_uses_embeddings(state["config"].distance_method):
             state["logger"].info(
-                "Phase 1: skipping embedding encode (distance_method=%s)",
+                "Phase 1: encoding embeddings for GDP/viz (distance_method=%s; "
+                "not used for clustering)",
                 state["config"].distance_method,
+            )
+        with PerformanceLogger(state["logger"], "Speciation Phase 1: Compute and save embeddings"):
+            compute_and_save_embeddings(
+                temp_path=temp_path,
+                model_name=state["config"].embedding_model,
+                batch_size=state["config"].embedding_batch_size,
+                logger=state["logger"]
             )
         
         outputs_path = get_outputs_path()
@@ -1883,12 +1887,16 @@ def load_state(path: str) -> bool:
             leader_embedding = None
             if sp_dict.get("leader_embedding"):
                 leader_embedding = np.array(sp_dict["leader_embedding"])
+            leader_phenotype = None
+            if sp_dict.get("leader_phenotype") is not None:
+                leader_phenotype = np.array(sp_dict["leader_phenotype"], dtype=np.float32)
             
             leader = Individual(
                 id=sp_dict["leader_id"],
                 prompt=sp_dict.get("leader_prompt", ""),
                 fitness=sp_dict.get("leader_fitness", 0.0),
                 embedding=leader_embedding,
+                phenotype=leader_phenotype,
                 species_id=sid
             )
             
@@ -2563,6 +2571,12 @@ def update_evolution_tracker_with_speciation(
         )
         density_size = int(speciation_result.get("density_size", 0) or 0)
         noise_count = int(speciation_result.get("noise_count", 0) or 0)
+        singleton_count = int(speciation_result.get("singleton_species_count", 0) or 0)
+        # Mature clusters only (exclude singleton pool and residual noise).
+        if is_inc and density_size:
+            clustered_count = max(0, density_size - noise_count - singleton_count)
+        else:
+            clustered_count = max(0, density_size - noise_count) if density_size else 0
         speciation_summary = {
             "species_count": total_species_count,
             "active_species_count": active_species_count,
@@ -2570,7 +2584,8 @@ def update_evolution_tracker_with_speciation(
             "archive_size": archive_size,
             "density_size": density_size,
             "noise_count": noise_count,
-            "clustered_count": max(0, density_size - noise_count) if density_size else 0,
+            "singleton_species_count": singleton_count,
+            "clustered_count": clustered_count,
             "population_mode": (
                 "inc_dbscan" if is_inc else "leader_follower"
             ),
@@ -2623,13 +2638,15 @@ def update_evolution_tracker_with_speciation(
                     if fitness > 0:
                         all_fitness.append(float(fitness))
                 if is_inc or is_inc_dbscan_mode(outputs_path=str(outputs_path)):
-                    noise_n = sum(
-                        1 for g in pop_genomes
-                        if int(g.get("density_label", g.get("species_id", 0) or 0)) == -1
-                    )
+                    def _lab(g):
+                        return int(g.get("density_label", g.get("species_id", 0) or 0))
+                    noise_n = sum(1 for g in pop_genomes if _lab(g) == -1)
+                    single_n = sum(1 for g in pop_genomes if _lab(g) == 0)
+                    mature_n = sum(1 for g in pop_genomes if _lab(g) > 0)
                     speciation_summary["density_size"] = total_pop
                     speciation_summary["noise_count"] = noise_n
-                    speciation_summary["clustered_count"] = max(0, total_pop - noise_n)
+                    speciation_summary["singleton_species_count"] = single_n
+                    speciation_summary["clustered_count"] = mature_n
                     speciation_summary["population_mode"] = "inc_dbscan"
                     # Archive panel unused; keep 0. Noise tracked separately.
                     archive_size = 0
@@ -2679,11 +2696,27 @@ def update_evolution_tracker_with_speciation(
             "current_archive_size": archive_size,
             "current_density_size": speciation_summary.get("density_size", 0),
             "current_noise_count": speciation_summary.get("noise_count", 0),
+            "current_singleton_species_count": speciation_summary.get("singleton_species_count", 0),
             "population_mode": speciation_summary.get("population_mode", "leader_follower"),
             "total_speciation_events": metrics_summary.get("total_speciation_events", 0),
             "total_merge_events": metrics_summary.get("total_merge_events", 0),
             "total_extinction_events": metrics_summary.get("total_extinction_events", 0),
         })
+        # Mirror singleton onto generation entry for live analysis.
+        gen_entry["singleton_species_count"] = speciation_summary.get("singleton_species_count", 0)
+
+        if speciation_result.get("success", True) and not speciation_result.get("error"):
+            try:
+                from .snapshots import append_species_snapshot
+                append_species_snapshot(
+                    tracker_path.parent,
+                    current_generation,
+                    is_inc=is_inc,
+                    speciation_result=speciation_result,
+                    logger=logger,
+                )
+            except Exception as e:
+                logger.warning("Failed to append species snapshot for gen %d: %s", current_generation, e)
         
         
         with open(tracker_path, 'w', encoding='utf-8') as f:

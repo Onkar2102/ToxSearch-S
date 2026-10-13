@@ -64,11 +64,17 @@ class IncDBSCANState:
         return len(self.genome_ids)
 
     def to_serializable(self) -> dict:
+        try:
+            from ..distance import get_nli_model_name
+            nli_model = get_nli_model_name()
+        except Exception:
+            nli_model = None
         return {
             "eps": self.eps,
             "min_samples": self.min_samples,
             "distance_method": self.distance_method,
             "distance_alpha": self.distance_alpha,
+            "nli_model": nli_model,
             "w_genotype": self.w_genotype,
             "w_phenotype": self.w_phenotype,
             "genome_ids": list(self.genome_ids),
@@ -673,21 +679,30 @@ def process_unlabeled(
         ),
         reverse=True,
     )
+    skipped = 0
     for i in idxs:
         g = genomes[i]
+        skip_reason = None
         try:
             ind = Individual.from_genome(g)
         except Exception as e:
-            log.warning("IncDBSCAN skip genome id=%s: %s", g.get("id"), e)
-            continue
-        if need_emb and ind.embedding is None:
-            log.warning("IncDBSCAN skip genome id=%s: no embedding (required by %s)", g.get("id"), method)
-            continue
-        if need_txt and not (ind.prompt or "").strip():
-            log.warning("IncDBSCAN skip genome id=%s: empty prompt (required by %s)", g.get("id"), method)
-            continue
-        if need_obj and ind.phenotype is None:
-            log.warning("IncDBSCAN skip genome id=%s: no objective vector (required by %s)", g.get("id"), method)
+            skip_reason = str(e)
+            ind = None
+        if ind is not None and need_emb and ind.embedding is None:
+            skip_reason = f"no embedding (required by {method})"
+        elif ind is not None and need_txt and not (ind.prompt or "").strip():
+            skip_reason = f"empty prompt (required by {method})"
+        elif ind is not None and need_obj and ind.phenotype is None:
+            skip_reason = f"no objective vector (required by {method})"
+        if skip_reason is not None:
+            skipped += 1
+            log.warning("IncDBSCAN skip genome id=%s: %s", g.get("id"), skip_reason)
+            events.append({
+                "event": "inc_dbscan_insert_skipped",
+                "genome_id": g.get("id"),
+                "reason": skip_reason,
+                "generation": current_generation,
+            })
             continue
         ev = insert_point(
             state, g, ind,
@@ -697,6 +712,11 @@ def process_unlabeled(
             events_tracker=events_tracker,
         )
         events.append(ev)
+    if skipped:
+        log.warning(
+            "IncDBSCAN process_unlabeled: skipped %d/%d unlabeled genomes",
+            skipped, len(idxs),
+        )
     sync_genomes_from_state(genomes, state)
     # Rebuild species members from full state
     individuals = individuals_from_genomes(genomes, log, distance_method=method)
@@ -793,12 +813,18 @@ def write_species_and_config(
     extra: Optional[dict] = None,
 ) -> None:
     from pathlib import Path
+    try:
+        from ..distance import get_nli_model_name
+        nli_model = get_nli_model_name()
+    except Exception:
+        nli_model = None
     payload = {
         "clustering_method": "dbscan",
         "dbscan_eps": state.eps,
         "dbscan_min_samples": state.min_samples,
         "distance_method": state.distance_method,
         "distance_alpha": state.distance_alpha,
+        "nli_model": nli_model,
         "inc_dbscan": True,
         # IncDBSCAN never enforces species_capacity (grow-only density memory).
         "species_capacity_enforced": False,

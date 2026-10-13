@@ -199,18 +199,20 @@ def process_generation_inc_dbscan(
         current_generation, eps, cfg.dbscan_min_samples, cfg.distance_method,
     )
 
-    if method_uses_embeddings(cfg.distance_method):
-        with PerformanceLogger(logger, "IncDBSCAN: embeddings"):
-            compute_and_save_embeddings(
-                temp_path=temp_p,
-                model_name=cfg.embedding_model,
-                batch_size=cfg.embedding_batch_size,
-                logger=logger,
-            )
-    else:
+    # Always encode prompt embeddings for GDP / analysis plots, even when
+    # distance_method=nli (clustering still uses NLI distances only).
+    if not method_uses_embeddings(cfg.distance_method):
         logger.info(
-            "IncDBSCAN: skipping embedding encode (distance_method=%s)",
+            "IncDBSCAN: encoding embeddings for GDP/viz (distance_method=%s; "
+            "not used for clustering)",
             cfg.distance_method,
+        )
+    with PerformanceLogger(logger, "IncDBSCAN: embeddings"):
+        compute_and_save_embeddings(
+            temp_path=temp_p,
+            model_name=cfg.embedding_model,
+            batch_size=cfg.embedding_batch_size,
+            logger=logger,
         )
 
     genomes = load_density_memory(temp_p, logger=logger)
@@ -287,7 +289,14 @@ def process_generation_inc_dbscan(
                     logger=logger,
                     events_tracker=events_tracker,
                 )
-                genomes_updated = n_unlabeled
+                # Count successful inserts only (skipped genomes stay unlabeled).
+                skipped = sum(1 for ev in evs if ev.get("event") == "inc_dbscan_insert_skipped")
+                genomes_updated = max(0, n_unlabeled - skipped)
+                if skipped > 0:
+                    logger.warning(
+                        "IncDBSCAN: inserted %d/%d newcomers (%d skipped)",
+                        genomes_updated, n_unlabeled, skipped,
+                    )
                 for ev in evs:
                     if ev.get("event") == "inc_dbscan_new_species":
                         speciation_events += 1
@@ -410,6 +419,9 @@ def run_inc_dbscan_speciation(
     north_star_metric: str = "toxicity",
 ) -> Dict[str, Any]:
     """Public entry used by ``run_speciation`` dispatch."""
+    import time as _time
+
+    _start = _time.time()
     result = process_generation_inc_dbscan(
         temp_path=temp_path,
         current_generation=current_generation,
@@ -417,6 +429,7 @@ def run_inc_dbscan_speciation(
         log_file=log_file,
         north_star_metric=north_star_metric,
     )
+    result["speciation_duration_seconds"] = round(_time.time() - _start, 3)
     try:
         from .run_speciation import update_evolution_tracker_with_speciation
         outputs = get_outputs_path()

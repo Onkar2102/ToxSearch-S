@@ -10,8 +10,8 @@
 #
 # Notes:
 #   - Figures are written under <output-dir>/figures/ after Gen 0 and each later gen.
-#   - PG/RG max_new_tokens are capped in config/PGConfig.yaml and config/RGConfig.yaml
-#     (256 / 512). Restart the run after changing those — a live process keeps old values.
+#   - PG/RG max_new_tokens come from config/PGConfig.yaml and config/RGConfig.yaml
+#     (currently 2048). Restart the run after changing those — a live process keeps old values.
 #   - operators=all × 8B is still slow per generation; use OPERATORS=cm for faster local smokes.
 #
 # Environment overrides (defaults match SpeciationConfig / CLI):
@@ -33,13 +33,13 @@
 #   EMBEDDING_DIM=384
 #   EMBEDDING_BATCH_SIZE=64
 #   DISTANCE_METHOD=embedding     # embedding | nli | nli+embedding | ...
-#   NLI_MODEL=facebook/bart-large-mnli
+#   NLI_MODEL=cross-encoder/nli-deberta-v3-small
 #   DISTANCE_ALPHA=0.7
 #   DBSCAN_EPS=                 defaults to THETA_SIM when empty
 #   DBSCAN_MIN_SAMPLES=2
 #   INC_DBSCAN_VALIDATE_EVERY=0
 #   STAGNATION_LIMIT=5
-#   RG_MODEL / PG_MODEL         GGUF paths
+#   RG_MODEL / PG_MODEL         GGUF paths (default: Llama-3.2-1B IQ4_XS)
 #   PYTHON=python3
 #   MAX_ATTEMPTS=2
 #
@@ -73,7 +73,7 @@ fi
 PYTHON="${PYTHON:-python3}"
 export PYTHONPATH="${SCRIPT_DIR}/src"
 
-MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-210}"
+MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-777}"
 CLUSTERING_METHODS="${CLUSTERING_METHODS:-leader_follower dbscan}"
 EVALUATOR="${EVALUATOR:-google}"
 NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-}"
@@ -85,10 +85,10 @@ SEED="${SEED:-42}"
 STAGNATION_LIMIT="${STAGNATION_LIMIT:-5}"
 
 THETA_SIM="${THETA_SIM:-0.25}"
-THETA_MERGE="${THETA_MERGE:-0.25}"
+THETA_MERGE="${THETA_MERGE:-0.1}"
 MIN_STABILITY_GENS="${MIN_STABILITY_GENS:-5}"
-SPECIES_CAPACITY="${SPECIES_CAPACITY:-10}"
-SPECIES_STAGNATION="${SPECIES_STAGNATION:-5}"
+SPECIES_CAPACITY="${SPECIES_CAPACITY:-100}"
+SPECIES_STAGNATION="${SPECIES_STAGNATION:-20}"
 
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-all-MiniLM-L6-v2}"
 EMBEDDING_DIM="${EMBEDDING_DIM:-384}"
@@ -96,10 +96,10 @@ EMBEDDING_BATCH_SIZE="${EMBEDDING_BATCH_SIZE:-64}"
 
 DISTANCE_METHOD="${DISTANCE_METHOD:-embedding}"
 DISTANCE_ALPHA="${DISTANCE_ALPHA:-0.7}"
-NLI_MODEL="${NLI_MODEL:-facebook/bart-large-mnli}"
+NLI_MODEL="${NLI_MODEL:-cross-encoder/nli-deberta-v3-small}"
 
 DBSCAN_EPS="${DBSCAN_EPS:-}"
-DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-1}"
+DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-2}"
 INC_DBSCAN_VALIDATE_EVERY="${INC_DBSCAN_VALIDATE_EVERY:-0}"
 
 RG_MODEL="${RG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf}"
@@ -143,6 +143,14 @@ preflight() {
         echo "ERROR: seed file not found: $SEED_FILE" >&2
         exit 1
     fi
+
+    # SpeciationConfig invariant: theta_merge <= theta_sim
+    awk -v m="$THETA_MERGE" -v s="$THETA_SIM" 'BEGIN {
+        if (m > s) { exit 1 }
+    }' || {
+        echo "ERROR: THETA_MERGE (${THETA_MERGE}) must be <= THETA_SIM (${THETA_SIM})." >&2
+        exit 1
+    }
 }
 
 # Shared args for both speciation modes (all operators + full speciation CLI).

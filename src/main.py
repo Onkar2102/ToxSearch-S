@@ -32,7 +32,7 @@ def update_model_configs(rg_model, pg_model, logger):
     )
 
 
-def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", pg_model="models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
+def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf", pg_model="models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf", operators="all", max_variants=1, stagnation_limit=5, seed_file="data/prompt.csv",
          max_total_genomes=None, seed=None,
          theta_sim=0.25, theta_merge=0.1, min_stability_gens=5, species_capacity=100,
          species_stagnation=20,
@@ -41,7 +41,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
          clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
          inc_dbscan_validate_every=0,
          distance_method="embedding", distance_alpha=0.7,
-         nli_model="facebook/bart-large-mnli"):
+         nli_model="cross-encoder/nli-deberta-v3-small"):
     
     
     get_logger, get_log_filename, log_system_info, PerformanceLogger = get_custom_logging()
@@ -87,7 +87,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             update_model_configs(rg_model, pg_model, logger)
     except Exception as e:
         logger.error("Config update failed: %s", e, exc_info=True)
-        return
+        return 1
 
     try:
         with PerformanceLogger(logger, "Initialize system", seed_file=seed_file):
@@ -96,7 +96,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             )
     except Exception as e:
         logger.error("System initialization failed: %s", e, exc_info=True)
-        return
+        return 1
 
     gen0_start = time.time()
     try:
@@ -112,14 +112,14 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 if not temp_genomes or len(temp_genomes) == 0:
                     logger.error("Generation 0 failed: temp.json is empty after response generation.")
                     logger.error("No initial population was generated. Check seed file and model configuration.")
-                    return
+                    return 1
                 logger.info("Generated %d initial genomes in temp.json", len(temp_genomes))
         else:
             logger.error("Generation 0 failed: temp.json was not created.")
-            return
+            return 1
     except Exception as e:
         logger.error("Generation failed: %s", e, exc_info=True)
-        return
+        return 1
 
     try:
         with PerformanceLogger(logger, "Gen 0: Evaluate (moderation)", methods=", ".join(moderation_methods)):
@@ -142,10 +142,10 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 if not temp_genomes or len(temp_genomes) == 0:
                     logger.error("Generation 0 failed: temp.json is empty after evaluation.")
                     logger.error("All genomes were removed during evaluation.")
-                    return
+                    return 1
     except Exception as e:
         logger.error("Evaluation failed: %s", e, exc_info=True)
-        return
+        return 1
 
     try:
         with PerformanceLogger(logger, "Gen 0: Apply refusal penalties"):
@@ -161,7 +161,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                        refusal_stats.get("penalties_applied", 0))
     except Exception as e:
         logger.error("Gen 0: Refusal penalty application failed: %s", e, exc_info=True)
-        return
+        return 1
 
     avg_fitness_before_speciation = 0.0001
     try:
@@ -171,7 +171,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             )
     except Exception as e:
         logger.error("Gen 0: Failed to compute avg_fitness before speciation: %s", e, exc_info=True)
-        return
+        return 1
 
     speciation_config = SpeciationConfig(
         theta_sim=theta_sim,
@@ -225,10 +225,11 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                            speciation_result.get("archived_count", 0),
                            speciation_result.get("genomes_updated", 0))
             else:
-                logger.warning("Speciation completed with warnings: %s", speciation_result.get("error", "unknown"))
+                logger.error("Gen 0 speciation failed: %s", speciation_result.get("error", "unknown"))
+                return 1
     except Exception as e:
         logger.error("Speciation failed: %s", e, exc_info=True)
-        return
+        return 1
     
     try:
         with PerformanceLogger(logger, "Gen 0: Operator effectiveness metrics"):
@@ -311,6 +312,19 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["generation_duration_seconds"] = round(time.time() - gen0_start, 3)
             gen0_stats["generation_duration_scope"] = "through_evolution_tracker_statistics_write"
             
+            from utils.run_config import speciation_tracker_metadata
+
+            _meta = speciation_tracker_metadata(speciation_config)
+            _meta.update(
+                evaluator=evaluator,
+                north_star_metric=north_star_metric,
+                openai_model=openai_model,
+                num_objectives=len(profile.phenotype_score_order),
+                axis_order=list(profile.phenotype_score_order),
+            )
+            if max_total_genomes is not None:
+                _meta["max_total_genomes"] = max_total_genomes
+
             update_evolution_tracker_with_statistics(
                 evolution_tracker_path=str(evolution_tracker_path),
                 current_generation=0,
@@ -318,14 +332,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 operator_statistics=None,
                 logger=logger,
                 log_file=log_file,
-                run_metadata_update=dict(
-                    theta_sim=theta_sim,
-                    species_capacity=species_capacity,
-                    evaluator=evaluator,
-                    north_star_metric=north_star_metric,
-                    openai_model=openai_model,
-                    **({"max_total_genomes": max_total_genomes} if max_total_genomes is not None else {}),
-                ),
+                run_metadata_update=_meta,
             )
             
             gen0_population_max = gen0_stats.get("population_max_fitness", 0.0001)
@@ -381,7 +388,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 logger.warning("Failed to read temp.json for IncDBSCAN validation: %s", e)
         if not has_population:
             logger.error("Generation 0 failed: empty temp.json after Incremental DBSCAN speciation.")
-            return
+            return 1
     else:
         elites_path = get_outputs_path() / "elites.json"
         if elites_path.exists():
@@ -398,7 +405,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             logger.error("Generation 0 failed: No genomes in elites.json after speciation.")
             logger.error("This indicates that Generation 0 did not complete successfully.")
             logger.error("Possible causes: empty temp.json, all genomes archived, or speciation failure.")
-            return
+            return 1
 
     evolution_tracker_path = get_outputs_path() / "EvolutionTracker.json"
     if evolution_tracker_path.exists():
@@ -418,6 +425,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
     
     terminated_by_total_genomes = False
     final_total_genomes = None
+    from speciation.clustering_mode import is_inc_dbscan_mode as _is_inc_mode
+    _use_inc_dbscan = _is_inc_mode(clustering_method=clustering_method)
     if evolution_tracker_path.exists() and max_total_genomes is not None:
         try:
             with open(evolution_tracker_path, 'r', encoding='utf-8') as f:
@@ -425,7 +434,16 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gens = tracker.get("generations", [])
             latest = max(gens, key=lambda g: g.get("generation_number", 0), default=None) if gens else None
             if latest is not None:
-                total = latest.get("elites_count", 0) + latest.get("archived_count", 0)
+                # IncDBSCAN budget = |D_t|; L–F budget = elites + archive.
+                if _use_inc_dbscan or latest.get("population_mode") == "inc_dbscan":
+                    total = int(
+                        latest.get("density_size")
+                        or latest.get("total_population")
+                        or latest.get("elites_count", 0)
+                        or 0
+                    )
+                else:
+                    total = latest.get("elites_count", 0) + latest.get("archived_count", 0)
                 final_total_genomes = total
                 if total >= max_total_genomes:
                     terminated_by_total_genomes = True
@@ -509,32 +527,25 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     from utils.population_io import trim_temp_to_budget, count_elites_and_archive
                     from speciation.clustering_mode import is_inc_dbscan_mode
                     if is_inc_dbscan_mode(clustering_method=clustering_method):
-                        # Budget = |D_t|; trim newest unlabeled if over budget
+                        # D_t is grow-only: never delete rows. Soft-stop when at/over budget.
                         temp_p = get_outputs_path() / "temp.json"
                         if temp_p.exists():
                             with open(temp_p, "r", encoding="utf-8") as f:
                                 dens = json.load(f)
                             if isinstance(dens, list) and len(dens) > max_total_genomes:
-                                # Keep labeled first, then highest fitness among rest
-                                labeled = [g for g in dens if g.get("density_label") is not None]
-                                unlabeled = [g for g in dens if g.get("density_label") is None]
-                                room = max(0, max_total_genomes - len(labeled))
-                                unlabeled.sort(
-                                    key=lambda g: _extract_north_star_score(g, north_star_metric),
-                                    reverse=True,
-                                )
-                                dens = labeled + unlabeled[:room]
-                                with open(temp_p, "w", encoding="utf-8") as f:
-                                    json.dump(dens, f, indent=2, ensure_ascii=False)
-                                logger.info(
-                                    "Gen %d: IncDBSCAN budget trim → %d genomes (max=%d)",
+                                logger.warning(
+                                    "Gen %d: IncDBSCAN |D_t|=%d exceeds max_total_genomes=%d; "
+                                    "keeping all rows (grow-only) and stopping after this generation",
                                     generation_count, len(dens), max_total_genomes,
                                 )
-                            if isinstance(dens, list) and len(dens) >= max_total_genomes and not any(
-                                g.get("density_label") is None for g in dens
-                            ):
-                                # No room for new unlabeled — stop if already at cap with all labeled
-                                pass
+                                terminated_by_total_genomes = True
+                            elif isinstance(dens, list) and len(dens) >= max_total_genomes:
+                                logger.info(
+                                    "Gen %d: IncDBSCAN budget reached (|D_t|=%d >= %d); "
+                                    "finishing this generation then stopping",
+                                    generation_count, len(dens), max_total_genomes,
+                                )
+                                terminated_by_total_genomes = True
                     else:
                         kept = trim_temp_to_budget(
                             str(get_outputs_path()),
@@ -563,14 +574,26 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             best_genome_id = None
 
             with PerformanceLogger(logger, "Gen %d: Variant statistics (pre-speciation)" % generation_count):
+                from speciation.clustering_mode import is_inc_dbscan_mode
                 temp_path_obj = get_outputs_path() / "temp.json"
                 remaining_variants = []
                 if temp_path_obj.exists():
                     with open(temp_path_obj, 'r', encoding='utf-8') as f:
                         remaining_variants = json.load(f)
-                
-                mutation_count = sum(1 for v in remaining_variants if v and v.get("variant_type") == "mutation")
-                crossover_count = sum(1 for v in remaining_variants if v and v.get("variant_type") == "crossover")
+                    if not isinstance(remaining_variants, list):
+                        remaining_variants = []
+
+                # IncDBSCAN temp.json is full D_t — only count this generation's rows.
+                if is_inc_dbscan_mode(clustering_method=clustering_method):
+                    cohort = [
+                        v for v in remaining_variants
+                        if v and int(v.get("generation", -1) or -1) == int(generation_count)
+                    ]
+                else:
+                    cohort = [v for v in remaining_variants if v]
+
+                mutation_count = sum(1 for v in cohort if v.get("variant_type") == "mutation")
+                crossover_count = sum(1 for v in cohort if v.get("variant_type") == "crossover")
                 remaining_count = mutation_count + crossover_count
                 
                 total_duplicates = 0
@@ -590,8 +613,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                     "variants_integrated": remaining_count,
                 }
                 
-                if remaining_variants:
-                    scores = [(_extract_north_star_score(v, north_star_metric), v.get("id")) for v in remaining_variants if v]
+                if cohort:
+                    scores = [(_extract_north_star_score(v, north_star_metric), v.get("id")) for v in cohort]
                     
                     if scores:
                             max_score_variants = round(max(s[0] for s in scores), 4)
@@ -626,10 +649,12 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                                speciation_result.get("archived_count", 0),
                                speciation_result.get("elites_moved", 0))
                 else:
-                    logger.warning("Gen %d speciation completed with warnings: %s", 
-                                  generation_count, speciation_result.get("error", "unknown"))
+                    logger.error("Gen %d speciation failed: %s; aborting run",
+                                 generation_count, speciation_result.get("error", "unknown"))
+                    return 1
             except Exception as e:
-                logger.error("Gen %d speciation failed: %s", generation_count, e, exc_info=True)
+                logger.error("Gen %d speciation failed: %s; aborting run", generation_count, e, exc_info=True)
+                return 1
             
             try:
                 with PerformanceLogger(logger, "Gen %d: Operator effectiveness metrics" % generation_count):
@@ -734,10 +759,19 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             logger=logger,
                             log_file=log_file
                         )
-                        
-                        gen_stats["max_score_variants"] = max_score_variants
-                        gen_stats["min_score_variants"] = min_score_variants
-                        gen_stats["avg_fitness_variants"] = avg_fitness_variants
+
+                        # Prefer calculate_generation_statistics() for this-gen variant
+                        # scores (it filters generation==current). Pre-speciation values
+                        # are only a fallback when stats left defaults.
+                        if float(gen_stats.get("max_score_variants", 0.0001) or 0.0001) <= 0.0001:
+                            gen_stats["max_score_variants"] = max_score_variants
+                        if float(gen_stats.get("min_score_variants", 0.0001) or 0.0001) <= 0.0001:
+                            gen_stats["min_score_variants"] = min_score_variants
+                        if float(gen_stats.get("avg_fitness_variants", 0.0001) or 0.0001) <= 0.0001:
+                            gen_stats["avg_fitness_variants"] = avg_fitness_variants
+                        max_score_variants = gen_stats["max_score_variants"]
+                        min_score_variants = gen_stats["min_score_variants"]
+                        avg_fitness_variants = gen_stats["avg_fitness_variants"]
                         
                         gen_stats["avg_fitness"] = avg_fitness_before_speciation
                         
@@ -786,44 +820,48 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             logger.warning("Recalculating from files to verify...")
                             current_population_max = 0.0001
                         
-                        if (current_population_max == 0.0 or current_population_max == 0.0001) and (
-                            gen_stats.get("elites_count", 0) > 0 or gen_stats.get("archived_count", 0) > 0
-                        ):
+                        _has_pop = (
+                            gen_stats.get("elites_count", 0) > 0
+                            or gen_stats.get("archived_count", 0) > 0
+                            or gen_stats.get("density_size", 0) > 0
+                            or gen_stats.get("total_population", 0) > 0
+                        )
+                        if (current_population_max == 0.0 or current_population_max == 0.0001) and _has_pop:
                             logger.warning(
-                                "Gen %d: population_max_fitness is %s but we have genomes (elites=%d, archived=%d) - recalculating...",
+                                "Gen %d: population_max_fitness is %s but we have genomes "
+                                "(elites=%d, archived=%d, density=%s) - recalculating...",
                                 generation_count,
                                 current_population_max,
                                 gen_stats.get("elites_count", 0),
                                 gen_stats.get("archived_count", 0),
+                                gen_stats.get("density_size", gen_stats.get("total_population")),
                             )
-                            logger.warning(f"Gen {generation_count}: population_max_fitness is 0.0 but we have genomes - this may indicate a calculation issue")
                             try:
+                                from speciation.clustering_mode import is_inc_dbscan_mode
                                 outputs_path = get_outputs_path()
-                                elites_path = outputs_path / "elites.json"
-                                archive_path = outputs_path / "archive.json"
+                                paths = []
+                                if is_inc_dbscan_mode(clustering_method=clustering_method):
+                                    paths = [outputs_path / "temp.json"]
+                                else:
+                                    paths = [outputs_path / "elites.json", outputs_path / "archive.json"]
                                 all_scores = []
-                                for path in [elites_path, archive_path]:
+                                for path in paths:
                                     if path.exists():
                                         with open(path, 'r', encoding='utf-8') as f:
                                             genomes = json.load(f)
+                                        if not isinstance(genomes, list):
+                                            continue
                                         for g in genomes:
                                             if g.get("generation", 0) <= generation_count:
-                                                score = None
-                                                if 'moderation_result' in g:
-                                                    mr = g['moderation_result']
-                                                    if isinstance(mr, dict):
-                                                        if 'google' in mr and isinstance(mr['google'], dict) and 'scores' in mr['google']:
-                                                            score = mr['google']['scores'].get(north_star_metric)
-                                                        elif 'openai' in mr and isinstance(mr['openai'], dict) and 'scores' in mr['openai']:
-                                                            score = mr['openai']['scores'].get(north_star_metric)
-                                                        elif 'scores' in mr:
-                                                            score = mr['scores'].get(north_star_metric)
-                                                if score is None:
-                                                    score = g.get(north_star_metric)
+                                                try:
+                                                    score = _extract_north_star_score(g, north_star_metric)
+                                                except Exception:
+                                                    score = None
                                                 if score is not None and float(score) >= 0.0001:
                                                     all_scores.append(float(score))
                                 if all_scores:
                                     current_population_max = max(all_scores)
+                                    gen_stats["population_max_fitness"] = round(current_population_max, 4)
                                     logger.info(f"Gen {generation_count}: Recalculated population_max_fitness={current_population_max:.4f} from files")
                                     if generation_count > 0 and current_population_max < previous_cumulative_population_max - 0.01:
                                         logger.error(f"Recalculated value ({current_population_max:.4f}) still < previous ({previous_cumulative_population_max:.4f})!")
@@ -842,7 +880,16 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             log_file=log_file,
                             run_metadata_update={"max_total_genomes": max_total_genomes} if max_total_genomes is not None else None,
                         )
-                        total_genomes = gen_stats["elites_count"] + gen_stats.get("archived_count", 0)
+                        # IncDBSCAN: budget is |D_t|; L–F: elites + archive.
+                        if _use_inc_dbscan or gen_stats.get("population_mode") == "inc_dbscan":
+                            total_genomes = int(
+                                gen_stats.get("density_size")
+                                or gen_stats.get("total_population")
+                                or gen_stats.get("elites_count", 0)
+                                or 0
+                            )
+                        else:
+                            total_genomes = gen_stats["elites_count"] + gen_stats.get("archived_count", 0)
                         final_total_genomes = total_genomes
                         try:
                             outputs_path = str(get_outputs_path())

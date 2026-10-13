@@ -196,10 +196,16 @@ class EvolutionEngine:
         
 
         try:
-            elites_path = str(Path(self.outputs_path) / "elites.json")
             top_10_path = str(Path(self.outputs_path) / "top_10.json")
-            self.parent_selector._save_top_10_by_toxicity(elites_path, top_10_path)
-
+            if self.use_inc_dbscan:
+                # IncDBSCAN breeding pool is temp.json (D_t), not elites.json.
+                self.parent_selector._save_top_10_by_toxicity(
+                    str(Path(self.outputs_path) / "temp.json"),
+                    top_10_path,
+                )
+            else:
+                elites_path = str(Path(self.outputs_path) / "elites.json")
+                self.parent_selector._save_top_10_by_toxicity(elites_path, top_10_path)
 
         except Exception as e:
             self.logger.error(f"Failed to populate top_10.json: {e}")

@@ -119,7 +119,9 @@ def load_species_state(path: Path, theta_sim: float, logger=None) -> Dict[int, S
             continue
         emb = np.array(sp_dict["leader_embedding"]) if sp_dict.get("leader_embedding") else None
         pheno = None
-        if sp_dict.get("leader_genome_data"):
+        if sp_dict.get("leader_phenotype") is not None:
+            pheno = np.asarray(sp_dict["leader_phenotype"], dtype=np.float32)
+        elif sp_dict.get("leader_genome_data"):
             pheno = extract_phenotype_vector(sp_dict["leader_genome_data"], logger=logger)
         leader = Individual(
             id=sp_dict["leader_id"],
