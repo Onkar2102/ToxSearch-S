@@ -12,6 +12,9 @@
 #     sbatch rc_script_parallel.sh
 #
 # Termination: --max-total-genomes (required). See docs/ToxSearch_S_14_Run_Manifest.csv.
+#
+# Project root: use the NEW tree (not ~/ToxSearch-S, which is an older checkout).
+# Override if needed: PROJECT_ROOT=/path/to/ToxSearch-S sbatch rc_script_parallel.sh
 
 #SBATCH --job-name=txsp_par
 #SBATCH --time=02-11:59:00
@@ -26,9 +29,12 @@
 #SBATCH --mail-user=slack:@U05PK8K2HEE
 #SBATCH --mail-type=ALL
 #SBATCH --gres=gpu:a100:4
+#SBATCH --chdir=/home/os9660/Downloads/ToxSearch-S
 
 set -euo pipefail
-cd /home/os9660/ToxSearch-S
+PROJECT_ROOT="${PROJECT_ROOT:-/home/os9660/Downloads/ToxSearch-S}"
+cd "$PROJECT_ROOT"
+echo "[DEBUG] PROJECT_ROOT=$PROJECT_ROOT  pwd=$(pwd)"
 
 # ---------------------------------------------------------------------------
 # 1) Spack env (same one you use interactively)
@@ -97,7 +103,7 @@ fi
 # ---------------------------------------------------------------------------
 # 7) Experiment knobs (Stage C defaults; override at sbatch time)
 # ---------------------------------------------------------------------------
-export PYTHONPATH=/home/os9660/ToxSearch-S/src
+export PYTHONPATH="${PROJECT_ROOT}/src"
 
 MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-1000}"
 EVALUATOR="${EVALUATOR:-google}"
