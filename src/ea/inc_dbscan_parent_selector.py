@@ -1,9 +1,10 @@
 """Parent selection from IncDBSCAN density memory (temp.json = D_t).
 
-All genomes are eligible for default mode, including the singleton pool
-(species_id / density_label = 0). Does not read elites.json / archive.json.
-Exploit / explore prefer active (non-frozen) mature clusters with label > 0;
-singleton pool is a last-resort fallback.
+Breedable set (before mode), same strategy as Leader–Follower:
+  Category 1 = active mature species (label > 0, non-frozen) + noise/singleton pool (0).
+  If Category 1 is empty, fall back to frozen mature species.
+
+Does not read elites.json / archive.json.
 """
 
 from __future__ import annotations
@@ -17,9 +18,12 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from utils import get_custom_logging, get_system_utils
 from utils.population_io import _extract_north_star_score, slim_selection_genome
 from speciation.density_memory import NOISE_LABEL, load_density_memory
+from speciation.clustering._io import SINGLETON_SPECIES_ID
 
 get_logger, _, _, _ = get_custom_logging()
 _, _, _, get_outputs_path, _, _, _ = get_system_utils()
+
+Pool = Tuple[int, List[Dict[str, Any]], float]
 
 
 class IncDBSCANParentSelector:
@@ -70,17 +74,70 @@ class IncDBSCANParentSelector:
 
     def _sorted_pools(
         self, groups: Dict[int, List[Dict[str, Any]]]
-    ) -> List[Tuple[int, List[Dict[str, Any]], float]]:
+    ) -> List[Pool]:
         fits = self._best_fitness(groups)
         pools = [(sid, gs, fits[sid]) for sid, gs in groups.items() if gs]
         pools.sort(key=lambda x: x[2], reverse=True)
         return pools
 
+    def _resolve_breedable_pools(
+        self,
+        groups: Dict[int, List[Dict[str, Any]]],
+        frozen_ids: Set[int],
+    ) -> List[Pool]:
+        """Category 1 (active mature + noise) else frozen mature — same as L–F.
+
+        Args:
+            groups: Label → genomes from density memory.
+            frozen_ids: Mature species ids marked frozen in speciation_state.
+
+        Returns:
+            Fitness-sorted pools used by default / exploit / explore.
+        """
+        category1: Dict[int, List[Dict[str, Any]]] = {}
+        for sid, gs in groups.items():
+            if not gs:
+                continue
+            # Active mature (non-frozen) + singleton/noise pool (0).
+            if sid > 0 and sid not in frozen_ids:
+                category1[sid] = gs
+            elif sid == SINGLETON_SPECIES_ID:
+                category1[sid] = gs
+
+        pools = self._sorted_pools(category1)
+        if pools:
+            self.logger.debug(
+                "IncDBSCAN Category 1 (active mature + noise): %s",
+                sorted(category1.keys()),
+            )
+            return pools
+
+        frozen = {
+            sid: gs for sid, gs in groups.items()
+            if sid > 0 and sid in frozen_ids and gs
+        }
+        pools = self._sorted_pools(frozen)
+        if pools:
+            self.logger.warning(
+                "IncDBSCAN: Category 1 empty — falling back to frozen mature species %s",
+                sorted(frozen.keys()),
+            )
+            return pools
+
+        raise RuntimeError(
+            "IncDBSCAN: no genomes in active mature+noise or frozen species — "
+            "cannot select parents."
+        )
+
     def _highest(self, genomes: List[Dict[str, Any]]) -> Dict[str, Any]:
         return max(genomes, key=self._score)
 
     @staticmethod
-    def _sample_random(genomes: List[Dict[str, Any]], k: int, exclude_ids: Optional[Set[Any]] = None) -> List[Dict[str, Any]]:
+    def _sample_random(
+        genomes: List[Dict[str, Any]],
+        k: int,
+        exclude_ids: Optional[Set[Any]] = None,
+    ) -> List[Dict[str, Any]]:
         pool = [g for g in genomes if exclude_ids is None or g.get("id") not in exclude_ids]
         if not pool:
             pool = list(genomes)
@@ -90,46 +147,24 @@ class IncDBSCANParentSelector:
             return random.sample(pool, k)
         return [random.choice(pool) for _ in range(k)]
 
-    def _species_pools_for_modes(
-        self,
-        groups: Dict[int, List[Dict[str, Any]]],
-        frozen_ids: Set[int],
-    ) -> List[Tuple[int, List[Dict[str, Any]], float]]:
-        """Active mature clusters (label > 0); fallback frozen; then singleton pool / any."""
-        active = {
-            sid: gs for sid, gs in groups.items()
-            if sid > 0 and sid not in frozen_ids and gs
-        }
-        pools = self._sorted_pools(active)
-        if pools:
-            return pools
-        frozen = {
-            sid: gs for sid, gs in groups.items()
-            if sid > 0 and sid in frozen_ids and gs
-        }
-        pools = self._sorted_pools(frozen)
-        if pools:
-            self.logger.warning("IncDBSCAN: no active species — falling back to frozen clusters")
-            return pools
-        # Last resort: singleton pool (0) and any residual labels
-        return self._sorted_pools(groups)
+    def _select_default(self, pools: List[Pool]) -> List[Dict[str, Any]]:
+        """Pick a random breedable species; sample 2 genomes (L–F default parity)."""
+        if not pools:
+            raise RuntimeError("IncDBSCAN: empty breedable set for default selection")
 
-    def _select_default(self, groups: Dict[int, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
-        """Default: two uniformly random genomes from the entire density memory."""
-        all_g = [g for gs in groups.values() for g in gs]
-        if not all_g:
-            raise RuntimeError("IncDBSCAN: no genomes in density memory for parent selection")
-        if len(all_g) >= 2:
-            return random.sample(all_g, 2)
-        return [all_g[0], all_g[0]]
+        sid, genomes, _ = random.choice(pools)
+        if len(genomes) >= 2:
+            return random.sample(genomes, 2)
 
-    def _select_exploit(
-        self,
-        groups: Dict[int, List[Dict[str, Any]]],
-        frozen_ids: Set[int],
-    ) -> List[Dict[str, Any]]:
-        """Top genome of best species + 2 random genomes from the same species."""
-        pools = self._species_pools_for_modes(groups, frozen_ids)
+        all_cat = [g for _, gs, _ in pools for g in gs]
+        if len(all_cat) >= 2:
+            return random.sample(all_cat, 2)
+        if len(all_cat) == 1:
+            return [all_cat[0], all_cat[0]]
+        raise RuntimeError("IncDBSCAN: no genomes in breedable set for default selection")
+
+    def _select_exploit(self, pools: List[Pool]) -> List[Dict[str, Any]]:
+        """Top genome of best breedable species + 2 random from the same species."""
         if not pools:
             raise RuntimeError("IncDBSCAN: no genomes for exploitation selection")
         _, top_gs, _ = pools[0]
@@ -139,35 +174,18 @@ class IncDBSCANParentSelector:
             rest = self._sample_random(top_gs, 2)
         return [p1, rest[0], rest[1]]
 
-    def _select_explore(
-        self,
-        groups: Dict[int, List[Dict[str, Any]]],
-        frozen_ids: Set[int],
-    ) -> List[Dict[str, Any]]:
-        """Best of top species; then one genome from each of two randomly chosen other species."""
-        pools = self._species_pools_for_modes(groups, frozen_ids)
+    def _select_explore(self, pools: List[Pool]) -> List[Dict[str, Any]]:
+        """One random genome from each of three randomly chosen breedable species."""
         if not pools:
             raise RuntimeError("IncDBSCAN: no genomes for exploration selection")
-        top_id, top_gs, _ = pools[0]
-        p1 = self._highest(top_gs)
 
-        others = [p for p in pools if p[0] != top_id]
-        if len(others) >= 2:
-            chosen = random.sample(others, 2)
-        elif len(others) == 1:
-            chosen = [others[0], others[0]]
+        n = len(pools)
+        if n >= 3:
+            chosen = random.sample(pools, 3)
         else:
-            # Single species: pad with random genomes from it
-            pad = self._sample_random(top_gs, 2, exclude_ids={p1.get("id")})
-            if len(pad) < 2:
-                pad = self._sample_random(top_gs, 2)
-            return [p1, pad[0], pad[1]]
+            chosen = [pools[i] for i in (random.choices(range(n), k=3))]
 
-        parents = [p1]
-        for _, gs, _ in chosen:
-            # Random genome from the randomly selected species
-            parents.append(random.choice(gs))
-        return parents
+        return [random.choice(gs) for _, gs, _ in chosen]
 
     def adaptive_tournament_selection(
         self,
@@ -179,31 +197,33 @@ class IncDBSCANParentSelector:
         if outputs_path is None:
             outputs_path = str(get_outputs_path())
         genomes = load_density_memory(str(Path(outputs_path) / "temp.json"), logger=self.logger)
-        # Eligible: any genome with a density_label or species_id (including -1 noise)
         eligible = [
             g for g in genomes
             if g.get("density_label") is not None or g.get("species_id") is not None
         ]
+        # Keep only mature + singleton pool labels for selection (drop residual -1).
+        eligible = [g for g in eligible if self._label(g) >= 0]
         if not eligible:
             self.logger.critical("IncDBSCAN: no labeled genomes in temp.json — cannot select parents")
             raise RuntimeError("No density-memory genomes available for parent selection.")
 
         groups = self._group(eligible)
         frozen_ids = self._load_frozen_ids(outputs_path)
+        pools = self._resolve_breedable_pools(groups, frozen_ids)
+
         mode = "default"
         if evolution_tracker:
             mode = str(evolution_tracker.get("selection_mode", "default")).lower()
 
         if mode in ("exploit", "exploitation"):
-            parents = self._select_exploit(groups, frozen_ids)
+            parents = self._select_exploit(pools)
         elif mode in ("explore", "exploration"):
-            parents = self._select_explore(groups, frozen_ids)
+            parents = self._select_explore(pools)
         else:
-            parents = self._select_default(groups)
+            parents = self._select_default(pools)
 
         slim = []
         for p in parents:
-            # Ensure species_id mirrors density_label for freeze bookkeeping
             if p.get("species_id") is None and p.get("density_label") is not None:
                 p = {**p, "species_id": int(p["density_label"])}
             elif p.get("density_label") is not None and p.get("species_id") != p.get("density_label"):
@@ -220,7 +240,6 @@ class IncDBSCANParentSelector:
             len(slim), mode, [p.get("id") for p in slim],
         )
 
-        # top_10 from full density memory
         self._save_top_10_by_toxicity(
             str(Path(outputs_path) / "temp.json"),
             str(Path(outputs_path) / "top_10.json"),

@@ -45,12 +45,13 @@ class TestLeaderFollowerSelection:
         assert parents[0]["id"] == 1  # top of species 10
         assert all(p["species_id"] == 10 for p in parents)
 
-    def test_explore_top_then_two_other_species(self):
+    def test_explore_three_random_species(self):
         parents = self.sel._select_parents_exploration(self.elites, self.active)
         assert len(parents) == 3
-        assert parents[0]["id"] == 1
-        assert parents[1]["species_id"] in {20, 30}
-        assert parents[2]["species_id"] in {20, 30}
+        sids = [p["species_id"] for p in parents]
+        assert all(sid in self.active for sid in sids)
+        # With 3+ breedable species, parents come from 3 distinct niches
+        assert len(set(sids)) == 3
 
 
 class TestIncDBSCANSelection:
@@ -60,33 +61,65 @@ class TestIncDBSCANSelection:
             10: [_g(1, 10, 0.9), _g(2, 10, 0.5), _g(3, 10, 0.4)],
             20: [_g(5, 20, 0.7), _g(6, 20, 0.2)],
             30: [_g(7, 30, 0.6), _g(8, 30, 0.1)],
+            0: [_g(50, 0, 0.15), _g(51, 0, 0.12)],
             -1: [_g(99, -1, 0.05)],
         }
 
-    def test_default_two_random_from_entire_population(self):
-        parents = self.sel._select_default(self.groups)
+    def _pools(self, frozen_ids=None):
+        return self.sel._resolve_breedable_pools(self.groups, frozen_ids or set())
+
+    def test_category1_includes_active_mature_and_noise(self):
+        pools = self._pools()
+        ids = {sid for sid, _, _ in pools}
+        assert ids == {10, 20, 30, 0}
+        assert -1 not in ids
+
+    def test_category1_empty_falls_back_to_frozen(self):
+        # Only frozen mature + no noise
+        groups = {
+            10: [_g(1, 10, 0.9), _g(2, 10, 0.5)],
+            20: [_g(5, 20, 0.7)],
+        }
+        pools = self.sel._resolve_breedable_pools(groups, frozen_ids={10, 20})
+        assert {sid for sid, _, _ in pools} == {10, 20}
+
+    def test_default_two_from_breedable_set(self):
+        pools = self._pools()
+        parents = self.sel._select_default(pools)
         assert len(parents) == 2
-        all_ids = {g["id"] for gs in self.groups.values() for g in gs}
-        assert parents[0]["id"] in all_ids
-        assert parents[1]["id"] in all_ids
+        breedable_ids = {g["id"] for _, gs, _ in pools for g in gs}
+        assert parents[0]["id"] in breedable_ids
+        assert parents[1]["id"] in breedable_ids
+        assert 99 not in breedable_ids  # residual -1 excluded
 
     def test_exploit_top_plus_two_from_same_species(self):
-        parents = self.sel._select_exploit(self.groups, frozen_ids=set())
+        parents = self.sel._select_exploit(self._pools())
         assert len(parents) == 3
         assert parents[0]["id"] == 1
         assert all(p["species_id"] == 10 for p in parents)
 
     def test_exploit_skips_frozen_top_species(self):
-        parents = self.sel._select_exploit(self.groups, frozen_ids={10})
-        assert parents[0]["species_id"] == 20  # next-best active
+        parents = self.sel._select_exploit(self._pools(frozen_ids={10}))
+        assert parents[0]["species_id"] == 20  # next-best in Category 1
         assert all(p["species_id"] == 20 for p in parents)
 
-    def test_explore_top_then_other_species(self):
-        parents = self.sel._select_explore(self.groups, frozen_ids=set())
+    def test_exploit_can_use_noise_when_only_noise_in_category1(self):
+        groups = {0: [_g(50, 0, 0.4), _g(51, 0, 0.3), _g(52, 0, 0.2)]}
+        pools = self.sel._resolve_breedable_pools(groups, frozen_ids=set())
+        parents = self.sel._select_exploit(pools)
         assert len(parents) == 3
-        assert parents[0]["id"] == 1
-        assert parents[1]["species_id"] in {20, 30}
-        assert parents[2]["species_id"] in {20, 30}
+        assert all(p["species_id"] == 0 for p in parents)
+        assert parents[0]["id"] == 50
+
+    def test_explore_three_random_species(self):
+        pools = self._pools()
+        breedable = {sid for sid, _, _ in pools}
+        parents = self.sel._select_explore(pools)
+        assert len(parents) == 3
+        sids = [p["species_id"] for p in parents]
+        assert all(sid in breedable for sid in sids)
+        # With 3+ breedable species/pools, parents come from 3 distinct niches
+        assert len(set(sids)) == 3
 
 
 class TestIncDBSCANFreeze:

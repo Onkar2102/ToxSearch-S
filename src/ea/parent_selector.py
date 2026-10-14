@@ -14,9 +14,11 @@ _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 
 
 class ParentSelector:
-    """Parent selection from elites.json (mature sid > 0 and singleton pool sid == 0).
+    """Parent selection from elites.json (mature sid > 0 and singleton/noise pool sid == 0).
 
-    Category 1 = active mature species (+ singleton pool); Category 2 = frozen when Category 1 is empty.
+    Breedable set (before mode), shared with IncDBSCAN:
+      Category 1 = active mature (non-frozen, sid > 0) + noise/singleton pool (0).
+      If Category 1 is empty, fall back to frozen mature species.
     """
 
     def __init__(self, north_star_metric: str, log_file: Optional[str] = None):
@@ -178,7 +180,7 @@ class ParentSelector:
         active_species_ids: set,
         outputs_path: str = None,
     ) -> List[Dict[str, Any]]:
-        """Best of top species; then one genome from each of two randomly chosen other species."""
+        """One random genome from each of three randomly chosen breedable species."""
         species_groups = self._group_by_species(elites)
         sorted_species = self._get_sorted_active_species(species_groups, active_species_ids)
 
@@ -187,24 +189,13 @@ class ParentSelector:
                 "No genomes in this category (sorted_species empty); should not happen after adaptive_tournament_selection."
             )
 
-        first_id, first_genomes, _first_fit = sorted_species[0]
-        parent1 = self._get_genome_with_highest_fitness(first_genomes)
+        n = len(sorted_species)
+        if n >= 3:
+            chosen = random.sample(sorted_species, 3)
+        else:
+            chosen = [sorted_species[i] for i in (random.choices(range(n), k=3))]
 
-        others = [sp for sp in sorted_species if sp[0] != first_id]
-        if len(others) >= 2:
-            chosen = random.sample(others, 2)
-            return [parent1, random.choice(chosen[0][1]), random.choice(chosen[1][1])]
-
-        if len(others) == 1:
-            # Only one other species: sample twice from it (may repeat)
-            other_gs = others[0][1]
-            return [parent1, random.choice(other_gs), random.choice(other_gs)]
-
-        # Single species: pad with random genomes from it
-        pad = self._sample_random_from(first_genomes, 2, exclude_ids={parent1.get("id")})
-        if len(pad) < 2:
-            pad = self._sample_random_from(first_genomes, 2)
-        return [parent1, pad[0], pad[1]]
+        return [random.choice(gs) for _, gs, _ in chosen]
 
     def adaptive_tournament_selection(self, evolution_tracker: Dict[str, Any] = None, outputs_path: str = None, current_generation: int = None) -> None:
         
