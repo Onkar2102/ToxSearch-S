@@ -11,7 +11,7 @@
 #   CLUSTERING_METHODS=leader_follower THETA_VALUES="0.25" bash run_experiments_parallel_2w.sh
 #
 # Environment overrides (defaults match SpeciationConfig / run_experiments_local.sh):
-#   MAX_TOTAL_GENOMES=777
+#   MAX_TOTAL_GENOMES=1000
 #   CLUSTERING_METHODS="leader_follower dbscan"
 #   EVALUATOR=google|openai
 #   NORTH_STAR_METRIC=
@@ -86,7 +86,7 @@ export PYTHONPATH="${SCRIPT_DIR}/src"
 MPI_RANKS="${MPI_RANKS:-3}"
 MPI_EXTRA_OPTS="${MPI_EXTRA_OPTS:-}"
 
-MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-777}"
+MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-1000}"
 CLUSTERING_METHODS="${CLUSTERING_METHODS:-leader_follower dbscan}"
 EVALUATOR="${EVALUATOR:-google}"
 NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-}"

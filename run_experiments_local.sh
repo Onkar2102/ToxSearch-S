@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local experiment runner: leader–follower + Incremental DBSCAN (default 777 genomes).
+# Local experiment runner: leader–follower + Incremental DBSCAN (default 1000 genomes).
 #
 # Usage (from project root):
 #   bash run_experiments_local.sh
@@ -15,7 +15,7 @@
 #   - operators=all × 8B is still slow per generation; use OPERATORS=cm for faster local smokes.
 #
 # Environment overrides (defaults match SpeciationConfig / CLI):
-#   MAX_TOTAL_GENOMES=777
+#   MAX_TOTAL_GENOMES=1000
 #   CLUSTERING_METHODS="leader_follower dbscan"
 #   EVALUATOR=google|openai
 #   NORTH_STAR_METRIC=          profile default if unset
@@ -73,7 +73,7 @@ fi
 PYTHON="${PYTHON:-python3}"
 export PYTHONPATH="${SCRIPT_DIR}/src"
 
-MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-777}"
+MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-1000}"
 CLUSTERING_METHODS="${CLUSTERING_METHODS:-leader_follower dbscan}"
 EVALUATOR="${EVALUATOR:-google}"
 NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-}"
