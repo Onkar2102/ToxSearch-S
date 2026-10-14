@@ -818,6 +818,16 @@ def write_species_and_config(
         nli_model = get_nli_model_name()
     except Exception:
         nli_model = None
+    from ._io import build_noise_entry
+
+    # Non-mature = singleton pool (0) + any residual DBSCAN noise (-1).
+    noise_ids = [
+        gid for gid, lab in zip(state.genome_ids, state.labels)
+        if lab is None or int(lab) <= 0
+    ]
+    noise_entry = build_noise_entry(noise_ids)
+    singleton_only = sum(1 for x in state.labels if int(x) == SINGLETON_SPECIES_ID)
+    residual_raw = sum(1 for x in state.labels if int(x) == NOISE_LABEL)
     payload = {
         "clustering_method": "dbscan",
         "dbscan_eps": state.eps,
@@ -828,13 +838,19 @@ def write_species_and_config(
         "inc_dbscan": True,
         # IncDBSCAN never enforces species_capacity (grow-only density memory).
         "species_capacity_enforced": False,
-        # After promotion, residual raw noise (-1) should be 0; pool 0 holds singletons.
-        "noise_count": sum(1 for x in state.labels if x == NOISE_LABEL),
-        "singleton_species_count": sum(1 for x in state.labels if int(x) == SINGLETON_SPECIES_ID),
+        # noise = all genomes not in a mature species (min_samples for maturity).
+        "noise": noise_entry,
+        "noise_count": noise_entry["count"],
+        "singleton_species_count": singleton_only,
+        "residual_dbscan_noise_count": residual_raw,
         "density_size": state.n_points(),
     }
     if extra:
         payload.update(extra)
+        # Re-assert noise after extra merge if caller did not replace it.
+        if "noise" not in (extra or {}):
+            payload["noise"] = noise_entry
+            payload["noise_count"] = noise_entry["count"]
     write_species_state(
         Path(speciation_state_path),
         species,

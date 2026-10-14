@@ -17,6 +17,8 @@ from ..species import Individual, Species, generate_species_id
 from ._io import (
     ARCHIVE_SPECIES_ID,
     SINGLETON_SPECIES_ID,
+    build_noise_entry,
+    collect_noise_ids_from_genomes,
     default_paths,
     individuals_from_genomes,
     load_json_list,
@@ -335,8 +337,22 @@ def leader_follower_clustering(
 
     save_json(temp_p, genomes)
     # Only persist mature species (sid > 0) in speciation_state.
+    # Non-mature (sid == 0) genomes are recorded under noise.genome_ids.
     mature_only = {sid: sp for sid, sp in species.items() if sid > 0}
-    write_species_state(state_p, mature_only, current_generation)
+    noise_ids = collect_noise_ids_from_genomes(list(elites or []) + list(genomes or []))
+    # Deduplicate while preserving build_noise_entry sorting.
+    noise_entry = build_noise_entry(noise_ids)
+    write_species_state(
+        state_p,
+        mature_only,
+        current_generation,
+        extra={
+            "noise": noise_entry,
+            "noise_count": noise_entry["count"],
+            "singleton_species_count": noise_entry["count"],
+            "clustering_method": "leader_follower",
+        },
+    )
 
     if genome_tracker is not None and updates:
         result = genome_tracker.batch_update(updates, current_generation, "leader_follower_clustering")

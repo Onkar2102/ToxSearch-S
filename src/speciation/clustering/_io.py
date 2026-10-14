@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence  # Optional used by individuals_from_genomes
+from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 
@@ -18,6 +18,68 @@ _, _, _, get_outputs_path, _, _, _ = get_system_utils()
 ARCHIVE_SPECIES_ID = -1
 # Shared pool for singleton / noise genomes (not mature niches). Mature species IDs start at 1.
 SINGLETON_SPECIES_ID = 0
+
+
+def is_non_mature_label(label) -> bool:
+    """True if ``label`` is noise/singleton pool (not a mature species id > 0)."""
+    if label is None:
+        return False
+    try:
+        return int(label) <= 0
+    except (TypeError, ValueError):
+        return False
+
+
+def build_noise_entry(genome_ids: Sequence[Any]) -> Dict[str, Any]:
+    """Build the ``noise`` block for speciation_state.json.
+
+    All non-mature genomes (Leader–Follower / IncDBSCAN singleton pool and any
+    residual DBSCAN noise) share ``species_id=0``. Mature niches use id >= 1.
+
+    Args:
+        genome_ids: Ids of genomes not assigned to any mature species.
+
+    Returns:
+        Dict with species_id, sorted genome_ids, and count.
+    """
+    ids = sorted({str(gid) for gid in genome_ids if gid is not None}, key=lambda x: (len(x), x))
+    return {
+        "species_id": SINGLETON_SPECIES_ID,
+        "genome_ids": ids,
+        "count": len(ids),
+    }
+
+
+def collect_noise_ids_from_genomes(
+    genomes: Sequence[dict],
+    *,
+    prefer_density_label: bool = False,
+) -> List[Any]:
+    """Return ids of genomes whose label is not a mature species (id <= 0).
+
+    Args:
+        genomes: Genome dicts with ``species_id`` and/or ``density_label``.
+        prefer_density_label: If True, prefer ``density_label`` (IncDBSCAN).
+
+    Returns:
+        List of genome ids (may include duplicates if callers pass overlapping lists).
+    """
+    out: List[Any] = []
+    for g in genomes:
+        if not isinstance(g, dict):
+            continue
+        gid = g.get("id")
+        if gid is None:
+            continue
+        if prefer_density_label and g.get("density_label") is not None:
+            lab = g.get("density_label")
+        else:
+            lab = g.get("species_id")
+            if lab is None and g.get("density_label") is not None:
+                lab = g.get("density_label")
+        if is_non_mature_label(lab):
+            out.append(gid)
+    return out
 
 
 def default_paths(
@@ -174,8 +236,13 @@ def write_species_state(
     generation: int,
     extra: Optional[dict] = None,
 ) -> None:
+    """Persist mature species and optional extras (including ``noise``) to disk.
+
+    Mature species only (callers should pass sid > 0). Non-mature genomes are
+    recorded under ``extra["noise"]`` via :func:`build_noise_entry`.
+    """
     payload = {
-        "species": {str(sid): sp.to_dict() for sid, sp in species.items()},
+        "species": {str(sid): sp.to_dict() for sid, sp in species.items() if int(sid) > 0},
         "generation": generation,
         "next_species_id": SpeciesIdGenerator.peek_next(),
     }
@@ -191,6 +258,13 @@ def write_species_state(
             existing = {}
     if extra:
         payload.update(extra)
+    # Keep noise_count aligned with the noise genome-id list when present.
+    noise_block = payload.get("noise")
+    if isinstance(noise_block, dict) and "genome_ids" in noise_block:
+        noise_block["species_id"] = SINGLETON_SPECIES_ID
+        noise_block["count"] = len(noise_block.get("genome_ids") or [])
+        payload["noise"] = noise_block
+        payload["noise_count"] = noise_block["count"]
 
     # Keep extinct list = prior extinct ∪ parent IDs referenced by merges but not alive.
     extinct_ids = set()

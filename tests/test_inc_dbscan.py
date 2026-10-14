@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from speciation.clustering.dbscan import dbscan_precomputed
+from speciation.clustering._io import SINGLETON_SPECIES_ID
 from speciation.clustering.inc_dbscan import (
     insert_point,
     seed_from_batch,
@@ -88,6 +89,39 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
         # Mature IDs start at 1; pool 0 does not consume the ID counter
         self.assertEqual(sorted(species.keys()), [1, 2])
         self.assertEqual(SpeciesIdGenerator.peek_next(), 3)
+
+    def test_speciation_state_noise_lists_non_mature_ids(self):
+        """speciation_state.noise lists pool-0 ids; noise_count matches that list."""
+        import json
+        from speciation.clustering.inc_dbscan import write_species_and_config
+
+        a, b = _unit([1, 0, 0]), _unit([0.99, 0.1, 0])
+        c, d = _unit([0, 1, 0]), _unit([0.1, 0.99, 0])
+        noise = _unit([0, 0, 1])
+        genomes = [
+            _genome(1, a, 0.9),
+            _genome(2, b, 0.8),
+            _genome(3, c, 0.7),
+            _genome(4, d, 0.6),
+            _genome(5, noise, 0.1),
+        ]
+        state, species, _ = seed_from_batch(
+            genomes, eps=0.05, min_samples=2, current_generation=0, distance_method="embedding"
+        )
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "speciation_state.json"
+            write_species_and_config(path, species, 0, state)
+            with open(path, encoding="utf-8") as f:
+                payload = json.load(f)
+            noise_block = payload["noise"]
+            self.assertEqual(noise_block["species_id"], SINGLETON_SPECIES_ID)
+            self.assertEqual(noise_block["genome_ids"], ["5"])
+            self.assertEqual(noise_block["count"], 1)
+            self.assertEqual(payload["noise_count"], 1)
+            self.assertEqual(payload["singleton_species_count"], 1)
+            self.assertEqual(payload.get("residual_dbscan_noise_count", 0), 0)
+            self.assertNotIn("0", payload["species"])
+            self.assertNotIn("-1", payload["species"])
 
     def test_sequential_inserts_match_batch_partition(self):
         """Insert one-by-one then compare partition to batch DBSCAN (label permutation)."""

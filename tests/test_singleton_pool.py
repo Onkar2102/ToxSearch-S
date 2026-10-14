@@ -236,8 +236,8 @@ class TestRedistributeSingletonAndArchive:
             assert json.loads((out / "temp.json").read_text()) == []
 
 
-def test_process_generation_has_contiguous_phases_no_skip_stubs():
-    """Regression: removed steps are renumbered, not left as '(skipped)' banners."""
+def test_process_generation_has_contiguous_stages_no_skip_stubs():
+    """Regression: pipeline stages use descriptive names, not skipped stubs."""
     import inspect
     from speciation.run_speciation import process_generation
 
@@ -245,7 +245,16 @@ def test_process_generation_has_contiguous_phases_no_skip_stubs():
     assert "(skipped)" not in src
     assert "Step 11" not in src
     assert "phase8_" not in src
-    for phase in range(1, 7):
-        assert f"Phase {phase}" in src
+    for stage in (
+        "Existing-species update",
+        "Species merge",
+        "Capacity enforcement",
+        "Stagnation freeze",
+        "Genome redistribution",
+        "Metrics and statistics",
+    ):
+        assert stage in src
     assert "Phase 7" not in src
     assert "Phase 8" not in src
+    for n in range(1, 7):
+        assert f"Phase {n}" not in src

@@ -3,9 +3,10 @@
 ``temp.json`` is the grow-only density memory D_t. Leader-follower
 ``run_speciation.process_generation`` is not used on this path.
 
-Species have **no max capacity** on this path (unlike L–F Phase 4).
-Stagnation freeze applies when a species was used as a parent source and
-its max fitness does not improve (same ``species_stagnation`` threshold).
+Species have no max capacity on this path (unlike Leader–Follower capacity
+enforcement). Stagnation freeze applies when a species was used as a parent
+source and its max fitness does not improve (same ``species_stagnation``
+threshold).
 """
 
 from __future__ import annotations
@@ -366,7 +367,7 @@ def process_generation_inc_dbscan(
     except Exception as e:
         logger.warning("events_tracker.save failed: %s", e)
 
-    noise_count = sum(
+    residual_raw = sum(
         1 for g in genomes
         if int(g.get("density_label", NOISE_LABEL) if g.get("density_label") is not None else NOISE_LABEL) == NOISE_LABEL
     )
@@ -374,6 +375,8 @@ def process_generation_inc_dbscan(
         1 for g in genomes
         if int(g.get("density_label", NOISE_LABEL) if g.get("density_label") is not None else NOISE_LABEL) == SINGLETON_SPECIES_ID
     )
+    # noise_count = all non-mature genomes (pool 0 + residual -1).
+    noise_count = singleton_count + residual_raw
     active = len([sp for sp in species.values() if sp.species_state == "active" and sp.id > 0])
     frozen = len([sp for sp in species.values() if sp.species_state == "frozen" and sp.id > 0])
 
@@ -384,11 +387,11 @@ def process_generation_inc_dbscan(
         "active_species_count": active,
         "frozen_species_count": frozen,
         "archive_size": 0,
-        # After promotion, residual raw noise (-1) should be 0; pool 0 holds singletons.
         "noise_count": noise_count,
         "singleton_species_count": singleton_count,
+        "residual_dbscan_noise_count": residual_raw,
         "density_size": len(genomes),
-        "clustered_count": len(genomes) - noise_count - singleton_count,
+        "clustered_count": len(genomes) - noise_count,
         "largest_species_size": max((sp.size for sp in species.values()), default=0),
         "average_species_size": (
             sum(sp.size for sp in species.values()) / len(species) if species else 0.0

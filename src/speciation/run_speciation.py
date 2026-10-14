@@ -91,8 +91,13 @@ def _save_tracker_if_dirty(state: Dict[str, Any]) -> None:
             state["logger"].debug("Saved genome tracker after critical operation")
 
 
-def _validate_tracker_consistency(state: Dict[str, Any], phase_name: str) -> None:
-    
+def _validate_tracker_consistency(state: Dict[str, Any], stage_name: str) -> None:
+    """Warn if genome tracker disagrees with elites/archive after a stage.
+
+    Args:
+        state: Speciation process state.
+        stage_name: Label for log messages (e.g. ``\"species merge\"``).
+    """
     if "_genome_tracker" not in state:
         return
     outputs_path = get_outputs_path()
@@ -103,18 +108,25 @@ def _validate_tracker_consistency(state: Dict[str, Any], phase_name: str) -> Non
         elites_path, archive_path, load_archive=False
     )
     if not is_consistent:
-        state["logger"].warning(f"Tracker consistency check failed after {phase_name}: {len(errors)} errors")
+        state["logger"].warning(f"Tracker consistency check failed after {stage_name}: {len(errors)} errors")
         for error in errors[:5]:
             state["logger"].warning(f"  - {error}")
 
 
 def _validate_species_accounting(
     state: Dict[str, Any],
-    phase_name: str,
+    stage_name: str,
     incubator_ids: Optional[List[int]] = None,
     extinct_ids: Optional[List[int]] = None,
 ) -> None:
-    
+    """Warn if tracker species ids are not alive, incubator, or extinct.
+
+    Args:
+        state: Speciation process state.
+        stage_name: Label for log messages.
+        incubator_ids: Optional incubator species ids; inferred if omitted.
+        extinct_ids: Optional extinct species ids; inferred if omitted.
+    """
     if "_genome_tracker" not in state:
         return
     logger = state["logger"]
@@ -143,7 +155,7 @@ def _validate_species_accounting(
         logger.warning(
             "Species accounting (%s): %d species have genomes in tracker but are not alive, incubator, or extinct: %s. "
             "Alive=%s, incubators=%d, extinct=%d.",
-            phase_name,
+            stage_name,
             len(orphan),
             sorted(orphan),
             sorted(alive),
@@ -153,7 +165,7 @@ def _validate_species_accounting(
     else:
         logger.debug(
             "Species accounting (%s): all %d tracker species accounted (alive=%d, incubator=%d, extinct=%d)",
-            phase_name, len(tracker_species_ids), len(alive), len(incubator_set), len(extinct_set),
+            stage_name, len(tracker_species_ids), len(alive), len(incubator_set), len(extinct_set),
         )
 
 
@@ -372,7 +384,15 @@ def _load_genomes_by_ids(genome_ids: List[str], outputs_path: Path, logger) -> L
 
 
 def redistribute_genomes(temp_path: Optional[str] = None, current_generation: int = 0) -> Dict[str, int]:
-    
+    """Write elites.json and archive.json from genome-tracker species assignments.
+
+    Args:
+        temp_path: Path to temp.json; defaults under the outputs directory.
+        current_generation: Generation index stamped onto genomes missing it.
+
+    Returns:
+        Dict with elites_moved, archive_moved, and total_processed counts.
+    """
     state = _get_state()
     logger = state["logger"]
     outputs_path = get_outputs_path()
@@ -393,7 +413,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
     stats = genome_tracker.get_distribution_stats()
     has_archived = int(stats["by_species_id"].get("-1", 0)) > 0
     
-    logger.info("Phase 5: Updating species_id from tracker")
+    logger.info("Redistribution: updating species_id from tracker")
     elites_genomes = _load_json_file(elites_path, logger, [])
     temp_genomes = _load_json_file(temp_path_obj, logger, [])
     archive_genomes = _load_json_file(archive_path, logger, [])
@@ -405,7 +425,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
         if "generation" not in genome or genome.get("generation") is None:
             genome["generation"] = current_generation
     
-    logger.info("Phase 5: Redistributing genomes (elites + archive)")
+    logger.info("Redistribution: assigning genomes to elites and archive")
     
     tracked_ids = set(genome_tracker.genomes.keys())
     file_sources = {
@@ -499,7 +519,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
             if g in genome_list:
                 genome_list.remove(g)
     
-    logger.info("Phase 5: Deduplicating and writing files")
+    logger.info("Redistribution: deduplicating and writing files")
     elites_deduped = _deduplicate_genomes(elites_to_save)
     archive_deduped = _deduplicate_genomes(archive_to_save)
     
@@ -518,7 +538,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
             if gid is not None:
                 _removed_dup_prompt_ids.append(str(gid))
             logger.warning(
-                "Phase 5: omitting genome id=%s from elites — duplicate prompt (case-sensitive) already retained",
+                "Redistribution: omitting genome id=%s from elites — duplicate prompt (case-sensitive) already retained",
                 gid,
             )
             continue
@@ -538,7 +558,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
             if gid is not None:
                 _removed_dup_prompt_ids.append(str(gid))
             logger.warning(
-                "Phase 5: omitting genome id=%s from archive — duplicate prompt (case-sensitive) already retained",
+                "Redistribution: omitting genome id=%s from archive — duplicate prompt (case-sensitive) already retained",
                 gid,
             )
             continue
@@ -561,7 +581,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
     ]
     if len(archive_deduped) < _n_arch_before:
         logger.warning(
-            "Phase 5: dropped %d archive row(s) whose id already appears in elites",
+            "Redistribution: dropped %d archive row(s) whose id already appears in elites",
             _n_arch_before - len(archive_deduped),
         )
 
@@ -576,7 +596,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
         elites_deduped, metric, logger=logger
     )
     logger.info(
-        "Phase 5: sorted %d elites by north-star metric %r (descending)",
+        "Redistribution: sorted %d elites by north-star metric %r (descending)",
         len(elites_deduped),
         metric,
     )
@@ -595,17 +615,17 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
         state["_events_tracker"].save()
         logger.info(f"Logged {len(movements)} file redistribution events")
     
-    logger.info("Phase 5: Final validation")
+    logger.info("Redistribution: final validation")
     is_consistent, errors = genome_tracker.validate_consistency(
         elites_path, archive_path, load_archive=has_archived
     )
     
     if not is_consistent:
-        logger.warning(f"Phase 5 validation found {len(errors)} inconsistencies:")
+        logger.warning(f"Redistribution validation found {len(errors)} inconsistencies:")
         for error in errors[:10]:
             logger.warning(f"  - {error}")
     else:
-        logger.info("Phase 5 validation passed - all genomes consistent")
+        logger.info("Redistribution validation passed - all genomes consistent")
     
     distribution_stats = {
         "elites_moved": len(elites_deduped),
@@ -615,7 +635,7 @@ def redistribute_genomes(temp_path: Optional[str] = None, current_generation: in
         "validation_errors": len(errors) if not is_consistent else 0
     }
     
-    logger.info(f"Phase 5 complete: {distribution_stats}")
+    logger.info(f"Redistribution complete: {distribution_stats}")
     return distribution_stats
 
 
@@ -624,7 +644,22 @@ def process_generation(current_generation: int,
                        temp_path: Optional[str] = None,
                        config: Optional[SpeciationConfig] = None, logger=None,
                        north_star_metric: Optional[str] = None) -> Dict[int, Species]:
-    
+    """Run one Leader–Follower speciation generation on ``temp.json``.
+
+    Stages: existing-species update, species merge, capacity enforcement,
+    stagnation freeze, genome redistribution, and metrics recording.
+    IncDBSCAN uses ``run_inc_dbscan`` instead.
+
+    Args:
+        current_generation: Generation index being processed.
+        temp_path: Path to temp.json newcomers; default under outputs.
+        config: Speciation configuration; initializes state if needed.
+        logger: Logger instance.
+        north_star_metric: Primary fitness field name.
+
+    Returns:
+        Mapping of species_id to Species objects after this generation.
+    """
     _init_state(config, logger)
     state = _get_state()
     if north_star_metric:
@@ -686,7 +721,7 @@ def process_generation(current_generation: int,
     is_generation_0 = not has_existing_species and not elites_has_genomes
     
     if has_existing_species and not elites_has_genomes:
-        state["logger"].debug(f"Found {len(state['species'])} existing species in memory but elites.json is empty - will run Phase 1")
+        state["logger"].debug(f"Found {len(state['species'])} existing species in memory but elites.json is empty - will run existing-species update")
     
     if is_generation_0:
         state["logger"].info("=== Generation 0: Initial clustering ===")
@@ -731,10 +766,10 @@ def process_generation(current_generation: int,
                 method, len(state["species"]),
             )
     else:
-        _phase1_start = _time.time()
-        state["logger"].info("=== Phase 1: Existing Species Processing ===")
+        _existing_start = _time.time()
+        state["logger"].info("=== Existing-species update ===")
 
-        with PerformanceLogger(state["logger"], "Speciation Phase 1: Compute prev max fitness"):
+        with PerformanceLogger(state["logger"], "Speciation existing-species update: prev max fitness"):
             outputs_path_prev_max = get_outputs_path()
             state["_prev_max_fitness"] = {}
             
@@ -774,11 +809,11 @@ def process_generation(current_generation: int,
         # Always encode for GDP/viz; clustering may ignore embeddings (e.g. nli).
         if not method_uses_embeddings(state["config"].distance_method):
             state["logger"].info(
-                "Phase 1: encoding embeddings for GDP/viz (distance_method=%s; "
+                "Existing-species update: encoding embeddings for GDP/viz (distance_method=%s; "
                 "not used for clustering)",
                 state["config"].distance_method,
             )
-        with PerformanceLogger(state["logger"], "Speciation Phase 1: Compute and save embeddings"):
+        with PerformanceLogger(state["logger"], "Speciation existing-species update: embeddings"):
             compute_and_save_embeddings(
                 temp_path=temp_path,
                 model_name=state["config"].embedding_model,
@@ -793,7 +828,7 @@ def process_generation(current_generation: int,
         method = state["config"].clustering_method
         # process_generation is L–F only; IncDBSCAN is dispatched in run_speciation().
 
-        with PerformanceLogger(state["logger"], f"Speciation Phase 1: {method} clustering"):
+        with PerformanceLogger(state["logger"], f"Speciation existing-species update: {method} clustering"):
             state["species"], _ = run_clustering(
                 method,
                 temp_path=temp_path,
@@ -816,7 +851,7 @@ def process_generation(current_generation: int,
                 species_count_before_clustering, species_count_after_clustering,
             )
 
-        with PerformanceLogger(state["logger"], "Speciation Phase 1: Radius enforcement"):
+        with PerformanceLogger(state["logger"], "Speciation existing-species update: radius enforcement"):
             import numpy as np
             from .distance import extract_phenotype_vector, pair_distance
 
@@ -900,18 +935,18 @@ def process_generation(current_generation: int,
                             sp.members = [sp.leader] + list(sp.members)
 
         _save_tracker_if_dirty(state)
-        _validate_tracker_consistency(state, "Phase 1")
-        state["logger"].info("Phase 1 completed in %.2fs", _time.time() - _phase1_start)
+        _validate_tracker_consistency(state, "existing-species update")
+        state["logger"].info("Existing-species update completed in %.2fs", _time.time() - _existing_start)
     
     
-    _phase2_start = _time.time()
-    state["logger"].info("=== Phase 2: Merging + Radius Enforcement ===")
+    _merge_start = _time.time()
+    state["logger"].info("=== Species merge and radius enforcement ===")
     
     
     outputs_path = get_outputs_path()
     speciation_state_path = outputs_path / "speciation_state.json"
     
-    with PerformanceLogger(state["logger"], "Speciation Phase 2: Merging"):
+    with PerformanceLogger(state["logger"], "Speciation merge: species pairing"):
         species_leaders = _load_species_leaders_from_state(outputs_path, state["logger"])
         
         for sid, sp in state["species"].items():
@@ -1055,9 +1090,9 @@ def process_generation(current_generation: int,
                 state["logger"].debug(f"Merge verification: species {sid} from {sp.parent_ids}, origin={sp.cluster_origin}")
     
     import numpy as np
-    state["logger"].info("=== Phase 2: Radius Enforcement (after merge) ===")
+    state["logger"].info("=== Radius enforcement (after merge) ===")
 
-    with PerformanceLogger(state["logger"], "Speciation Phase 2: Radius enforcement"):
+    with PerformanceLogger(state["logger"], "Speciation merge: radius enforcement"):
         import numpy as np
         from .distance import extract_phenotype_vector, pair_distance
 
@@ -1131,7 +1166,7 @@ def process_generation(current_generation: int,
                 elif not updated_set:
                     # Truly empty: drop species from active map (no incubation)
                     state["logger"].info(
-                        "Phase 2: Species %s empty after radius cleanup — removed (no incubator)",
+                        "Merge: species %s empty after radius cleanup — removed (no incubator)",
                         sid,
                     )
                     sp.species_state = "extinct"
@@ -1140,7 +1175,7 @@ def process_generation(current_generation: int,
                     state["historical_species"][sid] = sp
                     del state["species"][sid]
     
-    with PerformanceLogger(state["logger"], "Speciation Phase 2: Save tracker"):
+    with PerformanceLogger(state["logger"], "Speciation merge: save tracker"):
         _save_tracker_if_dirty(state)
         if "_events_tracker" in state:
             state["_events_tracker"].save()
@@ -1165,12 +1200,12 @@ def process_generation(current_generation: int,
                 state["logger"].warning(f"Failed to update speciation_state.json after radius enforcement: {e}")
         
         _save_tracker_if_dirty(state)
-        _validate_tracker_consistency(state, "Phase 2")
-    state["logger"].info("Phase 2 completed in %.2fs", _time.time() - _phase2_start)
+        _validate_tracker_consistency(state, "species merge")
+    state["logger"].info("Species merge completed in %.2fs", _time.time() - _merge_start)
     
     
-    _phase3_start = _time.time()
-    state["logger"].info("=== Phase 3: Capacity Enforcement (species_id > 0) ===")
+    _capacity_start = _time.time()
+    state["logger"].info("=== Capacity enforcement (species_id > 0) ===")
     
     
     all_capacity_species_ids = set(state["species"].keys())
@@ -1188,17 +1223,17 @@ def process_generation(current_generation: int,
         tracker_only_species = tracker_species_ids - in_memory_species_ids
         if tracker_only_species:
             state["logger"].info(
-                f"Phase 3: Found {len(tracker_only_species)} species in tracker but not in state['species']: {sorted(tracker_only_species)}"
+                f"Capacity: Found {len(tracker_only_species)} species in tracker but not in state['species']: {sorted(tracker_only_species)}"
             )
     
     outputs_path = get_outputs_path()
     
-    with PerformanceLogger(state["logger"], "Speciation Phase 3: Capacity enforcement (per species)"):
+    with PerformanceLogger(state["logger"], "Speciation capacity: per-species enforcement"):
         for sid in sorted(all_capacity_species_ids):
             sp = state["species"].get(sid) or state["species"].get(str(sid))
             
             if sp is None:
-                state["logger"].debug(f"Phase 3: Processing tracker-only species {sid} (not in state['species'])")
+                state["logger"].debug(f"Capacity: Processing tracker-only species {sid} (not in state['species'])")
             
             all_species_genomes = []
             
@@ -1238,7 +1273,7 @@ def process_generation(current_generation: int,
                 missing = set(all_genome_ids) - {str(g.get("id")) for g in all_species_genomes if g.get("id")}
                 if missing:
                     state["logger"].warning(
-                        f"Phase 3: Species {sid} - {len(missing)} genomes from tracker not found in files: {list(missing)[:5]}"
+                        f"Capacity: Species {sid} - {len(missing)} genomes from tracker not found in files: {list(missing)[:5]}"
                     )
             
             from utils.population_io import _extract_north_star_score
@@ -1251,20 +1286,20 @@ def process_generation(current_generation: int,
             
             if sp is not None:
                 state["logger"].debug(
-                    f"Phase 3: Species {sid} (state={sp.species_state}): "
+                    f"Capacity: Species {sid} (state={sp.species_state}): "
                     f"tracker={len(species_genome_ids)}, loaded={len(loaded_genomes)}, "
                     f"in_memory={len(sp.members)}, total={len(all_species_genomes)}, capacity={state['config'].species_capacity}"
                 )
             else:
                 state["logger"].debug(
-                    f"Phase 3: Species {sid} (tracker-only, not in state['species']): "
+                    f"Capacity: Species {sid} (tracker-only, not in state['species']): "
                     f"tracker={len(species_genome_ids)}, loaded={len(loaded_genomes)}, "
                     f"total={len(all_species_genomes)}, capacity={state['config'].species_capacity}"
                 )
             
             if len(all_species_genomes) > state["config"].species_capacity:
                 state["logger"].info(
-                    f"Phase 3: Species {sid} exceeds capacity: {len(all_species_genomes)} genomes "
+                    f"Capacity: Species {sid} exceeds capacity: {len(all_species_genomes)} genomes "
                     f"(capacity: {state['config'].species_capacity}), will archive {len(all_species_genomes) - state['config'].species_capacity}"
                     + (f" (tracker-only species)" if sp is None else "")
                 )
@@ -1287,12 +1322,12 @@ def process_generation(current_generation: int,
                             current_leader_fitness = sp.leader.fitness if sp.leader else float('-inf')
                             highest_fitness_member = max(sp.members, key=lambda x: x.fitness)
                             if highest_fitness_member.fitness > current_leader_fitness:
-                                state["logger"].debug(f"Phase 3: Merged species {sid} leader updated: {sp.leader.id} -> {highest_fitness_member.id} (new higher fitness genome)")
+                                state["logger"].debug(f"Capacity: Merged species {sid} leader updated: {sp.leader.id} -> {highest_fitness_member.id} (new higher fitness genome)")
                                 sp.leader = highest_fitness_member
                         else:
                             new_leader = max(sp.members, key=lambda x: x.fitness)
                             if new_leader != sp.leader:
-                                state["logger"].debug(f"Phase 3: Species {sid} leader updated: {sp.leader.id if sp.leader else None} -> {new_leader.id} (after capacity enforcement)")
+                                state["logger"].debug(f"Capacity: Species {sid} leader updated: {sp.leader.id if sp.leader else None} -> {new_leader.id} (after capacity enforcement)")
                             sp.leader = new_leader
                         
                         if sp.leader not in sp.members:
@@ -1339,7 +1374,7 @@ def process_generation(current_generation: int,
                                 state["logger"].error(f"  Excess genomes still in species {sid}: {still_in_species[:10]}")
                         else:
                             state["logger"].info(
-                                f"Phase 3: Species {sid} - archived {len(excess_ids)} genomes "
+                                f"Capacity: Species {sid} - archived {len(excess_ids)} genomes "
                                 f"(tracker: {before_count} -> {after_count})"
                             )
                         
@@ -1348,9 +1383,9 @@ def process_generation(current_generation: int,
                             if not save_success:
                                 state["logger"].error(f"CRITICAL: Failed to save tracker after capacity enforcement for species {sid}")
                             else:
-                                state["logger"].debug(f"Phase 3: Saved tracker after archiving {len(excess_ids)} genomes for species {sid}")
+                                state["logger"].debug(f"Capacity: Saved tracker after archiving {len(excess_ids)} genomes for species {sid}")
                     else:
-                        state["logger"].warning(f"Phase 3: No valid genome IDs found in excess_genomes for species {sid}")
+                        state["logger"].warning(f"Capacity: No valid genome IDs found in excess_genomes for species {sid}")
                 
                 excess_individuals = []
                 for genome in excess_genomes:
@@ -1375,9 +1410,9 @@ def process_generation(current_generation: int,
                         )
                 
                 
-                state["logger"].info(f"Phase 3: Species {sid} capacity enforced ({state['config'].species_capacity}), archived {len(excess_genomes)} excess genomes from {len(all_species_genomes)} total (all generations)")
+                state["logger"].info(f"Capacity: Species {sid} capacity enforced ({state['config'].species_capacity}), archived {len(excess_genomes)} excess genomes from {len(all_species_genomes)} total (all generations)")
             else:
-                state["logger"].debug(f"Phase 3: Species {sid} within capacity ({len(all_species_genomes)}/{state['config'].species_capacity})")
+                state["logger"].debug(f"Capacity: Species {sid} within capacity ({len(all_species_genomes)}/{state['config'].species_capacity})")
     
     leader_ids = {}
     duplicate_leaders = []
@@ -1431,16 +1466,16 @@ def process_generation(current_generation: int,
                         sid,
                     )
     
-    with PerformanceLogger(state["logger"], "Speciation Phase 3: Save tracker and validate"):
+    with PerformanceLogger(state["logger"], "Speciation capacity: save tracker and validate"):
         _save_tracker_if_dirty(state)
-        _validate_tracker_consistency(state, "Phase 3")
+        _validate_tracker_consistency(state, "capacity enforcement")
     
     for sid, sp in state["species"].items():
         if "_genome_tracker" in state:
             species_genome_ids = state["_genome_tracker"].get_all_genomes_by_species(sid)
             if len(species_genome_ids) > state["config"].species_capacity:
                 state["logger"].error(
-                    f"CRITICAL: After Phase 3, species {sid} still has {len(species_genome_ids)} genomes "
+                    f"CRITICAL: After capacity enforcement, species {sid} still has {len(species_genome_ids)} genomes "
                     f"(exceeds capacity {state['config'].species_capacity})"
                 )
                 state["logger"].error(f"  Genomes still in species {sid}: {species_genome_ids[:10]}")
@@ -1450,11 +1485,11 @@ def process_generation(current_generation: int,
                 ])
                 state["logger"].error(f"  Total archived genomes in tracker: {archived_count}")
     
-    state["logger"].info("Phase 3 completed in %.2fs", _time.time() - _phase3_start)
+    state["logger"].info("Capacity enforcement completed in %.2fs", _time.time() - _capacity_start)
     
     
-    _phase4_start = _time.time()
-    state["logger"].info("=== Phase 4: Stagnation Freeze ===")
+    _stagnation_start = _time.time()
+    state["logger"].info("=== Stagnation freeze ===")
     
     selected_species_ids = set()
     if current_generation > 0:
@@ -1503,7 +1538,7 @@ def process_generation(current_generation: int,
         )
     
     state["logger"].info(
-        "=== Phase 4: Freeze Stagnant Species (threshold=%d) ===",
+        "=== Freeze stagnant species (threshold=%d) ===",
         state["config"].species_stagnation
     )
     
@@ -1536,29 +1571,29 @@ def process_generation(current_generation: int,
             )
     
     state["logger"].info(
-        "Phase 4 summary: at_threshold=%d; frozen_this_step=%d; already_frozen=%d; freeze_events=%d",
+        "Stagnation freeze summary: at_threshold=%d; frozen_this_step=%d; already_frozen=%d; freeze_events=%d",
         at_threshold_count, frozen_count, already_frozen_count, state["_current_gen_events"]["extinction"]
     )
     
     if frozen_count > 0:
         _save_tracker_if_dirty(state)
-        state["logger"].info(f"Phase 4: Frozen {frozen_count} species (trackers updated)")
+        state["logger"].info(f"Stagnation freeze: frozen {frozen_count} species (trackers updated)")
     
     _save_tracker_if_dirty(state)
-    _validate_tracker_consistency(state, "Phase 4")
-    _validate_species_accounting(state, "Phase 4")
-    state["logger"].info("Phase 4 completed in %.2fs", _time.time() - _phase4_start)
+    _validate_tracker_consistency(state, "stagnation freeze")
+    _validate_species_accounting(state, "stagnation freeze")
+    state["logger"].info("Stagnation freeze completed in %.2fs", _time.time() - _stagnation_start)
     
     
-    _phase5_start = _time.time()
-    state["logger"].info("=== Phase 5: Redistribution of Genomes ===")
-    with PerformanceLogger(state["logger"], "Speciation Phase 5: Redistribution"):
+    _redistribution_start = _time.time()
+    state["logger"].info("=== Genome redistribution ===")
+    with PerformanceLogger(state["logger"], "Speciation redistribution"):
         distribution_result = redistribute_genomes(
             temp_path=temp_path if temp_path else None,
             current_generation=current_generation
         )
     state["logger"].info(
-        "Phase 5: Distribution complete - %d elites, %d archived",
+        "Redistribution: distribution complete - %d elites, %d archived",
         distribution_result.get("elites_moved", 0),
         distribution_result.get("archive_moved", 0),
     )
@@ -1593,16 +1628,16 @@ def process_generation(current_generation: int,
                 else:
                     sp.members = []
                 state["logger"].debug(
-                    f"Phase 5: Synced species {sid} members from tracker: {len(sp.members)} (was {len(current_member_ids)})"
+                    f"Redistribution: synced species {sid} members from tracker: {len(sp.members)} (was {len(current_member_ids)})"
                 )
     
-    state["logger"].info("Phase 5 completed in %.2fs", _time.time() - _phase5_start)
+    state["logger"].info("Genome redistribution completed in %.2fs", _time.time() - _redistribution_start)
     
     
-    _phase6_start = _time.time()
-    state["logger"].info("=== Phase 6: Metrics & Statistics ===")
+    _metrics_start = _time.time()
+    state["logger"].info("=== Metrics and statistics ===")
     
-    with PerformanceLogger(state["logger"], "Speciation Phase 6: Update labels and record metrics"):
+    with PerformanceLogger(state["logger"], "Speciation metrics: update labels and record"):
         from .labeling import update_species_labels
         update_species_labels(
             state["species"],
@@ -1615,7 +1650,7 @@ def process_generation(current_generation: int,
         elites_path = outputs_path / "elites.json"
         
         if not elites_path.exists():
-            raise FileNotFoundError(f"elites.json not found at {elites_path} - required for metrics calculation (should have been created in Phase 5)")
+            raise FileNotFoundError(f"elites.json not found at {elites_path} - required for metrics calculation (should have been created during redistribution)")
         archive_path = outputs_path / "archive.json"
         archive_size = 0
         if archive_path.exists():
@@ -1649,14 +1684,14 @@ def process_generation(current_generation: int,
         else:
             state["logger"].debug("Metrics validation passed - all metrics match file contents")
     
-    with PerformanceLogger(state["logger"], "Speciation Phase 6: Save state files"):
+    with PerformanceLogger(state["logger"], "Speciation metrics: save state files"):
         save_state(str(get_outputs_path() / "speciation_state.json"))
         if "_events_tracker" in state:
             state["_events_tracker"].save()
         if "_genome_tracker" in state:
             state["_genome_tracker"].save()
     
-    state["logger"].info("Phase 6 completed in %.2fs", _time.time() - _phase6_start)
+    state["logger"].info("Metrics recording completed in %.2fs", _time.time() - _metrics_start)
     
     process_gen_elapsed = _time.time() - _process_gen_start
     state["logger"].info("COMPLETED: Speciation generation %d in %.3f seconds", current_generation, process_gen_elapsed)
@@ -1829,12 +1864,21 @@ def save_state(path: str) -> None:
     archive_path = outputs_path / "archive.json"
     archive_genomes = _load_json_file(archive_path, logger, [])
     archive_count = len(archive_genomes)
+
+    from .clustering._io import build_noise_entry, collect_noise_ids_from_genomes
+
+    # Non-mature elites (species_id == 0) form the shared noise/singleton pool.
+    # Archive (-1) stays in archive.json and is not listed under noise.
+    noise_entry = build_noise_entry(collect_noise_ids_from_genomes(elites_genomes))
     
     state_dict = {
         "species": species_dict,
         "incubators": sorted(incubator_ids),
         "extinct": sorted(extinct_ids),
         "archive_count": archive_count,
+        "noise": noise_entry,
+        "noise_count": noise_entry["count"],
+        "singleton_species_count": noise_entry["count"],
         "global_best_id": state["global_best"].id if state["global_best"] else None,
         "metrics": state["metrics_tracker"].to_dict(),
         "config": state["config"].to_dict(),
@@ -2067,12 +2111,22 @@ def run_speciation(
     config: Optional[SpeciationConfig] = None,
     log_file: Optional[str] = None,
     north_star_metric: str = "toxicity") -> Dict[str, Any]:
-    
+    """Dispatch speciation for one generation (Leader–Follower or IncDBSCAN).
+
+    Args:
+        temp_path: Path to temp.json newcomers / density memory.
+        current_generation: Generation index.
+        config: Speciation configuration; defaults to SpeciationConfig().
+        log_file: Optional log path.
+        north_star_metric: Primary fitness field name.
+
+    Returns:
+        Speciation result dict (success flag, species counts, timings, etc.).
+    """
     logger = get_logger("RunSpeciation", log_file)
     logger.info("Starting speciation: generation=%d, metric=%s", current_generation, north_star_metric)
 
-    # Incremental DBSCAN uses a separate population + speciation path (temp.json = D_t).
-    # Leader–follower continues below unchanged.
+    # IncDBSCAN: temp.json is grow-only density memory D_t.
     cfg = config or SpeciationConfig()
     method = (cfg.clustering_method or "leader_follower").strip().lower().replace("-", "_")
     if method == "dbscan":

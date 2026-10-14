@@ -6,7 +6,12 @@ from typing import Dict, Optional, Set, Tuple
 
 from ..config import SpeciationConfig
 from ..species import Species
-from ._io import ARCHIVE_SPECIES_ID, SINGLETON_SPECIES_ID
+from ._io import (
+    ARCHIVE_SPECIES_ID,
+    SINGLETON_SPECIES_ID,
+    build_noise_entry,
+    collect_noise_ids_from_genomes,
+)
 from .dbscan import dbscan_precomputed
 from .leader_follower import leader_follower_clustering
 
@@ -81,6 +86,8 @@ def cluster(
 __all__ = [
     "ARCHIVE_SPECIES_ID",
     "SINGLETON_SPECIES_ID",
+    "build_noise_entry",
+    "collect_noise_ids_from_genomes",
     "cluster",
     "dbscan_precomputed",
     "leader_follower_clustering",

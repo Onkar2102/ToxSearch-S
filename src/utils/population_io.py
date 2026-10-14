@@ -1419,14 +1419,17 @@ def calculate_generation_statistics(
                     _seen.add(k)
                     uniq.append(g)
             dens = uniq
-            # After promotion: mature sid > 0, singleton pool sid == 0; residual raw noise == -1.
+            # Mature sid > 0; noise pool = sid/label <= 0 (singleton 0 + residual -1).
             residual_noise = [g for g in dens if _density_label_of(g) == -1]
             mature = [g for g in dens if (_density_label_of(g) or 0) > 0]
             singletons = [g for g in dens if _density_label_of(g) == 0]
+            non_mature = singletons + residual_noise
             labeled = mature + singletons
             stats["clustered_count"] = len(mature)
-            stats["noise_count"] = len(residual_noise)
+            # noise_count = genomes not in any mature species.
+            stats["noise_count"] = len(non_mature)
             stats["singleton_species_count"] = len(singletons)
+            stats["residual_dbscan_noise_count"] = len(residual_noise)
             stats["density_size"] = len(dens)
             # Breeding pool = mature clusters + singleton pool.
             stats["elites_count"] = len(labeled)
@@ -1463,13 +1466,16 @@ def calculate_generation_statistics(
             if current_generation == 0:
                 stats["initial_population_size"] = stats["total_population"]
             budget_metrics = calculate_budget_metrics(
-                labeled, residual_noise, this_gen, current_generation, _logger
+                labeled, non_mature, this_gen, current_generation, _logger
             )
             stats.update(budget_metrics)
             _logger.info(
-                "Gen %d IncDBSCAN stats: density=%d labeled=%d residual_noise=%d avg_fit=%.4f max=%.4f",
+                "Gen %d IncDBSCAN stats: density=%d mature=%d noise_pool=%d "
+                "(singleton=%d residual=-1:%d) avg_fit=%.4f max=%.4f",
                 current_generation, stats["density_size"], stats["clustered_count"],
-                stats["noise_count"], stats["avg_fitness_generation"],
+                stats["noise_count"], stats["singleton_species_count"],
+                stats["residual_dbscan_noise_count"],
+                stats["avg_fitness_generation"],
                 stats.get("population_max_fitness", 0.0001),
             )
             return stats

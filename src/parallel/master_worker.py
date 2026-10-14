@@ -1,3 +1,11 @@
+"""MPI master–worker evolutionary loop for ToxSearch.
+
+Rank 0 merges evaluated genomes, runs speciation, and serves parents.
+Worker ranks generate variants, elicit responses, and evaluate fitness.
+Termination is driven by ``max_total_genomes`` (primary) with optional
+generation limits.
+"""
+
 import json
 import os
 import sys
@@ -22,7 +30,14 @@ LEGACY_PARALLEL_MERGE_K_NON_ALL = 100
 
 
 def _read_tracker_selection_mode(outputs_path):
-    
+    """Return selection_mode from EvolutionTracker.json, or "default".
+
+    Args:
+        outputs_path: Run output directory containing EvolutionTracker.json.
+
+    Returns:
+        Lowercased selection mode string.
+    """
     path = Path(outputs_path) / "EvolutionTracker.json"
     if not path.exists():
         return "default"
@@ -35,7 +50,17 @@ def _read_tracker_selection_mode(outputs_path):
 
 
 def resolve_parallel_merge_k(outputs_path, operators_mode, max_variants, batch_size_override):
-    
+    """Resolve merge batch size K for the parallel master.
+
+    Args:
+        outputs_path: Run output directory (reads selection_mode from tracker).
+        operators_mode: Operator set name (e.g. "all").
+        max_variants: Variants produced per parent request.
+        batch_size_override: Explicit K; if set, returned unchanged.
+
+    Returns:
+        Integer merge batch size.
+    """
     if batch_size_override is not None:
         return int(batch_size_override)
     om = (operators_mode or "all").lower()
@@ -51,14 +76,32 @@ def resolve_parallel_merge_k(outputs_path, operators_mode, max_variants, batch_s
 
 
 def send_payload(comm, dest, tag, payload, logger=None):
-    
+    """Send a Python object on ``comm`` with the given MPI tag.
+
+    Args:
+        comm: MPI communicator.
+        dest: Destination rank.
+        tag: Message tag.
+        payload: Picklable message body.
+        logger: Optional logger for debug traces.
+    """
     if logger:
         logger.debug("send -> rank %d  tag=%d  payload_type=%s", dest, tag, type(payload).__name__)
     comm.send(payload, dest=dest, tag=tag)
 
 
 def recv_payload(comm, source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, logger=None):
-    
+    """Blocking receive of a Python object from ``comm``.
+
+    Args:
+        comm: MPI communicator.
+        source: Source rank filter (default: any).
+        tag: Tag filter (default: any).
+        logger: Optional logger for debug traces.
+
+    Returns:
+        Tuple of (payload, tag_id, source_rank).
+    """
     status = MPI.Status()
     data = comm.recv(source=source, tag=tag, status=status)
     tag_id = status.Get_tag()
@@ -69,7 +112,15 @@ def recv_payload(comm, source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, logger=None):
 
 
 def _check_stop(comm, logger=None):
-    
+    """Return True if a STOP message from the master is pending (and consume it).
+
+    Args:
+        comm: MPI communicator.
+        logger: Optional logger.
+
+    Returns:
+        True if STOP was received.
+    """
     if comm.Iprobe(source=0, tag=STOP):
         comm.recv(source=0, tag=STOP)
         if logger:
@@ -79,7 +130,17 @@ def _check_stop(comm, logger=None):
 
 
 def _load_existing_prompts(outputs_path, logger, use_inc_dbscan=False):
-    
+    """Load prompt strings already present in the population for deduplication.
+
+    Args:
+        outputs_path: Run output directory.
+        logger: Logger instance.
+        use_inc_dbscan: If True, read ``temp.json`` (density memory); else
+            elites.json and archive.json.
+
+    Returns:
+        Set of existing prompt strings.
+    """
     existing = set()
     fnames = ("temp.json",) if use_inc_dbscan else ("elites.json", "archive.json")
     for fname in fnames:
@@ -101,7 +162,24 @@ def _load_existing_prompts(outputs_path, logger, use_inc_dbscan=False):
 def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
                         north_star_metric, speciation_config, log_file, logger,
                         run_speciation_fn=None):
-    
+    """Drain up to K buffered genomes, write temp.json, and run speciation.
+
+    Args:
+        buffers: Per-worker lists of evaluated genome dicts.
+        K: Maximum genomes to accept in this merge.
+        outputs_path: Run output directory.
+        generation_id: Current generation index.
+        next_genome_id: Next global genome id to assign.
+        north_star_metric: Primary fitness field name.
+        speciation_config: Speciation configuration object or dict.
+        log_file: Path for speciation logging.
+        logger: Logger instance.
+        run_speciation_fn: Callable invoked for speciation; stub if None.
+
+    Returns:
+        Tuple of (accepted_count, discarded_count, next_genome_id,
+        speciation_result, accepted_genomes).
+    """
     merge_start = time.time()
     buffer_snapshot = {r: len(b) for r, b in buffers.items() if b}
     total_buffered = sum(buffer_snapshot.values())
@@ -165,7 +243,7 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
 
     temp_path = outputs_path / "temp.json"
     if use_inc:
-        # Append newcomers into grow-only density memory
+        # Append newcomers to grow-only density memory (temp.json).
         existing = []
         if temp_path.exists():
             try:
@@ -222,7 +300,13 @@ def _merge_and_speciate(buffers, K, outputs_path, generation_id, next_genome_id,
 
 
 def _stub_speciation(outputs_path, temp_path, logger):
-    
+    """Minimal speciation stub: move temp genomes to archive with species_id=-1.
+
+    Args:
+        outputs_path: Run output directory.
+        temp_path: Path to temp.json.
+        logger: Logger instance.
+    """
     try:
         with open(temp_path, "r", encoding="utf-8") as f:
             genomes = json.load(f)
@@ -260,7 +344,17 @@ def _stub_speciation(outputs_path, temp_path, logger):
 
 
 def _select_parents(outputs_path, north_star_metric, generation_id, logger):
-    
+    """Run parent selection and load parents.json / top_10.json.
+
+    Args:
+        outputs_path: Run output directory.
+        north_star_metric: Primary fitness field name.
+        generation_id: Current generation index.
+        logger: Logger instance.
+
+    Returns:
+        Tuple of (parents list, top_10 list).
+    """
     from speciation.clustering_mode import is_inc_dbscan_mode
 
     op = str(outputs_path)
@@ -302,7 +396,14 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
 
 
 def _collect_operator_stats(accepted_genomes):
-    
+    """Count accepted genomes by operator name.
+
+    Args:
+        accepted_genomes: Iterable of genome dicts.
+
+    Returns:
+        Mapping of operator name to count.
+    """
     stats = {}
     for g in accepted_genomes:
         op_name = g.get("operator", "unknown")
@@ -311,7 +412,15 @@ def _collect_operator_stats(accepted_genomes):
 
 
 def _aggregate_parents_from_genomes(accepted_genomes, north_star_metric="toxicity"):
-    
+    """Build unique parent records and a top-10 list from accepted genomes.
+
+    Args:
+        accepted_genomes: Genomes with optional ``parents`` lists.
+        north_star_metric: Fitness field used for ranking.
+
+    Returns:
+        Tuple of (parents_list, top10_list).
+    """
     by_id = {}
     for g in (accepted_genomes or []):
         for p in (g.get("parents") or []):
@@ -341,7 +450,32 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
                     generation_duration_seconds=None, generation_wall_start=None, n_workers=None,
                     batch_size_K=None, speciation_config=None, config_dict=None,
                     evaluated_this_generation=None, discarded_this_generation=None):
-    
+    """Update EvolutionTracker.json and adaptive selection after a merge.
+
+    Args:
+        outputs_path: Run output directory.
+        generation_id: Generation just completed.
+        total_evaluated: Cumulative evaluations.
+        total_integrated: Cumulative accepted genomes.
+        total_discarded: Cumulative discarded genomes.
+        speciation_result: Dict of speciation metrics for this generation.
+        logger: Logger instance.
+        north_star_metric: Primary fitness field name.
+        log_file: Optional log path.
+        accepted_genomes: Genomes accepted in this merge.
+        sent_parents_top10: Cached parents/top_10 sent to workers.
+        generation_duration_seconds: Optional duration override.
+        generation_wall_start: Wall-clock start for duration computation.
+        n_workers: Worker count for run metadata.
+        batch_size_K: Merge K recorded in tracker.
+        speciation_config: Speciation config for metadata.
+        config_dict: Broadcast run config.
+        evaluated_this_generation: Evaluations since last merge.
+        discarded_this_generation: Discards in this merge.
+
+    Raises:
+        RuntimeError: If the tracker update fails.
+    """
     logger.debug("Updating EvolutionTracker (full): gen=%d  evaluated=%d  "
                  "integrated=%d  discarded=%d  accepted_genomes=%d",
                  generation_id, total_evaluated, total_integrated, total_discarded,
@@ -551,7 +685,13 @@ def _update_tracker(outputs_path, generation_id, total_evaluated, total_integrat
 
 
 def _ensure_tracking_artifacts(outputs_path, logger, config_dict=None):
-    """Create tracker/event/op-effectiveness stubs before first speciation (seq parity)."""
+    """Create empty population and tracker files if missing (sequential parity).
+
+    Args:
+        outputs_path: Run output directory.
+        logger: Logger instance.
+        config_dict: Optional run config for EvolutionTracker metadata.
+    """
     from datetime import datetime
 
     outputs_path = Path(outputs_path)
@@ -649,7 +789,15 @@ def _ensure_tracking_artifacts(outputs_path, logger, config_dict=None):
 
 def _update_operator_effectiveness(outputs_path, generation_id, north_star_metric, logger,
                                    operator_statistics=None):
-    """Mirror sequential main.py operator-effectiveness CSV + viz after each merge."""
+    """Update operator-effectiveness CSV and visualizations after a merge.
+
+    Args:
+        outputs_path: Run output directory.
+        generation_id: Current generation index.
+        north_star_metric: Primary fitness field name.
+        logger: Logger instance.
+        operator_statistics: Optional per-operator counts.
+    """
     try:
         from utils.operator_effectiveness import (
             calculate_table4_metrics,
@@ -694,7 +842,12 @@ def _update_operator_effectiveness(outputs_path, generation_id, north_star_metri
 
 
 def _run_live_analysis(outputs_path, logger):
-    
+    """Run non-fatal live analysis visualizations after speciation.
+
+    Args:
+        outputs_path: Run output directory.
+        logger: Logger instance.
+    """
     try:
         from utils.live_analysis import run_live_analysis
         results = run_live_analysis(outputs_path=str(outputs_path), logger=logger)
@@ -712,7 +865,21 @@ def _run_final_statistics(outputs_path, north_star_metric, start_time, generatio
                           total_merge_speciation_seconds=None,
                           in_flight_at_stop=None,
                           merge_k_history=None):
-    
+    """Mark the run complete and write final statistics and master metrics.
+
+    Args:
+        outputs_path: Run output directory.
+        north_star_metric: Primary fitness field name.
+        start_time: Wall-clock start (``time.time()``).
+        generations_completed: Number of generations finished.
+        log_file: Log path for final statistics helpers.
+        logger: Logger instance.
+        accepted_per_worker: Optional per-rank accepted counts.
+        total_wait_for_results_seconds: Master wait time accumulator.
+        total_merge_speciation_seconds: Merge+speciation time accumulator.
+        in_flight_at_stop: Buffer size when stop was triggered.
+        merge_k_history: List of per-merge K records.
+    """
     try:
         execution_time = time.time() - start_time
         logger.info("Generating final statistics: execution_time=%.1fs  "
@@ -769,7 +936,21 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                 speciation_config, log_file, logger,
                 max_generations=None, run_speciation_fn=None,
                 config_dict=None):
-    
+    """Master dispatch loop: serve parents, merge evaluations, run speciation.
+
+    Args:
+        comm: MPI communicator.
+        size: Communicator size (1 master + workers).
+        K: Optional explicit merge batch size override.
+        outputs_path: Run output directory.
+        north_star_metric: Primary fitness field name.
+        speciation_config: Speciation configuration.
+        log_file: Log path.
+        logger: Logger instance.
+        max_generations: Optional generation cap (secondary to genome budget).
+        run_speciation_fn: Speciation callable.
+        config_dict: Config broadcast to workers.
+    """
     from utils.population_io import get_max_genome_id_from_all_files
 
     start_time = time.time()
@@ -1128,7 +1309,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             logger=logger,
                             log_file=log_file,
                         )
-                        # IncDBSCAN budget = |D_t|; L–F = elites + archive.
+                        # IncDBSCAN budget is |D_t|; Leader–Follower uses elites + archive.
                         if (
                             gen_stats.get("population_mode") == "inc_dbscan"
                             or gen_stats.get("density_size") is not None
@@ -1155,8 +1336,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                     for w in range(1, size):
                         send_payload(comm, w, STOP, None, logger=logger)
                     logger.info("Sent STOP to all %d worker(s) (immediate broadcast).", size - 1)
-                    # STOP is authoritative: workers may exit their request loop without
-                    # another PARENTS_REQUEST, so do not block waiting to count them.
+                    # After STOP broadcast, mark all workers finished without
+                    # waiting for further PARENTS_REQUEST messages.
                     finished_workers = n_workers
                     break
 
@@ -1164,7 +1345,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
     if _total_buffered() > 0:
         logger.info("="*50)
-        logger.info("Drain phase: including %d genomes from buffers (not discarded). %s",
+        logger.info("Final buffer drain: including %d genomes from buffers (not discarded). %s",
                      _total_buffered(), _buffer_state_str())
         drain_start = time.time()
         accepted, discarded, next_genome_id, spec_result, accepted_genomes = \
@@ -1184,7 +1365,7 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
             "generation_number": generation_id,
             "merge_k_used": drain_batch_k,
             "buffered_before_merge": drain_batch_k,
-            "drain_phase": True,
+            "is_final_drain": True,
         })
         eval_this_gen = total_evaluated - snap_evaluated
         _update_tracker(outputs_path, generation_id, total_evaluated,
@@ -1240,7 +1421,17 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
 
 
 def _load_seed_prompts(seed_file, start, end, logger):
-    
+    """Load a slice of seed prompts from a CSV ``questions`` column.
+
+    Args:
+        seed_file: Path to seed CSV.
+        start: Inclusive start index.
+        end: Exclusive end index.
+        logger: Logger instance.
+
+    Returns:
+        List of prompt strings (possibly empty on error).
+    """
     try:
         df = pd.read_csv(seed_file, engine="python", on_bad_lines="skip",
                          sep=",", quotechar='"', skipinitialspace=True)
@@ -1256,7 +1447,18 @@ def _load_seed_prompts(seed_file, start, end, logger):
 
 def worker_main(comm, rank, size, logger, config_dict=None,
                 response_generator=None, prompt_generator=None, evaluator=None):
-    
+    """Worker loop: request parents, evaluate variants, return results.
+
+    Args:
+        comm: MPI communicator.
+        rank: This worker's rank.
+        size: Communicator size.
+        logger: Logger instance.
+        config_dict: Unused; config is broadcast from rank 0.
+        response_generator: Optional pre-built response generator.
+        prompt_generator: Optional pre-built prompt generator.
+        evaluator: Optional pre-built evaluator.
+    """
     config_dict = comm.bcast(None, root=0)
     logger.info("Worker %d received config: %s", rank, list((config_dict or {}).keys()))
 
@@ -1597,7 +1799,11 @@ def worker_main(comm, rank, size, logger, config_dict=None,
 
 
 def _load_perspective_api_keys():
-    
+    """Load Perspective API keys from environment variables.
+
+    Returns:
+        List of API key strings (may be empty).
+    """
     import os
     multi = os.getenv("PERSPECTIVE_API_KEYS", "").strip()
     if multi:
@@ -1621,7 +1827,15 @@ def _load_perspective_api_keys():
 
 
 def _rank_log_file(base_log_file, rank):
-    
+    """Return a per-rank log path derived from ``base_log_file``.
+
+    Args:
+        base_log_file: Base log file path, or None.
+        rank: MPI rank (0 → master suffix).
+
+    Returns:
+        Rank-specific log path, or None.
+    """
     if base_log_file is None:
         return None
     stem, ext = os.path.splitext(base_log_file)
@@ -1641,7 +1855,35 @@ def run(logger, K=None, outputs_path=None, north_star_metric="toxicity",
         perspective_api_keys=None,
         evaluator_backend="google",
         openai_model="omni-moderation-latest"):
-    
+    """Entry point for the MPI parallel evolutionary run.
+
+    Args:
+        logger: Logger instance (may be replaced with a per-rank logger).
+        K: Optional merge batch size override.
+        outputs_path: Run output directory.
+        north_star_metric: Primary fitness field name.
+        speciation_config: Speciation configuration.
+        log_file: Base log file path.
+        max_generations: Optional generation cap.
+        max_total_genomes: Required genome budget for termination.
+        run_speciation_fn: Speciation callable for the master.
+        operators_mode: Variation operator set.
+        seed_file: Seed prompts CSV (relative to project root unless absolute).
+        seed: RNG seed.
+        moderation_methods: Optional evaluation method list.
+        stagnation_limit: Generations without improvement before explore mode.
+        max_variants: Variants per parent request.
+        response_generator: Optional shared response generator (workers).
+        prompt_generator: Optional shared prompt generator (workers).
+        evaluator: Optional shared evaluator (workers).
+        perspective_api_keys: Optional API keys; else loaded from the environment.
+        evaluator_backend: Evaluator profile name.
+        openai_model: OpenAI moderation model when applicable.
+
+    Raises:
+        RuntimeError: If fewer than two MPI ranks are available.
+        ValueError: If ``max_total_genomes`` is not set.
+    """
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
     size = comm.Get_size()
