@@ -215,7 +215,7 @@ rainbowplus-main/
 research_questions_*.txt
 EMNLP_*.txt
 
-rc_script.sh
+
 dependency_parallel.sh
 
 *.tex

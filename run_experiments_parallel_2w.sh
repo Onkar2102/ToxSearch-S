@@ -18,7 +18,7 @@
 #   OPENAI_MODEL=omni-moderation-latest
 #   OPERATORS=all               ie | cm | all
 #   MAX_VARIANTS=1
-#   SEED_FILE=data/prompt_100.csv
+#   SEED_FILE=data/prompt.csv
 #   SEED=42
 #   THETA_SIM=0.25              used when THETA_VALUES is empty
 #   THETA_MERGE=0.1             must be <= each theta_sim
@@ -47,13 +47,18 @@
 #   - mpi4py and project deps installed in the active venv
 #   - .env with API keys for EVALUATOR
 #
-# .env is loaded for API keys. PYTHONPATH is set to src.
+# Setup mirrors cluster rc_script.sh (portable bits): venv → isolate Python →
+# threading/ML quiet flags → .env keys → PYTHONPATH=src. For multi-GPU cluster
+# jobs with Spack/CUDA/srun, use rc_script.sh instead.
+#
+# Optional: SKIP_CLI_CHECK=1 to skip the --help flag smoke check.
 
 set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# 1) Activate venv
 if [ -d "venv" ]; then
     # shellcheck source=/dev/null
     source venv/bin/activate
@@ -65,6 +70,22 @@ elif [ -d ".spvenv" ]; then
     source .spvenv/bin/activate
 fi
 
+# 2) Python isolation
+export PYTHONNOUSERSITE=1
+unset PYTHONPATH PYTHONHOME || true
+
+# 3) Threading + quiet ML stacks
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-${SLURM_CPUS_PER_TASK:-4}}"
+export OPENBLAS_NUM_THREADS="$OMP_NUM_THREADS"
+export MKL_NUM_THREADS="$OMP_NUM_THREADS"
+export NUMEXPR_NUM_THREADS="$OMP_NUM_THREADS"
+export PYTHONUNBUFFERED=1
+export TF_CPP_MIN_LOG_LEVEL="${TF_CPP_MIN_LOG_LEVEL:-3}"
+export TRANSFORMERS_NO_TF=1
+export TRANSFORMERS_NO_FLAX=1
+export KERAS_BACKEND="${KERAS_BACKEND:-torch}"
+
+# 4) API keys from .env
 if [ -f ".env" ]; then
     set +u
     set -a
@@ -72,6 +93,10 @@ if [ -f ".env" ]; then
     source .env
     set +a
     set -u
+fi
+
+if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
+    export PERSPECTIVE_API_KEY
 fi
 
 if ! command -v mpiexec >/dev/null 2>&1; then
@@ -93,7 +118,7 @@ NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-}"
 OPENAI_MODEL="${OPENAI_MODEL:-omni-moderation-latest}"
 OPERATORS="${OPERATORS:-all}"
 MAX_VARIANTS="${MAX_VARIANTS:-1}"
-SEED_FILE="${SEED_FILE:-data/prompt_100.csv}"
+SEED_FILE="${SEED_FILE:-data/prompt.csv}"
 SEED="${SEED:-42}"
 STAGNATION_LIMIT="${STAGNATION_LIMIT:-5}"
 
@@ -127,6 +152,11 @@ preflight() {
     if [ ! -f "src/main.py" ]; then
         echo "ERROR: src/main.py not found (run from project root)." >&2
         exit 1
+    fi
+
+    if [ "${SKIP_CLI_CHECK:-0}" != "1" ]; then
+        "$PYTHON" src/main.py --help | grep -E "theta-sim|embedding-model|species-capacity|distance-method|clustering-method|max-total-genomes|evaluator" >/dev/null \
+            || { echo "ERROR: main.py CLI missing expected flags (set SKIP_CLI_CHECK=1 to bypass)." >&2; exit 1; }
     fi
 
     case "$EVALUATOR" in
