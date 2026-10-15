@@ -97,9 +97,17 @@ def write_run_config(outputs_path: Path, config: RunConfig) -> Path:
     return out
 
 
-def speciation_tracker_metadata(speciation_config: SpeciationConfig) -> dict[str, Any]:
-    """Fields mirrored into EvolutionTracker.run_metadata for matrix filtering."""
-    cfg = speciation_config.to_dict()
+def speciation_tracker_metadata(speciation_config: SpeciationConfig | dict[str, Any]) -> dict[str, Any]:
+    """Fields mirrored into EvolutionTracker.run_metadata for matrix filtering.
+
+    Accepts a ``SpeciationConfig`` or a plain dict (MPI tests / injection stubs).
+    """
+    if isinstance(speciation_config, dict):
+        cfg = speciation_config
+    elif hasattr(speciation_config, "to_dict"):
+        cfg = speciation_config.to_dict()
+    else:
+        cfg = {}
     return {
         "clustering_method": cfg.get("clustering_method"),
         "distance_method": cfg.get("distance_method"),

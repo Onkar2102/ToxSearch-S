@@ -513,6 +513,28 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 logger.error("Gen %d: Refusal penalty application failed: %s", 
                             generation_count, e, exc_info=True)
             
+            # Drop failed evaluations before speciation (MPI merge already skips status=error).
+            try:
+                temp_prune = get_outputs_path() / "temp.json"
+                if temp_prune.exists():
+                    with open(temp_prune, "r", encoding="utf-8") as f:
+                        _tmp_pop = json.load(f)
+                    if isinstance(_tmp_pop, list):
+                        _kept = [
+                            g for g in _tmp_pop
+                            if g and str(g.get("status", "complete")).lower() != "error"
+                        ]
+                        _n_err = len(_tmp_pop) - len(_kept)
+                        if _n_err:
+                            with open(temp_prune, "w", encoding="utf-8") as f:
+                                json.dump(_kept, f, indent=2, ensure_ascii=False)
+                            logger.info(
+                                "Gen %d: removed %d error-status genomes from temp.json before speciation",
+                                generation_count, _n_err,
+                            )
+            except Exception as e:
+                logger.warning("Gen %d: failed to prune error genomes from temp.json: %s", generation_count, e)
+
             avg_fitness_before_speciation = 0.0001
             try:
                 with PerformanceLogger(logger, "Gen %d: Calculate avg_fitness before speciation" % generation_count):
@@ -584,13 +606,16 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                         remaining_variants = []
 
                 # IncDBSCAN temp.json is full D_t — only count this generation's rows.
+                def _usable(v):
+                    return bool(v) and str(v.get("status", "complete")).lower() != "error"
+
                 if is_inc_dbscan_mode(clustering_method=clustering_method):
                     cohort = [
                         v for v in remaining_variants
-                        if v and int(v.get("generation", -1) or -1) == int(generation_count)
+                        if _usable(v) and int(v.get("generation", -1) or -1) == int(generation_count)
                     ]
                 else:
-                    cohort = [v for v in remaining_variants if v]
+                    cohort = [v for v in remaining_variants if _usable(v)]
 
                 mutation_count = sum(1 for v in cohort if v.get("variant_type") == "mutation")
                 crossover_count = sum(1 for v in cohort if v.get("variant_type") == "crossover")
@@ -614,7 +639,15 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                 }
                 
                 if cohort:
-                    scores = [(_extract_north_star_score(v, north_star_metric), v.get("id")) for v in cohort]
+                    scores = []
+                    for v in cohort:
+                        try:
+                            scores.append((_extract_north_star_score(v, north_star_metric), v.get("id")))
+                        except ValueError as score_err:
+                            logger.warning(
+                                "Gen %d: skipping unscored genome %s in variant stats: %s",
+                                generation_count, v.get("id"), score_err,
+                            )
                     
                     if scores:
                             max_score_variants = round(max(s[0] for s in scores), 4)

@@ -1712,6 +1712,10 @@ def update_evolution_tracker_with_statistics(
                 "singleton_species_count",
                 gen_entry.get("singleton_species_count", 0),
             ),
+            "residual_dbscan_noise_count": statistics.get(
+                "residual_dbscan_noise_count",
+                gen_entry.get("residual_dbscan_noise_count"),
+            ),
             "population_mode": statistics.get("population_mode", gen_entry.get("population_mode", "leader_follower")),
             "population_max_fitness": round(
                 statistics.get(

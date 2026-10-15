@@ -2626,11 +2626,11 @@ def update_evolution_tracker_with_speciation(
         density_size = int(speciation_result.get("density_size", 0) or 0)
         noise_count = int(speciation_result.get("noise_count", 0) or 0)
         singleton_count = int(speciation_result.get("singleton_species_count", 0) or 0)
-        # Mature clusters only (exclude singleton pool and residual noise).
-        if is_inc and density_size:
-            clustered_count = max(0, density_size - noise_count - singleton_count)
-        else:
-            clustered_count = max(0, density_size - noise_count) if density_size else 0
+        # IncDBSCAN: noise_count already includes singleton pool + residual (-1).
+        # LF: noise_count is the non-elite / archive-adjacent pool.
+        clustered_count = max(0, density_size - noise_count) if density_size else 0
+        if is_inc and speciation_result.get("clustered_count") is not None:
+            clustered_count = int(speciation_result["clustered_count"])
         speciation_summary = {
             "species_count": total_species_count,
             "active_species_count": active_species_count,
@@ -2694,12 +2694,15 @@ def update_evolution_tracker_with_speciation(
                 if is_inc or is_inc_dbscan_mode(outputs_path=str(outputs_path)):
                     def _lab(g):
                         return int(g.get("density_label", g.get("species_id", 0) or 0))
-                    noise_n = sum(1 for g in pop_genomes if _lab(g) == -1)
+                    residual_n = sum(1 for g in pop_genomes if _lab(g) == -1)
                     single_n = sum(1 for g in pop_genomes if _lab(g) == 0)
                     mature_n = sum(1 for g in pop_genomes if _lab(g) > 0)
+                    # Match run_inc_dbscan: noise_count = singleton + residual.
+                    noise_n = single_n + residual_n
                     speciation_summary["density_size"] = total_pop
                     speciation_summary["noise_count"] = noise_n
                     speciation_summary["singleton_species_count"] = single_n
+                    speciation_summary["residual_dbscan_noise_count"] = residual_n
                     speciation_summary["clustered_count"] = mature_n
                     speciation_summary["population_mode"] = "inc_dbscan"
                     # Archive panel unused; keep 0. Noise tracked separately.

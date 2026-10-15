@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from speciation.config import SpeciationConfig
-from utils.run_config import build_run_config, write_run_config
+from utils.run_config import build_run_config, speciation_tracker_metadata, write_run_config
 
 
 def test_write_run_config(tmp_path: Path) -> None:
@@ -32,3 +32,16 @@ def test_write_run_config(tmp_path: Path) -> None:
     assert data["max_total_genomes"] == 150
     assert data["seed"] == 42
     assert data["speciation"]["theta_sim"] == spec.theta_sim
+
+
+def test_speciation_tracker_metadata_accepts_dict_and_config() -> None:
+    from_obj = speciation_tracker_metadata(SpeciationConfig(distance_method="nli"))
+    assert from_obj["distance_method"] == "nli"
+    assert from_obj["clustering_method"] == "leader_follower"
+
+    from_dict = speciation_tracker_metadata(
+        {"clustering_method": "dbscan", "distance_method": "embedding", "custom": True}
+    )
+    assert from_dict["clustering_method"] == "dbscan"
+    assert from_dict["distance_method"] == "embedding"
+    assert from_dict["theta_sim"] is None

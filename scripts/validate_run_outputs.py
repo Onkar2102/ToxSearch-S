@@ -98,12 +98,25 @@ def validate_run(
             clustered = latest.get("clustered_count")
             single = latest.get("singleton_species_count")
             noise = latest.get("noise_count")
-            if dens is not None and clustered is not None and single is not None and noise is not None:
-                if int(dens) != int(clustered) + int(single) + int(noise):
+            residual = latest.get("residual_dbscan_noise_count")
+            # Canonical: noise_count = singleton + residual (all non-mature).
+            # Identity: density == clustered + noise_count.
+            if dens is not None and clustered is not None and noise is not None:
+                if int(dens) != int(clustered) + int(noise):
                     errors.append(
                         f"density identity broken: density={dens} != "
-                        f"clustered({clustered})+singleton({single})+noise({noise})"
+                        f"clustered({clustered})+noise({noise})"
                     )
+            if (
+                single is not None
+                and residual is not None
+                and noise is not None
+                and int(noise) != int(single) + int(residual)
+            ):
+                errors.append(
+                    f"noise decomposition broken: noise={noise} != "
+                    f"singleton({single})+residual({residual})"
+                )
 
     total_pop = 0
     pop_files = ("temp.json",) if is_inc else ("elites.json", "archive.json", "temp.json")
