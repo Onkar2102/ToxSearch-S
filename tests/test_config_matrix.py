@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from speciation.clustering import cluster
-from speciation.clustering.inc_dbscan import seed_from_batch
+from speciation.clustering.inc_dbscan import seed_from_incremental
 from speciation.config import SpeciationConfig
 from speciation.distance import (
     DISTANCE_METHODS,
@@ -142,7 +142,7 @@ def test_leader_follower_all_distance_methods(distance_method: str) -> None:
 def test_inc_dbscan_all_distance_methods(distance_method: str) -> None:
     SpeciesIdGenerator.reset(0)
     genomes = _population()
-    state, species, ev = seed_from_batch(
+    state, species, ev = seed_from_incremental(
         genomes,
         eps=0.15,
         min_samples=2,
@@ -152,4 +152,4 @@ def test_inc_dbscan_all_distance_methods(distance_method: str) -> None:
     )
     assert state is not None
     assert isinstance(species, dict)
-    assert ev.get("event") == "inc_dbscan_init"
+    assert ev.get("event") == "inc_dbscan_seed"

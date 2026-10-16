@@ -8,16 +8,13 @@ from pathlib import Path
 
 import numpy as np
 
-from speciation.clustering.dbscan import dbscan_precomputed
 from speciation.clustering._io import SINGLETON_SPECIES_ID
 from speciation.clustering.inc_dbscan import (
     insert_point,
-    seed_from_batch,
+    seed_from_incremental,
     process_unlabeled,
-    validate_against_batch,
 )
 from speciation.density_memory import NOISE_LABEL, is_labeled, set_density_label
-from speciation.distance import pairwise_embedding_matrix
 from speciation.species import Individual, SpeciesIdGenerator
 from utils.evaluator_profiles import set_active_evaluator, set_active_north_star
 
@@ -71,9 +68,10 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
             _genome(4, d, 0.6),
             _genome(5, noise, 0.1),
         ]
-        state, species, ev = seed_from_batch(
+        state, species, ev = seed_from_incremental(
             genomes, eps=0.05, min_samples=2, current_generation=0, distance_method="embedding"
         )
+        self.assertEqual(ev["event"], "inc_dbscan_seed")
         self.assertEqual(ev["noise"], 0)
         self.assertEqual(ev["noise_before_singleton_promotion"], 1)
         self.assertEqual(ev["singletons"], 1)
@@ -105,7 +103,7 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
             _genome(4, d, 0.6),
             _genome(5, noise, 0.1),
         ]
-        state, species, _ = seed_from_batch(
+        state, species, _ = seed_from_incremental(
             genomes, eps=0.05, min_samples=2, current_generation=0, distance_method="embedding"
         )
         with tempfile.TemporaryDirectory() as td:
@@ -123,8 +121,8 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
             self.assertNotIn("0", payload["species"])
             self.assertNotIn("-1", payload["species"])
 
-    def test_sequential_inserts_match_batch_partition(self):
-        """Insert one-by-one then compare partition to batch DBSCAN (label permutation)."""
+    def test_sequential_insert_far_point_stays_non_mature(self):
+        """Seed with two clusters, then insert a far point into the singleton pool."""
         vecs = [
             _unit([1, 0, 0]),
             _unit([0.98, 0.1, 0]),
@@ -132,21 +130,22 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
             _unit([0.1, 0.98, 0]),
             _unit([0, 0, 1]),
         ]
-        # Seed with first 4, insert 5th as new far point (noise)
         genomes = [_genome(i + 1, vecs[i], fitness=1.0 - 0.1 * i) for i in range(4)]
-        state, species, _ = seed_from_batch(
+        state, species, _ = seed_from_incremental(
             genomes, eps=0.08, min_samples=2, distance_method="embedding"
         )
+        self.assertEqual(len(species), 2)
         g5 = _genome(5, vecs[4], fitness=0.05)
         genomes.append(g5)
         ind = Individual.from_genome(g5)
-        insert_point(state, g5, ind, current_generation=1, species=species)
-        self.assertTrue(validate_against_batch(state))
+        ev = insert_point(state, g5, ind, current_generation=1, species=species)
+        self.assertIn(ev.get("event"), ("inc_dbscan_insert_noise", "inc_dbscan_singleton_pool"))
+        self.assertTrue(int(state.labels[-1]) <= 0)
 
     def test_process_unlabeled_absorb(self):
         a, b = _unit([1, 0]), _unit([0.99, 0.05])
         genomes = [_genome(1, a, 0.9), _genome(2, b, 0.8)]
-        state, species, _ = seed_from_batch(
+        state, species, _ = seed_from_incremental(
             genomes, eps=0.1, min_samples=2, distance_method="embedding"
         )
         # Near cluster member
@@ -168,7 +167,7 @@ class TestIncDBSCANSeedAndNoise(unittest.TestCase):
             _unit([0.75, 0.75, 0]),  # bridge between the two clusters
         ]
         genomes = [_genome(i + 1, vecs[i], fitness=1.0 - 0.1 * i) for i in range(4)]
-        state, species, _ = seed_from_batch(
+        state, species, _ = seed_from_incremental(
             genomes, eps=0.12, min_samples=2, distance_method="embedding"
         )
         self.assertEqual(len(species), 2)
@@ -239,15 +238,6 @@ class TestIncDBSCANParentSelector(unittest.TestCase):
             with open(td / "parents.json") as f:
                 parents = json.load(f)
             self.assertGreaterEqual(len(parents), 2)
-
-
-class TestDBSCANPrecomputedStillWorks(unittest.TestCase):
-    def test_precomputed(self):
-        emb = np.stack([_unit([1, 0]), _unit([0.99, 0.1]), _unit([0, 1])])
-        dist = pairwise_embedding_matrix(emb)
-        labels = dbscan_precomputed(dist, eps=0.05, min_samples=2)
-        self.assertEqual(labels[0], labels[1])
-        self.assertEqual(int(labels[2]), -1)
 
 
 if __name__ == "__main__":

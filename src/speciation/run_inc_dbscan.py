@@ -21,9 +21,8 @@ from .clustering.inc_dbscan import (
     process_unlabeled,
     promote_noise_to_singleton_species,
     save_inc_state,
-    seed_from_batch,
+    seed_from_incremental,
     sync_genomes_from_state,
-    validate_against_batch,
     write_species_and_config,
 )
 from .clustering._io import SINGLETON_SPECIES_ID, load_species_state
@@ -39,7 +38,7 @@ from .distance import method_uses_embeddings
 from .embeddings import compute_and_save_embeddings
 from .events_tracker import EventsTracker
 from .genome_tracker import GenomeTracker
-from .species import Species, SpeciesIdGenerator
+from .species import Species
 from utils.population_io import _extract_north_star_score
 
 from utils import get_custom_logging, get_system_utils
@@ -260,9 +259,8 @@ def process_generation_inc_dbscan(
     )
 
     if do_seed:
-        with PerformanceLogger(logger, "IncDBSCAN: batch seed"):
-            SpeciesIdGenerator.reset(0)
-            inc_state, species, seed_ev = seed_from_batch(
+        with PerformanceLogger(logger, "IncDBSCAN: incremental seed"):
+            inc_state, species, seed_ev = seed_from_incremental(
                 genomes,
                 eps=eps,
                 min_samples=int(cfg.dbscan_min_samples),
@@ -272,10 +270,12 @@ def process_generation_inc_dbscan(
                 w_genotype=cfg.w_genotype,
                 w_phenotype=cfg.w_phenotype,
                 logger=logger,
+                events_tracker=events_tracker,
             )
             speciation_events = int(seed_ev.get("new_species", 0))
+            merge_events = int(seed_ev.get("merge_events", 0))
             genomes_updated = sum(1 for g in genomes if is_labeled(g))
-            events_tracker.log("population", "inc_dbscan_init", seed_ev)
+            events_tracker.log("population", "inc_dbscan_seed", seed_ev)
     else:
         species = load_species_state(state_path, eps, logger=logger)
         # Cursor restored from next_species_id (and extinct/alive IDs as fallback).
@@ -354,14 +354,6 @@ def process_generation_inc_dbscan(
         except Exception as e:
             logger.warning("genome_tracker.save failed: %s", e)
 
-    validate_every = int(getattr(cfg, "inc_dbscan_validate_every", 0) or 0)
-    if validate_every > 0 and current_generation % validate_every == 0:
-        ok = validate_against_batch(inc_state, logger=logger)
-        events_tracker.log(
-            "population",
-            "inc_dbscan_validate_ok" if ok else "inc_dbscan_validate_mismatch",
-            {"generation": current_generation},
-        )
     try:
         events_tracker.save()
     except Exception as e:

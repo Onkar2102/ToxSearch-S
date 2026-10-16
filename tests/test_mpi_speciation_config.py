@@ -75,7 +75,7 @@ def test_broadcast_speciation_config_all_distance_methods(comm, rank, size, logg
 def test_mpi_cluster_dispatch_embedding(comm, rank, size, logger, clustering_method):
     """Each rank clusters a tiny synthetic population (embedding distance)."""
     from speciation.clustering import cluster
-    from speciation.clustering.inc_dbscan import seed_from_batch
+    from speciation.clustering.inc_dbscan import seed_from_incremental
     from speciation.config import SpeciationConfig
     from speciation.species import SpeciesIdGenerator
     from utils.evaluator_profiles import set_active_evaluator, set_active_north_star
@@ -91,12 +91,12 @@ def test_mpi_cluster_dispatch_embedding(comm, rank, size, logger, clustering_met
     ]
 
     if clustering_method == "dbscan":
-        state, species, ev = seed_from_batch(
+        state, species, ev = seed_from_incremental(
             genomes, eps=0.15, min_samples=2, distance_method="embedding"
         )
         assert state is not None
         assert isinstance(species, dict)
-        assert ev.get("event") == "inc_dbscan_init"
+        assert ev.get("event") == "inc_dbscan_seed"
     else:
         with tempfile.TemporaryDirectory() as td:
             td_path = Path(td)

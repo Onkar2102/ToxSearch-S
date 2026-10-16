@@ -1,7 +1,7 @@
 """Grow-only Incremental DBSCAN for ToxSearch-S (CLI ``clustering_method=dbscan``).
 
-Gen-0 seeds via ``dbscan_precomputed``. Later genomes are inserted with local
-neighborhood updates (absorb / new species from noise / merge). No deletions.
+Gen-0 and later generations use the same local insert path (absorb / new species
+from noise / merge). No deletions.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 import numpy as np
 
 from ..density_memory import (
+    DENSITY_LABEL_KEY,
     NOISE_LABEL,
     get_density_label,
     is_labeled,
@@ -24,15 +25,11 @@ from ..distance import (
     method_uses_texts,
     distances_to_query,
     normalize_distance_method,
-    pairwise_distance_matrix,
 )
 from ..species import Individual, Species, SpeciesIdGenerator, generate_species_id
-from .dbscan import dbscan_precomputed
 from ._io import (
     SINGLETON_SPECIES_ID,
     individuals_from_genomes,
-    stack_objectives,
-    stack_unit_embeddings,
     write_species_state,
 )
 
@@ -117,13 +114,7 @@ def _dkw(state: IncDBSCANState, logger) -> dict:
     )
 
 
-def _rebuild_neighbors(state: IncDBSCANState, dist: np.ndarray) -> None:
-    n = dist.shape[0]
-    state.neighbors = [set(int(j) for j in np.flatnonzero(dist[i] <= state.eps)) for i in range(n)]
-    state.is_core = [len(state.neighbors[i]) >= state.min_samples for i in range(n)]
-
-
-def seed_from_batch(
+def seed_from_incremental(
     genomes: List[Dict[str, Any]],
     *,
     eps: float,
@@ -134,79 +125,65 @@ def seed_from_batch(
     w_genotype: float = 0.7,
     w_phenotype: float = 0.3,
     logger=None,
+    events_tracker=None,
 ) -> Tuple[IncDBSCANState, Dict[int, Species], Dict[str, Any]]:
-    """Run batch DBSCAN once; assign mature IDs (>=1); promote noise → shared pool 0."""
+    """Bootstrap empty density memory via sequential inserts (fitness-descending).
+
+    Same insert logic as later generations; clears any prior density labels so
+    Gen-0 (or a missing state file) always rebuilds from scratch.
+    """
     log = logger or get_logger("IncDBSCAN")
     method = normalize_distance_method(distance_method)
-    individuals = individuals_from_genomes(genomes, log, distance_method=method)
-    if not individuals:
-        state = IncDBSCANState(eps=eps, min_samples=min_samples, distance_method=method,
-                               distance_alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype)
-        return state, {}, {"new_species": 0, "noise": 0, "singletons": 0, "n": 0}
-
-    # Align genomes list to individuals (same filter as individuals_from_genomes)
-    id_to_genome = {g.get("id"): g for g in genomes if g.get("id") is not None}
-    ordered_genomes = [id_to_genome[ind.id] for ind in individuals if ind.id in id_to_genome]
-
-    need_emb = method_uses_embeddings(method)
-    need_obj = method_uses_objectives(method)
-    need_txt = method_uses_texts(method)
-    # Keep embeddings when present even for pure nli (optional; used by GDP / hybrid resume).
-    have_all_emb = all(ind.embedding is not None for ind in individuals)
-    emb = stack_unit_embeddings(individuals) if (need_emb or have_all_emb) else None
-    objectives = stack_objectives(individuals) if need_obj else None
-    texts = [ind.prompt or "" for ind in individuals] if need_txt else [""] * len(individuals)
-    dist = pairwise_distance_matrix(
-        method,
-        embeddings=emb,
-        objectives=objectives,
-        texts=texts if need_txt else None,
-        alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype, logger=log,
-    )
-    raw = dbscan_precomputed(dist, eps=eps, min_samples=min_samples)
-
     SpeciesIdGenerator.reset(0)
-    persistent = [NOISE_LABEL] * len(raw)
-    local_to_sid: Dict[int, int] = {}
-    for lab in sorted({int(x) for x in raw if int(x) >= 0}):
-        local_to_sid[lab] = generate_species_id()
-    for i, lab in enumerate(raw):
-        persistent[i] = NOISE_LABEL if int(lab) < 0 else local_to_sid[int(lab)]
+    for g in genomes:
+        g.pop(DENSITY_LABEL_KEY, None)
 
     state = IncDBSCANState(
-        eps=eps, min_samples=min_samples, distance_method=method,
-        distance_alpha=distance_alpha, w_genotype=w_genotype, w_phenotype=w_phenotype,
-        embeddings=emb, objectives=objectives, texts=list(texts),
-        genome_ids=[ind.id for ind in individuals],
-        labels=list(persistent),
-        is_core=[], neighbors=[],
+        eps=eps,
+        min_samples=min_samples,
+        distance_method=method,
+        distance_alpha=distance_alpha,
+        w_genotype=w_genotype,
+        w_phenotype=w_phenotype,
     )
-    _rebuild_neighbors(state, dist)
+    species: Dict[int, Species] = {}
+    if not genomes:
+        return state, species, {
+            "new_species": 0,
+            "noise": 0,
+            "singletons": 0,
+            "n": 0,
+            "event": "inc_dbscan_seed",
+        }
 
-    for g, lab in zip(ordered_genomes, persistent):
-        set_density_label(g, lab)
-
-    # Sync unlabeled genomes that lacked embeddings: leave unlabeled
-    species = _build_species_from_state(state, ordered_genomes, individuals, current_generation, eps, origin="inc_dbscan_init")
-    n_noise_raw = int(sum(1 for x in persistent if x == NOISE_LABEL))
-    # Residual DBSCAN noise → shared singleton pool (species_id=0).
+    insert_evs = process_unlabeled(
+        state,
+        genomes,
+        current_generation=current_generation,
+        species=species,
+        logger=log,
+        events_tracker=events_tracker,
+    )
+    n_noise_raw = int(sum(1 for lab in state.labels if int(lab) == NOISE_LABEL))
     n_singletons = promote_noise_to_singleton_species(
-        state, ordered_genomes, species, current_generation=current_generation, logger=log
+        state, genomes, species, current_generation=current_generation, logger=log,
+        events_tracker=events_tracker,
     )
-    if ordered_genomes is not genomes:
-        n_singletons += promote_noise_to_singleton_species(
-            state, genomes, species, current_generation=current_generation, logger=log
-        )
+    n_new = sum(1 for ev in insert_evs if ev.get("event") == "inc_dbscan_new_species")
+    n_merge = sum(1 for ev in insert_evs if ev.get("event") == "inc_dbscan_merge")
     events = {
         "new_species": len(species),
+        "insert_new_species_events": n_new,
+        "merge_events": n_merge,
         "noise": 0,
         "noise_before_singleton_promotion": n_noise_raw,
         "singletons": n_singletons,
-        "n": len(persistent),
-        "event": "inc_dbscan_init",
+        "n": state.n_points(),
+        "event": "inc_dbscan_seed",
     }
     log.info(
-        "IncDBSCAN seed: n=%d eps=%.4f min_samples=%d → mature_species=%d (noise→pool0: %d)",
+        "IncDBSCAN incremental seed: n=%d eps=%.4f min_samples=%d → "
+        "mature_species=%d (noise→pool0: %d)",
         events["n"], eps, min_samples, events["new_species"], n_singletons,
     )
     return state, species, events
@@ -237,13 +214,11 @@ def _build_species_from_state(
         groups[lab].append(ind)
 
     species: Dict[int, Species] = dict(existing or {})
-    # Drop species no longer present
+    # Drop species no longer present in the density labels
     alive = set(groups)
     for sid in list(species.keys()):
         if sid not in alive:
-            # Keep lineage shell as extinct if we had merges; for init just omit
-            if origin == "inc_dbscan_init":
-                species.pop(sid, None)
+            species.pop(sid, None)
 
     for sid, members in groups.items():
         members = sorted(members, key=lambda x: x.fitness, reverse=True)
@@ -727,60 +702,6 @@ def process_unlabeled(
     species.clear()
     species.update(rebuilt)
     return events
-
-
-def validate_against_batch(state: IncDBSCANState, logger=None) -> bool:
-    """Return True if IncDBSCAN partition matches batch DBSCAN up to label permutation."""
-    log = logger or get_logger("IncDBSCAN")
-    n = state.n_points()
-    if n == 0:
-        return True
-    method = state.distance_method
-    dist = pairwise_distance_matrix(
-        method,
-        embeddings=state.embeddings,
-        objectives=state.objectives if method in ("objective", "embedding+objective") else None,
-        texts=state.texts if "nli" in method else None,
-        alpha=state.distance_alpha,
-        w_genotype=state.w_genotype,
-        w_phenotype=state.w_phenotype,
-        logger=log,
-    )
-    raw = dbscan_precomputed(dist, eps=state.eps, min_samples=state.min_samples)
-
-    def _parts_inc(labels):
-        """Inc labels: >0 mature; 0 pool + -1 noise → anonymous singletons."""
-        groups = defaultdict(set)
-        for i, lab in enumerate(labels):
-            lab = int(lab)
-            if lab <= 0:
-                groups[("singleton", i)].add(i)
-            else:
-                groups[("sid", lab)].add(i)
-        return {frozenset(m) for m in groups.values()}
-
-    def _parts_batch(labels):
-        """Batch DBSCAN local labels: >=0 are clusters (0 is valid); -1 → singleton."""
-        groups = defaultdict(set)
-        for i, lab in enumerate(labels):
-            lab = int(lab)
-            if lab < 0:
-                groups[("singleton", i)].add(i)
-            else:
-                groups[("sid", lab)].add(i)
-        return {frozenset(m) for m in groups.values()}
-
-    inc_p = _parts_inc(state.labels)
-    bat_p = _parts_batch(raw)
-    ok = inc_p == bat_p
-    if not ok:
-        log.warning(
-            "IncDBSCAN validation mismatch: inc_parts=%d batch_parts=%d",
-            len(inc_p), len(bat_p),
-        )
-    else:
-        log.info("IncDBSCAN validation OK (n=%d parts=%d)", n, len(inc_p))
-    return ok
 
 
 def save_inc_state(path, state: IncDBSCANState) -> None:

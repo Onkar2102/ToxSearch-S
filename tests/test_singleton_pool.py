@@ -15,7 +15,7 @@ from speciation.clustering._io import (
     SINGLETON_SPECIES_ID,
     individuals_from_genomes,
 )
-from speciation.clustering.inc_dbscan import seed_from_batch, validate_against_batch
+from speciation.clustering.inc_dbscan import seed_from_incremental
 from speciation.clustering.leader_follower import leader_follower_clustering
 from speciation.distance import set_entailment_scorer, clear_nli_cache
 from speciation.genome_tracker import GenomeTracker
@@ -152,7 +152,7 @@ class TestIncDBSCANSingletonPool:
             _genome(1, _unit([1, 0, 0]), 0.9),
             _genome(2, _unit([0, 1, 0]), 0.8),
         ]
-        state, species, ev = seed_from_batch(
+        state, species, ev = seed_from_incremental(
             genomes, eps=0.01, min_samples=1, distance_method="embedding"
         )
         assert len(species) == 0
@@ -161,23 +161,6 @@ class TestIncDBSCANSingletonPool:
         )
         assert all(int(lab) == SINGLETON_SPECIES_ID for lab in state.labels)
         assert all(int(g["species_id"]) == SINGLETON_SPECIES_ID for g in genomes)
-
-    def test_validate_against_batch_treats_batch_label_zero_as_cluster(self):
-        """Batch DBSCAN local label 0 is a real cluster, not a singleton."""
-        a, b = _unit([1, 0, 0]), _unit([0.99, 0.1, 0])
-        c, d = _unit([0, 1, 0]), _unit([0.1, 0.99, 0])
-        genomes = [
-            _genome(1, a, 0.9),
-            _genome(2, b, 0.8),
-            _genome(3, c, 0.7),
-            _genome(4, d, 0.6),
-        ]
-        state, species, _ = seed_from_batch(
-            genomes, eps=0.08, min_samples=2, distance_method="embedding"
-        )
-        assert len(species) == 2
-        assert validate_against_batch(state) is True
-
 
 class TestRedistributeSingletonAndArchive:
     def test_sid_zero_goes_to_elites_sid_minus_one_to_archive(self, monkeypatch):

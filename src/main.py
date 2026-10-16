@@ -39,7 +39,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
          embedding_model="all-MiniLM-L6-v2", embedding_dim=384, embedding_batch_size=64,
          evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest",
          clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
-         inc_dbscan_validate_every=0,
          distance_method="embedding", distance_alpha=0.7,
          nli_model="cross-encoder/nli-deberta-v3-small"):
     
@@ -185,7 +184,6 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         clustering_method=clustering_method,
         dbscan_eps=dbscan_eps,
         dbscan_min_samples=dbscan_min_samples,
-        inc_dbscan_validate_every=inc_dbscan_validate_every,
         distance_method=distance_method,
         distance_alpha=distance_alpha,
         nli_model=nli_model,

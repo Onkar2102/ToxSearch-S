@@ -37,7 +37,6 @@
 #   DISTANCE_ALPHA=0.7
 #   DBSCAN_EPS=                 defaults to THETA_SIM when empty
 #   DBSCAN_MIN_SAMPLES=2
-#   INC_DBSCAN_VALIDATE_EVERY=0
 #   STAGNATION_LIMIT=5
 #   RG_MODEL / PG_MODEL         GGUF paths (default: Llama-3.2-1B IQ4_XS)
 #   PYTHON=python3
@@ -126,7 +125,6 @@ NLI_MODEL="${NLI_MODEL:-cross-encoder/nli-deberta-v3-small}"
 
 DBSCAN_EPS="${DBSCAN_EPS:-}"
 DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-2}"
-INC_DBSCAN_VALIDATE_EVERY="${INC_DBSCAN_VALIDATE_EVERY:-0}"
 
 RG_MODEL="${RG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf}"
 PG_MODEL="${PG_MODEL:-models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf}"
@@ -269,7 +267,6 @@ run_clustering_method() {
     echo "  distance_method=${DISTANCE_METHOD}  distance_alpha=${DISTANCE_ALPHA}  nli_model=${NLI_MODEL}"
     if [ "$method" = "dbscan" ]; then
         echo "  dbscan_eps=${DBSCAN_EPS:-$THETA_SIM}  dbscan_min_samples=${DBSCAN_MIN_SAMPLES}"
-        echo "  inc_dbscan_validate_every=${INC_DBSCAN_VALIDATE_EVERY}"
     fi
     echo "Output: ${out_dir}"
     echo "=========================================="
@@ -282,7 +279,6 @@ run_clustering_method() {
 
     if [ "$method" = "dbscan" ]; then
         method_args+=(--dbscan-min-samples "$DBSCAN_MIN_SAMPLES")
-        method_args+=(--inc-dbscan-validate-every "$INC_DBSCAN_VALIDATE_EVERY")
         if [ -n "$DBSCAN_EPS" ]; then
             method_args+=(--dbscan-eps "$DBSCAN_EPS")
         else

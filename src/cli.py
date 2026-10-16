@@ -187,12 +187,6 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"DBSCAN min_samples (default: {defaults.dbscan_min_samples})",
     )
     parser.add_argument(
-        "--inc-dbscan-validate-every",
-        type=int,
-        default=getattr(defaults, "inc_dbscan_validate_every", 0),
-        help="Every N gens, check IncDBSCAN vs batch partition (0=off)",
-    )
-    parser.add_argument(
         "--distance",
         "--distance-method",
         dest="distance_method",
@@ -308,7 +302,6 @@ def main(argv: list[str] | None = None) -> int:
             clustering_method=args.clustering_method,
             dbscan_eps=args.dbscan_eps,
             dbscan_min_samples=args.dbscan_min_samples,
-            inc_dbscan_validate_every=args.inc_dbscan_validate_every,
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
             nli_model=args.nli_model,
@@ -430,7 +423,6 @@ def main(argv: list[str] | None = None) -> int:
             clustering_method=args.clustering_method,
             dbscan_eps=args.dbscan_eps,
             dbscan_min_samples=args.dbscan_min_samples,
-            inc_dbscan_validate_every=args.inc_dbscan_validate_every,
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
             nli_model=args.nli_model,

@@ -12,7 +12,6 @@ from ._io import (
     build_noise_entry,
     collect_noise_ids_from_genomes,
 )
-from .dbscan import dbscan_precomputed
 from .leader_follower import leader_follower_clustering
 
 from utils import get_custom_logging
@@ -89,6 +88,5 @@ __all__ = [
     "build_noise_entry",
     "collect_noise_ids_from_genomes",
     "cluster",
-    "dbscan_precomputed",
     "leader_follower_clustering",
 ]

@@ -133,7 +133,6 @@ NLI_MODEL="${NLI_MODEL:-cross-encoder/nli-deberta-v3-small}"
 CLUSTERING_METHOD="${CLUSTERING_METHOD:-leader_follower}"
 DBSCAN_EPS="${DBSCAN_EPS:-}"
 DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-2}"
-INC_DBSCAN_VALIDATE_EVERY="${INC_DBSCAN_VALIDATE_EVERY:-0}"
 
 RG_MODEL="${RG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf}"
 PG_MODEL="${PG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf}"
@@ -256,7 +255,6 @@ if [ "$EVALUATOR" = "openai" ]; then
 fi
 if [ "$CLUSTERING_METHOD" = "dbscan" ]; then
     SRUN_ARGS+=(--dbscan-min-samples "$DBSCAN_MIN_SAMPLES")
-    SRUN_ARGS+=(--inc-dbscan-validate-every "$INC_DBSCAN_VALIDATE_EVERY")
     if [ -n "$DBSCAN_EPS" ]; then
         SRUN_ARGS+=(--dbscan-eps "$DBSCAN_EPS")
     else

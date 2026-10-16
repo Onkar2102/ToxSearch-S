@@ -16,7 +16,6 @@ from .clustering import (
     ARCHIVE_SPECIES_ID,
     SINGLETON_SPECIES_ID,
     cluster,
-    dbscan_precomputed,
     leader_follower_clustering,
 )
 
@@ -52,7 +51,7 @@ __all__ = [
     "extract_phenotype_vector", "phenotype_distance", "phenotype_distances_batch", "PHENOTYPE_SCORE_ORDER",
     
     "leader_follower_clustering",
-    "dbscan_precomputed", "cluster",
+    "cluster",
 
     "ARCHIVE_SPECIES_ID",
     "SINGLETON_SPECIES_ID",
