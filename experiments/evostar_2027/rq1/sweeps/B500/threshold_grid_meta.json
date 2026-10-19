@@ -11,7 +11,7 @@
     "leader_follower",
     "incdbscan"
   ],
-  "t_min": 0.1,
+  "t_min": 0.05,
   "t_max": 0.5,
   "t_step": 0.05,
   "min_samples": [
@@ -19,6 +19,12 @@
   ],
   "lf_semantics": "offline fitness-desc; join nearest leader if d < theta; else new leader",
   "incdbscan_semantics": "true IncDBSCAN seed_from_precomputed_matrix; fitness-desc inserts; eps=t; min_samples as given; same insert logic as live clustering_method=dbscan",
+  "timing": {
+    "wall_seconds": 8.356,
+    "wall_hours": 0.0023,
+    "n_grid_rows": 80,
+    "finished_at": "2026-10-19T14:19:57.022864+00:00"
+  },
   "files": {
     "threshold_grid": "experiments/evostar_2027/rq1/sweeps/B500/threshold_grid.csv",
     "prompt_samples": "experiments/evostar_2027/rq1/sweeps/B500/threshold_grid_prompt_samples.json",

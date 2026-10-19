@@ -1,41 +1,34 @@
 #!/bin/bash -l
 #
 # SLURM / local one-command RQ1 driver (Part 1 + optional Part 2).
-# Mirrors rc_script.sh cluster bootstrap; runs run_rq1_pipeline.py.
+# Resume-safe: NLI checkpoints continue; finished batch grids/pilots are skipped.
 #
-# Sync experiments/evostar_2027/data/ (pool+batches+cheap mats) to the cluster first.
-# Do NOT use SMOKE=1 on the cluster — that is a local wiring check only.
+# Sync experiments/evostar_2027/data/ (pool+batches+cheap mats + NLI checkpoints)
+# to the cluster first. Do NOT use SMOKE=1 on the cluster.
 #
-# Cluster (reuse synced pool/batches; run NLI @ 2000; 1d held)::
-#   STAGES=nli,materialize,p1e sbatch rc_rq1.sh
-#
-# Or default stages: pool/materialize are no-ops if artifacts already exist::
+# ---------------------------------------------------------------------------
+# Finish remaining Part 1 + Part 2 (recommended)
+# ---------------------------------------------------------------------------
 #   sbatch rc_rq1.sh
 #
-# Full-pool NLI after 2000 is done::
-#   NLI_MAX_N=3139 ALLOW_LARGE_N=1 STAGES=nli,materialize,p1e sbatch rc_rq1.sh
+# Explicit::
+#   STAGES=nli,materialize,p1d,p1e,finalize,pilots \
+#   NLI_MAX_N=2000 BATCH_SIZE=256 RUN_P1D=1 \
+#   RQ1_BATCHES=500,1000,2000 T_MIN=0.05 T_MAX=0.5 T_STEP=0.05 \
+#   RUN_PILOTS=1 PILOT_RUN=1 PILOT_SEEDS=0,1,2,3,4 FREEZE_BATCH=500 \
+#   sbatch rc_rq1.sh
 #
-# Enable Part 1d + freeze::
-#   RUN_P1D=1 STAGES=p1d,p1e sbatch rc_rq1.sh
+# Part 1 only (no EA pilots)::
+#   RUN_PILOTS=0 STAGES=nli,materialize,p1d,p1e,finalize sbatch rc_rq1.sh
 #
-# Part 1d⁺ independent threshold grid (0.1 step 0.05) on B500::
-#   PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1d_threshold_grid.py \
-#     --mats-dir experiments/evostar_2027/data/mats/B500 \
-#     --p0 experiments/evostar_2027/data/batches/B500/p0.pkl \
-#     --sweeps-dir experiments/evostar_2027/rq1/sweeps/B500 \
-#     --t-min 0.1 --t-max 0.5 --t-step 0.05
+# Pilots only (Part 1 already done)::
+#   STAGES=p1e,pilots RUN_PILOTS=1 PILOT_RUN=1 sbatch rc_rq1.sh
 #
-# Local B500 test (NLI @ 500; nested prefix of fitness-sorted pool)::
-#   STAGES=nli,materialize NLI_MAX_N=500 bash rc_rq1.sh
-#
-# Local smoke only (minutes; never for campaign results)::
+# Local smoke::
 #   SMOKE=1 bash rc_rq1.sh
-#
-# Optional Part 2 pilots (needs GGUF + Perspective like rc_script.sh)::
-#   RUN_PILOTS=1 PILOT_RUN=1 sbatch rc_rq1.sh
 
 #SBATCH --job-name=rq1_evostar
-#SBATCH --time=01-11:59:00
+#SBATCH --time=02-11:59:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
@@ -64,20 +57,35 @@ echo "[DEBUG] PROJECT_ROOT=$PROJECT_ROOT  pwd=$(pwd)  SLURM_JOB_ID=${SLURM_JOB_I
 SMOKE="${SMOKE:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 SKIP_CLUSTER_ENV="${SKIP_CLUSTER_ENV:-0}"
-# Prefer NLI-focused stages when pool/batches already synced (avoids rebuild work).
+
+# Resume remaining: NLI → attach → grids all batches → freeze → paper → pilots
 if [ -f "experiments/evostar_2027/data/pool/p0_full.pkl" ] \
    && [ -f "experiments/evostar_2027/data/batches/B2000/p0.pkl" ] \
    && [ -f "experiments/evostar_2027/data/mats/B2000/d_E.npy" ]; then
-    DEFAULT_STAGES="nli,materialize,p1e"
+    DEFAULT_STAGES="nli,materialize,p1d,p1e,finalize,pilots"
 else
     DEFAULT_STAGES="all"
 fi
 STAGES="${STAGES:-$DEFAULT_STAGES}"
-NLI_MAX_N="${NLI_MAX_N:-}"
+
+NLI_MAX_N="${NLI_MAX_N:-2000}"
 ALLOW_LARGE_N="${ALLOW_LARGE_N:-0}"
-RUN_P1D="${RUN_P1D:-0}"
-RUN_PILOTS="${RUN_PILOTS:-0}"
-PILOT_RUN="${PILOT_RUN:-0}"
+RUN_P1D="${RUN_P1D:-1}"
+RQ1_BATCHES="${RQ1_BATCHES:-500,1000,2000}"
+REF_RADIUS="${REF_RADIUS:-0.1}"
+T_MIN="${T_MIN:-0.05}"
+T_MAX="${T_MAX:-0.5}"
+T_STEP="${T_STEP:-0.05}"
+FREEZE_BATCH="${FREEZE_BATCH:-500}"
+
+# Part 2: launch remaining shortlist cells (skip already-finished)
+RUN_PILOTS="${RUN_PILOTS:-1}"
+PILOT_RUN="${PILOT_RUN:-1}"
+PILOT_DISTANCES="${PILOT_DISTANCES:-auto}"
+PILOT_CLUSTERINGS="${PILOT_CLUSTERINGS:-auto}"
+# One seed by default (fast). Full design: PILOT_SEEDS=0,1,2,3,4
+PILOT_SEEDS="${PILOT_SEEDS:-0}"
+
 NLI_WHICH="${NLI_WHICH:-both}"
 CHECKPOINT_EVERY="${CHECKPOINT_EVERY:-10}"
 BATCH_SIZE="${BATCH_SIZE:-256}"
@@ -87,7 +95,10 @@ FORCE="${FORCE:-0}"
 if [ "$SMOKE" = "1" ]; then
     echo "WARNING: SMOKE=1 is for local wiring only — do not use for cluster campaign runs." >&2
     NLI_MAX_N="${NLI_MAX_N:-50}"
-    echo "[SMOKE] NLI_MAX_N=${NLI_MAX_N}"
+    RUN_P1D="${RUN_P1D:-0}"
+    RUN_PILOTS="${RUN_PILOTS:-0}"
+    PILOT_RUN="${PILOT_RUN:-0}"
+    echo "[SMOKE] NLI_MAX_N=${NLI_MAX_N} RUN_P1D=${RUN_P1D}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -105,7 +116,6 @@ if [ -n "${SLURM_JOB_ID:-}" ] && [ "$SKIP_CLUSTER_ENV" != "1" ]; then
     export LD_LIBRARY_PATH="$CUDA_ROOT/lib64:$CUDA_ROOT/lib:${LD_LIBRARY_PATH:-}"
     echo "[DEBUG] CUDA_ROOT=$CUDA_ROOT"
 
-    # Prefer cluster venv; fall back to .venv / venv
     if [ -f .spvenv/bin/activate ]; then
         # shellcheck source=/dev/null
         source .spvenv/bin/activate
@@ -149,6 +159,9 @@ export TRANSFORMERS_NO_FLAX=1
 export KERAS_BACKEND="torch"
 export PYTHONPATH="${PROJECT_ROOT}/src:${PROJECT_ROOT}"
 
+export RUN_P1D RQ1_BATCHES REF_RADIUS T_MIN T_MAX T_STEP NLI_MAX_N
+export RUN_PILOTS PILOT_RUN PILOT_DISTANCES PILOT_CLUSTERINGS PILOT_SEEDS FREEZE_BATCH
+
 if [ -f ".env" ]; then
     set +u
     set -a
@@ -176,10 +189,26 @@ fi
 # ---------------------------------------------------------------------------
 ARGV=(python "$PIPELINE" --stages "$STAGES" --nli-which "$NLI_WHICH"
       --checkpoint-every "$CHECKPOINT_EVERY" --batch-size "$BATCH_SIZE"
-      --nli-model "$NLI_MODEL")
+      --nli-model "$NLI_MODEL"
+      --nli-max-n "$NLI_MAX_N"
+      --batches "$RQ1_BATCHES"
+      --reference-radius "$REF_RADIUS"
+      --t-min "$T_MIN" --t-max "$T_MAX" --t-step "$T_STEP"
+      --freeze-batch "$FREEZE_BATCH"
+      --pilot-distances "$PILOT_DISTANCES"
+      --pilot-clusterings "$PILOT_CLUSTERINGS"
+      --pilot-seeds "$PILOT_SEEDS")
 
-if [ -n "$NLI_MAX_N" ]; then
-    ARGV+=(--nli-max-n "$NLI_MAX_N")
+if [ "$RUN_P1D" = "1" ]; then
+    ARGV+=(--run-p1d)
+else
+    ARGV+=(--no-p1d)
+fi
+if [ "$RUN_PILOTS" = "1" ]; then
+    ARGV+=(--run-pilots)
+fi
+if [ "$PILOT_RUN" = "1" ]; then
+    ARGV+=(--pilot-run)
 fi
 if [ "$SMOKE" = "1" ]; then
     ARGV+=(--smoke)
@@ -190,26 +219,20 @@ fi
 if [ "$ALLOW_LARGE_N" = "1" ]; then
     ARGV+=(--allow-large-n)
 fi
-if [ "$RUN_P1D" = "1" ]; then
-    ARGV+=(--run-p1d)
-fi
-if [ "$RUN_PILOTS" = "1" ]; then
-    ARGV+=(--run-pilots)
-fi
-if [ "$PILOT_RUN" = "1" ]; then
-    ARGV+=(--pilot-run)
-fi
 if [ "$FORCE" = "1" ]; then
     ARGV+=(--force)
 fi
 
 echo "=========================================="
-echo "RQ1 pipeline"
+echo "RQ1 pipeline (resume remaining Part 1 + Part 2)"
 echo "  stages=${STAGES}"
-echo "  smoke=${SMOKE} dry_run=${DRY_RUN}"
-echo "  nli_max_n=${NLI_MAX_N:-default} allow_large=${ALLOW_LARGE_N}"
-echo "  run_p1d=${RUN_P1D} run_pilots=${RUN_PILOTS} pilot_run=${PILOT_RUN}"
-echo "  provisional radii: theta_sim=eps=0.1 (until 1d)"
+echo "  smoke=${SMOKE} dry_run=${DRY_RUN} force=${FORCE}"
+echo "  nli_max_n=${NLI_MAX_N} batch_size=${BATCH_SIZE}"
+echo "  run_p1d=${RUN_P1D} batches=${RQ1_BATCHES} t=${T_MIN}:${T_STEP}:${T_MAX}"
+echo "  freeze_batch=${FREEZE_BATCH}"
+echo "  run_pilots=${RUN_PILOTS} pilot_run=${PILOT_RUN}"
+echo "  pilot_distances=${PILOT_DISTANCES} clusterings=${PILOT_CLUSTERINGS}"
+echo "  pilot_seeds=${PILOT_SEEDS}"
 echo "  job=${SLURM_JOB_ID:-local}"
 echo "=========================================="
 

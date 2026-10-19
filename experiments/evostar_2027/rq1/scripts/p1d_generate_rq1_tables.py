@@ -151,6 +151,21 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
     target = float(calib[0]["target_fraction"]) if calib else 0.0
     batch_lower = batch.lower()
     timing_rows = _collect_timing(sweeps_dir, n)
+    t_vals = sorted({round(float(r["threshold"]), 2) for r in grid})
+    n_t = len(t_vals)
+    n_dist = len({r["distance"] for r in grid if r["distance"] in DIST_TEX and r["distance"] != "d_P"})
+    n_methods = len({r["method"] for r in grid})
+    n_runs = len([r for r in grid if r["distance"] in ("d_E", "d_EP", "d_N", "d_negE")])
+    if n_t >= 2:
+        t_grid_tex = (
+            f"$t\\in\\{{{t_vals[0]:.2f},{t_vals[1]:.2f},\\ldots,{t_vals[-1]:.2f}\\}}$ "
+            f"({n_t} values $\\times$ {n_dist} distances $\\times$ {n_methods} methods "
+            f"$=$ {n_runs} runs)"
+        )
+    elif n_t == 1:
+        t_grid_tex = f"$t={t_vals[0]:.2f}$ ({n_runs} runs)"
+    else:
+        t_grid_tex = "threshold grid (empty)"
 
     lines: List[str] = [
         f"% Auto-generated from {sweeps_dir} — do not hand-edit.",
@@ -169,10 +184,7 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
             r"Speciation methods & Leader--Follower (offline) and Incremental DBSCAN "
             r"(\texttt{seed\_from\_precomputed\_matrix}, fitness-descending insert order) \\"
         ),
-        (
-            r"Threshold grid & $t\in\{0.10,0.15,\ldots,0.50\}$ "
-            r"(9 values $\times$ 4 distances $\times$ 2 methods $=$ 72 runs) \\"
-        ),
+        f"Threshold grid & {t_grid_tex} \\\\",
         (
             r"Incremental DBSCAN minimum samples & $\textit{min\_samples}=2$ "
             r"(structure also probed at $m\in\{2,3,5\}$) \\"
@@ -317,6 +329,7 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
                 method in ("leader_follower", "incdbscan")
                 and r["distance"] in ("d_E", "d_EP")
                 and float(r["threshold"]) <= 0.15 + 1e-9
+                and float(r["threshold"]) >= 0.05 - 1e-9
             ):
                 mark = r"$^\dagger$"
             if (

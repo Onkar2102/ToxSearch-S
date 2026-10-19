@@ -1,18 +1,30 @@
 {
-  "started_at": "2026-10-19T01:54:01.460743+00:00",
+  "started_at": "2026-10-19T14:50:52.361502+00:00",
   "stages": [
     "nli",
     "materialize",
     "p1d",
-    "p1e"
+    "p1e",
+    "finalize",
+    "pilots"
   ],
   "smoke": false,
-  "nli_max_n": 500,
+  "nli_max_n": 2000,
   "run_p1d": true,
+  "batches": [
+    500,
+    1000,
+    2000
+  ],
+  "threshold_grid": {
+    "t_min": 0.05,
+    "t_max": 0.5,
+    "t_step": 0.05
+  },
   "provisional_radii": {
     "theta_sim": 0.1,
     "eps": 0.1
   },
   "part1d": "enabled",
-  "finished_at": "2026-10-19T02:33:04.206670+00:00"
+  "finished_at": "2026-10-19T14:50:52.363914+00:00"
 }
