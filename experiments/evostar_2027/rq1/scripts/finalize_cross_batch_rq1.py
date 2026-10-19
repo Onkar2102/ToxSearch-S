@@ -296,6 +296,10 @@ def build_conclusion_md(batches: List[Dict[str, Any]]) -> str:
 
 
 def update_notebook(batches: List[Dict[str, Any]]) -> None:
+    # Notebook lives under notebooks/ (often gitignored) — skip on cluster if absent.
+    if not NB_PATH.is_file():
+        print(f"[SKIP] notebook missing (not fatal): {NB_PATH}")
+        return
     nb = json.loads(NB_PATH.read_text(encoding="utf-8"))
     # Drop prior cross-batch section if present
     new_cells = []
