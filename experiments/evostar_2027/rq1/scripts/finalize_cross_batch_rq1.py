@@ -535,7 +535,8 @@ def rebuild_pdf() -> None:
 
 
 def main() -> int:
-    needed = ["B500", "B1000", "B2000"]
+    # Full RQ1 set: nested prefixes + full pool (B3139).
+    needed = ["B500", "B1000", "B2000", "B3139"]
     for b in needed:
         sw = RQ1 / "sweeps" / b
         for f in ("calibration.csv", "structure.csv", "threshold_grid.csv", "coherence.csv"):
@@ -545,7 +546,7 @@ def main() -> int:
 
     # Ensure per-batch LaTeX tables exist
     gen = ROOT / "experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py"
-    for b, n in [("B1000", 1000), ("B2000", 2000)]:
+    for b, n in [("B1000", 1000), ("B2000", 2000), ("B3139", 3139)]:
         out = NOTES / f"rq1_{b.lower()}_tables.tex"
         subprocess.check_call(
             [

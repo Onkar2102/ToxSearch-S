@@ -23,12 +23,17 @@ Full N=2000 (long; resumes from checkpoint)::
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py \\
       --max-n 2000 --which both --checkpoint-every 10 --batch-size 256
 
-Then slice B1000 from the N=2000 mats (no NLI at N=3139)::
+Then slice B1000 from the N=2000 mats::
 
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1a2_build_batches.py \\
       --skip-cheap-mats --slice-nli-only
 
-Artifacts land under experiments/evostar_2027/rq1/mats/:
+Full pool N=3139 reuses the complete N=2000 prefix (only the new border is computed)::
+
+    PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py \\
+      --max-n 3139 --allow-large-n --which both --checkpoint-every 10 --batch-size 256
+
+Artifacts land under experiments/evostar_2027/data/mats/_flat/ (campaign) or rq1/mats/:
   d_N_{N}.npy + d_N_{N}.progress.json
   d_negE_{N}.npy + d_negE_{N}.progress.json
 """
@@ -98,6 +103,41 @@ def _timing_payload(
     return payload
 
 
+def _pairs_through_row(n: int, row_exclusive: int, seeded_k: int = 0) -> int:
+    """Upper-triangle pairs filled after completing rows ``0 .. row_exclusive-1``.
+
+    With a seeded prefix of size ``seeded_k``, the k×k block counts immediately;
+    rows ``i < seeded_k`` only add the border to columns ``seeded_k .. n-1``.
+    """
+    seeded_k = max(0, min(int(seeded_k), n))
+    prefix = seeded_k * (seeded_k - 1) // 2
+    if row_exclusive <= 0:
+        return prefix
+    done = prefix
+    for i in range(row_exclusive):
+        j0 = seeded_k if i < seeded_k else i + 1
+        if j0 < n:
+            done += n - j0
+    return done
+
+
+def _find_seed_prefix(mats_dir: Path, label: str, n: int) -> Optional[Path]:
+    """Largest complete ``{label}_{k}.npy`` with k < n (prefer 2000, then smaller)."""
+    candidates: list[int] = []
+    for p in mats_dir.glob(f"{label}_*.npy"):
+        stem = p.stem  # d_N_2000
+        try:
+            k = int(stem.rsplit("_", 1)[1])
+        except (IndexError, ValueError):
+            continue
+        if 0 < k < n and _already_complete(p, k):
+            candidates.append(k)
+    if not candidates:
+        return None
+    k = max(candidates)
+    return mats_dir / f"{label}_{k}.npy"
+
+
 def pairwise_nli_checkpointed(
     texts: Sequence[str],
     out_path: Path,
@@ -106,35 +146,88 @@ def pairwise_nli_checkpointed(
     checkpoint_every: int = 10,
     batch_size: int = 256,
     label: str = "d_N",
+    seed_prefix: Optional[Path] = None,
 ) -> np.ndarray:
-    """Fill symmetric matrix row-by-row with resume support."""
+    """Fill symmetric matrix row-by-row with resume + optional smaller-prefix seed."""
     from speciation.distance_metrics.nli import get_nli_stats
 
     n = len(texts)
+    progress_path = out_path.with_suffix(".progress.json")
+    prev = _read_progress(progress_path)
+    seeded_k = int(prev.get("seeded_prefix_n", 0) or 0)
+
     if out_path.is_file():
         dist = np.load(out_path)
         if dist.shape != (n, n):
             raise ValueError(f"Checkpoint shape {dist.shape} != ({n}, {n})")
         print(f"  resumed {label} from {out_path}")
+        start_i = int(prev.get("next_i", 0))
     else:
         dist = np.zeros((n, n), dtype=np.float64)
+        start_i = 0
+        if seed_prefix is not None and seed_prefix.is_file():
+            pref = np.load(seed_prefix)
+            k = int(pref.shape[0])
+            if pref.shape != (k, k):
+                raise ValueError(f"Seed {seed_prefix} is not square: {pref.shape}")
+            if k >= n:
+                raise ValueError(f"Seed size {k} must be < target N={n}")
+            if not _already_complete(seed_prefix, k):
+                raise SystemExit(
+                    f"Refusing incomplete seed {seed_prefix}; "
+                    "finish that N first or omit seeding."
+                )
+            dist[:k, :k] = pref
+            seeded_k = k
+            prefix_pairs = k * (k - 1) // 2
+            print(
+                f"  seeded {label}[:{k},:{k}] from {seed_prefix} "
+                f"({prefix_pairs} pairs cached; border remains)",
+                flush=True,
+            )
+            # Persist seed immediately so a crash still resumes with prefix.
+            np.save(out_path, dist)
+            progress_path.write_text(
+                json.dumps(
+                    _timing_payload(
+                        n=n,
+                        label=label,
+                        next_i=0,
+                        prior_wall=0.0,
+                        session_wall=0.0,
+                        pairs_done=prefix_pairs,
+                        pairs_total=n * (n - 1) // 2,
+                        complete=False,
+                        extra={
+                            "batch_size": int(batch_size),
+                            "seeded_prefix_n": k,
+                            "seeded_from": str(seed_prefix),
+                        },
+                    )
+                ),
+                encoding="utf-8",
+            )
 
-    progress_path = out_path.with_suffix(".progress.json")
+    # Re-read after possible seed write; keep wall/seed/resume consistent.
     prev = _read_progress(progress_path)
-    start_i = int(prev.get("next_i", 0))
-    # Accumulated wall across prior resume sessions (do not reset on resume).
+    if "seeded_prefix_n" in prev:
+        seeded_k = int(prev.get("seeded_prefix_n", 0) or 0)
+    if "next_i" in prev:
+        start_i = int(prev.get("next_i", start_i))
     prior_wall = float(prev.get("wall_seconds", 0.0) or 0.0)
 
     t0 = time.time()
-    pairs_at_start = sum(n - 1 - r for r in range(start_i))
     pairs_total = n * (n - 1) // 2
+    pairs_at_start = _pairs_through_row(n, start_i, seeded_k)
     for i in range(start_i, n):
-        others = [texts[j] for j in range(i + 1, n)]
+        # Seeded prefix: rows i < k only need distances to new columns j >= k.
+        j0 = seeded_k if i < seeded_k else i + 1
+        others = [texts[j] for j in range(j0, n)]
         if others:
             row = row_fn(texts[i], others, batch_size=batch_size)
-            for k, j in enumerate(range(i + 1, n)):
-                dist[i, j] = row[k]
-                dist[j, i] = row[k]
+            for k_off, j in enumerate(range(j0, n)):
+                dist[i, j] = row[k_off]
+                dist[j, i] = row[k_off]
         if (i + 1) % 5 == 0:
             try:
                 import torch
@@ -145,10 +238,17 @@ def pairwise_nli_checkpointed(
         if (i + 1) % checkpoint_every == 0 or i + 1 == n:
             np.save(out_path, dist)
             session_wall = time.time() - t0
-            pairs_done = sum(n - 1 - r for r in range(i + 1))
+            pairs_done = _pairs_through_row(n, i + 1, seeded_k)
             pairs_this = pairs_done - pairs_at_start
             rate = pairs_this / session_wall if session_wall > 0 else 0.0
             eta = (pairs_total - pairs_done) / rate if rate > 0 else float("inf")
+            extra: Dict[str, Any] = {"batch_size": int(batch_size)}
+            if seeded_k:
+                extra["seeded_prefix_n"] = int(seeded_k)
+                if seed_prefix is not None:
+                    extra["seeded_from"] = str(seed_prefix)
+                elif prev.get("seeded_from"):
+                    extra["seeded_from"] = prev["seeded_from"]
             payload = _timing_payload(
                 n=n,
                 label=label,
@@ -158,7 +258,7 @@ def pairwise_nli_checkpointed(
                 pairs_done=pairs_done,
                 pairs_total=pairs_total,
                 complete=(i + 1 == n),
-                extra={"batch_size": int(batch_size)},
+                extra=extra,
             )
             progress_path.write_text(json.dumps(payload), encoding="utf-8")
             stats = get_nli_stats()
@@ -212,6 +312,17 @@ def main() -> int:
     p.add_argument("--batch-size", type=int, default=256)
     p.add_argument("--nli-model", type=str, default=None)
     p.add_argument("--force", action="store_true", help="Ignore complete checkpoints")
+    p.add_argument(
+        "--seed-from",
+        type=Path,
+        default=None,
+        help="Optional smaller complete .npy to copy as top-left prefix (default: auto)",
+    )
+    p.add_argument(
+        "--no-seed",
+        action="store_true",
+        help="Do not auto-seed from a smaller complete matrix (e.g. 2000→3139)",
+    )
     args = p.parse_args()
 
     if args.max_n > 2000 and not args.allow_large_n:
@@ -254,7 +365,7 @@ def main() -> int:
     print(f"NLI mats for N={n} → {mats_dir}")
     print(
         "Resume tip: re-run the same command; incomplete .npy/.progress.json continue "
-        "from next_i. For full analysis index use --max-n 2000."
+        "from next_i. Larger N auto-seeds from a complete smaller prefix (e.g. 2000→3139)."
     )
     timing: Dict[str, Any] = {}
     for label, path, fn in jobs:
@@ -271,6 +382,14 @@ def main() -> int:
                     "source": "progress.json",
                 }
             continue
+        seed: Optional[Path] = None
+        if not args.force and not args.no_seed:
+            if args.seed_from is not None:
+                seed = args.seed_from
+            else:
+                seed = _find_seed_prefix(mats_dir, label, n)
+            if seed is not None:
+                print(f"  will seed {label} from {seed}")
         print(f"  computing {label} → {path}")
         pairwise_nli_checkpointed(
             texts,
@@ -279,6 +398,7 @@ def main() -> int:
             checkpoint_every=args.checkpoint_every,
             batch_size=args.batch_size,
             label=label,
+            seed_prefix=seed,
         )
         prog = _read_progress(path.with_suffix(".progress.json"))
         timing[label] = {

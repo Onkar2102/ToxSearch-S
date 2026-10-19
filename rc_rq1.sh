@@ -30,14 +30,12 @@
 # ---------------------------------------------------------------------------
 # SLURM resource budget (Part 1 only)
 # ---------------------------------------------------------------------------
-#   NLI stays at N=2000 (B3139 has cheap mats only; no full-pool NLI unless
-#     NLI_MAX_N=3139 ALLOW_LARGE_N=1 — multi-day GPU).
-#   Materialize + B1000/B2000/B3139 grids (B500 already done): ~1–4 h
-#   Finalize / freeze: ~1 h
-#   Total ≈ 4–8 h → request 1d (buffer for queue/GPU hiccups).
+#   NLI@2000 done; full-pool NLI@3139 seeds from that prefix (border only).
+#     NLI_MAX_N=3139 ALLOW_LARGE_N=1 → ~0.5–1 d GPU typical.
+#   Then materialize + B3139 grids + finalize; smaller batches skip if done.
 #
 #SBATCH --job-name=rq1_offline
-#SBATCH --time=01-00:00:00
+#SBATCH --time=00-16:00:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
