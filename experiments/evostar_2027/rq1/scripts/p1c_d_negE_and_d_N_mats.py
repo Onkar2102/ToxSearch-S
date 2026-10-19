@@ -38,8 +38,9 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Sequence
+from typing import Any, Callable, Dict, Optional, Sequence
 
 import numpy as np
 
@@ -47,6 +48,54 @@ from experiments.stage_analysis import stage_a
 
 DEFAULT_P0 = Path("experiments/evostar_2027/rq1/p0")
 DEFAULT_MATS = Path("experiments/evostar_2027/rq1/mats")
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _read_progress(progress_path: Path) -> Dict[str, Any]:
+    if not progress_path.is_file():
+        return {}
+    try:
+        return json.loads(progress_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _timing_payload(
+    *,
+    n: int,
+    label: str,
+    next_i: int,
+    prior_wall: float,
+    session_wall: float,
+    pairs_done: int,
+    pairs_total: int,
+    complete: bool = False,
+    extra: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    wall = float(prior_wall) + float(session_wall)
+    rate = (pairs_done / wall) if wall > 0 else 0.0
+    payload: Dict[str, Any] = {
+        "next_i": int(next_i),
+        "n": int(n),
+        "label": label,
+        "wall_seconds": round(wall, 3),
+        "wall_hours": round(wall / 3600.0, 4),
+        "session_wall_seconds": round(float(session_wall), 3),
+        "prior_wall_seconds": round(float(prior_wall), 3),
+        "pairs_done": int(pairs_done),
+        "pairs_total": int(pairs_total),
+        "pairs_per_sec": round(rate, 2),
+        "updated_at": _utc_now(),
+    }
+    if complete:
+        payload["complete"] = True
+        payload["finished_at"] = _utc_now()
+    if extra:
+        payload.update(extra)
+    return payload
 
 
 def pairwise_nli_checkpointed(
@@ -71,12 +120,14 @@ def pairwise_nli_checkpointed(
         dist = np.zeros((n, n), dtype=np.float64)
 
     progress_path = out_path.with_suffix(".progress.json")
-    start_i = 0
-    if progress_path.is_file():
-        start_i = int(json.loads(progress_path.read_text()).get("next_i", 0))
+    prev = _read_progress(progress_path)
+    start_i = int(prev.get("next_i", 0))
+    # Accumulated wall across prior resume sessions (do not reset on resume).
+    prior_wall = float(prev.get("wall_seconds", 0.0) or 0.0)
 
     t0 = time.time()
     pairs_at_start = sum(n - 1 - r for r in range(start_i))
+    pairs_total = n * (n - 1) // 2
     for i in range(start_i, n):
         others = [texts[j] for j in range(i + 1, n)]
         if others:
@@ -93,28 +144,32 @@ def pairwise_nli_checkpointed(
                 pass
         if (i + 1) % checkpoint_every == 0 or i + 1 == n:
             np.save(out_path, dist)
-            progress_path.write_text(
-                json.dumps({"next_i": i + 1, "n": n, "label": label}),
-                encoding="utf-8",
-            )
-            stats = get_nli_stats()
-            elapsed = time.time() - t0
+            session_wall = time.time() - t0
             pairs_done = sum(n - 1 - r for r in range(i + 1))
-            pairs_total = n * (n - 1) // 2
             pairs_this = pairs_done - pairs_at_start
-            rate = pairs_this / elapsed if elapsed > 0 else 0.0
+            rate = pairs_this / session_wall if session_wall > 0 else 0.0
             eta = (pairs_total - pairs_done) / rate if rate > 0 else float("inf")
+            payload = _timing_payload(
+                n=n,
+                label=label,
+                next_i=i + 1,
+                prior_wall=prior_wall,
+                session_wall=session_wall,
+                pairs_done=pairs_done,
+                pairs_total=pairs_total,
+                complete=(i + 1 == n),
+                extra={"batch_size": int(batch_size)},
+            )
+            progress_path.write_text(json.dumps(payload), encoding="utf-8")
+            stats = get_nli_stats()
             print(
                 f"  {label} checkpoint row {i + 1}/{n} pairs={pairs_done}/{pairs_total} "
                 f"({100 * pairs_done / pairs_total:.1f}%) "
                 f"rate={rate:.1f}/s ETA={eta / 3600:.1f}h "
+                f"wall={payload['wall_hours']:.2f}h "
                 f"model_passes={stats.get('model_passes')}",
                 flush=True,
             )
-    progress_path.write_text(
-        json.dumps({"next_i": n, "n": n, "label": label, "complete": True}),
-        encoding="utf-8",
-    )
     return dist
 
 
@@ -201,9 +256,20 @@ def main() -> int:
         "Resume tip: re-run the same command; incomplete .npy/.progress.json continue "
         "from next_i. For full analysis index use --max-n 2000."
     )
+    timing: Dict[str, Any] = {}
     for label, path, fn in jobs:
         if not args.force and _already_complete(path, n):
             print(f"  skip {label}: already complete at {path}")
+            prog = _read_progress(path.with_suffix(".progress.json"))
+            if prog:
+                timing[label] = {
+                    "wall_seconds": prog.get("wall_seconds"),
+                    "wall_hours": prog.get("wall_hours"),
+                    "pairs_per_sec": prog.get("pairs_per_sec"),
+                    "pairs_total": prog.get("pairs_total"),
+                    "complete": True,
+                    "source": "progress.json",
+                }
             continue
         print(f"  computing {label} → {path}")
         pairwise_nli_checkpointed(
@@ -214,15 +280,36 @@ def main() -> int:
             batch_size=args.batch_size,
             label=label,
         )
+        prog = _read_progress(path.with_suffix(".progress.json"))
+        timing[label] = {
+            "wall_seconds": prog.get("wall_seconds"),
+            "wall_hours": prog.get("wall_hours"),
+            "pairs_per_sec": prog.get("pairs_per_sec"),
+            "pairs_total": prog.get("pairs_total"),
+            "complete": bool(prog.get("complete")),
+            "source": "progress.json",
+        }
 
+    total_wall = sum(
+        float(v["wall_seconds"])
+        for v in timing.values()
+        if v.get("wall_seconds") is not None
+    )
     meta = {
         "N": n,
         "p0_analysis": str(pkl),
         "which": args.which,
+        "batch_size": int(args.batch_size),
+        "checkpoint_every": int(args.checkpoint_every),
+        "nli_model": args.nli_model,
         "files": {
             "d_N": str(mats_dir / f"d_N_{n}.npy"),
             "d_negE": str(mats_dir / f"d_negE_{n}.npy"),
         },
+        "timing": timing,
+        "timing_total_wall_seconds": round(total_wall, 3) if timing else None,
+        "timing_total_wall_hours": round(total_wall / 3600.0, 4) if timing else None,
+        "updated_at": _utc_now(),
         "resume_full_n2000": (
             "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/"
             "p1c_d_negE_and_d_N_mats.py --max-n 2000 --which both "
@@ -230,6 +317,10 @@ def main() -> int:
         ),
     }
     (mats_dir / f"nli_mats_meta_{n}.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    print(
+        f"Wrote {mats_dir / f'nli_mats_meta_{n}.json'} "
+        f"(total NLI wall ≈ {meta.get('timing_total_wall_hours')} h)"
+    )
     return 0
 
 

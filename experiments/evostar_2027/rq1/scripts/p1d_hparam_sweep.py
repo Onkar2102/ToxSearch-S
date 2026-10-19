@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -126,6 +128,7 @@ def main() -> int:
     mats_dir = args.mats_dir
     if not mats_dir.is_dir():
         raise SystemExit(f"Missing mats dir {mats_dir}; run p1b first")
+    t0 = time.time()
 
     loaded: Dict[str, Tuple[np.ndarray, int, Path]] = {}
     for stem in ("d_E", "d_P", "d_EP", "d_N", "d_negE"):
@@ -211,6 +214,7 @@ def main() -> int:
         if len(row) and float(row.iloc[0]["noise_frac"]) > 0.95:
             notes.append(f"{d}: high noise at min_samples=2; consider 2 still (default) for pilots")
 
+    wall_s = time.time() - t0
     proposal = {
         "shortlist_plan_names": shortlist,
         "shortlist_cli_methods": [PLAN_TO_CLI[d] for d in shortlist],
@@ -232,6 +236,11 @@ def main() -> int:
             if r["distance"] in shortlist
         },
         "notes": notes,
+        "timing": {
+            "wall_seconds": round(wall_s, 3),
+            "wall_hours": round(wall_s / 3600.0, 4),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+        },
         "files": {"calibration": str(calib_path), "structure": str(struct_path)},
     }
     prop_path = sweeps_dir / "shortlist_proposal.json"

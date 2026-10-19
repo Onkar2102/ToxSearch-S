@@ -1,0 +1,21 @@
+{
+  "N": 2000,
+  "which": "both",
+  "files": {
+    "d_N": "experiments/evostar_2027/data/mats/_flat/d_N_2000.npy",
+    "d_negE": "experiments/evostar_2027/data/mats/_flat/d_negE_2000.npy"
+  },
+  "timing": {
+    "d_N": {
+      "wall_seconds": 15754.554,
+      "wall_hours": 4.3763,
+      "pairs_per_sec": 126.88,
+      "pairs_total": 1999000,
+      "complete": true,
+      "source": "progress.json"
+    }
+  },
+  "timing_total_wall_seconds": 15754.554,
+  "timing_total_wall_hours": 4.3763,
+  "updated_at": "2026-10-19T14:04:01.400962+00:00"
+}

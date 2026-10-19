@@ -1,1 +1,17 @@
-{"next_i": 20, "n": 2000, "label": "d_N"}
+{
+  "next_i": 2000,
+  "n": 2000,
+  "label": "d_N",
+  "complete": true,
+  "wall_seconds": 15754.554,
+  "wall_hours": 4.3763,
+  "session_wall_seconds": 15441.0,
+  "prior_wall_seconds": 313.554,
+  "pairs_done": 1999000,
+  "pairs_total": 1999000,
+  "pairs_per_sec": 126.88,
+  "batch_size": 32,
+  "finished_at": "2026-10-19T13:14:41+00:00",
+  "updated_at": "2026-10-19T14:04:01.398879+00:00",
+  "timing_note": "Backfilled from p1c_n2000_resume.log timestamps + rate; includes small pre-resume row0-20 estimate."
+}

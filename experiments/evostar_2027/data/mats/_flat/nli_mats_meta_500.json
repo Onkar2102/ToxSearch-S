@@ -1,10 +1,29 @@
 {
   "N": 500,
-  "p0_analysis": "experiments/evostar_2027/data/pool/p0_full.pkl",
   "which": "both",
   "files": {
     "d_N": "experiments/evostar_2027/data/mats/_flat/d_N_500.npy",
     "d_negE": "experiments/evostar_2027/data/mats/_flat/d_negE_500.npy"
   },
-  "resume_full_n2000": "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --max-n 2000 --which both --checkpoint-every 10 --batch-size 256"
+  "timing": {
+    "d_N": {
+      "wall_seconds": 1534.44,
+      "wall_hours": 0.4262,
+      "pairs_per_sec": 81.3,
+      "pairs_total": 124750,
+      "complete": true,
+      "source": "progress.json"
+    },
+    "d_negE": {
+      "wall_seconds": 1499.399,
+      "wall_hours": 0.4165,
+      "pairs_per_sec": 83.2,
+      "pairs_total": 124750,
+      "complete": true,
+      "source": "progress.json"
+    }
+  },
+  "timing_total_wall_seconds": 3033.839,
+  "timing_total_wall_hours": 0.8427,
+  "updated_at": "2026-10-19T14:04:01.400303+00:00"
 }

@@ -1,0 +1,44 @@
+{
+  "incdbscan_semantics": "seed_from_precomputed_matrix fitness-desc",
+  "recommended": [
+    {
+      "method": "leader_follower",
+      "distance": "d_E",
+      "t": 0.1,
+      "why": "best clean LF; max=66"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "t": 0.1,
+      "why": "usable IncDBSCAN embedding"
+    },
+    {
+      "method": "leader_follower",
+      "distance": "d_EP",
+      "t": 0.1,
+      "why": "near-redundant with d_E"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "t": 0.1,
+      "why": "usable IncDBSCAN EP"
+    }
+  ],
+  "not_recommended": [
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "t": 0.1,
+      "why": "max=352 collapse"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "t": 0.1,
+      "why": "high sep but max=298 topic mix"
+    }
+  ],
+  "working_band": "t\u22480.10\u20130.15 on d_E/d_EP for LF and IncDBSCAN"
+}

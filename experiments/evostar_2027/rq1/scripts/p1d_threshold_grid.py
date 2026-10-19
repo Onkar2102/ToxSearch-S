@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
@@ -246,6 +248,7 @@ def main() -> int:
     grid = _threshold_grid(args.t_min, args.t_max, args.t_step)
     print(f"threshold grid ({len(grid)}): {grid}")
     print("methods: leader_follower, incdbscan")
+    t_grid0 = time.time()
 
     prompts: Optional[List[str]] = None
     fitness_list: Optional[List[float]] = None
@@ -414,6 +417,7 @@ def main() -> int:
     )
     print(f"Wrote {index_path} ({len(species_index)} species configs)")
 
+    wall_s = time.time() - t_grid0
     meta = {
         "mats_dir": str(args.mats_dir),
         "p0": str(args.p0) if args.p0 else None,
@@ -428,6 +432,12 @@ def main() -> int:
             "true IncDBSCAN seed_from_precomputed_matrix; fitness-desc inserts; "
             "eps=t; min_samples as given; same insert logic as live clustering_method=dbscan"
         ),
+        "timing": {
+            "wall_seconds": round(wall_s, 3),
+            "wall_hours": round(wall_s / 3600.0, 4),
+            "n_grid_rows": len(rows),
+            "finished_at": datetime.now(timezone.utc).isoformat(),
+        },
         "files": {
             "threshold_grid": str(grid_path),
             "prompt_samples": str(samples_path),
@@ -437,7 +447,7 @@ def main() -> int:
     }
     meta_path = sweeps_dir / "threshold_grid_meta.json"
     meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    print(f"Wrote {meta_path}")
+    print(f"Wrote {meta_path} (grid wall={wall_s:.1f}s)")
     return 0
 
 

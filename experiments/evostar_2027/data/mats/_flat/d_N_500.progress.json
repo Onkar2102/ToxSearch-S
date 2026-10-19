@@ -1,1 +1,14 @@
-{"next_i": 500, "n": 500, "label": "d_N", "complete": true}
+{
+  "next_i": 500,
+  "n": 500,
+  "label": "d_N",
+  "complete": true,
+  "wall_seconds": 1534.44,
+  "wall_hours": 0.4262,
+  "pairs_done": 124750,
+  "pairs_total": 124750,
+  "pairs_per_sec": 81.3,
+  "batch_size": 256,
+  "updated_at": "2026-10-19T14:04:01.399337+00:00",
+  "timing_note": "Backfilled from p1c_b500_e2e.log reported pairs/s."
+}

@@ -1,0 +1,6 @@
+[05:05:28] === post-NLI orchestrator starting (pid 24875) ===
+[05:05:28] Waiting for d_N_2000 + d_negE_2000 complete…
+[05:05:28]   still waiting… d_N next_i=40  d_negE next_i=?
+[05:26:11] === post-NLI orchestrator starting (pid 55949) ===
+[05:26:11] Waiting for d_N_2000 + d_negE_2000 complete…
+[05:26:11]   still waiting… d_N next_i=110  d_negE next_i=?
