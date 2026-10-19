@@ -250,8 +250,10 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
         r"\midrule",
     ]
     for r in calib:
+        # Escape underscores outside the f-string (Python 3.11 forbids \\ in {...}).
+        cli_tex = str(r["cli_method"]).replace("_", r"\_")
         lines.append(
-            f"{DIST_TEX[r['distance']]} & {str(r['cli_method']).replace('_', '\\_')} & {r['N']} & "
+            f"{DIST_TEX[r['distance']]} & {cli_tex} & {r['N']} & "
             f"{_fmt_f(r['target_fraction'], 3)} & {_fmt_f(r['reference_radius'], 2)} & "
             f"{_fmt_f(r['theta_sim'], 4)} & {_fmt_f(r['eps'], 4)} \\\\"
         )
