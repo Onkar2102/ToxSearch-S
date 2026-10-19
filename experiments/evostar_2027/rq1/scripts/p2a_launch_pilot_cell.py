@@ -9,7 +9,7 @@ Dry-run (default; verifies wiring without a full EA)::
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p2a_launch_pilot_cell.py \\
       --distance embedding --clustering leader_follower --dry-run
 
-Real launch (N_max=250)::
+Real launch (N_max from frozen_config, default 150)::
 
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p2a_launch_pilot_cell.py \\
       --distance embedding --clustering leader_follower --run
@@ -50,7 +50,7 @@ def build_cli_argv(
     theta = float(dist_cfg["theta_sim"])
     eps = float(dist_cfg.get("dbscan_eps") or dist_cfg["eps"])
     min_samples = int(dist_cfg.get("dbscan_min_samples") or dist_cfg["min_samples"])
-    max_genomes = int(frozen.get("max_total_genomes", 250))
+    max_genomes = int(frozen.get("max_total_genomes", 150))
     seed_file = str(frozen.get("seed_file", "data/prompt.csv"))
 
     argv = [
@@ -139,7 +139,7 @@ def main() -> int:
         "clustering_method": args.clustering,
         "seed": args.seed,
         "seed_file": str(seed_file),
-        "max_total_genomes": frozen.get("max_total_genomes", 250),
+        "max_total_genomes": frozen.get("max_total_genomes", 150),
         "frozen_config": str(args.frozen_config),
         "distance_hparams": frozen["distances"][args.distance],
         "command": cmd,

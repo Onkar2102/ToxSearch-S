@@ -422,6 +422,8 @@ def stage_p1e(args: argparse.Namespace) -> None:
             "--sweeps-dir",
             str(prop.parent),
             "--force",
+            "--max-total-genomes",
+            str(int(args.pilot_max_genomes)),
         ]
         _run(cmd, dry_run=args.dry_run)
         return
@@ -622,7 +624,12 @@ def main() -> int:
         default=os.environ.get("PILOT_SEEDS", "0"),
         help="Comma seeds for Part 2 grid (default: 0). Env: PILOT_SEEDS",
     )
-    p.add_argument("--pilot-max-genomes", type=int, default=250)
+    p.add_argument(
+        "--pilot-max-genomes",
+        type=int,
+        default=int(os.environ.get("PILOT_MAX_GENOMES", "150")),
+        help="Part 2 EA --max-total-genomes (default 150). Env: PILOT_MAX_GENOMES",
+    )
     p.add_argument(
         "--freeze-batch",
         type=int,

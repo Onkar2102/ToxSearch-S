@@ -26,6 +26,12 @@ def main() -> int:
         action="store_true",
         help="Overwrite existing frozen_config.json",
     )
+    p.add_argument(
+        "--max-total-genomes",
+        type=int,
+        default=150,
+        help="Pilot EA budget written into frozen_config (default 150)",
+    )
     args = p.parse_args()
 
     prop_path = args.sweeps_dir / "shortlist_proposal.json"
@@ -54,7 +60,7 @@ def main() -> int:
         "frozen_at": datetime.now(timezone.utc).isoformat(),
         "source": "experiments/evostar_2027/rq1 Part 1",
         "seed_file": "data/prompt.csv",
-        "max_total_genomes": 250,
+        "max_total_genomes": int(args.max_total_genomes),
         "shortlist_cli_methods": list(proposal["shortlist_cli_methods"]),
         "clustering_methods": list(proposal["clustering_to_pilot"]),
         "temporal_knobs": "code_defaults_untouched",

@@ -3,7 +3,7 @@
   "frozen_at": "2026-10-19T02:33:04.202688+00:00",
   "source": "experiments/evostar_2027/rq1 Part 1",
   "seed_file": "data/prompt.csv",
-  "max_total_genomes": 250,
+  "max_total_genomes": 150,
   "shortlist_cli_methods": [
     "embedding",
     "embedding+objective",

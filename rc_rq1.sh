@@ -26,15 +26,25 @@
 #
 # Local smoke::
 #   SMOKE=1 bash rc_rq1.sh
-
+#
+# ---------------------------------------------------------------------------
+# SLURM resource budget (default job: resume NLI + grids + 8 pilots @ seed 0)
+# ---------------------------------------------------------------------------
+#   Remaining NLI (d_negE @ N=2000, ~1.67M pairs left): ~0.5–3 h on A100 (bs=256)
+#   Materialize + B1000/B2000 LF+IncDBSCAN grids (B500 skipped if done): ~0.5–2 h
+#   Part 2 pilots: 4 distances × 2 clusterings × 1 seed = 8 cells, N_max=150
+#     (rc_script ~14 h for N_max=1000 → ~2–3 h/cell for N_max=150) → ~16–24 h
+#   Finalize / freeze / buffer: ~3–6 h
+#   Total ≈ 20–35 h → request 1d 18h. Raise --time if PILOT_SEEDS=0,1,2,3,4 (40 cells).
+#
 #SBATCH --job-name=rq1_evostar
-#SBATCH --time=02-11:59:00
+#SBATCH --time=01-18:00:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=16g
+#SBATCH --cpus-per-task=1
+#SBATCH --mem-per-cpu=32g
 #SBATCH --account=evostar
 #SBATCH --partition=tier3
 #SBATCH --mail-user=slack:@U05PK8K2HEE
@@ -85,6 +95,7 @@ PILOT_DISTANCES="${PILOT_DISTANCES:-auto}"
 PILOT_CLUSTERINGS="${PILOT_CLUSTERINGS:-auto}"
 # One seed by default (fast). Full design: PILOT_SEEDS=0,1,2,3,4
 PILOT_SEEDS="${PILOT_SEEDS:-0}"
+PILOT_MAX_GENOMES="${PILOT_MAX_GENOMES:-150}"
 
 NLI_WHICH="${NLI_WHICH:-both}"
 CHECKPOINT_EVERY="${CHECKPOINT_EVERY:-10}"
@@ -160,7 +171,7 @@ export KERAS_BACKEND="torch"
 export PYTHONPATH="${PROJECT_ROOT}/src:${PROJECT_ROOT}"
 
 export RUN_P1D RQ1_BATCHES REF_RADIUS T_MIN T_MAX T_STEP NLI_MAX_N
-export RUN_PILOTS PILOT_RUN PILOT_DISTANCES PILOT_CLUSTERINGS PILOT_SEEDS FREEZE_BATCH
+export RUN_PILOTS PILOT_RUN PILOT_DISTANCES PILOT_CLUSTERINGS PILOT_SEEDS PILOT_MAX_GENOMES FREEZE_BATCH
 
 if [ -f ".env" ]; then
     set +u
@@ -197,7 +208,8 @@ ARGV=(python "$PIPELINE" --stages "$STAGES" --nli-which "$NLI_WHICH"
       --freeze-batch "$FREEZE_BATCH"
       --pilot-distances "$PILOT_DISTANCES"
       --pilot-clusterings "$PILOT_CLUSTERINGS"
-      --pilot-seeds "$PILOT_SEEDS")
+      --pilot-seeds "$PILOT_SEEDS"
+      --pilot-max-genomes "$PILOT_MAX_GENOMES")
 
 if [ "$RUN_P1D" = "1" ]; then
     ARGV+=(--run-p1d)
@@ -232,7 +244,7 @@ echo "  run_p1d=${RUN_P1D} batches=${RQ1_BATCHES} t=${T_MIN}:${T_STEP}:${T_MAX}"
 echo "  freeze_batch=${FREEZE_BATCH}"
 echo "  run_pilots=${RUN_PILOTS} pilot_run=${PILOT_RUN}"
 echo "  pilot_distances=${PILOT_DISTANCES} clusterings=${PILOT_CLUSTERINGS}"
-echo "  pilot_seeds=${PILOT_SEEDS}"
+echo "  pilot_seeds=${PILOT_SEEDS} pilot_max_genomes=${PILOT_MAX_GENOMES}"
 echo "  job=${SLURM_JOB_ID:-local}"
 echo "=========================================="
 
