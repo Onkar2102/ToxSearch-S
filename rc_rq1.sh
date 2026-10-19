@@ -14,7 +14,7 @@
 # Explicit Part 1::
 #   STAGES=nli,materialize,p1d,p1e,finalize RUN_PILOTS=0 \
 #   NLI_MAX_N=2000 BATCH_SIZE=256 RUN_P1D=1 \
-#   RQ1_BATCHES=500,1000,2000 T_MIN=0.05 T_MAX=0.5 T_STEP=0.05 \
+#   RQ1_BATCHES=500,1000,2000,3139 T_MIN=0.05 T_MAX=0.5 T_STEP=0.05 \
 #   FREEZE_BATCH=500 \
 #   FREEZE_CLI_METHODS=embedding,nli_entail \
 #   FREEZE_CLUSTERING_METHODS=leader_follower,dbscan \
@@ -30,8 +30,9 @@
 # ---------------------------------------------------------------------------
 # SLURM resource budget (Part 1 only)
 # ---------------------------------------------------------------------------
-#   Remaining NLI (d_negE @ N=2000, next_i≈170): ~0.5–3 h on A100 (bs=256)
-#   Materialize + B1000/B2000 grids (B500 already done): ~0.5–2 h
+#   NLI stays at N=2000 (B3139 has cheap mats only; no full-pool NLI unless
+#     NLI_MAX_N=3139 ALLOW_LARGE_N=1 — multi-day GPU).
+#   Materialize + B1000/B2000/B3139 grids (B500 already done): ~1–4 h
 #   Finalize / freeze: ~1 h
 #   Total ≈ 4–8 h → request 1d (buffer for queue/GPU hiccups).
 #
@@ -79,7 +80,8 @@ STAGES="${STAGES:-$DEFAULT_STAGES}"
 NLI_MAX_N="${NLI_MAX_N:-2000}"
 ALLOW_LARGE_N="${ALLOW_LARGE_N:-0}"
 RUN_P1D="${RUN_P1D:-1}"
-RQ1_BATCHES="${RQ1_BATCHES:-500,1000,2000}"
+# Nested prefixes of p0_full; 3139 = full pool (cheap d_E/d_P/d_EP; NLI only ≤2000)
+RQ1_BATCHES="${RQ1_BATCHES:-500,1000,2000,3139}"
 REF_RADIUS="${REF_RADIUS:-0.1}"
 T_MIN="${T_MIN:-0.05}"
 T_MAX="${T_MAX:-0.5}"

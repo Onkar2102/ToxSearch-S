@@ -18,12 +18,12 @@ Examples::
     # Local smoke (cheap + NLI@50, no 1d, no EA)
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py --smoke
 
-    # Cluster campaign: NLI@2000, attach, full grids for B500/B1000/B2000
+    # Cluster campaign: NLI@2000, attach, grids for B500/B1000/B2000/B3139
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py \\
       --stages nli,materialize,p1d --nli-max-n 2000 --run-p1d \\
-      --batches 500,1000,2000 --t-min 0.05 --t-max 0.5 --t-step 0.05
+      --batches 500,1000,2000,3139 --t-min 0.05 --t-max 0.5 --t-step 0.05
 
-    # After NLI@2000, full-pool NLI
+    # Optional: after NLI@2000, full-pool NLI (expensive; B3139 NLI mats)
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py \\
       --stages nli,materialize --nli-max-n 3139 --allow-large-n
 """
@@ -46,7 +46,7 @@ RQ1 = Path("experiments/evostar_2027/rq1")
 NOTES = Path("notes/LaTeX2e+Proceedings+Templates+download")
 PROVISIONAL_THETA = 0.1
 PROVISIONAL_EPS = 0.1
-DEFAULT_BATCHES = (500, 1000, 2000)
+DEFAULT_BATCHES = (500, 1000, 2000, 3139)  # 3139 = full p0 pool
 
 ALL_STAGES = (
     "pool",
