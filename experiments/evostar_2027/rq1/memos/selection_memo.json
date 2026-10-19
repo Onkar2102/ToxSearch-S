@@ -1,0 +1,28 @@
+{
+  "rule": [
+    "higher best_fitness",
+    "higher top10_mean_fitness",
+    "higher mature_species_count (non-degenerate)",
+    "lower NLI/wall cost on ties"
+  ],
+  "n_cells_seen": 1,
+  "n_finished": 0,
+  "cells": [
+    {
+      "cell_id": "embedding__leader_follower__seed0",
+      "distance_method": "embedding",
+      "clustering_method": "leader_follower",
+      "seed": 0,
+      "mode": "dry-run",
+      "best_fitness": NaN,
+      "top10_mean_fitness": NaN,
+      "n_elites": 0,
+      "mature_species_count": 0,
+      "wall_seconds": null,
+      "nli_model_passes": null,
+      "finished": false
+    }
+  ],
+  "selected": null,
+  "status": "no_finished_cells"
+}

@@ -1,0 +1,41 @@
+{
+  "cell_id": "embedding__leader_follower__seed0",
+  "distance_method": "embedding",
+  "clustering_method": "leader_follower",
+  "seed": 0,
+  "seed_file": "data/prompt.csv",
+  "max_total_genomes": 250,
+  "frozen_config": "experiments/evostar_2027/rq1/frozen_config.json",
+  "distance_hparams": {
+    "plan_name": "d_E",
+    "theta_sim": 0.2491595995024483,
+    "eps": 0.24915959950244826,
+    "dbscan_eps": 0.24915959950244826,
+    "min_samples": 2,
+    "dbscan_min_samples": 2,
+    "N_calibrated_on": 2000,
+    "smoke_sized_calibration": false
+  },
+  "command": "/Users/onkars/Documents/Projects/ToxSearch-S/venv/bin/python -m cli --seed-file data/prompt.csv --seed 0 --max-total-genomes 250 --distance embedding --clustering-method leader_follower --theta-sim 0.2491595995024483 --output-dir experiments/evostar_2027/rq1/pilots/embedding__leader_follower__seed0/run",
+  "argv": [
+    "/Users/onkars/Documents/Projects/ToxSearch-S/venv/bin/python",
+    "-m",
+    "cli",
+    "--seed-file",
+    "data/prompt.csv",
+    "--seed",
+    "0",
+    "--max-total-genomes",
+    "250",
+    "--distance",
+    "embedding",
+    "--clustering-method",
+    "leader_follower",
+    "--theta-sim",
+    "0.2491595995024483",
+    "--output-dir",
+    "experiments/evostar_2027/rq1/pilots/embedding__leader_follower__seed0/run"
+  ],
+  "created_at": "2026-10-19T00:52:07.763776+00:00",
+  "mode": "dry-run"
+}

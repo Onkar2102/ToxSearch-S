@@ -214,7 +214,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=defaults.nli_model,
         help=(
-            "HuggingFace MNLI model for --distance nli / nli+embedding "
+            "HuggingFace MNLI model for --distance nli / nli_entail / nli+embedding "
             f"(default: {defaults.nli_model})"
         ),
     )

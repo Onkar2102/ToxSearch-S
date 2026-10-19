@@ -1,0 +1,12 @@
+{
+  "N": 2000,
+  "p0_analysis": "experiments/evostar_2027/rq1/p0/p0_analysis_2000.pkl",
+  "index_json": "experiments/evostar_2027/rq1/p0/index.json",
+  "files": {
+    "d_E": "experiments/evostar_2027/rq1/mats/d_E_2000.npy",
+    "d_P": "experiments/evostar_2027/rq1/mats/d_P_2000.npy",
+    "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_2000.npy"
+  },
+  "w_genotype": 0.7,
+  "w_phenotype": 0.3
+}

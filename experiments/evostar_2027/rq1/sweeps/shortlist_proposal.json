@@ -1,0 +1,66 @@
+{
+  "shortlist_plan_names": [
+    "d_E",
+    "d_EP",
+    "d_N",
+    "d_negE"
+  ],
+  "shortlist_cli_methods": [
+    "embedding",
+    "embedding+objective",
+    "nli",
+    "nli_entail"
+  ],
+  "clustering_to_pilot": [
+    "leader_follower",
+    "dbscan"
+  ],
+  "locked_min_samples": 2,
+  "reference_radius_d_E": 0.25,
+  "target_neighbor_fraction": 0.986,
+  "per_distance": {
+    "d_E": {
+      "cli_method": "embedding",
+      "theta_sim": 0.2491595995024483,
+      "eps": 0.24915959950244826,
+      "dbscan_eps": 0.24915959950244826,
+      "min_samples": 2,
+      "N_used": 2000,
+      "smoke_sized": false
+    },
+    "d_EP": {
+      "cli_method": "embedding+objective",
+      "theta_sim": 0.18826533337021328,
+      "eps": 0.18826533337021326,
+      "dbscan_eps": 0.18826533337021326,
+      "min_samples": 2,
+      "N_used": 2000,
+      "smoke_sized": false
+    },
+    "d_N": {
+      "cli_method": "nli",
+      "theta_sim": 0.27397620677948004,
+      "eps": 0.27397620677948,
+      "dbscan_eps": 0.27397620677948,
+      "min_samples": 2,
+      "N_used": 50,
+      "smoke_sized": true
+    },
+    "d_negE": {
+      "cli_method": "nli_entail",
+      "theta_sim": 0.5064977407455445,
+      "eps": 0.5064977407455444,
+      "dbscan_eps": 0.5064977407455444,
+      "min_samples": 2,
+      "N_used": 50,
+      "smoke_sized": true
+    }
+  },
+  "notes": [
+    "Mat sizes differ {'d_E': 2000, 'd_P': 2000, 'd_EP': 2000, 'd_N': 50, 'd_negE': 50}; calibration uses each mat at its own N. Shortlist prefers distances with N matching d_E when available."
+  ],
+  "files": {
+    "calibration": "experiments/evostar_2027/rq1/sweeps/calibration.csv",
+    "structure": "experiments/evostar_2027/rq1/sweeps/structure.csv"
+  }
+}

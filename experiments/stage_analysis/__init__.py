@@ -8,6 +8,8 @@ Modules:
     run_all      Stage C/D table CLI
     run_stage_a  Stage A build P0 + intrinsic tables CLI
     run_stage_d  Stage D top-k cross-oracle rescoring CLI
+    build_heldout_batches  RQ1 held-out P0 prefixes from a run
+    run_rq1_batches        RQ1 Stage A over nested batch sizes
 
 Run from project root with ``PYTHONPATH=src:.``.
 """

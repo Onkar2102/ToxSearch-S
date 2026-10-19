@@ -1,0 +1,45 @@
+{
+  "home": "experiments/evostar_2027/data",
+  "pool": {
+    "pool_dir": "experiments/evostar_2027/data/pool",
+    "files": {
+      "p0_full.pkl": "experiments/evostar_2027/data/pool/p0_full.pkl",
+      "p0_analysis_2000.pkl": "experiments/evostar_2027/data/pool/p0_analysis_2000.pkl",
+      "index.json": "experiments/evostar_2027/data/pool/index.json"
+    }
+  },
+  "batches": [
+    "B1000",
+    "B2000",
+    "B3139"
+  ],
+  "distances_cheap": [
+    "d_E",
+    "d_P",
+    "d_EP"
+  ],
+  "distances_nli": [
+    "d_N",
+    "d_negE"
+  ],
+  "provisional_radii": {
+    "theta_sim": 0.1,
+    "eps": 0.1,
+    "dbscan_eps": 0.1,
+    "applies_to": "all batches / all distances until Part 1d",
+    "part1d": "held"
+  },
+  "nli": {
+    "attached": {},
+    "missing": [
+      "d_N",
+      "d_negE"
+    ]
+  },
+  "part1d": "held \u2014 do not run p1d_hparam_sweep until NLI mats ready and review begins",
+  "next_nli_commands": [
+    "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --p0-dir experiments/evostar_2027/data/pool --mats-dir experiments/evostar_2027/data/mats/_flat --max-n 2000 --which both --checkpoint-every 10 --batch-size 256",
+    "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --p0-dir experiments/evostar_2027/data/pool --mats-dir experiments/evostar_2027/data/mats/_flat --max-n 3139 --allow-large-n --which both --checkpoint-every 10 --batch-size 256",
+    "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1_materialize_data.py --data-dir experiments/evostar_2027/data  # re-attach NLI slices after p1c"
+  ]
+}

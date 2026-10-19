@@ -1,0 +1,22 @@
+{
+  "n_cells": 1,
+  "n_with_run_artifacts": 0,
+  "cells": [
+    {
+      "cell_id": "embedding__leader_follower__seed0",
+      "distance_method": "embedding",
+      "clustering_method": "leader_follower",
+      "seed": 0,
+      "mode": "dry-run",
+      "max_total_genomes": 250,
+      "wall_seconds": null,
+      "total_genomes": null,
+      "nli_model_passes": null,
+      "nli_cache_hits": null,
+      "nli_distance_calls": null,
+      "has_run_dir": false,
+      "dry_run_only": true
+    }
+  ],
+  "note": "Dry-run cells have command wiring only. Re-run p2a with --run to populate wall / NLI counters from EvolutionTracker."
+}

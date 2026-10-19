@@ -244,6 +244,24 @@ def nli_distance(text_a: str, text_b: str, *, logger=None) -> float:
     return float(0.5 * (d_ab + d_ba))
 
 
+def nli_entail_distance(text_a: str, text_b: str, *, logger=None) -> float:
+    r"""Symmetrized non-entailment distance \(d_{\neg E}=1-\bar{P}_E\) in ``[0, 1]``.
+
+    ``d(u,u)=0``. Shares the same MNLI scorer / cache as ``nli_distance``.
+    """
+    if text_a is None or text_b is None:
+        raise ValueError("nli_entail_distance requires non-None texts on both sides")
+    a = str(text_a)
+    b = str(text_b)
+    with _scorer_lock:
+        _stats["distance_calls"] += 1
+    if a == b:
+        return 0.0
+    pe_ab, _, _ = nli_class_probabilities(a, b, logger=logger)
+    pe_ba, _, _ = nli_class_probabilities(b, a, logger=logger)
+    return float(1.0 - 0.5 * (pe_ab + pe_ba))
+
+
 def nli_distances_batch(
     query_text: str,
     texts: Sequence[str],
@@ -256,12 +274,268 @@ def nli_distances_batch(
     )
 
 
+def nli_entail_distances_batch(
+    query_text: str,
+    texts: Sequence[str],
+    *,
+    logger=None,
+) -> np.ndarray:
+    return np.asarray(
+        [nli_entail_distance(query_text, t, logger=logger) for t in texts],
+        dtype=np.float64,
+    )
+
+
+def _pipeline_from_default_scorer(scorer: NLIScorer):
+    """Return the HF TextClassificationPipeline closed over by the default scorer, if any."""
+    closure = getattr(scorer, "__closure__", None)
+    if not closure:
+        return None
+    for cell in closure:
+        obj = cell.cell_contents
+        if type(obj).__name__ == "TextClassificationPipeline":
+            return obj
+        if callable(obj) and hasattr(obj, "model") and hasattr(obj, "tokenizer"):
+            return obj
+    return None
+
+
+def _score_pairs_batched(
+    premises: Sequence[str],
+    hypotheses: Sequence[str],
+    *,
+    batch_size: int = 64,
+    logger=None,
+) -> list:
+    """Directional (P_E, P_N, P_C) for aligned premise/hypothesis lists."""
+    if len(premises) != len(hypotheses):
+        raise ValueError("premises and hypotheses must have equal length")
+    if not premises:
+        return []
+
+    scorer = get_nli_scorer(logger=logger)
+    clf = _pipeline_from_default_scorer(scorer)
+    out = []
+    if clf is None:
+        for a, b in zip(premises, hypotheses):
+            out.append(nli_class_probabilities(a, b, logger=logger))
+        return out
+
+    for start in range(0, len(premises), batch_size):
+        chunk_p = premises[start : start + batch_size]
+        chunk_h = hypotheses[start : start + batch_size]
+        inputs = [{"text": str(a), "text_pair": str(b)} for a, b in zip(chunk_p, chunk_h)]
+        raw = clf(inputs, top_k=None)
+        # Single-item edge: pipeline may flatten to list[dict]
+        if raw and isinstance(raw[0], dict) and "label" in raw[0]:
+            raw = [raw]
+        for item in raw:
+            scores = {str(x["label"]).lower(): float(x["score"]) for x in item}
+            pe, pn, pc = _parse_nli_scores(scores)
+            probs = _normalize_probs(pe, pn, pc)
+            out.append(probs)
+            with _scorer_lock:
+                _stats["model_passes"] += 1
+    return out
+
+
+def nli_distances_from_query(
+    query_text: str,
+    texts: Sequence[str],
+    *,
+    batch_size: int = 64,
+    logger=None,
+) -> np.ndarray:
+    """Symmetrized d_N from one query to many texts (batched HF when available)."""
+    texts = [str(t) for t in texts]
+    q = str(query_text)
+    n = len(texts)
+    out = np.zeros(n, dtype=np.float64)
+    if n == 0:
+        return out
+    with _scorer_lock:
+        _stats["distance_calls"] += n
+    # Split identical vs distinct to keep d(u,u)=0
+    idxs = [i for i, t in enumerate(texts) if t != q]
+    if not idxs:
+        return out
+    others = [texts[i] for i in idxs]
+    ab = _score_pairs_batched([q] * len(others), others, batch_size=batch_size, logger=logger)
+    ba = _score_pairs_batched(others, [q] * len(others), batch_size=batch_size, logger=logger)
+    for k, i in enumerate(idxs):
+        pe_ab, pn_ab, pc_ab = ab[k]
+        pe_ba, pn_ba, pc_ba = ba[k]
+        out[i] = 0.5 * (
+            _directional_expected_sq(pe_ab, pn_ab, pc_ab)
+            + _directional_expected_sq(pe_ba, pn_ba, pc_ba)
+        )
+    return out
+
+
+_torch_tok = None
+_torch_model = None
+_torch_device = None
+_torch_label_idx = None  # (entail, neutral, contradict)
+
+
+def _ensure_torch_nli(logger=None):
+    """Lazy-load tokenizer+model for high-throughput MPS/CUDA batching."""
+    global _torch_tok, _torch_model, _torch_device, _torch_label_idx
+    if _torch_model is not None:
+        return
+    import torch
+    from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+    log = logger or get_logger("NLIDistance")
+    name = get_nli_model_name()
+    log.info("Loading torch NLI model %s for batched pairwise d_N", name)
+    _torch_tok = AutoTokenizer.from_pretrained(name)
+    _torch_model = AutoModelForSequenceClassification.from_pretrained(name)
+    if torch.backends.mps.is_available():
+        _torch_device = torch.device("mps")
+    elif torch.cuda.is_available():
+        _torch_device = torch.device("cuda")
+    else:
+        _torch_device = torch.device("cpu")
+    _torch_model.to(_torch_device).eval()
+    id2label = {int(k): str(v).lower() for k, v in _torch_model.config.id2label.items()}
+    # Prefer name matching; fall back to DeBERTa cross-encoder convention 0/1/2.
+    ent = neu = con = None
+    for i, lab in id2label.items():
+        if "entail" in lab:
+            ent = i
+        elif "neutral" in lab:
+            neu = i
+        elif "contradict" in lab:
+            con = i
+    if ent is None or neu is None or con is None:
+        ent, neu, con = 1, 2, 0
+    _torch_label_idx = (ent, neu, con)
+
+
+def _torch_score_pairs(
+    premises: Sequence[str],
+    hypotheses: Sequence[str],
+    *,
+    batch_size: int = 256,
+    max_length: int = 256,
+) -> np.ndarray:
+    """Return array (n, 3) of (P_E, P_N, P_C)."""
+    import torch
+
+    _ensure_torch_nli()
+    assert _torch_tok is not None and _torch_model is not None and _torch_device is not None
+    ent_i, neu_i, con_i = _torch_label_idx  # type: ignore[misc]
+    rows = []
+    bs = max(1, int(batch_size))
+    with torch.no_grad():
+        start = 0
+        while start < len(premises):
+            chunk_p = list(premises[start : start + bs])
+            chunk_h = list(hypotheses[start : start + bs])
+            try:
+                enc = _torch_tok(
+                    chunk_p,
+                    chunk_h,
+                    padding=True,
+                    truncation=True,
+                    max_length=max_length,
+                    return_tensors="pt",
+                )
+                enc = {k: v.to(_torch_device) for k, v in enc.items()}
+                probs = torch.softmax(_torch_model(**enc).logits, dim=-1).detach().cpu().numpy()
+                rows.append(np.stack([probs[:, ent_i], probs[:, neu_i], probs[:, con_i]], axis=1))
+                with _scorer_lock:
+                    _stats["model_passes"] += len(chunk_p)
+                start += bs
+            except RuntimeError as e:
+                msg = str(e).lower()
+                if "out of memory" in msg or "mps backend out of memory" in msg:
+                    if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
+                        torch.mps.empty_cache()
+                    if bs <= 1:
+                        raise
+                    bs = max(1, bs // 2)
+                    continue
+                raise
+    return np.concatenate(rows, axis=0) if rows else np.zeros((0, 3), dtype=np.float64)
+
+
+def nli_distances_from_query_torch(
+    query_text: str,
+    texts: Sequence[str],
+    *,
+    batch_size: int = 256,
+    max_length: int = 256,
+) -> np.ndarray:
+    """Fast symmetrized d_N via direct torch batching (preferred for large matrices)."""
+    texts = [str(t) for t in texts]
+    q = str(query_text)
+    n = len(texts)
+    out = np.zeros(n, dtype=np.float64)
+    if n == 0:
+        return out
+    with _scorer_lock:
+        _stats["distance_calls"] += n
+    idxs = [i for i, t in enumerate(texts) if t != q]
+    if not idxs:
+        return out
+    others = [texts[i] for i in idxs]
+    ab = _torch_score_pairs([q] * len(others), others, batch_size=batch_size, max_length=max_length)
+    ba = _torch_score_pairs(others, [q] * len(others), batch_size=batch_size, max_length=max_length)
+    d_ab = ab[:, 2] + 0.5 * ab[:, 1]  # P_C + 0.5 P_N
+    d_ba = ba[:, 2] + 0.5 * ba[:, 1]
+    vals = 0.5 * (d_ab + d_ba)
+    for k, i in enumerate(idxs):
+        out[i] = float(vals[k])
+    return out
+
+
+def nli_entail_distances_from_query_torch(
+    query_text: str,
+    texts: Sequence[str],
+    *,
+    batch_size: int = 256,
+    max_length: int = 256,
+) -> np.ndarray:
+    r"""Fast symmetrized \(d_{\neg E}=1-\bar{P}_E\) via torch batching."""
+    texts = [str(t) for t in texts]
+    q = str(query_text)
+    n = len(texts)
+    out = np.zeros(n, dtype=np.float64)
+    if n == 0:
+        return out
+    with _scorer_lock:
+        _stats["distance_calls"] += n
+    idxs = [i for i, t in enumerate(texts) if t != q]
+    if not idxs:
+        return out
+    others = [texts[i] for i in idxs]
+    ab = _torch_score_pairs([q] * len(others), others, batch_size=batch_size, max_length=max_length)
+    ba = _torch_score_pairs(others, [q] * len(others), batch_size=batch_size, max_length=max_length)
+    vals = 1.0 - 0.5 * (ab[:, 0] + ba[:, 0])
+    for k, i in enumerate(idxs):
+        out[i] = float(vals[k])
+    return out
+
+
 def pairwise_nli_matrix(texts: Sequence[str], *, logger=None) -> np.ndarray:
     n = len(texts)
     dist = np.zeros((n, n), dtype=np.float64)
     for i in range(n):
         for j in range(i + 1, n):
             d = nli_distance(texts[i], texts[j], logger=logger)
+            dist[i, j] = d
+            dist[j, i] = d
+    return dist
+
+
+def pairwise_nli_entail_matrix(texts: Sequence[str], *, logger=None) -> np.ndarray:
+    n = len(texts)
+    dist = np.zeros((n, n), dtype=np.float64)
+    for i in range(n):
+        for j in range(i + 1, n):
+            d = nli_entail_distance(texts[i], texts[j], logger=logger)
             dist[i, j] = d
             dist[j, i] = d
     return dist
@@ -283,5 +557,11 @@ __all__ = [
     "entailment_probability",
     "nli_distance",
     "nli_distances_batch",
+    "nli_distances_from_query",
+    "nli_distances_from_query_torch",
+    "nli_entail_distance",
+    "nli_entail_distances_batch",
+    "nli_entail_distances_from_query_torch",
     "pairwise_nli_matrix",
+    "pairwise_nli_entail_matrix",
 ]

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "frozen_at": "2026-10-19T01:31:40.105020+00:00",
+  "source": "provisional (1d held)",
+  "seed_file": "data/prompt.csv",
+  "max_total_genomes": 250,
+  "shortlist_cli_methods": [
+    "embedding",
+    "embedding+objective",
+    "nli",
+    "nli_entail"
+  ],
+  "clustering_methods": [
+    "leader_follower",
+    "dbscan"
+  ],
+  "temporal_knobs": "code_defaults_untouched",
+  "distances": {
+    "embedding": {
+      "plan_name": "d_E",
+      "theta_sim": 0.1,
+      "eps": 0.1,
+      "dbscan_eps": 0.1,
+      "min_samples": 2,
+      "dbscan_min_samples": 2,
+      "provisional": true
+    },
+    "embedding+objective": {
+      "plan_name": "d_EP",
+      "theta_sim": 0.1,
+      "eps": 0.1,
+      "dbscan_eps": 0.1,
+      "min_samples": 2,
+      "dbscan_min_samples": 2,
+      "provisional": true
+    },
+    "nli": {
+      "plan_name": "d_N",
+      "theta_sim": 0.1,
+      "eps": 0.1,
+      "dbscan_eps": 0.1,
+      "min_samples": 2,
+      "dbscan_min_samples": 2,
+      "provisional": true
+    },
+    "nli_entail": {
+      "plan_name": "d_negE",
+      "theta_sim": 0.1,
+      "eps": 0.1,
+      "dbscan_eps": 0.1,
+      "min_samples": 2,
+      "dbscan_min_samples": 2,
+      "provisional": true
+    }
+  },
+  "part1d": "held",
+  "provisional_radii": {
+    "theta_sim": 0.1,
+    "eps": 0.1
+  }
+}

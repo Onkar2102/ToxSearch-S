@@ -6,11 +6,12 @@ Select via ``SpeciationConfig.distance_method`` / CLI ``--distance-method``:
 - ``objective`` — moderation score-vector Euclidean \(d_P \in [0,1]\)
 - ``nli`` — symmetrized expected-squared NLI dissimilarity
   \(d_N=\bar p_C+\tfrac12\bar p_N\in[0,1]\)
+- ``nli_entail`` — symmetrized non-entailment \(d_{\neg E}=1-\bar p_E\in[0,1]\)
 - ``nli+embedding`` — hybrid \(d_H = \alpha d_E + (1-\alpha) d_N\)
 - ``embedding+objective`` — legacy blend \(w_g d_E + w_p d_P\)
 
 Atomic metrics live in ``speciation.distance_metrics``
-(``embedding`` / ``objective`` / ``nli``).
+(``embedding`` / ``objective`` / ``nli`` / ``nli_entail``).
 """
 
 from __future__ import annotations
@@ -30,9 +31,12 @@ from .distance_metrics import (
     nli_class_probabilities,
     nli_distance,
     nli_distances_batch,
+    nli_entail_distance,
+    nli_entail_distances_batch,
     objective_distance,
     objective_distances_batch,
     pairwise_embedding_matrix,
+    pairwise_nli_entail_matrix,
     pairwise_nli_matrix,
     pairwise_objective_matrix,
     phenotype_distance,
@@ -51,9 +55,12 @@ DISTANCE_METHODS = (
     "embedding",
     "objective",
     "nli",
+    "nli_entail",
     "nli+embedding",
     "embedding+objective",
 )
+
+_TEXT_DISTANCE_COMPONENTS = frozenset({"nli", "nli_entail"})
 
 
 def normalize_distance_method(method: Optional[str]) -> str:
@@ -71,6 +78,11 @@ def normalize_distance_method(method: Optional[str]) -> str:
         "obj": "objective",
         "scores": "objective",
         "entailment": "nli",
+        "nli_entailment": "nli_entail",
+        "neg_e": "nli_entail",
+        "d_nege": "nli_entail",
+        "d_neg_e": "nli_entail",
+        "non_entail": "nli_entail",
         "nli_emb": "nli+embedding",
         "nli_embedding": "nli+embedding",
         "nli_hybrid": "nli+embedding",
@@ -109,7 +121,7 @@ def normalize_distance_method(method: Optional[str]) -> str:
 def parse_distance_components(method: str) -> Tuple[str, ...]:
     """Return the atomic components used by ``method`` (order preserved)."""
     m = normalize_distance_method(method)
-    if m in ("embedding", "objective", "nli"):
+    if m in ("embedding", "objective", "nli", "nli_entail"):
         return (m,)
     if m == "nli+embedding":
         return ("embedding", "nli")
@@ -124,8 +136,8 @@ def method_uses_embeddings(method: str) -> bool:
 
 
 def method_uses_texts(method: str) -> bool:
-    """True only when ``method`` includes NLI (needs prompt text)."""
-    return "nli" in parse_distance_components(method)
+    """True when ``method`` needs prompt text (``nli`` or ``nli_entail``)."""
+    return bool(_TEXT_DISTANCE_COMPONENTS & set(parse_distance_components(method)))
 
 
 def method_uses_objectives(method: str) -> bool:
@@ -141,8 +153,8 @@ def apply_distance_runtime_config(
 ) -> str:
     """Apply runtime side-effects for the selected distance method.
 
-    For ``nli`` / ``nli+embedding``, sets the HuggingFace MNLI model id used by
-    ``distance_metrics.nli``. Returns the normalized method name.
+    For ``nli`` / ``nli_entail`` / ``nli+embedding``, sets the HuggingFace MNLI
+    model id used by ``distance_metrics.nli``. Returns the normalized method name.
     """
     m = normalize_distance_method(distance_method)
     if method_uses_texts(m) and nli_model:
@@ -186,7 +198,7 @@ def pair_distance(
         raise ValueError(f"distance_method={m!r} requires embeddings on both sides")
     if "objective" in comps and (objective_a is None or objective_b is None):
         raise ValueError(f"distance_method={m!r} requires objective vectors on both sides")
-    if "nli" in comps and (not (text_a or "").strip() or not (text_b or "").strip()):
+    if method_uses_texts(m) and (not (text_a or "").strip() or not (text_b or "").strip()):
         raise ValueError(f"distance_method={m!r} requires non-empty texts on both sides")
 
     def _emb() -> float:
@@ -198,12 +210,17 @@ def pair_distance(
     def _nli() -> float:
         return nli_distance(text_a or "", text_b or "", logger=logger)
 
+    def _nli_entail() -> float:
+        return nli_entail_distance(text_a or "", text_b or "", logger=logger)
+
     if m == "embedding":
         return _emb()
     if m == "objective":
         return _obj()
     if m == "nli":
         return _nli()
+    if m == "nli_entail":
+        return _nli_entail()
     if m == "nli+embedding":
         a = float(np.clip(alpha, 0.0, 1.0))
         return _blend((_emb(), _nli()), (a, 1.0 - a))
@@ -249,7 +266,7 @@ def distances_to_query(
         raise ValueError(f"distance_method={m!r} requires query_embedding and embeddings")
     if "objective" in comps and (query_objective is None or objectives is None):
         raise ValueError(f"distance_method={m!r} requires query_objective and objectives")
-    if "nli" in comps:
+    if method_uses_texts(m):
         if texts is None:
             raise ValueError(f"distance_method={m!r} requires texts")
         if not (query_text or "").strip():
@@ -270,12 +287,17 @@ def distances_to_query(
     def _nli_batch() -> np.ndarray:
         return nli_distances_batch(query_text or "", texts, logger=logger)
 
+    def _nli_entail_batch() -> np.ndarray:
+        return nli_entail_distances_batch(query_text or "", texts, logger=logger)
+
     if m == "embedding":
         return _emb_batch()
     if m == "objective":
         return _obj_batch()
     if m == "nli":
         return _nli_batch()
+    if m == "nli_entail":
+        return _nli_entail_batch()
     if m == "nli+embedding":
         a = float(np.clip(alpha, 0.0, 1.0))
         return a * _emb_batch() + (1.0 - a) * _nli_batch()
@@ -314,12 +336,17 @@ def pairwise_distance_matrix(
     def _nli_mat() -> np.ndarray:
         return pairwise_nli_matrix(list(texts or []), logger=logger)
 
+    def _nli_entail_mat() -> np.ndarray:
+        return pairwise_nli_entail_matrix(list(texts or []), logger=logger)
+
     if m == "embedding":
         return _emb_mat()
     if m == "objective":
         return _obj_mat()
     if m == "nli":
         return _nli_mat()
+    if m == "nli_entail":
+        return _nli_entail_mat()
     if m == "nli+embedding":
         a = float(np.clip(alpha, 0.0, 1.0))
         return a * _emb_mat() + (1.0 - a) * _nli_mat()
@@ -399,6 +426,9 @@ __all__ = [
     "nli_distance",
     "nli_distances_batch",
     "pairwise_nli_matrix",
+    "nli_entail_distance",
+    "nli_entail_distances_batch",
+    "pairwise_nli_entail_matrix",
     "nli_class_probabilities",
     "set_entailment_scorer",
     "set_nli_scorer",

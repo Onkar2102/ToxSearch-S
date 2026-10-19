@@ -1,0 +1,16 @@
+{
+  "started_at": "2026-10-19T01:31:39.268294+00:00",
+  "stages": [
+    "materialize",
+    "p1e"
+  ],
+  "smoke": false,
+  "nli_max_n": 2000,
+  "run_p1d": false,
+  "provisional_radii": {
+    "theta_sim": 0.1,
+    "eps": 0.1
+  },
+  "part1d": "held",
+  "finished_at": "2026-10-19T01:31:40.105341+00:00"
+}

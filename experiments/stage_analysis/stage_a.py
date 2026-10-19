@@ -8,7 +8,7 @@ per prompt and one call to each live oracle (see ``build_p0``).
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Iterable, List, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -101,8 +101,11 @@ def build_p0(
     return df
 
 
-def load_p0(path: str) -> pd.DataFrame:
-    """Load a P0 table written by ``build_p0``."""
+def load_p0(path: str, *, require_openai: bool = True) -> pd.DataFrame:
+    """Load a P0 table written by ``build_p0`` or the held-out batch builder.
+
+    Set ``require_openai=False`` for google-only RQ1 batches that reuse run artifacts.
+    """
     from pathlib import Path
 
     p = Path(path)
@@ -114,7 +117,9 @@ def load_p0(path: str) -> pd.DataFrame:
         df = pd.read_json(p, lines=True)
     else:
         df = pd.read_json(p)
-    required = {"prompt", "response", "emb", "scores_google", "scores_openai"}
+    required = {"prompt", "response", "emb", "scores_google"}
+    if require_openai:
+        required.add("scores_openai")
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"P0 table missing columns: {sorted(missing)}")
@@ -137,11 +142,19 @@ def d_p_matrix(scores: np.ndarray) -> np.ndarray:
     return d
 
 
-def distance_matrices(p0: pd.DataFrame, nli: bool = True) -> Dict[str, np.ndarray]:
+def distance_matrices(
+    p0: pd.DataFrame,
+    nli: bool = True,
+    *,
+    evaluators: Sequence[str] = ("google", "openai"),
+) -> Dict[str, np.ndarray]:
     emb = np.vstack(p0["emb"].map(np.asarray).to_list())
     mats = {"d_E": d_e_matrix(emb)}
-    for ev in ("google", "openai"):
-        dp = d_p_matrix(np.vstack(p0[f"scores_{ev}"].map(np.asarray).to_list()))
+    for ev in evaluators:
+        col = f"scores_{ev}"
+        if col not in p0.columns:
+            raise ValueError(f"distance_matrices: missing column {col}")
+        dp = d_p_matrix(np.vstack(p0[col].map(np.asarray).to_list()))
         mats[f"d_P[{ev}]"] = dp
         mats[f"d_EP[{ev}]"] = W_G * mats["d_E"] + W_P * dp
     if nli:
@@ -249,8 +262,61 @@ def oracle_agreement(p0: pd.DataFrame) -> Dict[str, float]:
     """Spearman between the two oracles' north stars on the shared P0 responses."""
     from utils.evaluator_profiles import GOOGLE_PHENOTYPE_SCORE_ORDER, OPENAI_PHENOTYPE_SCORE_ORDER
 
+    if "scores_openai" not in p0.columns:
+        raise ValueError("oracle_agreement requires scores_openai")
     g = np.vstack(p0["scores_google"].map(np.asarray).to_list())[:, GOOGLE_PHENOTYPE_SCORE_ORDER.index("toxicity")]
     o = np.vstack(p0["scores_openai"].map(np.asarray).to_list())[:, OPENAI_PHENOTYPE_SCORE_ORDER.index("violence")]
     return {"spearman_toxicity_vs_violence": float(spearmanr(g, o).correlation),
             "spearman_toxicity_vs_max_openai": float(spearmanr(
                 g, np.vstack(p0["scores_openai"].map(np.asarray).to_list()).max(axis=1)).correlation)}
+
+
+def prompt_resample_cis(
+    mats: Dict[str, np.ndarray],
+    *,
+    pairs: Sequence[Tuple[str, str]] = (
+        ("d_E", "d_N"),
+        ("d_E", "d_EP[google]"),
+        ("d_N", "d_EP[google]"),
+    ),
+    knn_k: int = 10,
+    n_boot: int = 200,
+    seed: int = 0,
+    alpha: float = 0.05,
+) -> Dict[str, Dict[str, float]]:
+    """Prompt-level bootstrap CIs for Spearman and mean k-NN Jaccard.
+
+    Resamples matrix *rows* (prompts), not raw pairs as i.i.d. observations.
+    Only pairs whose keys exist in ``mats`` are reported.
+    """
+    rng = np.random.default_rng(seed)
+    n = next(iter(mats.values())).shape[0]
+    out: Dict[str, Dict[str, float]] = {}
+    usable = [(a, b) for a, b in pairs if a in mats and b in mats]
+    if not usable or n < 3:
+        return out
+
+    for a, b in usable:
+        spearmans, jaccards = [], []
+        for _ in range(n_boot):
+            idx = rng.integers(0, n, size=n)
+            ma = mats[a][np.ix_(idx, idx)]
+            mb = mats[b][np.ix_(idx, idx)]
+            ua, ub = _upper(ma), _upper(mb)
+            if ua.size < 2 or np.all(ua == ua[0]) or np.all(ub == ub[0]):
+                continue
+            spearmans.append(float(spearmanr(ua, ub).correlation))
+            jaccards.append(knn_jaccard(ma, mb, knn_k))
+        for name, vals in (("spearman", spearmans), ("knn_jaccard", jaccards)):
+            arr = np.asarray([v for v in vals if v == v], dtype=float)
+            key = f"{a}__{b}__{name}"
+            if arr.size == 0:
+                out[key] = {"mean": float("nan"), "ci_lo": float("nan"), "ci_hi": float("nan"), "n_boot": 0}
+            else:
+                out[key] = {
+                    "mean": float(arr.mean()),
+                    "ci_lo": float(np.quantile(arr, alpha / 2)),
+                    "ci_hi": float(np.quantile(arr, 1 - alpha / 2)),
+                    "n_boot": int(arr.size),
+                }
+    return out

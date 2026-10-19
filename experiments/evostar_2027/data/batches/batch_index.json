@@ -1,0 +1,40 @@
+{
+  "ordering": "fitness_desc_then_run_genome_id",
+  "p0_full": "experiments/evostar_2027/data/pool/p0_full.pkl",
+  "n_full": 3139,
+  "batches": [
+    {
+      "batch_id": "B1000",
+      "N": 1000,
+      "p0_path": "experiments/evostar_2027/data/batches/B1000/p0.pkl",
+      "fitness_min": 0.0674,
+      "fitness_max": 0.7308,
+      "fitness_median": 0.1269,
+      "nested_prefix_of": "B3139"
+    },
+    {
+      "batch_id": "B2000",
+      "N": 2000,
+      "p0_path": "experiments/evostar_2027/data/batches/B2000/p0.pkl",
+      "fitness_min": 0.0233,
+      "fitness_max": 0.7308,
+      "fitness_median": 0.067,
+      "nested_prefix_of": "B3139"
+    },
+    {
+      "batch_id": "B3139",
+      "N": 3139,
+      "p0_path": "experiments/evostar_2027/data/batches/B3139/p0.pkl",
+      "fitness_min": 0.0056,
+      "fitness_max": 0.7308,
+      "fitness_median": 0.0338,
+      "nested_prefix_of": null
+    }
+  ],
+  "nested": "B1000 \u2282 B2000 \u2282 B3139",
+  "provisional_radii": {
+    "theta_sim": 0.1,
+    "eps": 0.1
+  },
+  "part1d": "held"
+}

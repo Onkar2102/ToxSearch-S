@@ -33,13 +33,17 @@ def _metric_from_state(state: Optional[Dict[str, Any]] = None) -> str:
 
 def _require_radius_inputs(method: str, genome: Dict[str, Any]) -> None:
     """Raise if genome lacks fields required by ``distance_method`` for radius checks."""
-    from .distance import extract_phenotype_vector, parse_distance_components
+    from .distance import (
+        extract_phenotype_vector,
+        method_uses_texts,
+        parse_distance_components,
+    )
 
     comps = parse_distance_components(method)
     gid = genome.get("id", "?")
     if "embedding" in comps and not genome.get("prompt_embedding"):
         raise ValueError(f"Genome {gid}: missing prompt_embedding for distance_method={method!r}")
-    if "nli" in comps and not (genome.get("prompt") or "").strip():
+    if method_uses_texts(method) and not (genome.get("prompt") or "").strip():
         raise ValueError(f"Genome {gid}: missing prompt text for distance_method={method!r}")
     if "objective" in comps and extract_phenotype_vector(genome, logger=None) is None:
         raise ValueError(f"Genome {gid}: missing objective/phenotype for distance_method={method!r}")

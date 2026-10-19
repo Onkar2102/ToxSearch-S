@@ -1,0 +1,7 @@
+{
+  "theta_sim": 0.1,
+  "eps": 0.1,
+  "dbscan_eps": 0.1,
+  "applies_to": "all batches / all distances until Part 1d",
+  "part1d": "held"
+}

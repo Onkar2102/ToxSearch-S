@@ -1,0 +1,23 @@
+{
+  "batch_id": "B1000",
+  "N": 1000,
+  "p0_path": "experiments/evostar_2027/data/batches/B1000/p0.pkl",
+  "distances": {
+    "d_E": "experiments/evostar_2027/data/mats/B1000/d_E.npy",
+    "d_P": "experiments/evostar_2027/data/mats/B1000/d_P.npy",
+    "d_EP": "experiments/evostar_2027/data/mats/B1000/d_EP.npy"
+  },
+  "missing_distances": [
+    "d_N",
+    "d_negE"
+  ],
+  "provisional_radii": {
+    "theta_sim": 0.1,
+    "eps": 0.1,
+    "dbscan_eps": 0.1,
+    "note": "Provisional for Part 1 until 1d; not from neighbor-fraction calibration."
+  },
+  "part1d": "held",
+  "w_genotype": 0.7,
+  "w_phenotype": 0.3
+}

@@ -185,6 +185,41 @@ def test_nli_distance_qiu_expected_squared() -> None:
         clear_nli_cache()
 
 
+def test_nli_entail_distance_symmetrized() -> None:
+    """d_¬E = 1 - mean(P_E), symmetrized; identical texts → 0."""
+    from speciation.distance import (
+        clear_nli_cache,
+        method_uses_texts,
+        normalize_distance_method,
+        pair_distance,
+        set_nli_scorer,
+    )
+
+    assert normalize_distance_method("nli_entail") == "nli_entail"
+    assert normalize_distance_method("neg_e") == "nli_entail"
+    assert method_uses_texts("nli_entail") is True
+
+    set_nli_scorer(lambda a, b: (1.0, 0.0, 0.0))
+    try:
+        assert pair_distance("nli_entail", text_a="a", text_b="a") == pytest.approx(0.0)
+        assert pair_distance("nli_entail", text_a="a", text_b="b") == pytest.approx(0.0)
+        set_nli_scorer(lambda a, b: (0.0, 0.0, 1.0))
+        assert pair_distance("nli_entail", text_a="a", text_b="b") == pytest.approx(1.0)
+        # ab P_E=0.2, ba P_E=0.4 → 1 - 0.3 = 0.7
+        def _mixed(a: str, b: str):
+            if a == "u" and b == "v":
+                return (0.2, 0.3, 0.5)
+            if a == "v" and b == "u":
+                return (0.4, 0.1, 0.5)
+            return (1.0 / 3.0,) * 3
+
+        set_nli_scorer(_mixed)
+        assert pair_distance("nli_entail", text_a="u", text_b="v") == pytest.approx(0.7)
+    finally:
+        set_nli_scorer(None)
+        clear_nli_cache()
+
+
 def test_nli_requires_non_empty_text() -> None:
     from speciation.distance import clear_nli_cache, pair_distance, set_entailment_scorer
 
@@ -246,6 +281,7 @@ def test_config_distance_method() -> None:
         ("embedding", True, False, False),
         ("objective", False, False, True),
         ("nli", False, True, False),
+        ("nli_entail", False, True, False),
         ("nli+embedding", True, True, False),
         ("embedding+objective", True, False, True),
     ],

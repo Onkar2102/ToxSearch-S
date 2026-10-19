@@ -1,0 +1,76 @@
+{
+  "ordering": "fitness_desc_then_run_genome_id (same as p0_full)",
+  "p0_full": "experiments/evostar_2027/rq1/p0/p0_full.pkl",
+  "n_full": 3139,
+  "batches": [
+    {
+      "batch_id": "B1000",
+      "N": 1000,
+      "p0_path": "experiments/evostar_2027/rq1/batches/B1000/p0.pkl",
+      "fitness_min": 0.0674,
+      "fitness_max": 0.7308,
+      "fitness_median": 0.1269,
+      "nested_prefix_of": "B3139"
+    },
+    {
+      "batch_id": "B2000",
+      "N": 2000,
+      "p0_path": "experiments/evostar_2027/rq1/batches/B2000/p0.pkl",
+      "fitness_min": 0.0233,
+      "fitness_max": 0.7308,
+      "fitness_median": 0.067,
+      "nested_prefix_of": "B3139"
+    },
+    {
+      "batch_id": "B3139",
+      "N": 3139,
+      "p0_path": "experiments/evostar_2027/rq1/batches/B3139/p0.pkl",
+      "fitness_min": 0.0056,
+      "fitness_max": 0.7308,
+      "fitness_median": 0.0338,
+      "nested_prefix_of": null
+    }
+  ],
+  "nested": "B1000 \u2282 B2000 \u2282 B3139",
+  "cheap_mats": {
+    "N_full": 3139,
+    "sizes": [
+      1000,
+      2000,
+      3139
+    ],
+    "w_genotype": 0.7,
+    "w_phenotype": 0.3,
+    "files_by_N": {
+      "1000": {
+        "d_E": "experiments/evostar_2027/rq1/mats/d_E_1000.npy",
+        "d_P": "experiments/evostar_2027/rq1/mats/d_P_1000.npy",
+        "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_1000.npy"
+      },
+      "2000": {
+        "d_E": "experiments/evostar_2027/rq1/mats/d_E_2000.npy",
+        "d_P": "experiments/evostar_2027/rq1/mats/d_P_2000.npy",
+        "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_2000.npy"
+      },
+      "3139": {
+        "d_E": "experiments/evostar_2027/rq1/mats/d_E_3139.npy",
+        "d_P": "experiments/evostar_2027/rq1/mats/d_P_3139.npy",
+        "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_3139.npy"
+      }
+    },
+    "source_p0": "p0_full leading prefixes (fitness-sorted)"
+  },
+  "nli": {
+    "sliced": {},
+    "missing_sources": [
+      "experiments/evostar_2027/rq1/mats/d_N_2000.npy",
+      "experiments/evostar_2027/rq1/mats/d_negE_2000.npy"
+    ],
+    "commands": [
+      "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --max-n 2000 --which both --checkpoint-every 10 --batch-size 256",
+      "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1a2_build_batches.py --skip-cheap-mats --slice-nli-only",
+      "No d_N / d_negE at N=3139 (compute budget)."
+    ]
+  },
+  "nli_policy": "Compute d_N and d_negE only up to N=2000 via p1c; B1000 is a leading slice. No NLI matrix at full N=3139."
+}
