@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 """Part 1c: checkpointed d_N and d_¬E (nli / nli_entail) on the analysis index.
 
+Currently writes only final distances:
+
+- ``d_N`` = symmetrized Qiu Eq. 9: ``P̄_C + ½ P̄_N``
+- ``d_negE`` = ``1 − P̄_E``
+
+Follow-up (not implemented here — avoid a full NLI recompute unless needed):
+checkpoint raw class probabilities ``P_E / P_N / P_C`` (or a clustering-oriented
+``d_biE`` from Kuhn-style bidirectional entailment / soft
+``1 − min(P_E^{ab}, P_E^{ba})``). Topic clustering wants meaning-equivalence,
+not UQ-style continuous semantic density; without class probs we cannot build
+that third formula from existing ``d_N`` / ``d_negE`` alone.
+
 Smoke (recommended first)::
 
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py \\

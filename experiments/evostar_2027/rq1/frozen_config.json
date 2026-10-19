@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "frozen_at": "2026-10-19T01:31:40.105020+00:00",
-  "source": "provisional (1d held)",
+  "frozen_at": "2026-10-19T02:33:04.202688+00:00",
+  "source": "experiments/evostar_2027/rq1 Part 1",
   "seed_file": "data/prompt.csv",
   "max_total_genomes": 250,
   "shortlist_cli_methods": [
@@ -18,44 +18,45 @@
   "distances": {
     "embedding": {
       "plan_name": "d_E",
-      "theta_sim": 0.1,
-      "eps": 0.1,
-      "dbscan_eps": 0.1,
+      "theta_sim": 0.09984880215658216,
+      "eps": 0.09984880215658215,
+      "dbscan_eps": 0.09984880215658215,
       "min_samples": 2,
       "dbscan_min_samples": 2,
-      "provisional": true
+      "N_calibrated_on": 500,
+      "smoke_sized_calibration": false
     },
     "embedding+objective": {
       "plan_name": "d_EP",
-      "theta_sim": 0.1,
-      "eps": 0.1,
-      "dbscan_eps": 0.1,
+      "theta_sim": 0.08821937700988504,
+      "eps": 0.08821937700988502,
+      "dbscan_eps": 0.08821937700988502,
       "min_samples": 2,
       "dbscan_min_samples": 2,
-      "provisional": true
+      "N_calibrated_on": 500,
+      "smoke_sized_calibration": false
     },
     "nli": {
       "plan_name": "d_N",
-      "theta_sim": 0.1,
-      "eps": 0.1,
-      "dbscan_eps": 0.1,
+      "theta_sim": 0.23868516087532046,
+      "eps": 0.23868516087532043,
+      "dbscan_eps": 0.23868516087532043,
       "min_samples": 2,
       "dbscan_min_samples": 2,
-      "provisional": true
+      "N_calibrated_on": 500,
+      "smoke_sized_calibration": false
     },
     "nli_entail": {
       "plan_name": "d_negE",
-      "theta_sim": 0.1,
-      "eps": 0.1,
-      "dbscan_eps": 0.1,
+      "theta_sim": 0.46993535757064825,
+      "eps": 0.4699353575706482,
+      "dbscan_eps": 0.4699353575706482,
       "min_samples": 2,
       "dbscan_min_samples": 2,
-      "provisional": true
+      "N_calibrated_on": 500,
+      "smoke_sized_calibration": false
     }
   },
-  "part1d": "held",
-  "provisional_radii": {
-    "theta_sim": 0.1,
-    "eps": 0.1
-  }
+  "notes": [],
+  "proposal_path": "experiments/evostar_2027/rq1/sweeps/B500/shortlist_proposal.json"
 }

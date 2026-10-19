@@ -9,6 +9,7 @@
     }
   },
   "batches": [
+    "B500",
     "B1000",
     "B2000",
     "B3139"
@@ -30,11 +31,29 @@
     "part1d": "held"
   },
   "nli": {
-    "attached": {},
-    "missing": [
-      "d_N",
-      "d_negE"
-    ]
+    "attached": {
+      "d_N": {
+        "source": "experiments/evostar_2027/data/mats/_flat/d_N_500.npy",
+        "source_N": 500
+      },
+      "d_negE": {
+        "source": "experiments/evostar_2027/data/mats/_flat/d_negE_500.npy",
+        "source_N": 500
+      }
+    },
+    "missing": [],
+    "pending_larger": {
+      "d_N": [
+        1000,
+        2000,
+        3139
+      ],
+      "d_negE": [
+        1000,
+        2000,
+        3139
+      ]
+    }
   },
   "part1d": "held \u2014 do not run p1d_hparam_sweep until NLI mats ready and review begins",
   "next_nli_commands": [

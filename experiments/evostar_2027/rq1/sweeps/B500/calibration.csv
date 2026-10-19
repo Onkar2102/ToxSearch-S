@@ -1,0 +1,6 @@
+distance,cli_method,N,path,target_fraction,reference,reference_radius,theta_sim,eps,dbscan_eps,smoke_sized
+d_E,embedding,500,experiments/evostar_2027/data/mats/B500/d_E.npy,0.836,d_E,0.1,0.09984880215658216,0.09984880215658215,0.09984880215658215,False
+d_P,objective,500,experiments/evostar_2027/data/mats/B500/d_P.npy,0.836,d_E,0.1,0.021306835757568813,0.02130683575756881,0.02130683575756881,False
+d_EP,embedding+objective,500,experiments/evostar_2027/data/mats/B500/d_EP.npy,0.836,d_E,0.1,0.08821937700988504,0.08821937700988502,0.08821937700988502,False
+d_N,nli,500,experiments/evostar_2027/data/mats/B500/d_N.npy,0.836,d_E,0.1,0.23868516087532046,0.23868516087532043,0.23868516087532043,False
+d_negE,nli_entail,500,experiments/evostar_2027/data/mats/B500/d_negE.npy,0.836,d_E,0.1,0.46993535757064825,0.4699353575706482,0.4699353575706482,False

@@ -218,14 +218,38 @@ def write_batch_dataset_jsons(
         print(f"  wrote {bdir / 'dataset.json'} (missing={missing})")
 
 
+def _batches_complete(batches_dir: Path, sizes: Sequence[int]) -> bool:
+    return all((batches_dir / f"B{n}" / "p0.pkl").is_file() for n in sizes)
+
+
+def _cheap_complete(mats_root: Path, sizes: Sequence[int]) -> bool:
+    return all(
+        (mats_root / f"B{n}" / f"{name}.npy").is_file()
+        for n in sizes
+        for name in DISTANCES_CHEAP
+    )
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Materialize evostar_2027/data pool + batch mats")
     p.add_argument("--src-p0", type=Path, default=DEFAULT_RQ1_P0)
     p.add_argument("--src-mats", type=Path, default=DEFAULT_RQ1_MATS)
     p.add_argument("--data-dir", type=Path, default=DEFAULT_DATA)
-    p.add_argument("--sizes", type=str, default="1000,2000,3139")
+    p.add_argument("--sizes", type=str, default="500,1000,2000,3139")
     p.add_argument("--rebuild-cheap", action="store_true")
+    p.add_argument(
+        "--skip-existing",
+        action="store_true",
+        default=True,
+        help="Do not rewrite batch p0 / cheap mats if already present (default)",
+    )
+    p.add_argument(
+        "--force-rewrite",
+        action="store_true",
+        help="Rewrite batches + cheap mats even if present",
+    )
     args = p.parse_args()
+    skip_existing = bool(args.skip_existing) and not args.force_rewrite and not args.rebuild_cheap
 
     sizes = tuple(int(x.strip()) for x in args.sizes.split(",") if x.strip())
     data_dir = args.data_dir
@@ -243,7 +267,30 @@ def main() -> int:
         sizes = tuple(sorted(set(sizes) | {n_full}))
 
     batches_dir = data_dir / "batches"
-    batch_meta = write_p0_batches(df_full, batches_dir, sizes)
+    mats_root = data_dir / "mats"
+
+    missing_batches = [n for n in sizes if not (batches_dir / f"B{n}" / "p0.pkl").is_file()]
+    if skip_existing and not missing_batches:
+        print(f"[SKIP] batches already present under {batches_dir}")
+        batch_meta = [
+            {"batch_id": f"B{n}", "N": n, "p0_path": str(batches_dir / f"B{n}" / "p0.pkl")}
+            for n in sizes
+        ]
+    elif skip_existing and missing_batches:
+        print(f"[PARTIAL] writing missing batches only: {missing_batches}")
+        batch_meta = write_p0_batches(df_full, batches_dir, missing_batches)
+        # include already-present sizes in index
+        for n in sizes:
+            if n in missing_batches:
+                continue
+            batch_meta.append(
+                {"batch_id": f"B{n}", "N": n, "p0_path": str(batches_dir / f"B{n}" / "p0.pkl")}
+            )
+        batch_meta = sorted(batch_meta, key=lambda r: int(r["N"]))
+    else:
+        batch_meta = write_p0_batches(df_full, batches_dir, sizes)
+
+    nested = " ⊂ ".join(f"B{n}" for n in sorted(sizes))
     (batches_dir / "batch_index.json").write_text(
         json.dumps(
             {
@@ -251,7 +298,7 @@ def main() -> int:
                 "p0_full": str(p0_full),
                 "n_full": n_full,
                 "batches": batch_meta,
-                "nested": "B1000 ⊂ B2000 ⊂ B3139",
+                "nested": nested,
                 "provisional_radii": {"theta_sim": PROVISIONAL_THETA, "eps": PROVISIONAL_EPS},
                 "part1d": "held",
             },
@@ -260,10 +307,21 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    mats_root = data_dir / "mats"
-    reuse = None if args.rebuild_cheap else args.src_mats
-    materialize_cheap(df_full, mats_root, sizes, reuse_rq1_mats=reuse)
+    missing_cheap = [
+        n for n in sizes
+        if not all((mats_root / f"B{n}" / f"{name}.npy").is_file() for name in DISTANCES_CHEAP)
+    ]
+    if skip_existing and not missing_cheap:
+        print(f"[SKIP] cheap mats already present under {mats_root}/B*")
+    elif skip_existing and missing_cheap:
+        print(f"[PARTIAL] writing cheap mats for missing sizes only: {missing_cheap}")
+        reuse = None if args.rebuild_cheap else args.src_mats
+        materialize_cheap(df_full, mats_root, missing_cheap, reuse_rq1_mats=reuse)
+    else:
+        reuse = None if args.rebuild_cheap else args.src_mats
+        materialize_cheap(df_full, mats_root, sizes, reuse_rq1_mats=reuse)
 
+    # Always try to attach newly completed NLI + refresh dataset.json
     nli_report = attach_nli_slices(mats_root, sizes, args.src_mats)
     write_batch_dataset_jsons(data_dir, sizes)
 

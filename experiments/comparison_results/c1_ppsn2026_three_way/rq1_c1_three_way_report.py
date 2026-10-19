@@ -59,7 +59,6 @@ except Exception as e:  # pragma: no cover
     SentenceTransformer = None  # type: ignore
     _st_import_error = e
 
-from sklearn.cluster import DBSCAN
 from sklearn.manifold import MDS
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.metrics.pairwise import cosine_distances
@@ -70,8 +69,12 @@ while PROJ != PROJ.parent and not (PROJ / "src").exists():
 
 if str(PROJ) not in sys.path:
     sys.path.insert(0, str(PROJ))
+_src = str(PROJ / "src")
+if _src not in sys.path:
+    sys.path.insert(0, _src)
 
 from src.utils.matplotlib_embed_fonts import configure_matplotlib_embedded_fonts  # noqa: E402
+from speciation.clustering.inc_dbscan import seed_from_precomputed_matrix  # noqa: E402
 
 configure_matplotlib_embedded_fonts()
 
@@ -101,6 +104,7 @@ EMBED_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 # Diversity settings (pre-registered here; keep fixed for all methods)
 TOPK = 50
+# Diversity: IncDBSCAN seed on cosine-distance matrix (not sklearn batch DBSCAN)
 DBSCAN_EPS = 0.25  # cosine distance threshold on normalized embeddings
 DBSCAN_MIN_SAMPLES = 3
 
@@ -308,12 +312,21 @@ def semantic_spread_mean_cosine_distance(embs: Sequence[np.ndarray]) -> float:
 
 
 def dbscan_cluster_count(embs: Sequence[np.ndarray]) -> Tuple[int, float]:
-    """Return (n_clusters_excluding_noise, noise_fraction)."""
+    """Return (n_mature_clusters, non_mature_fraction) via IncDBSCAN seed.
+
+    Uses cosine pairwise distances with ``DBSCAN_EPS`` / ``DBSCAN_MIN_SAMPLES``
+    and fitness-agnostic index insert order (report diversity only).
+    """
     if len(embs) < DBSCAN_MIN_SAMPLES:
         return 0, 0.0
     X = np.stack([np.asarray(e, dtype=np.float32) for e in embs], axis=0)
-    labels = DBSCAN(eps=DBSCAN_EPS, min_samples=DBSCAN_MIN_SAMPLES, metric="cosine").fit_predict(X)
-    n_noise = int(np.sum(labels == -1))
+    D = cosine_distances(X).astype(np.float64)
+    np.fill_diagonal(D, 0.0)
+    order = np.arange(D.shape[0], dtype=np.int64)
+    labels = seed_from_precomputed_matrix(
+        D, order, eps=DBSCAN_EPS, min_samples=DBSCAN_MIN_SAMPLES
+    )
+    n_noise = int(np.sum(labels < 0))
     uniq = {int(x) for x in labels.tolist() if int(x) >= 0}
     return len(uniq), float(n_noise) / float(len(labels)) if len(labels) else 0.0
 

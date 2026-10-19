@@ -1,16 +1,18 @@
 {
-  "started_at": "2026-10-19T01:31:39.268294+00:00",
+  "started_at": "2026-10-19T01:54:01.460743+00:00",
   "stages": [
+    "nli",
     "materialize",
+    "p1d",
     "p1e"
   ],
   "smoke": false,
-  "nli_max_n": 2000,
-  "run_p1d": false,
+  "nli_max_n": 500,
+  "run_p1d": true,
   "provisional_radii": {
     "theta_sim": 0.1,
     "eps": 0.1
   },
-  "part1d": "held",
-  "finished_at": "2026-10-19T01:31:40.105341+00:00"
+  "part1d": "enabled",
+  "finished_at": "2026-10-19T02:33:04.206670+00:00"
 }

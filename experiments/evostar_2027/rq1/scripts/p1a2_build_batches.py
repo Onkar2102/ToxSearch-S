@@ -35,7 +35,7 @@ import pandas as pd
 DEFAULT_P0 = Path("experiments/evostar_2027/rq1/p0")
 DEFAULT_BATCHES = Path("experiments/evostar_2027/rq1/batches")
 DEFAULT_MATS = Path("experiments/evostar_2027/rq1/mats")
-BATCH_SIZES: Tuple[int, ...] = (1000, 2000, 3139)
+BATCH_SIZES: Tuple[int, ...] = (500, 1000, 2000, 3139)
 W_G, W_P = 0.7, 0.3
 
 

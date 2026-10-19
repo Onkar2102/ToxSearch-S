@@ -189,6 +189,157 @@ def seed_from_incremental(
     return state, species, events
 
 
+def seed_from_precomputed_matrix(
+    D: np.ndarray,
+    order: Sequence[int],
+    *,
+    eps: float,
+    min_samples: int = 2,
+) -> np.ndarray:
+    r"""Offline IncDBSCAN seed using a precomputed distance matrix.
+
+    Same insert / absorb / merge / singleton-pool semantics as live
+    ``seed_from_incremental`` → ``insert_point``, but ε-neighborhoods are taken
+    from ``D[i, j] <= eps`` instead of ``distances_to_query``. Insert order is
+    the caller-provided ``order`` (RQ1 uses fitness-descending).
+
+    Returns
+    -------
+    labels : ndarray of shape ``(N,)``, dtype int32
+        Analysis labels aligned with matrix rows: mature niches remapped to
+        ``0 .. K-1``; singleton pool and residual noise mapped to ``-1``.
+    """
+    D = np.asarray(D, dtype=np.float64)
+    if D.ndim != 2 or D.shape[0] != D.shape[1]:
+        raise ValueError(f"D must be square, got {D.shape}")
+    n = int(D.shape[0])
+    if n == 0:
+        return np.zeros(0, dtype=np.int32)
+    order_arr = np.asarray(list(order), dtype=np.int64)
+    if order_arr.shape != (n,) or set(int(x) for x in order_arr.tolist()) != set(range(n)):
+        raise ValueError("order must be a permutation of 0..N-1")
+
+    SpeciesIdGenerator.reset(0)
+    # State arrays keyed by *insertion* index 0..n-1
+    labels: List[int] = []
+    is_core: List[bool] = []
+    neighbors: List[Set[int]] = []
+    orig_of: List[int] = []  # insertion idx → matrix row
+    ins_of: Dict[int, int] = {}  # matrix row → insertion idx
+
+    def _demote_size1_inplace() -> None:
+        counts: Dict[int, int] = defaultdict(int)
+        for lab in labels:
+            if int(lab) > 0:
+                counts[int(lab)] += 1
+        size1 = {sid for sid, c in counts.items() if c == 1}
+        if not size1:
+            return
+        for i, lab in enumerate(labels):
+            if int(lab) in size1:
+                labels[i] = SINGLETON_SPECIES_ID
+
+    for orig_i in order_arr:
+        orig_i = int(orig_i)
+        new_idx = len(orig_of)
+        if new_idx == 0:
+            labels.append(NOISE_LABEL)
+            neighbors.append({0})
+            is_core.append(min_samples <= 1)
+            orig_of.append(orig_i)
+            ins_of[orig_i] = 0
+            if is_core[0]:
+                labels[0] = SINGLETON_SPECIES_ID
+            continue
+
+        nbrs = {
+            k
+            for k, orig_j in enumerate(orig_of)
+            if float(D[orig_i, orig_j]) <= eps
+        }
+        labels.append(NOISE_LABEL)
+        neighbors.append(set(nbrs) | {new_idx})
+        is_core.append(False)
+        orig_of.append(orig_i)
+        ins_of[orig_i] = new_idx
+
+        for j in nbrs:
+            neighbors[j].add(new_idx)
+
+        affected = set(nbrs) | {new_idx}
+        for i in affected:
+            is_core[i] = len(neighbors[i]) >= min_samples
+
+        core_cluster_ids: Set[int] = set()
+        for j in nbrs:
+            lab_j = int(labels[j])
+            if is_core[j] and lab_j > 0:
+                core_cluster_ids.add(lab_j)
+
+        new_is_core = is_core[new_idx]
+
+        if not new_is_core and not core_cluster_ids:
+            labels[new_idx] = NOISE_LABEL
+            continue
+
+        if not new_is_core and core_cluster_ids:
+            labels[new_idx] = min(core_cluster_ids)
+            continue
+
+        # new point is core — reuse live helpers via a thin state shim
+        shim = IncDBSCANState(
+            eps=eps,
+            min_samples=min_samples,
+            labels=labels,
+            is_core=is_core,
+            neighbors=neighbors,
+            genome_ids=list(range(len(labels))),
+        )
+
+        if len(core_cluster_ids) == 0:
+            reachable = _collect_reachable(shim, new_idx)
+            if len(reachable) < 2:
+                for i in reachable:
+                    labels[i] = SINGLETON_SPECIES_ID
+            else:
+                sid = generate_species_id()
+                _expand_cluster(shim, new_idx, sid)
+            continue
+
+        if len(core_cluster_ids) == 1:
+            sid = next(iter(core_cluster_ids))
+            _expand_cluster(shim, new_idx, sid)
+            continue
+
+        parents = sorted(core_cluster_ids)
+        survivor = parents[0]
+        for pid in parents:
+            SpeciesIdGenerator.note_id(pid)
+        _expand_cluster(shim, new_idx, survivor)
+        for i, lab in enumerate(labels):
+            if lab in core_cluster_ids:
+                labels[i] = survivor
+        labels[new_idx] = survivor
+
+    # Promote residual noise → singleton pool; demote size-1 mature labels
+    for i, lab in enumerate(labels):
+        if int(lab) == NOISE_LABEL:
+            labels[i] = SINGLETON_SPECIES_ID
+    _demote_size1_inplace()
+
+    # Analysis labels: matrix-row aligned; mature → 0..K-1; non-mature → -1
+    out = np.full(n, -1, dtype=np.int32)
+    mature_ids = sorted({int(lab) for lab in labels if int(lab) > 0})
+    remap = {sid: k for k, sid in enumerate(mature_ids)}
+    for ins_idx, lab in enumerate(labels):
+        orig = orig_of[ins_idx]
+        if int(lab) > 0:
+            out[orig] = remap[int(lab)]
+        else:
+            out[orig] = -1
+    return out
+
+
 def _build_species_from_state(
     state: IncDBSCANState,
     genomes: Sequence[Dict[str, Any]],

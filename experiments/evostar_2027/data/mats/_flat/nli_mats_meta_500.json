@@ -1,0 +1,10 @@
+{
+  "N": 500,
+  "p0_analysis": "experiments/evostar_2027/data/pool/p0_full.pkl",
+  "which": "both",
+  "files": {
+    "d_N": "experiments/evostar_2027/data/mats/_flat/d_N_500.npy",
+    "d_negE": "experiments/evostar_2027/data/mats/_flat/d_negE_500.npy"
+  },
+  "resume_full_n2000": "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --max-n 2000 --which both --checkpoint-every 10 --batch-size 256"
+}

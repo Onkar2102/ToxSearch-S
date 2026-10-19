@@ -4,9 +4,13 @@
 Uses whatever mats exist under rq1/mats (cheap always; NLI if present).
 If only smoke-sized d_N / d_negE exist, calibrates those at their N and notes it.
 
+Structure probes use **true IncDBSCAN** ``seed_from_precomputed_matrix``
+(fitness-desc when ``--p0`` is given).
+
 Example::
 
-    PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1d_hparam_sweep.py
+    PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1d_hparam_sweep.py \\
+      --prefer-n 500 --p0 experiments/evostar_2027/data/batches/B500/p0.pkl
 """
 
 from __future__ import annotations
@@ -18,9 +22,9 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.cluster import DBSCAN
 
 from experiments.stage_analysis import stage_a
+from speciation.clustering.inc_dbscan import seed_from_precomputed_matrix
 
 DEFAULT_MATS = Path("experiments/evostar_2027/rq1/mats")
 DEFAULT_SWEEPS = Path("experiments/evostar_2027/rq1/sweeps")
@@ -38,10 +42,17 @@ PLAN_TO_CLI = {
 }
 
 
-def _load_mat(mats_dir: Path, stem: str) -> Optional[Tuple[np.ndarray, int, Path]]:
-    """Load largest available ``{stem}_{N}.npy`` (prefer N=2000)."""
-    matches = sorted(mats_dir.glob(f"{stem}_*.npy"), key=lambda p: p.stat().st_mtime, reverse=True)
-    # Prefer exact analysis size if present
+def _load_mat(
+    mats_dir: Path,
+    stem: str,
+    *,
+    prefer_n: Optional[int] = None,
+) -> Optional[Tuple[np.ndarray, int, Path]]:
+    """Load ``{stem}_{N}.npy`` or batch-dir ``{stem}.npy``.
+
+    Preference: ``prefer_n`` if present → 2000 if present → largest N.
+    Also accepts ``mats_dir/B{N}/{stem}.npy`` when ``prefer_n`` is set.
+    """
     by_n: Dict[int, Path] = {}
     for p in mats_dir.glob(f"{stem}_*.npy"):
         try:
@@ -49,23 +60,40 @@ def _load_mat(mats_dir: Path, stem: str) -> Optional[Tuple[np.ndarray, int, Path
         except ValueError:
             continue
         by_n[n] = p
+    if prefer_n is not None:
+        batch_hit = mats_dir / f"B{prefer_n}" / f"{stem}.npy"
+        if batch_hit.is_file():
+            by_n[prefer_n] = batch_hit
+        plain = mats_dir / f"{stem}.npy"
+        if plain.is_file() and prefer_n not in by_n:
+            # single-batch folder passed as mats_dir
+            m = np.load(plain)
+            return m, int(m.shape[0]), plain
     if not by_n:
         return None
-    n = max(by_n)
-    # Prefer 2000 when available
-    if 2000 in by_n:
+    if prefer_n is not None and prefer_n in by_n:
+        n = prefer_n
+    elif 2000 in by_n and prefer_n is None:
         n = 2000
+    else:
+        n = max(by_n)
     path = by_n[n]
     m = np.load(path)
     return m, n, path
 
 
-def _dbscan_structure(m: np.ndarray, eps: float, min_samples: int) -> Dict[str, float]:
-    labels = DBSCAN(eps=eps, min_samples=min_samples, metric="precomputed").fit_predict(m)
+def _dbscan_structure(
+    m: np.ndarray,
+    eps: float,
+    min_samples: int,
+    order: np.ndarray,
+) -> Dict[str, float]:
+    """True IncDBSCAN incremental seed on precomputed mat (analysis labels)."""
+    labels = seed_from_precomputed_matrix(m, order, eps=eps, min_samples=min_samples)
     n = len(labels)
     noise = float(np.mean(labels < 0)) if n else 0.0
-    clusters = int(len(set(labels) - {-1}))
-    sizes = [int(np.sum(labels == c)) for c in set(labels) if c >= 0]
+    clusters = int(len(set(int(x) for x in labels.tolist()) - {-1}))
+    sizes = [int(np.sum(labels == c)) for c in set(labels.tolist()) if c >= 0]
     return {
         "n_clusters": clusters,
         "noise_frac": noise,
@@ -81,6 +109,18 @@ def main() -> int:
     p.add_argument("--sweeps-dir", type=Path, default=DEFAULT_SWEEPS)
     p.add_argument("--reference-radius", type=float, default=REFERENCE_RADIUS)
     p.add_argument("--min-samples", type=int, nargs="+", default=list(MIN_SAMPLES_GRID))
+    p.add_argument(
+        "--prefer-n",
+        type=int,
+        default=None,
+        help="Prefer mats at this N (e.g. 500 for B500 local E2E)",
+    )
+    p.add_argument(
+        "--p0",
+        type=Path,
+        default=None,
+        help="Optional p0.pkl for fitness-desc IncDBSCAN insert order (else index order)",
+    )
     args = p.parse_args()
 
     mats_dir = args.mats_dir
@@ -89,7 +129,7 @@ def main() -> int:
 
     loaded: Dict[str, Tuple[np.ndarray, int, Path]] = {}
     for stem in ("d_E", "d_P", "d_EP", "d_N", "d_negE"):
-        hit = _load_mat(mats_dir, stem)
+        hit = _load_mat(mats_dir, stem, prefer_n=args.prefer_n)
         if hit is not None:
             loaded[stem] = hit
             print(f"  loaded {stem} N={hit[1]} from {hit[2]}")
@@ -111,6 +151,16 @@ def main() -> int:
     ref_m, ref_n, _ = loaded["d_E"]
     target_frac = stage_a.neighbor_fraction(ref_m, args.reference_radius, strict=True)
 
+    # Fitness-desc insert order when p0 matches mat N; else index order
+    order_by_n: Dict[int, np.ndarray] = {}
+    if args.p0 is not None and args.p0.is_file():
+        df = pd.read_pickle(args.p0)
+        fit = pd.to_numeric(df["fitness"], errors="coerce").fillna(0.0).to_numpy()
+        order_by_n[len(df)] = np.argsort(-fit)
+        print(f"IncDBSCAN order = fitness-desc from {args.p0} (N={len(df)})")
+    else:
+        notes.append("No --p0; IncDBSCAN structure probes use index insert order")
+
     for name, (m, n, path) in loaded.items():
         theta = stage_a.calibrate_radius(m, target_frac, strict=True)
         eps = stage_a.calibrate_radius(m, target_frac, strict=False)
@@ -127,8 +177,9 @@ def main() -> int:
             "dbscan_eps": eps,
             "smoke_sized": n < ref_n,
         })
+        order = order_by_n.get(n, np.arange(n))
         for ms in args.min_samples:
-            st = _dbscan_structure(m, eps, ms)
+            st = _dbscan_structure(m, eps, ms, order)
             structure_rows.append({
                 "distance": name,
                 "N": n,

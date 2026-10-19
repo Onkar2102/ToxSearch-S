@@ -3,7 +3,13 @@
 # SLURM / local one-command RQ1 driver (Part 1 + optional Part 2).
 # Mirrors rc_script.sh cluster bootstrap; runs run_rq1_pipeline.py.
 #
-# Submit (full NLI @ 2000, 1d held, provisional theta/eps=0.1)::
+# Sync experiments/evostar_2027/data/ (pool+batches+cheap mats) to the cluster first.
+# Do NOT use SMOKE=1 on the cluster — that is a local wiring check only.
+#
+# Cluster (reuse synced pool/batches; run NLI @ 2000; 1d held)::
+#   STAGES=nli,materialize,p1e sbatch rc_rq1.sh
+#
+# Or default stages: pool/materialize are no-ops if artifacts already exist::
 #   sbatch rc_rq1.sh
 #
 # Full-pool NLI after 2000 is done::
@@ -12,11 +18,18 @@
 # Enable Part 1d + freeze::
 #   RUN_P1D=1 STAGES=p1d,p1e sbatch rc_rq1.sh
 #
-# Local smoke (no SLURM / no GPU check)::
-#   SMOKE=1 bash rc_rq1.sh
+# Part 1d⁺ independent threshold grid (0.1 step 0.05) on B500::
+#   PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1d_threshold_grid.py \
+#     --mats-dir experiments/evostar_2027/data/mats/B500 \
+#     --p0 experiments/evostar_2027/data/batches/B500/p0.pkl \
+#     --sweeps-dir experiments/evostar_2027/rq1/sweeps/B500 \
+#     --t-min 0.1 --t-max 0.5 --t-step 0.05
 #
-# Dry-run (print stages only)::
-#   DRY_RUN=1 bash rc_rq1.sh
+# Local B500 test (NLI @ 500; nested prefix of fitness-sorted pool)::
+#   STAGES=nli,materialize NLI_MAX_N=500 bash rc_rq1.sh
+#
+# Local smoke only (minutes; never for campaign results)::
+#   SMOKE=1 bash rc_rq1.sh
 #
 # Optional Part 2 pilots (needs GGUF + Perspective like rc_script.sh)::
 #   RUN_PILOTS=1 PILOT_RUN=1 sbatch rc_rq1.sh
@@ -51,7 +64,15 @@ echo "[DEBUG] PROJECT_ROOT=$PROJECT_ROOT  pwd=$(pwd)  SLURM_JOB_ID=${SLURM_JOB_I
 SMOKE="${SMOKE:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 SKIP_CLUSTER_ENV="${SKIP_CLUSTER_ENV:-0}"
-STAGES="${STAGES:-all}"
+# Prefer NLI-focused stages when pool/batches already synced (avoids rebuild work).
+if [ -f "experiments/evostar_2027/data/pool/p0_full.pkl" ] \
+   && [ -f "experiments/evostar_2027/data/batches/B2000/p0.pkl" ] \
+   && [ -f "experiments/evostar_2027/data/mats/B2000/d_E.npy" ]; then
+    DEFAULT_STAGES="nli,materialize,p1e"
+else
+    DEFAULT_STAGES="all"
+fi
+STAGES="${STAGES:-$DEFAULT_STAGES}"
 NLI_MAX_N="${NLI_MAX_N:-}"
 ALLOW_LARGE_N="${ALLOW_LARGE_N:-0}"
 RUN_P1D="${RUN_P1D:-0}"
@@ -64,6 +85,7 @@ NLI_MODEL="${NLI_MODEL:-cross-encoder/nli-deberta-v3-small}"
 FORCE="${FORCE:-0}"
 
 if [ "$SMOKE" = "1" ]; then
+    echo "WARNING: SMOKE=1 is for local wiring only — do not use for cluster campaign runs." >&2
     NLI_MAX_N="${NLI_MAX_N:-50}"
     echo "[SMOKE] NLI_MAX_N=${NLI_MAX_N}"
 fi

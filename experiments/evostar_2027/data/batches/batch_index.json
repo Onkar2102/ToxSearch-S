@@ -4,34 +4,27 @@
   "n_full": 3139,
   "batches": [
     {
+      "batch_id": "B500",
+      "N": 500,
+      "p0_path": "experiments/evostar_2027/data/batches/B500/p0.pkl"
+    },
+    {
       "batch_id": "B1000",
       "N": 1000,
-      "p0_path": "experiments/evostar_2027/data/batches/B1000/p0.pkl",
-      "fitness_min": 0.0674,
-      "fitness_max": 0.7308,
-      "fitness_median": 0.1269,
-      "nested_prefix_of": "B3139"
+      "p0_path": "experiments/evostar_2027/data/batches/B1000/p0.pkl"
     },
     {
       "batch_id": "B2000",
       "N": 2000,
-      "p0_path": "experiments/evostar_2027/data/batches/B2000/p0.pkl",
-      "fitness_min": 0.0233,
-      "fitness_max": 0.7308,
-      "fitness_median": 0.067,
-      "nested_prefix_of": "B3139"
+      "p0_path": "experiments/evostar_2027/data/batches/B2000/p0.pkl"
     },
     {
       "batch_id": "B3139",
       "N": 3139,
-      "p0_path": "experiments/evostar_2027/data/batches/B3139/p0.pkl",
-      "fitness_min": 0.0056,
-      "fitness_max": 0.7308,
-      "fitness_median": 0.0338,
-      "nested_prefix_of": null
+      "p0_path": "experiments/evostar_2027/data/batches/B3139/p0.pkl"
     }
   ],
-  "nested": "B1000 \u2282 B2000 \u2282 B3139",
+  "nested": "B500 \u2282 B1000 \u2282 B2000 \u2282 B3139",
   "provisional_radii": {
     "theta_sim": 0.1,
     "eps": 0.1

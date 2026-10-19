@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Simulate IncDBSCAN ε-neighborhoods vs batch DBSCAN as |D_t| grows to N_max.
+"""Simulate IncDBSCAN ε-neighborhoods as |D_t| grows to N_max.
 
-Compares three insert regimes against classical (batch) DBSCAN on the same
-prefix of points at each checkpoint:
+Compares insert regimes against **exact** IncDBSCAN on the same prefix at
+each checkpoint (no batch / sklearn DBSCAN):
 
-  1. exact IncDBSCAN  — true ε-balls (ToxSearch insert semantics, no singleton pool)
+  1. exact IncDBSCAN  — true ε-balls (ToxSearch insert semantics)
   2. approx IncDBSCAN — each true ε-neighbor kept w.p. ``recall`` (ANN-style miss)
-  3. batch DBSCAN     — sklearn-style density clustering on the full prefix
 
-Also times a vectorized "fast batch" path (precomputed d_E + DBSCAN expand).
-
-Data: real Unit-normalized embeddings from an IncDBSCAN run, extended to N_max
+Data: real unit-normalized embeddings from an IncDBSCAN run, extended to N_max
 with on-sphere perturbations of the empirical cloud (variant-like) plus a small
 fraction of fresh uniform directions (exploration).
 
@@ -55,49 +52,6 @@ def pairwise_d_E(X: np.ndarray) -> np.ndarray:
 def d_E_to_query(query: np.ndarray, X: np.ndarray) -> np.ndarray:
     sims = np.clip(X @ query, -1.0, 1.0)
     return (1.0 - sims) / 2.0
-
-
-# ---------------------------------------------------------------------------
-# Batch DBSCAN (classical / "fast" with precomputed matrix)
-# ---------------------------------------------------------------------------
-
-
-def batch_dbscan_precomputed(
-    D: np.ndarray,
-    eps: float,
-    min_samples: int,
-) -> Tuple[np.ndarray, List[Set[int]]]:
-    """Classical DBSCAN on a full distance matrix. Labels: -1 = noise, else ≥0.
-
-    Returns (labels, neighborhoods) where neighborhoods[i] = {j : D[i,j] ≤ eps}
-    including i.
-    """
-    n = D.shape[0]
-    mask = D <= eps
-    neighbors: List[Set[int]] = [
-        set(np.flatnonzero(mask[i]).tolist()) for i in range(n)
-    ]
-    degrees = mask.sum(axis=1)
-    is_core = degrees >= min_samples
-    labels = np.full(n, -1, dtype=np.int32)
-    cluster_id = 0
-    for i in range(n):
-        if labels[i] != -1 or not is_core[i]:
-            continue
-        # Expand densify-reachable from core i
-        q = deque([i])
-        labels[i] = cluster_id
-        while q:
-            u = q.popleft()
-            if not is_core[u]:
-                continue
-            for v in neighbors[u]:
-                if labels[v] == -1:
-                    labels[v] = cluster_id
-                    if is_core[v]:
-                        q.append(v)
-        cluster_id += 1
-    return labels, neighbors
 
 
 # ---------------------------------------------------------------------------
@@ -349,9 +303,9 @@ def run_simulation(
     checkpoint_set = set(int(c) for c in checkpoints if c <= n_max)
     checkpoint_set.add(n_max)
 
-    # Precompute full distance matrix once (fast batch path substrate)
+    # Optional: time full pairwise d_E (not used for clustering)
     t0 = time.perf_counter()
-    D_full = pairwise_d_E(X)
+    _ = pairwise_d_E(X)
     t_dist = time.perf_counter() - t0
 
     # Incremental states: exact + approx per recall
@@ -388,25 +342,22 @@ def run_simulation(
         if target_n not in checkpoint_set:
             continue
 
-        # Batch / fast DBSCAN on prefix
-        t1 = time.perf_counter()
-        batch_labels, batch_nbrs = batch_dbscan_precomputed(
-            D_full[:target_n, :target_n], eps, min_samples
-        )
-        t_batch = time.perf_counter() - t1
-
-        k_b, noise_b = n_clusters_and_noise(batch_labels)
+        # Reference = exact IncDBSCAN state at this prefix
+        ref = states["inc_exact"]
+        ref_labels = np.asarray(ref.labels, dtype=np.int32)
+        ref_nbrs = ref.neighbors
+        k_ref, noise_ref = n_clusters_and_noise(ref_labels)
 
         for name, st in states.items():
             inc_labels = np.asarray(st.labels, dtype=np.int32)
             assert len(inc_labels) == target_n
-            ari = contingency_ari(batch_labels, inc_labels)
-            jacc = mean_neighborhood_jaccard(st.neighbors, batch_nbrs)
+            ari = contingency_ari(ref_labels, inc_labels) if name != "inc_exact" else 1.0
+            jacc = mean_neighborhood_jaccard(st.neighbors, ref_nbrs)
             k_i, noise_i = n_clusters_and_noise(inc_labels)
-            # Exact neighborhood recall vs batch (fraction of true nbrs kept)
+            # Neighborhood recall vs exact IncDBSCAN
             recall_emp = []
             for i in range(target_n):
-                true = batch_nbrs[i]
+                true = ref_nbrs[i]
                 got = st.neighbors[i]
                 if len(true) <= 1:
                     recall_emp.append(1.0)
@@ -417,15 +368,14 @@ def run_simulation(
                     "generation": gen,
                     "n": target_n,
                     "method": name,
-                    "ari_vs_batch": ari,
+                    "ari_vs_exact": ari,
                     "mean_nbr_jaccard": jacc,
                     "mean_nbr_recall": float(np.mean(recall_emp)),
                     "n_clusters_inc": k_i,
-                    "n_clusters_batch": k_b,
+                    "n_clusters_exact": k_ref,
                     "noise_frac_inc": noise_i,
-                    "noise_frac_batch": noise_b,
+                    "noise_frac_exact": noise_ref,
                     "cum_insert_seconds": t_inc[name],
-                    "batch_seconds_at_n": t_batch,
                     "pairwise_dE_seconds_full": t_dist,
                     "eps": eps,
                     "min_samples": min_samples,
@@ -457,11 +407,13 @@ def plot_results(rows: List[dict], out_dir: Path) -> None:
 
     ax = axes[0, 0]
     for m in methods:
-        xs, ys = series(m, "ari_vs_batch")
+        if m == "inc_exact":
+            continue
+        xs, ys = series(m, "ari_vs_exact")
         ax.plot(xs, ys, marker="o", ms=3.5, lw=1.6, color=cmap.get(m, None), label=m)
     ax.set_xlabel(r"$n = |D_t|$")
-    ax.set_ylabel("ARI vs batch DBSCAN")
-    ax.set_title("Partition agreement")
+    ax.set_ylabel("ARI vs exact IncDBSCAN")
+    ax.set_title("Partition agreement (approx vs exact)")
     ax.set_ylim(-0.05, 1.05)
     ax.grid(True, alpha=0.3)
     ax.legend(fontsize=8)
@@ -471,15 +423,12 @@ def plot_results(rows: List[dict], out_dir: Path) -> None:
         xs, ys = series(m, "mean_nbr_jaccard")
         ax.plot(xs, ys, marker="o", ms=3.5, lw=1.6, color=cmap.get(m, None), label=m)
     ax.set_xlabel(r"$n = |D_t|$")
-    ax.set_ylabel(r"Mean Jaccard($N_\varepsilon^{\mathrm{inc}}, N_\varepsilon^{\mathrm{batch}}$)")
+    ax.set_ylabel(r"Mean Jaccard($N_\varepsilon, N_\varepsilon^{\mathrm{exact}}$)")
     ax.set_title("ε-neighborhood agreement")
     ax.set_ylim(-0.05, 1.05)
     ax.grid(True, alpha=0.3)
 
     ax = axes[1, 0]
-    # clusters: exact + batch reference
-    xs, ys = series("inc_exact", "n_clusters_batch")
-    ax.plot(xs, ys, marker="s", ms=3.5, lw=1.6, color="#444444", label="batch DBSCAN", ls="--")
     for m in methods:
         xs, ys = series(m, "n_clusters_inc")
         ax.plot(xs, ys, marker="o", ms=3.5, lw=1.6, color=cmap.get(m, None), label=m)
@@ -490,20 +439,18 @@ def plot_results(rows: List[dict], out_dir: Path) -> None:
     ax.legend(fontsize=7)
 
     ax = axes[1, 1]
-    xs, ys = series("inc_exact", "batch_seconds_at_n")
-    ax.plot(xs, ys, marker="s", ms=3.5, lw=1.6, color="#444444", label="batch @ checkpoint", ls="--")
     for m in methods:
         xs, ys = series(m, "cum_insert_seconds")
         ax.plot(xs, ys, marker="o", ms=3.5, lw=1.6, color=cmap.get(m, None), label=f"{m} cum.")
     ax.set_xlabel(r"$n = |D_t|$")
     ax.set_ylabel("Seconds")
-    ax.set_title("Runtime (insert cum. vs batch recompute)")
+    ax.set_title("Cumulative insert runtime")
     ax.set_yscale("log")
     ax.grid(True, alpha=0.3, which="both")
     ax.legend(fontsize=7)
 
     fig.suptitle(
-        f"IncDBSCAN neighborhoods vs batch DBSCAN (eps={rows[0]['eps']}, "
+        f"IncDBSCAN neighborhoods (exact vs approx; eps={rows[0]['eps']}, "
         f"min_samples={rows[0]['min_samples']})",
         fontsize=11,
     )
@@ -595,8 +542,8 @@ def main() -> None:
         "note": (
             "Exact IncDBSCAN uses true ε-neighborhoods (Ester-style insert). "
             "Approx variants randomly drop true neighbors with keep-prob=recall "
-            "to simulate ANN range-query misses. Batch DBSCAN reclusters the "
-            "full prefix at each checkpoint on precomputed d_E."
+            "to simulate ANN range-query misses. Metrics are vs exact IncDBSCAN "
+            "(no batch DBSCAN)."
         ),
     }
     with open(args.out_dir / "summary.json", "w") as f:
@@ -607,10 +554,10 @@ def main() -> None:
     print(f"Wrote {args.out_dir / 'neighborhood_sim.png'}")
     for r in final:
         print(
-            f"  {r['method']}: ARI={r['ari_vs_batch']:.4f}  "
+            f"  {r['method']}: ARI={r['ari_vs_exact']:.4f}  "
             f"Jaccard={r['mean_nbr_jaccard']:.4f}  "
             f"nbr_recall={r['mean_nbr_recall']:.4f}  "
-            f"k_inc={r['n_clusters_inc']} k_batch={r['n_clusters_batch']}"
+            f"k_inc={r['n_clusters_inc']} k_exact={r['n_clusters_exact']}"
         )
 
 

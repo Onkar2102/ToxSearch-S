@@ -12,6 +12,7 @@ from speciation.clustering._io import SINGLETON_SPECIES_ID
 from speciation.clustering.inc_dbscan import (
     insert_point,
     seed_from_incremental,
+    seed_from_precomputed_matrix,
     process_unlabeled,
 )
 from speciation.density_memory import NOISE_LABEL, is_labeled, set_density_label
@@ -238,6 +239,48 @@ class TestIncDBSCANParentSelector(unittest.TestCase):
             with open(td / "parents.json") as f:
                 parents = json.load(f)
             self.assertGreaterEqual(len(parents), 2)
+
+
+class TestIncDBSCANPrecomputedMatrix(unittest.TestCase):
+    def setUp(self):
+        SpeciesIdGenerator.reset(0)
+
+    def test_precomputed_seed_deterministic_and_aligned(self):
+        # Two tight pairs far apart + one isolated point
+        rng = np.random.default_rng(0)
+        pts = np.array([
+            [0.0, 0.0],
+            [0.01, 0.0],
+            [1.0, 0.0],
+            [1.01, 0.0],
+            [5.0, 5.0],
+        ], dtype=np.float64)
+        n = len(pts)
+        D = np.zeros((n, n), dtype=np.float64)
+        for i in range(n):
+            for j in range(i + 1, n):
+                d = float(np.linalg.norm(pts[i] - pts[j]))
+                D[i, j] = D[j, i] = d
+        order = np.arange(n)  # index order
+        a = seed_from_precomputed_matrix(D, order, eps=0.05, min_samples=2)
+        b = seed_from_precomputed_matrix(D, order, eps=0.05, min_samples=2)
+        self.assertEqual(a.shape, (n,))
+        np.testing.assert_array_equal(a, b)
+        # Isolated point must be non-mature (-1)
+        self.assertEqual(int(a[4]), -1)
+        # Each tight pair should share a mature label (or both noise if min_samples blocks)
+        # With min_samples=2 and eps covering pair distance 0.01, pairs should mature
+        self.assertNotEqual(int(a[0]), -1)
+        self.assertEqual(int(a[0]), int(a[1]))
+        self.assertNotEqual(int(a[2]), -1)
+        self.assertEqual(int(a[2]), int(a[3]))
+        self.assertNotEqual(int(a[0]), int(a[2]))
+        # Fitness-desc order permutation still deterministic
+        order2 = np.array([4, 3, 2, 1, 0])
+        c = seed_from_precomputed_matrix(D, order2, eps=0.05, min_samples=2)
+        d = seed_from_precomputed_matrix(D, order2, eps=0.05, min_samples=2)
+        np.testing.assert_array_equal(c, d)
+        del rng
 
 
 if __name__ == "__main__":

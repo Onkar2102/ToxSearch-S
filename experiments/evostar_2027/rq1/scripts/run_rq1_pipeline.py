@@ -97,6 +97,10 @@ def stage_materialize(args: argparse.Namespace) -> None:
         "--src-mats",
         str(RQ1 / "mats"),
     ]
+    if args.rebuild_cheap or args.force:
+        cmd.append("--force-rewrite")
+    else:
+        cmd.append("--skip-existing")
     if args.rebuild_cheap:
         cmd.append("--rebuild-cheap")
     _run(cmd, dry_run=args.dry_run)
@@ -135,11 +139,13 @@ def stage_p1d(args: argparse.Namespace) -> None:
     if not args.run_p1d:
         print("[HOLD] p1d — pass --run-p1d to enable (campaign default: held)")
         return
-    # Prefer legacy rq1/mats flat names for p1d; also symlink from data/_flat if needed
-    mats = RQ1 / "mats"
-    mats.mkdir(parents=True, exist_ok=True)
+    prefer_n = int(args.nli_max_n)
+    # Prefer per-batch folder (B500/…) when present; else flat + rq1/mats
+    batch_mats = DATA / "mats" / f"B{prefer_n}"
     flat = DATA / "mats" / "_flat"
-    if flat.is_dir():
+    mats = batch_mats if batch_mats.is_dir() else (RQ1 / "mats")
+    if flat.is_dir() and mats == RQ1 / "mats":
+        mats.mkdir(parents=True, exist_ok=True)
         for p in flat.glob("d_*.npy"):
             dest = mats / p.name
             if not dest.exists():
@@ -149,7 +155,20 @@ def stage_p1d(args: argparse.Namespace) -> None:
                     import shutil
 
                     shutil.copy2(p, dest)
-    cmd = [_py(), _script("p1d_hparam_sweep.py"), "--mats-dir", str(mats)]
+    sweeps = RQ1 / "sweeps" / f"B{prefer_n}"
+    sweeps.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        _py(),
+        _script("p1d_hparam_sweep.py"),
+        "--mats-dir",
+        str(mats),
+        "--sweeps-dir",
+        str(sweeps),
+        "--prefer-n",
+        str(prefer_n),
+        "--reference-radius",
+        str(PROVISIONAL_THETA),
+    ]
     _run(cmd, dry_run=args.dry_run)
 
 
@@ -197,9 +216,19 @@ def _write_provisional_frozen(args: argparse.Namespace) -> None:
 
 
 def stage_p1e(args: argparse.Namespace) -> None:
-    prop = RQ1 / "sweeps" / "shortlist_proposal.json"
+    prefer_n = int(args.nli_max_n)
+    prop = RQ1 / "sweeps" / f"B{prefer_n}" / "shortlist_proposal.json"
+    if not prop.is_file():
+        prop = RQ1 / "sweeps" / "shortlist_proposal.json"
     if args.run_p1d and prop.is_file():
-        _run([_py(), _script("p1e_freeze_config.py")], dry_run=args.dry_run)
+        cmd = [
+            _py(),
+            _script("p1e_freeze_config.py"),
+            "--sweeps-dir",
+            str(prop.parent),
+            "--force",
+        ]
+        _run(cmd, dry_run=args.dry_run)
         return
     print("[INFO] p1e: 1d held — writing provisional frozen_config @ theta/eps=0.1")
     _write_provisional_frozen(args)
