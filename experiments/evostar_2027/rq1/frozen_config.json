@@ -1,13 +1,25 @@
 {
-  "schema_version": 1,
-  "frozen_at": "2026-10-19T02:33:04.202688+00:00",
-  "source": "experiments/evostar_2027/rq1 Part 1",
+  "schema_version": 2,
+  "campaign": "rq2_factorial",
+  "frozen_at": "2026-10-19T18:30:23.319501+00:00",
+  "source": "experiments/evostar_2027/rq1 Part 1 offline (B500 radii)",
   "seed_file": "data/prompt.csv",
-  "max_total_genomes": 150,
+  "max_total_genomes": 2000,
+  "pilot_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "n_cells": 40,
   "shortlist_cli_methods": [
     "embedding",
-    "embedding+objective",
-    "nli",
     "nli_entail"
   ],
   "clustering_methods": [
@@ -26,26 +38,6 @@
       "N_calibrated_on": 500,
       "smoke_sized_calibration": false
     },
-    "embedding+objective": {
-      "plan_name": "d_EP",
-      "theta_sim": 0.08821937700988504,
-      "eps": 0.08821937700988502,
-      "dbscan_eps": 0.08821937700988502,
-      "min_samples": 2,
-      "dbscan_min_samples": 2,
-      "N_calibrated_on": 500,
-      "smoke_sized_calibration": false
-    },
-    "nli": {
-      "plan_name": "d_N",
-      "theta_sim": 0.23868516087532046,
-      "eps": 0.23868516087532043,
-      "dbscan_eps": 0.23868516087532043,
-      "min_samples": 2,
-      "dbscan_min_samples": 2,
-      "N_calibrated_on": 500,
-      "smoke_sized_calibration": false
-    },
     "nli_entail": {
       "plan_name": "d_negE",
       "theta_sim": 0.46993535757064825,
@@ -57,6 +49,8 @@
       "smoke_sized_calibration": false
     }
   },
-  "notes": [],
+  "notes": [
+    "RQ2 live factorial: d_E (embedding) vs d_negE (nli_entail) \u00d7 LF vs IncDBSCAN; d_EP and full d_N dropped from live grid after offline RQ1."
+  ],
   "proposal_path": "experiments/evostar_2027/rq1/sweeps/B500/shortlist_proposal.json"
 }

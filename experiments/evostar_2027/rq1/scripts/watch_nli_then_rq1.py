@@ -106,8 +106,10 @@ def run_batch(n: int) -> None:
             "experiments/evostar_2027/rq1/scripts/p1d_cluster_coherence.py",
             "--species-dir",
             str(sw / "species"),
-            "--d-e",
-            str(mats / "d_E.npy"),
+            "--mats-dir",
+            str(mats),
+            "--p0",
+            str(p0),
             "--out",
             str(sw / "coherence.csv"),
         ]

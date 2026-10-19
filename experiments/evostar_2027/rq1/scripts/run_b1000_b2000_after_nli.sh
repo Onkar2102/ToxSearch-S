@@ -72,7 +72,8 @@ run_batch() {
   log "===== STAGE: coherence ${BID} ====="
   "$PY" experiments/evostar_2027/rq1/scripts/p1d_cluster_coherence.py \
     --species-dir "${SW}/species" \
-    --d-e "${MATS}/d_E.npy" \
+    --mats-dir "$MATS" \
+    --p0 "$P0" \
     --out "${SW}/coherence.csv"
 
   log "===== STAGE: LaTeX tables ${BID} ====="

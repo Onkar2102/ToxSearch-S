@@ -194,8 +194,10 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
             f"($\\approx{_fmt_f(target, 3)}$) \\\\"
         ),
         (
-            r"Topic-clustering proxy & Intra-/inter-cluster mean $d_E$ on the embedding canvas; "
-            r"prompt samples from the largest niches \\"
+            r"Topic-clustering proxy & Within-/between-cluster Separation and silhouette "
+            r"scored under \emph{all} canvases $d_E$, $d_{EP}$, $d_N$, $d_{\neg E}$ "
+            r"(primary ranking on held-out $d_E$); Davies--Bouldin / Calinski--Harabasz on "
+            r"MiniLM vectors; prompt samples from the largest niches \\"
         ),
     ]
     for item, setting in timing_rows:
@@ -286,6 +288,31 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
         )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
 
+    def _coh_f(c: Optional[Dict[str, str]], key: str, nd: int) -> str:
+        if not c or c.get(key) in (None, ""):
+            return "---"
+        try:
+            return _fmt_f(c[key], nd)
+        except Exception:
+            return "---"
+
+    def _dagger_mark(method: str, r: Dict[str, str]) -> str:
+        mark = ""
+        if (
+            method in ("leader_follower", "incdbscan")
+            and r["distance"] in ("d_E", "d_EP")
+            and float(r["threshold"]) <= 0.15 + 1e-9
+            and float(r["threshold"]) >= 0.05 - 1e-9
+        ):
+            mark = r"$^\dagger$"
+        if (
+            method == "incdbscan"
+            and r["distance"] in ("d_N", "d_negE")
+            and float(r["max_cluster"]) >= 0.5 * n
+        ):
+            mark = r"$^\ddagger$"
+        return mark
+
     def grid_table(method: str, label: str, caption: str) -> List[str]:
         out = [
             r"\begin{table}[htbp]",
@@ -293,21 +320,23 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
             f"\\caption{{{caption}}}",
             f"\\label{{{label}}}",
             r"\scriptsize",
-            r"\setlength{\tabcolsep}{2.2pt}",
-            r"\begin{tabular}{@{}lrrrrrrrl@{}}",
+            r"\setlength{\tabcolsep}{1.8pt}",
+            r"\begin{tabular}{@{}lrrrrrrrrrl@{}}",
             r"\toprule",
         ]
         if method == "leader_follower":
             out.append(
                 r"Distance & \thead{Threshold\\$t$} & \thead{Mature\\niches} & Singletons & "
                 r"\thead{Maximum\\niche size} & \thead{Fraction in\\mature niches} & "
-                r"\thead{Neighbor\\fraction} & Separation & \thead{Structurally\\healthy} \\"
+                r"\thead{Neighbor\\fraction} & \thead{Within\\(intra $d_E$)} & "
+                r"\thead{Between\\(inter $d_E$)} & Separation & \thead{Structurally\\healthy} \\"
             )
         else:
             out.append(
                 r"Distance & \thead{Threshold\\$t$} & \thead{Number of\\clusters} & "
                 r"\thead{Noise\\fraction} & \thead{Maximum\\cluster size} & "
                 r"\thead{Fraction in\\mature niches} & \thead{Neighbor\\fraction} & "
+                r"\thead{Within\\(intra $d_E$)} & \thead{Between\\(inter $d_E$)} & "
                 r"Separation & \thead{Structurally\\healthy} \\"
             )
         out.append(r"\midrule")
@@ -318,26 +347,11 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
             if r["distance"] not in DIST_TEX:
                 continue
             c = _coh_key(coh, method, r["distance"], r["threshold"], r.get("min_samples"))
-            sep = (
-                _fmt_f(c["separation"], 2)
-                if c and c.get("separation") not in (None, "")
-                else "---"
-            )
+            intra = _coh_f(c, "intra_d_E", 3)
+            inter = _coh_f(c, "inter_d_E", 3)
+            sep = _coh_f(c, "separation", 2)
             ok = "Yes" if c and str(c.get("structurally_healthy")) == "True" else "No"
-            mark = ""
-            if (
-                method in ("leader_follower", "incdbscan")
-                and r["distance"] in ("d_E", "d_EP")
-                and float(r["threshold"]) <= 0.15 + 1e-9
-                and float(r["threshold"]) >= 0.05 - 1e-9
-            ):
-                mark = r"$^\dagger$"
-            if (
-                method == "incdbscan"
-                and r["distance"] in ("d_N", "d_negE")
-                and float(r["max_cluster"]) >= 0.5 * n
-            ):
-                mark = r"$^\ddagger$"
+            mark = _dagger_mark(method, r)
             dist = DIST_TEX[r["distance"]] + mark
             if prev == r["distance"]:
                 dist = ""
@@ -347,27 +361,74 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
                     f"{dist} & {_fmt_f(r['threshold'], 2)} & {r['n_mature']} & "
                     f"{r['n_singletons']} & {_fmt_i(r['max_cluster'])} & "
                     f"{_fmt_f(r['frac_in_mature'], 3)} & {_fmt_f(r['neighbor_frac_lf'], 3)} & "
-                    f"{sep} & {ok} \\\\"
+                    f"{intra} & {inter} & {sep} & {ok} \\\\"
                 )
             else:
                 out.append(
                     f"{dist} & {_fmt_f(r['threshold'], 2)} & {r['n_clusters']} & "
                     f"{_fmt_f(r['noise_frac'], 3)} & {_fmt_i(r['max_cluster'])} & "
                     f"{_fmt_f(r['frac_in_mature'], 3)} & {_fmt_f(r['neighbor_frac_lf'], 3)} & "
-                    f"{sep} & {ok} \\\\"
+                    f"{intra} & {inter} & {sep} & {ok} \\\\"
                 )
         out += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
         return out
 
+    def quality_table(method: str, label: str, caption: str) -> List[str]:
+        """Silhouette / Davies--Bouldin / Calinski--Harabasz for one speciation method."""
+        out = [
+            r"\begin{table}[htbp]",
+            r"\centering",
+            f"\\caption{{{caption}}}",
+            f"\\label{{{label}}}",
+            r"\scriptsize",
+            r"\setlength{\tabcolsep}{2.2pt}",
+            r"\begin{tabular}{@{}lrrrrrl@{}}",
+            r"\toprule",
+            (
+                r"Distance & \thead{Threshold\\$t$} & Silhouette & "
+                r"\thead{Davies--\\Bouldin} & \thead{Calinski--\\Harabasz} & "
+                r"Separation & \thead{Structurally\\healthy} \\"
+            ),
+            r"\midrule",
+        ]
+        rows = [r for r in grid if r["method"] == method and r["distance"] in DIST_TEX]
+        rows.sort(key=lambda r: (_dist_sort_key(r["distance"]), float(r["threshold"])))
+        prev_dist = None
+        for r in rows:
+            c = _coh_key(coh, method, r["distance"], r["threshold"], r.get("min_samples"))
+            mark = _dagger_mark(method, r)
+            dist_tex = DIST_TEX[r["distance"]] + mark
+            dist_show = "" if prev_dist == r["distance"] else dist_tex
+            prev_dist = r["distance"]
+            ok = "Yes" if c and str(c.get("structurally_healthy")) == "True" else "No"
+            out.append(
+                f"{dist_show} & {_fmt_f(r['threshold'], 2)} & "
+                f"{_coh_f(c, 'silhouette_d_E', 3)} & {_coh_f(c, 'davies_bouldin', 3)} & "
+                f"{_coh_f(c, 'calinski_harabasz', 1)} & {_coh_f(c, 'separation', 2)} & "
+                f"{ok} \\\\"
+            )
+        out += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+        return out
+
+    sep_caption_tail = (
+        r"Within / Between are mean intra- / inter-cluster $d_E$ on the embedding canvas; "
+        r"Separation $=$ Between/Within. Structurally healthy marks cells that pass collapse "
+        r"and fragmentation filters. Recommended working-band cells are marked~$\dagger$."
+    )
+    quality_caption_tail = (
+        r"Silhouette and Separation here use the held-out embedding canvas $d_E$ "
+        r"(full cross-canvas Within / Between / Separation / silhouette appear in the "
+        r"cross-canvas tables). Davies--Bouldin (lower better) and Calinski--Harabasz "
+        r"(higher better) require feature vectors and are computed on MiniLM embeddings "
+        r"only (not distance-canvas transferable). Structurally healthy matches the "
+        r"corresponding threshold-grid table. Recommended working-band cells are marked~$\dagger$."
+    )
     lines += grid_table(
         "leader_follower",
         f"tab:rq1-{batch_lower}-grid-lf",
         (
             f"Batch~{batch} full Leader--Follower threshold grid ($N{{=}}{n}$; join if $d<t$; "
-            r"fitness-descending order). Separation is the ratio of mean inter-cluster to mean "
-            r"intra-cluster $d_E$ on the embedding canvas. Structurally healthy marks cells that "
-            r"pass collapse and fragmentation filters. Recommended working-band cells are "
-            r"marked~$\dagger$."
+            f"fitness-descending order). {sep_caption_tail}"
         ),
     )
     lines += grid_table(
@@ -375,12 +436,131 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
         f"tab:rq1-{batch_lower}-grid-inc",
         (
             f"Batch~{batch} full Incremental DBSCAN threshold grid ($N{{=}}{n}$; true incremental "
-            r"seed on precomputed distance matrices; $\textit{min\_samples}=2$). Separation is "
-            r"the ratio of mean inter-cluster to mean intra-cluster $d_E$ on the embedding canvas. "
-            r"Structurally healthy marks cells that pass collapse and fragmentation filters. "
-            r"Recommended cells are marked~$\dagger$; oversized natural-language-inference "
-            r"components are marked~$\ddagger$."
+            r"seed on precomputed distance matrices; $\textit{min\_samples}=2$). "
+            + sep_caption_tail
+            + r" Oversized natural-language-inference components are marked~$\ddagger$."
         ),
+    )
+    lines += quality_table(
+        "leader_follower",
+        f"tab:rq1-{batch_lower}-quality-lf",
+        (
+            f"Batch~{batch} classic cluster-quality indices for Leader--Follower threshold-grid "
+            f"cells ($N{{=}}{n}$). {quality_caption_tail}"
+        ),
+    )
+    lines += quality_table(
+        "incdbscan",
+        f"tab:rq1-{batch_lower}-quality-inc",
+        (
+            f"Batch~{batch} classic cluster-quality indices for Incremental DBSCAN threshold-grid "
+            f"cells ($N{{=}}{n}$; $\\textit{{min\\_samples}}=2$). {quality_caption_tail} "
+            r"Oversized natural-language-inference components are marked~$\ddagger$."
+        ),
+    )
+
+    def cross_canvas_metric_table(
+        method: str,
+        label: str,
+        caption: str,
+        *,
+        metric_prefix: str,
+        short_name: str,
+        nd: int,
+        higher_better: bool,
+    ) -> List[str]:
+        """One clustering metric under every scoring canvas for one speciation method."""
+        col_heads = (
+            rf"\thead{{{short_name}@$d_E$}} & \thead{{{short_name}@$d_{{EP}}$}} & "
+            rf"\thead{{{short_name}@$d_N$}} & \thead{{{short_name}@$d_{{\neg E}}$}}"
+        )
+        out = [
+            r"\begin{table}[htbp]",
+            r"\centering",
+            f"\\caption{{{caption}}}",
+            f"\\label{{{label}}}",
+            r"\scriptsize",
+            r"\setlength{\tabcolsep}{2.0pt}",
+            r"\begin{tabular}{@{}lrrrrrl@{}}",
+            r"\toprule",
+            (
+                r"Forming & \thead{Threshold\\$t$} & "
+                + col_heads
+                + r" & \thead{Structurally\\healthy} \\"
+            ),
+            r"\midrule",
+        ]
+        rows = [r for r in grid if r["method"] == method and r["distance"] in DIST_TEX]
+        rows.sort(key=lambda r: (_dist_sort_key(r["distance"]), float(r["threshold"])))
+        prev_dist = None
+        for r in rows:
+            c = _coh_key(coh, method, r["distance"], r["threshold"], r.get("min_samples"))
+            mark = _dagger_mark(method, r)
+            dist_tex = DIST_TEX[r["distance"]] + mark
+            dist_show = "" if prev_dist == r["distance"] else dist_tex
+            prev_dist = r["distance"]
+            ok = "Yes" if c and str(c.get("structurally_healthy")) == "True" else "No"
+            out.append(
+                f"{dist_show} & {_fmt_f(r['threshold'], 2)} & "
+                f"{_coh_f(c, f'{metric_prefix}_on_d_E', nd)} & "
+                f"{_coh_f(c, f'{metric_prefix}_on_d_EP', nd)} & "
+                f"{_coh_f(c, f'{metric_prefix}_on_d_N', nd)} & "
+                f"{_coh_f(c, f'{metric_prefix}_on_d_negE', nd)} & "
+                f"{ok} \\\\"
+            )
+        out += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+        return out
+
+    def _emit_cross_family(method: str, method_name: str, label_suffix: str, extra: str = "") -> None:
+        if method == "incdbscan":
+            head_scope = (
+                f"Batch~{batch} cross-canvas {{what}} for {method_name} "
+                f"($N{{=}}{n}$; $\\textit{{min\\_samples}}=2$). "
+            )
+        else:
+            head_scope = f"Batch~{batch} cross-canvas {{what}} for {method_name} ($N{{=}}{n}$). "
+        shared = (
+            r"Each niche partition (forming distance) is rescored under all four canvases "
+            r"$d_E$, $d_{EP}$, $d_N$, $d_{\neg E}$. "
+            r"Diagonal entries (score under the forming canvas) can look strong by construction; "
+            r"off-diagonal entries test transfer. Recommended working-band cells are marked~$\dagger$."
+            + extra
+        )
+        specs = [
+            ("within", "intra", "Within", 3, "within-cluster (intra) distances",
+             "mean intra-cluster pairwise distance (lower tighter)"),
+            ("between", "inter", "Between", 3, "between-cluster (inter) distances",
+             "mean inter-cluster pairwise distance (higher more separated)"),
+            ("sep", "separation", "Sep", 2, "Separation (inter/intra)",
+             r"Separation $=$ Between/Within (higher better)"),
+            ("sil", "silhouette", "Sil", 3, "silhouette",
+             "silhouette on the precomputed canvas (higher better; negative implies mismatched assignment)"),
+        ]
+        for short, prefix, head, nd, what, gloss in specs:
+            caption = (
+                head_scope.replace("{what}", what)
+                + shared
+                + f" {head}@$d$: {gloss}."
+            )
+            label = f"tab:rq1-{batch_lower}-cross-{short}-{label_suffix}"
+            lines.extend(
+                cross_canvas_metric_table(
+                    method,
+                    label,
+                    caption,
+                    metric_prefix=prefix,
+                    short_name=head,
+                    nd=nd,
+                    higher_better=True,
+                )
+            )
+
+    _emit_cross_family("leader_follower", "Leader--Follower", "lf")
+    _emit_cross_family(
+        "incdbscan",
+        "Incremental DBSCAN",
+        "inc",
+        extra=r" Oversized natural-language-inference components are marked~$\ddagger$.",
     )
 
     out.parent.mkdir(parents=True, exist_ok=True)

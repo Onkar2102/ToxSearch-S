@@ -173,6 +173,18 @@ def _batch_p1d_done(sweeps: Path, *, expect_nli: bool) -> bool:
         need |= {"d_N", "d_negE"}
     if not need.issubset(dists):
         return False
+    # Require classic + cross-canvas columns (forces rescore after schema bump).
+    coh_cols = set(c_rows[0].keys())
+    for col in (
+        "silhouette_d_E",
+        "davies_bouldin",
+        "calinski_harabasz",
+        "separation_on_d_E",
+        "separation_on_d_EP",
+        "separation_on_forming",
+    ):
+        if col not in coh_cols:
+            return False
     # Coherence should cover the same method×distance×t cells (approx).
     return len(c_rows) >= max(1, len(g_rows) // 2)
 
@@ -270,8 +282,10 @@ def _run_batch_p1d(args: argparse.Namespace, n: int) -> None:
             _script("p1d_cluster_coherence.py"),
             "--species-dir",
             str(sweeps / "species"),
-            "--d-e",
-            str(mats / "d_E.npy"),
+            "--mats-dir",
+            str(mats),
+            "--p0",
+            str(p0),
             "--out",
             str(sweeps / "coherence.csv"),
         ],
@@ -424,7 +438,16 @@ def stage_p1e(args: argparse.Namespace) -> None:
             "--force",
             "--max-total-genomes",
             str(int(args.pilot_max_genomes)),
+            "--pilot-seeds",
+            str(args.pilot_seeds),
         ]
+        # RQ2-style shortlist override (env / CLI); empty ⇒ keep proposal shortlist
+        cli_m = str(getattr(args, "freeze_cli_methods", "") or "").strip()
+        if cli_m:
+            cmd.extend(["--cli-methods", cli_m])
+        clus_m = str(getattr(args, "freeze_clustering_methods", "") or "").strip()
+        if clus_m:
+            cmd.extend(["--clustering-methods", clus_m])
         _run(cmd, dry_run=args.dry_run)
         return
     print("[INFO] p1e: 1d held — writing provisional frozen_config @ theta/eps=0.1")
@@ -635,6 +658,18 @@ def main() -> int:
         type=int,
         default=int(os.environ.get("FREEZE_BATCH", "500")),
         help="Prefer shortlist from this batch for p1e freeze (default 500)",
+    )
+    p.add_argument(
+        "--freeze-cli-methods",
+        type=str,
+        default=os.environ.get("FREEZE_CLI_METHODS", ""),
+        help="Comma CLI distances for p1e freeze (RQ2: embedding,nli_entail). Env: FREEZE_CLI_METHODS",
+    )
+    p.add_argument(
+        "--freeze-clustering-methods",
+        type=str,
+        default=os.environ.get("FREEZE_CLUSTERING_METHODS", ""),
+        help="Comma clusterings for p1e freeze (RQ2: leader_follower,dbscan). Env: FREEZE_CLUSTERING_METHODS",
     )
     args = p.parse_args()
 

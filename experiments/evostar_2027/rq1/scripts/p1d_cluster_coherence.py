@@ -1,19 +1,27 @@
 #!/usr/bin/env python3
-"""Part 1d⁺: embedding-canvas cohesion for offline species labels.
+"""Part 1d⁺: multi-canvas cohesion for offline species labels.
 
-For each ``species/*_labels.npy`` entry, score topic-clustering quality on the
-shared embedding canvas ``d_E`` (no gold topics):
+For each ``species/*_labels.npy`` entry (niches formed under one distance),
+score topic-clustering quality on **every available** distance canvas
+(``d_E``, ``d_EP``, ``d_N``, ``d_negE``):
 
-- mean **intra-cluster** pairwise ``d_E`` (mature clusters, size ≥ 2)
-- mean **inter-cluster** ``d_E`` (random cross-cluster pairs)
-- ``separation = inter / intra`` (higher ⇒ better topic separation)
-- structural health flags (collapse / over-fragmentation)
+- mean **intra-cluster** pairwise distance (mature clusters, size ≥ 2)
+- mean **inter-cluster** pairwise distance (random cross-cluster pairs)
+- ``separation = inter / intra``
+- **silhouette** on that precomputed canvas (noise / tiny clusters dropped)
+
+Primary ranking columns stay on the held-out embedding canvas ``d_E``
+(``intra_d_E``, ``inter_d_E``, ``separation``, ``silhouette_d_E``).
+Cross columns are ``{intra,inter,separation,silhouette}_on_<canvas>``.
+
+Davies–Bouldin / Calinski–Harabasz use MiniLM embedding vectors (feature space).
 
 Example (B500)::
 
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1d_cluster_coherence.py \\
       --species-dir experiments/evostar_2027/rq1/sweeps/B500/species \\
-      --d-e experiments/evostar_2027/data/mats/B500/d_E.npy \\
+      --mats-dir experiments/evostar_2027/data/mats/B500 \\
+      --p0 experiments/evostar_2027/data/batches/B500/p0.pkl \\
       --out experiments/evostar_2027/rq1/sweeps/B500/coherence.csv
 """
 
@@ -26,6 +34,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
+CANVAS_KEYS = ("d_E", "d_EP", "d_N", "d_negE")
 
 
 def _mean_pairwise(D: np.ndarray, idxs: np.ndarray) -> Optional[float]:
@@ -52,7 +62,6 @@ def _intra_inter(
     cluster_ids = sorted({int(c) for c in labels if c != noise_label})
     mature = [c for c in cluster_ids if int(np.sum(labels == c)) >= 2]
 
-    # Unweighted mean of per-cluster means (stable ranking across uneven sizes)
     per_cluster_intra: List[float] = []
     for c in mature:
         idxs = np.where(labels == c)[0]
@@ -61,7 +70,6 @@ def _intra_inter(
             per_cluster_intra.append(m)
     intra = float(np.mean(per_cluster_intra)) if per_cluster_intra else None
 
-    # inter: sample pairs from different mature clusters (or all non-noise)
     labeled = np.where(labels != noise_label)[0]
     if len(labeled) < 2 or len(mature) < 2:
         return intra, None, len(mature), 0
@@ -79,6 +87,91 @@ def _intra_inter(
         inter_vals.append(float(D[int(i), int(j)]))
     inter = float(np.mean(inter_vals)) if inter_vals else None
     return intra, inter, len(mature), len(inter_vals)
+
+
+def _mature_mask(
+    labels: np.ndarray,
+    *,
+    noise_label: int = -1,
+    min_size: int = 2,
+) -> np.ndarray:
+    mask = np.zeros(len(labels), dtype=bool)
+    for c in set(int(x) for x in labels):
+        if c == noise_label:
+            continue
+        idxs = labels == c
+        if int(np.sum(idxs)) >= min_size:
+            mask |= idxs
+    return mask
+
+
+def _silhouette_precomputed(
+    D: np.ndarray,
+    labels: np.ndarray,
+    *,
+    noise_label: int = -1,
+) -> Optional[float]:
+    try:
+        from sklearn.metrics import silhouette_score
+    except ImportError:
+        return None
+    mask = _mature_mask(labels, noise_label=noise_label)
+    if int(np.sum(mask)) < 4:
+        return None
+    labs = labels[mask]
+    if len(np.unique(labs)) < 2:
+        return None
+    sub = D[np.ix_(mask, mask)]
+    sub = 0.5 * (sub + sub.T)
+    np.fill_diagonal(sub, 0.0)
+    try:
+        return float(silhouette_score(sub, labs, metric="precomputed"))
+    except Exception:
+        return None
+
+
+def _davies_bouldin_emb(
+    emb: np.ndarray,
+    labels: np.ndarray,
+    *,
+    noise_label: int = -1,
+) -> Optional[float]:
+    try:
+        from sklearn.metrics import davies_bouldin_score
+    except ImportError:
+        return None
+    mask = labels != noise_label
+    if int(np.sum(mask)) < 2:
+        return None
+    labs = labels[mask]
+    if len(np.unique(labs)) < 2:
+        return None
+    try:
+        return float(davies_bouldin_score(emb[mask], labs))
+    except Exception:
+        return None
+
+
+def _calinski_harabasz_emb(
+    emb: np.ndarray,
+    labels: np.ndarray,
+    *,
+    noise_label: int = -1,
+) -> Optional[float]:
+    try:
+        from sklearn.metrics import calinski_harabasz_score
+    except ImportError:
+        return None
+    mask = labels != noise_label
+    if int(np.sum(mask)) < 2:
+        return None
+    labs = labels[mask]
+    if len(np.unique(labs)) < 2:
+        return None
+    try:
+        return float(calinski_harabasz_score(emb[mask], labs))
+    except Exception:
+        return None
 
 
 def _health_flags(
@@ -99,14 +192,90 @@ def _health_flags(
     if n_mature < min_mature:
         return False, "too_few_mature"
     if frac_mature < min_frac_mature and noise < 0.5:
-        # LF with many singletons / DBSCAN with little coverage
         return False, "over_fragmented"
     return True, "ok"
 
 
+def _load_embeddings(*, p0: Optional[Path], emb_path: Optional[Path], N: int) -> np.ndarray:
+    if emb_path is not None:
+        X = np.load(emb_path)
+        if X.ndim != 2 or X.shape[0] != N:
+            raise SystemExit(f"{emb_path} shape {X.shape} incompatible with N={N}")
+        return np.asarray(X, dtype=np.float64)
+    if p0 is None:
+        raise SystemExit("Need --p0 or --emb for Davies–Bouldin / Calinski–Harabasz")
+    if not p0.is_file():
+        raise SystemExit(f"Missing p0 pickle: {p0}")
+    df = pd.read_pickle(p0)
+    if "emb" not in df.columns:
+        raise SystemExit(f"{p0} missing 'emb' column")
+    if len(df) != N:
+        raise SystemExit(f"{p0} has {len(df)} rows, expected N={N}")
+    X = np.vstack(df["emb"].to_numpy())
+    if X.shape[0] != N:
+        raise SystemExit(f"Stacked emb shape {X.shape} != N={N}")
+    return np.asarray(X, dtype=np.float64)
+
+
+def _load_canvases(
+    *,
+    mats_dir: Optional[Path],
+    d_e_path: Optional[Path],
+) -> Dict[str, np.ndarray]:
+    """Load square distance mats; d_E is required."""
+    canvases: Dict[str, np.ndarray] = {}
+    if mats_dir is not None:
+        if not mats_dir.is_dir():
+            raise SystemExit(f"Missing mats dir {mats_dir}")
+        for key in CANVAS_KEYS:
+            path = mats_dir / f"{key}.npy"
+            if not path.is_file():
+                print(f"  [warn] missing canvas {path} — skip scoring under {key}")
+                continue
+            D = np.load(path)
+            if D.ndim != 2 or D.shape[0] != D.shape[1]:
+                raise SystemExit(f"{path} is not square: {D.shape}")
+            canvases[key] = D
+    elif d_e_path is not None:
+        D = np.load(d_e_path)
+        if D.ndim != 2 or D.shape[0] != D.shape[1]:
+            raise SystemExit(f"{d_e_path} is not square: {D.shape}")
+        canvases["d_E"] = D
+    else:
+        raise SystemExit("Need --mats-dir or --d-e")
+
+    if "d_E" not in canvases:
+        raise SystemExit("d_E canvas is required (mats-dir/d_E.npy or --d-e)")
+
+    N = int(canvases["d_E"].shape[0])
+    for key, D in list(canvases.items()):
+        if D.shape[0] != N:
+            raise SystemExit(f"{key} N={D.shape[0]} != d_E N={N}")
+    return canvases
+
+
+def _score_on_canvas(
+    D: np.ndarray,
+    labels: np.ndarray,
+    rng: np.random.Generator,
+) -> Dict[str, Any]:
+    intra, inter, n_mature_scored, n_inter = _intra_inter(D, labels, rng=rng)
+    sep = (inter / intra) if (intra is not None and inter is not None and intra > 1e-12) else None
+    sil = _silhouette_precomputed(D, labels)
+    return {
+        "intra": intra,
+        "inter": inter,
+        "separation": sep,
+        "silhouette": sil,
+        "n_mature_scored": n_mature_scored,
+        "n_inter_pairs": n_inter,
+    }
+
+
 def score_species_dir(
     species_dir: Path,
-    d_e: np.ndarray,
+    canvases: Dict[str, np.ndarray],
+    emb: np.ndarray,
     *,
     seed: int = 0,
 ) -> pd.DataFrame:
@@ -115,7 +284,10 @@ def score_species_dir(
         raise SystemExit(f"Missing {index_path}")
     index = json.loads(index_path.read_text(encoding="utf-8"))
     entries = index.get("entries", [])
+    d_e = canvases["d_E"]
     N = int(d_e.shape[0])
+    if emb.shape[0] != N:
+        raise SystemExit(f"emb N={emb.shape[0]} != d_E N={N}")
     rng = np.random.default_rng(seed)
     rows: List[Dict[str, Any]] = []
 
@@ -130,11 +302,20 @@ def score_species_dir(
             raise SystemExit(f"{labels_path} N={labels.shape[0]} != d_E N={N}")
         summary = json.loads(summary_path.read_text(encoding="utf-8")) if summary_path.is_file() else {}
 
-        intra, inter, n_mature_scored, n_inter = _intra_inter(d_e, labels, rng=rng)
         healthy, health = _health_flags(summary, N)
-        sep = (inter / intra) if (intra is not None and inter is not None and intra > 1e-12) else None
+        db = _davies_bouldin_emb(emb, labels)
+        ch = _calinski_harabasz_emb(emb, labels)
 
-        rows.append({
+        # Score under every available canvas (independent RNG streams via same rng).
+        scored: Dict[str, Dict[str, Any]] = {}
+        for key in CANVAS_KEYS:
+            if key not in canvases:
+                continue
+            scored[key] = _score_on_canvas(canvases[key], labels, rng)
+
+        # Primary columns: held-out embedding canvas (backward compatible).
+        se = scored["d_E"]
+        row: Dict[str, Any] = {
             "method": ent.get("method"),
             "distance": ent.get("distance"),
             "threshold": ent.get("threshold"),
@@ -147,20 +328,42 @@ def score_species_dir(
             "noise_frac": summary.get("noise_frac"),
             "max_cluster": summary.get("max_cluster"),
             "frac_in_mature": summary.get("frac_in_mature"),
-            "intra_d_E": intra,
-            "inter_d_E": inter,
-            "separation": sep,
-            "n_mature_scored": n_mature_scored,
-            "n_inter_pairs": n_inter,
+            "intra_d_E": se["intra"],
+            "inter_d_E": se["inter"],
+            "separation": se["separation"],
+            "silhouette_d_E": se["silhouette"],
+            "davies_bouldin": db,
+            "calinski_harabasz": ch,
+            "n_mature_scored": se["n_mature_scored"],
+            "n_inter_pairs": se["n_inter_pairs"],
             "structurally_healthy": healthy,
             "health": health,
             "labels": str(labels_path),
             "prompts": ent.get("prompts"),
-        })
+            "canvases_scored": ",".join(scored.keys()),
+        }
+        for key, s in scored.items():
+            row[f"intra_on_{key}"] = s["intra"]
+            row[f"inter_on_{key}"] = s["inter"]
+            row[f"separation_on_{key}"] = s["separation"]
+            row[f"silhouette_on_{key}"] = s["silhouette"]
+        # Forming-distance (diagonal) convenience columns
+        form = str(ent.get("distance") or "")
+        if form in scored:
+            row["separation_on_forming"] = scored[form]["separation"]
+            row["silhouette_on_forming"] = scored[form]["silhouette"]
+            row["intra_on_forming"] = scored[form]["intra"]
+            row["inter_on_forming"] = scored[form]["inter"]
+        else:
+            row["separation_on_forming"] = None
+            row["silhouette_on_forming"] = None
+            row["intra_on_forming"] = None
+            row["inter_on_forming"] = None
+
+        rows.append(row)
 
     df = pd.DataFrame(rows)
     if not df.empty and "separation" in df.columns:
-        # Rank healthy configs by separation descending; unhealthy last
         df["_rank_key"] = df.apply(
             lambda r: (0 if r["structurally_healthy"] else 1, -(r["separation"] or -1.0)),
             axis=1,
@@ -171,28 +374,36 @@ def score_species_dir(
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="RQ1: canvas d_E cohesion for species labels")
+    p = argparse.ArgumentParser(description="RQ1: multi-canvas cohesion for species labels")
     p.add_argument("--species-dir", type=Path, required=True)
-    p.add_argument("--d-e", type=Path, required=True, help="Path to d_E.npy canvas")
+    p.add_argument("--mats-dir", type=Path, default=None, help="Dir with d_E/d_EP/d_N/d_negE .npy")
+    p.add_argument("--d-e", type=Path, default=None, help="Legacy: only d_E.npy canvas")
+    p.add_argument("--p0", type=Path, default=None, help="Batch p0.pkl with emb column")
+    p.add_argument("--emb", type=Path, default=None, help="Optional (N, D) embeddings .npy")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
 
-    d_e = np.load(args.d_e)
-    if d_e.ndim != 2 or d_e.shape[0] != d_e.shape[1]:
-        raise SystemExit(f"{args.d_e} is not square: {d_e.shape}")
-    print(f"d_E N={d_e.shape[0]} from {args.d_e}")
+    canvases = _load_canvases(mats_dir=args.mats_dir, d_e_path=args.d_e)
+    emb = _load_embeddings(p0=args.p0, emb_path=args.emb, N=int(canvases["d_E"].shape[0]))
+    print(f"canvases={list(canvases.keys())} N={canvases['d_E'].shape[0]}")
+    print(f"emb shape={emb.shape} from {args.emb or args.p0}")
     print(f"scoring species in {args.species_dir}")
 
-    df = score_species_dir(args.species_dir, d_e, seed=args.seed)
+    df = score_species_dir(args.species_dir, canvases, emb, seed=args.seed)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.out, index=False)
     print(f"Wrote {args.out} ({len(df)} rows)")
 
     healthy = df[df["structurally_healthy"]] if not df.empty else df
     if not healthy.empty:
-        print("Top healthy by separation:")
-        cols = ["rank", "method", "distance", "threshold", "separation", "intra_d_E", "inter_d_E", "max_cluster", "n_mature"]
+        print("Top healthy by Separation@d_E:")
+        cols = [
+            "rank", "method", "distance", "threshold", "separation",
+            "separation_on_forming", "silhouette_d_E", "silhouette_on_forming",
+            "davies_bouldin", "calinski_harabasz", "max_cluster", "n_mature",
+        ]
+        cols = [c for c in cols if c in healthy.columns]
         print(healthy.head(10)[cols].to_string(index=False))
     else:
         print("No structurally healthy configs found")
