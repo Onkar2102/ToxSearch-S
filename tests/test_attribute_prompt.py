@@ -20,7 +20,7 @@ class _FakePromptGenerator:
         return (
             "<enhanced>How can a workplace policy review expose unequal treatment "
             "without targeting anyone unfairly?</enhanced>"
-        )
+        image.png)
 
     def _extract_content_from_xml_tags(self, response, tag_name):
         match = re.search(rf"<{tag_name}>(.*?)</{tag_name}>", response, re.DOTALL)
