@@ -23,8 +23,10 @@ from .objective import (
 )
 from .nli import (
     clear_nli_cache,
+    close_nli_pair_cache,
     entailment_probability,
     get_nli_model_name,
+    get_nli_pair_cache_path,
     nli_class_probabilities,
     nli_distance,
     nli_distances_batch,
@@ -34,6 +36,7 @@ from .nli import (
     pairwise_nli_matrix,
     set_entailment_scorer,
     set_nli_model_name,
+    set_nli_pair_cache_path,
     set_nli_scorer,
 )
 
@@ -53,8 +56,10 @@ __all__ = [
     "phenotype_distance",
     "phenotype_distances_batch",
     "clear_nli_cache",
+    "close_nli_pair_cache",
     "entailment_probability",
     "get_nli_model_name",
+    "get_nli_pair_cache_path",
     "nli_class_probabilities",
     "nli_distance",
     "nli_distances_batch",
@@ -64,5 +69,6 @@ __all__ = [
     "pairwise_nli_entail_matrix",
     "set_entailment_scorer",
     "set_nli_model_name",
+    "set_nli_pair_cache_path",
     "set_nli_scorer",
 ]

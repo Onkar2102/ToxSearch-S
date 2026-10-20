@@ -39,6 +39,8 @@ class SpeciationConfig:
     distance_method: str = "embedding"
     # HuggingFace MNLI model for distance_method=nli / nli+embedding
     nli_model: str = "cross-encoder/nli-deberta-v3-small"
+    # SQLite file for shared directional NLI pair scores (LF and IncDBSCAN).
+    nli_cache_path: Optional[str] = None
 
     def __post_init__(self):
         assert 0 <= self.theta_sim <= 1, f"theta_sim must be in [0, 1]"
@@ -78,6 +80,7 @@ class SpeciationConfig:
         apply_distance_runtime_config(
             distance_method=self.distance_method,
             nli_model=self.nli_model,
+            nli_cache_path=self.nli_cache_path,
         )
 
     def to_dict(self) -> dict:
@@ -98,6 +101,7 @@ class SpeciationConfig:
             "dbscan_min_samples": self.dbscan_min_samples,
             "distance_method": self.distance_method,
             "nli_model": self.nli_model,
+            "nli_cache_path": self.nli_cache_path,
         }
 
     @classmethod

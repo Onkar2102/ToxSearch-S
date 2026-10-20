@@ -1,17 +1,17 @@
 #!/bin/bash -l
 #
-# SLURM: 10 independent leader-follower + d_E (embedding) replicates.
+# SLURM: 10 independent incremental DBSCAN + d_E (embedding) replicates.
 # Radii and live budget from RQ1 freeze (full-archive operating point t=0.10):
-#   --distance embedding  --clustering-method leader_follower
-#   --theta-sim 0.1  --theta-merge 0.1  --max-total-genomes 1000
-# LF knobs: min-stability-gens 3, species-capacity 25, species-stagnation 7.
+#   --distance embedding  --clustering-method dbscan
+#   --theta-sim 0.1  --dbscan-eps 0.1  --dbscan-min-samples 2
+#   --max-total-genomes 1000
 #
 # RIT RC:
 #   https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
 #
 # Submit (default / preferred here): one GPU, 10 seeds in sequence.
 #   sbatch rc_script.sh
-# Each seed writes data/outputs/rq1_lf_embedding_t010/rep{i}_s{seed}.
+# Each seed writes data/outputs/rq1_incdbscan_embedding_t010/rep{i}_s{seed}.
 # SKIP_IF_DONE=1 so a resubmit continues from the first incomplete replicate.
 #
 # Optional (one GPU per seed, at most 2 at a time):
@@ -20,7 +20,7 @@
 # Override PROJECT_ROOT if your tree is elsewhere.
 # Termination: --max-total-genomes (required).
 
-#SBATCH --job-name=rq1_lf_de
+#SBATCH --job-name=rq1_inc_de
 # 10 sequential N=1000 embedding runs on one GPU. 14h is only enough for ~1 replicate.
 #SBATCH --time=05-12:00:00
 #SBATCH --output=%x_%j.out
@@ -106,21 +106,23 @@ if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 7) RQ1 live cell: L–F + embedding (d_E) @ theta_sim=0.1, N_max=1000
+# 7) RQ1 live cell: IncDBSCAN + embedding (d_E) @ eps=0.1, N_max=1000
 # ---------------------------------------------------------------------------
 export PYTHONPATH="${PROJECT_ROOT}/src"
 
 N_REPLICATES="${N_REPLICATES:-10}"
 SEED_BASE="${SEED_BASE:-0}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq1_lf_embedding_t010}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq1_incdbscan_embedding_t010}"
 
 EVALUATOR="google"
 NORTH_STAR_METRIC="toxicity"
 DISTANCE_METHOD="embedding"
-CLUSTERING_METHOD="leader_follower"
-# RQ1 selected t=0.10 on d_E (full archive). Frozen match is ~0.0998; use 0.1.
+CLUSTERING_METHOD="dbscan"
+# RQ1 selected t=0.10 on d_E (full archive). Same number is theta_sim and eps.
 THETA_SIM="${THETA_SIM:-0.1}"
 THETA_MERGE="${THETA_MERGE:-0.1}"
+DBSCAN_EPS="${DBSCAN_EPS:-0.1}"
+DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-2}"
 
 MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-1000}"
 OPERATORS="${OPERATORS:-all}"
@@ -137,6 +139,8 @@ EMBEDDING_DIM="${EMBEDDING_DIM:-384}"
 EMBEDDING_BATCH_SIZE="${EMBEDDING_BATCH_SIZE:-64}"
 DISTANCE_ALPHA="${DISTANCE_ALPHA:-0.7}"
 NLI_MODEL="${NLI_MODEL:-cross-encoder/nli-deberta-v3-small}"
+# Shared by LF and IncDBSCAN (and across the 10 seeds). No-op until --distance nli_entail.
+NLI_CACHE_FILE="${NLI_CACHE_FILE:-data/cache/nli_pairs.sqlite}"
 
 RG_MODEL="${RG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf}"
 PG_MODEL="${PG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf}"
@@ -149,7 +153,7 @@ EXECUTION_MODE="${EXECUTION_MODE:-auto}"  # auto | array | loop
 REPLICATE_RUNS=()
 for ((i = 0; i < N_REPLICATES; i++)); do
     seed=$((SEED_BASE + i))
-    rid="LF_dE_t010_rep${i}_s${seed}"
+    rid="Inc_dE_t010_rep${i}_s${seed}"
     out="${OUTPUT_ROOT}/rep${i}_s${seed}"
     REPLICATE_RUNS+=("${rid}|${out}|${seed}")
 done
@@ -208,12 +212,12 @@ run_one_execution() {
     fi
 
     echo "=========================================="
-    echo "SLURM ToxSearch-S: RQ1 L–F + d_E @ theta_sim=0.1"
+    echo "SLURM ToxSearch-S: RQ1 IncDBSCAN + d_E @ eps=0.1"
     echo "  run_id=${run_id}"
     echo "  evaluator=${EVALUATOR}  north_star=${NORTH_STAR_METRIC}"
     echo "  distance=${DISTANCE_METHOD}  clustering=${CLUSTERING_METHOD}"
     echo "  max_total_genomes=${MAX_TOTAL_GENOMES}  seed=${run_seed}  seed_file=${SEED_FILE}"
-    echo "  theta_sim=${THETA_SIM}  theta_merge=${THETA_MERGE}"
+    echo "  theta_sim=${THETA_SIM}  dbscan_eps=${DBSCAN_EPS}  min_samples=${DBSCAN_MIN_SAMPLES}"
     echo "  output_dir=${output_dir}"
     echo "  array_task=${SLURM_ARRAY_TASK_ID:-n/a}  job=${SLURM_JOB_ID:-local}"
     echo "=========================================="
@@ -238,7 +242,10 @@ run_one_execution() {
         --distance-method "$DISTANCE_METHOD" \
         --distance-alpha "$DISTANCE_ALPHA" \
         --nli-model "$NLI_MODEL" \
+        --nli-cache-file "$NLI_CACHE_FILE" \
         --clustering-method "$CLUSTERING_METHOD" \
+        --dbscan-eps "$DBSCAN_EPS" \
+        --dbscan-min-samples "$DBSCAN_MIN_SAMPLES" \
         --rg "$RG_MODEL" \
         --pg "$PG_MODEL" \
         --seed-file "$SEED_FILE" \
@@ -273,7 +280,7 @@ llm = Llama(
 print("LLAMA_GPU_SMOKETEST_OK")
 PY
 
-python src/main.py --help | grep -E "theta-sim|embedding-model|distance-method|clustering-method|max-total-genomes|evaluator" || exit 1
+python src/main.py --help | grep -E "theta-sim|dbscan-eps|embedding-model|distance-method|clustering-method|max-total-genomes|evaluator" || exit 1
 preflight
 
 # ---------------------------------------------------------------------------
@@ -288,7 +295,7 @@ if [ "$EXECUTION_MODE" = "auto" ]; then
 fi
 
 echo "[DEBUG] EXECUTION_MODE=${EXECUTION_MODE}  N_REPLICATES=${#REPLICATE_RUNS[@]}"
-echo "[DEBUG] THETA_SIM=${THETA_SIM}  THETA_MERGE=${THETA_MERGE}  OUTPUT_ROOT=${OUTPUT_ROOT}"
+echo "[DEBUG] THETA_SIM=${THETA_SIM}  DBSCAN_EPS=${DBSCAN_EPS}  MIN_SAMPLES=${DBSCAN_MIN_SAMPLES}  OUTPUT_ROOT=${OUTPUT_ROOT}"
 
 case "$EXECUTION_MODE" in
     array)

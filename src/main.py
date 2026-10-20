@@ -40,7 +40,8 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
          evaluator="google", north_star_metric=None, openai_model="omni-moderation-latest",
          clustering_method="leader_follower", dbscan_eps=None, dbscan_min_samples=2,
          distance_method="embedding", distance_alpha=0.7,
-         nli_model="cross-encoder/nli-deberta-v3-small"):
+         nli_model="cross-encoder/nli-deberta-v3-small",
+         nli_cache_file=None):
     
     
     get_logger, get_log_filename, log_system_info, PerformanceLogger = get_custom_logging()
@@ -187,6 +188,7 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
         distance_method=distance_method,
         distance_alpha=distance_alpha,
         nli_model=nli_model,
+        nli_cache_path=nli_cache_file,
     )
 
     temp_path_obj = get_outputs_path() / "temp.json"

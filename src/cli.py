@@ -218,6 +218,16 @@ def build_parser() -> argparse.ArgumentParser:
             f"(default: {defaults.nli_model})"
         ),
     )
+    parser.add_argument(
+        "--nli-cache-file",
+        type=str,
+        default=None,
+        help=(
+            "SQLite file for directional NLI pair scores. Shared by leader-follower "
+            "and incremental DBSCAN so the same prompt pair is not rescored. "
+            "Env NLI_PAIR_CACHE is used if this flag is omitted."
+        ),
+    )
     return parser
 
 
@@ -305,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
             nli_model=args.nli_model,
+            nli_cache_path=args.nli_cache_file,
         )
     except (AssertionError, ValueError) as exc:
         parser.error(str(exc))
@@ -426,6 +437,7 @@ def main(argv: list[str] | None = None) -> int:
             distance_method=args.distance_method,
             distance_alpha=args.distance_alpha,
             nli_model=args.nli_model,
+            nli_cache_file=args.nli_cache_file,
         )
         return int(rc or 0)
     except KeyboardInterrupt:

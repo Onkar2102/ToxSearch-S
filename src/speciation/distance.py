@@ -23,6 +23,7 @@ import numpy as np
 from .distance_metrics import (
     PHENOTYPE_SCORE_ORDER,
     clear_nli_cache,
+    set_nli_pair_cache_path,
     embedding_distance,
     embedding_distances_batch,
     entailment_probability,
@@ -149,14 +150,24 @@ def apply_distance_runtime_config(
     *,
     distance_method: str,
     nli_model: Optional[str] = None,
+    nli_cache_path: Optional[str] = None,
     logger=None,
 ) -> str:
     """Apply runtime side-effects for the selected distance method.
 
     For ``nli`` / ``nli_entail`` / ``nli+embedding``, sets the HuggingFace MNLI
-    model id used by ``distance_metrics.nli``. Returns the normalized method name.
+    model id used by ``distance_metrics.nli``. Optional ``nli_cache_path`` (or
+    env ``NLI_PAIR_CACHE``) persists directional pair scores for reuse across
+    LF and IncDBSCAN runs. Returns the normalized method name.
     """
+    import os
+
     m = normalize_distance_method(distance_method)
+    cache_path = nli_cache_path if nli_cache_path is not None else os.environ.get("NLI_PAIR_CACHE")
+    if cache_path:
+        set_nli_pair_cache_path(cache_path)
+        if logger is not None:
+            logger.info("NLI pair cache: %s", cache_path)
     if method_uses_texts(m) and nli_model:
         set_nli_model_name(nli_model)
         if logger is not None:

@@ -18,8 +18,11 @@ pipeline). Unit tests can inject ``set_nli_scorer`` or the legacy
 
 from __future__ import annotations
 
+import atexit
 import hashlib
+import sqlite3
 import threading
+from pathlib import Path
 from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import numpy as np
@@ -42,7 +45,10 @@ _default_model_name = "cross-encoder/nli-deberta-v3-small"
 _model_name: str = _default_model_name
 _pair_cache: Dict[Tuple[str, str], NLIProbs] = {}
 # Cumulative per process: directional model passes, cache hits, symmetric d_N evaluations.
-_stats: Dict[str, int] = {"model_passes": 0, "cache_hits": 0, "distance_calls": 0}
+_stats: Dict[str, int] = {"model_passes": 0, "cache_hits": 0, "distance_calls": 0, "disk_hits": 0}
+_cache_db_path: Optional[Path] = None
+_cache_db: Optional[sqlite3.Connection] = None
+_cache_db_pending = 0
 
 
 def get_nli_stats() -> Dict[str, int]:
@@ -91,8 +97,113 @@ def set_entailment_scorer(scorer: Optional[EntailmentScorer]) -> None:
 
 
 def clear_nli_cache() -> None:
+    """Clear the in-memory pair cache. The on-disk SQLite file is kept."""
     with _scorer_lock:
         _pair_cache.clear()
+
+
+def get_nli_pair_cache_path() -> Optional[str]:
+    with _scorer_lock:
+        return str(_cache_db_path) if _cache_db_path is not None else None
+
+
+def _flush_cache_db_locked() -> None:
+    global _cache_db_pending
+    if _cache_db is None:
+        return
+    _cache_db.commit()
+    _cache_db_pending = 0
+
+
+def close_nli_pair_cache() -> None:
+    global _cache_db, _cache_db_path, _cache_db_pending
+    with _scorer_lock:
+        if _cache_db is not None:
+            try:
+                _cache_db.commit()
+            except sqlite3.Error:
+                pass
+            try:
+                _cache_db.close()
+            except sqlite3.Error:
+                pass
+        _cache_db = None
+        _cache_db_path = None
+        _cache_db_pending = 0
+
+
+def set_nli_pair_cache_path(path: Optional[str]) -> None:
+    """Persist directional MNLI triples so LF and IncDBSCAN reuse the same pairs.
+
+    ``path`` is a SQLite file. Rows are keyed by ``(model, cache_key_a, cache_key_b)``.
+    Pass ``None`` or an empty string to disable disk persistence. Both clusterers share this
+    file across processes (WAL). In-memory hits still win first.
+    """
+    global _cache_db, _cache_db_path, _cache_db_pending
+    raw = (path or "").strip()
+    with _scorer_lock:
+        if _cache_db is not None:
+            try:
+                _cache_db.commit()
+                _cache_db.close()
+            except sqlite3.Error:
+                pass
+            _cache_db = None
+            _cache_db_path = None
+            _cache_db_pending = 0
+        if not raw:
+            return
+        p = Path(raw).expanduser()
+        p.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(p), timeout=30.0, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA busy_timeout=5000")
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS nli_pairs (
+                model TEXT NOT NULL,
+                ka TEXT NOT NULL,
+                kb TEXT NOT NULL,
+                pe REAL NOT NULL,
+                pn REAL NOT NULL,
+                pc REAL NOT NULL,
+                PRIMARY KEY (model, ka, kb)
+            )
+            """
+        )
+        conn.commit()
+        _cache_db = conn
+        _cache_db_path = p
+        _cache_db_pending = 0
+
+
+def _disk_get_locked(ka: str, kb: str) -> Optional[NLIProbs]:
+    if _cache_db is None:
+        return None
+    cur = _cache_db.execute(
+        "SELECT pe, pn, pc FROM nli_pairs WHERE model=? AND ka=? AND kb=?",
+        (_model_name, ka, kb),
+    )
+    row = cur.fetchone()
+    if row is None:
+        return None
+    return (float(row[0]), float(row[1]), float(row[2]))
+
+
+def _disk_put_locked(ka: str, kb: str, probs: NLIProbs) -> None:
+    global _cache_db_pending
+    if _cache_db is None:
+        return
+    _cache_db.execute(
+        "INSERT OR REPLACE INTO nli_pairs (model, ka, kb, pe, pn, pc) VALUES (?,?,?,?,?,?)",
+        (_model_name, ka, kb, float(probs[0]), float(probs[1]), float(probs[2])),
+    )
+    _cache_db.commit()
+    _cache_db_pending = 0
+
+
+atexit.register(close_nli_pair_cache)
 
 
 def _cache_key(a: str, b: str) -> Tuple[str, str]:
@@ -207,12 +318,19 @@ def nli_class_probabilities(text_a: str, text_b: str, *, logger=None) -> NLIProb
         if key in _pair_cache:
             _stats["cache_hits"] += 1
             return _pair_cache[key]
+        disk = _disk_get_locked(key[0], key[1])
+        if disk is not None:
+            _pair_cache[key] = disk
+            _stats["cache_hits"] += 1
+            _stats["disk_hits"] += 1
+            return disk
     scorer = get_nli_scorer(logger=logger)
     pe, pn, pc = scorer(a, b)
     probs = _normalize_probs(pe, pn, pc)
     with _scorer_lock:
         _pair_cache[key] = probs
         _stats["model_passes"] += 1
+        _disk_put_locked(key[0], key[1], probs)
     return probs
 
 
@@ -552,6 +670,9 @@ __all__ = [
     "get_nli_scorer",
     "get_entailment_scorer",
     "clear_nli_cache",
+    "set_nli_pair_cache_path",
+    "get_nli_pair_cache_path",
+    "close_nli_pair_cache",
     "get_nli_stats",
     "nli_class_probabilities",
     "entailment_probability",
