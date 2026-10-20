@@ -545,7 +545,7 @@ class EvolutionEngine:
                 
                 MLMOperator(self.north_star_metric, log_file=self.log_file, generator=self.prompt_generator),
                 LLMBasedParaphrasingOperator(self.north_star_metric, log_file=self.log_file, generator=self.prompt_generator),
-                StylisticMutator(log_file=self.log_file, generator=self.prompt_generator),
+                StylisticMutator(log_file=self.log_file, generator=self.prompt_generator, north_star_metric=self.north_star_metric),
                 
                 LLMBackTranslationHIOperator(log_file=self.log_file, generator=self.prompt_generator),
                 
@@ -561,7 +561,7 @@ class EvolutionEngine:
                 
                 MLMOperator(self.north_star_metric, log_file=self.log_file, generator=self.prompt_generator),
                 LLMBasedParaphrasingOperator(self.north_star_metric, log_file=self.log_file, generator=self.prompt_generator),
-                StylisticMutator(log_file=self.log_file, generator=self.prompt_generator),
+                StylisticMutator(log_file=self.log_file, generator=self.prompt_generator, north_star_metric=self.north_star_metric),
                 
                 LLMBackTranslationHIOperator(log_file=self.log_file, generator=self.prompt_generator),
                 
@@ -578,7 +578,7 @@ class EvolutionEngine:
                 
                 MLMOperator(self.north_star_metric, log_file=self.log_file, generator=self.prompt_generator),
                 LLMBasedParaphrasingOperator(self.north_star_metric, log_file=self.log_file, generator=self.prompt_generator),
-                StylisticMutator(log_file=self.log_file, generator=self.prompt_generator),
+                StylisticMutator(log_file=self.log_file, generator=self.prompt_generator, north_star_metric=self.north_star_metric),
                 
                 LLMBackTranslationHIOperator(log_file=self.log_file, generator=self.prompt_generator),
                 
@@ -688,7 +688,7 @@ def generate_single_variant(parents, prompt_generator, north_star_metric="toxici
                 POSAwareAntonymReplacement(north_star_metric, log_file=log_file, num_POS_tags=1, generator=prompt_generator),
                 MLMOperator(north_star_metric, log_file=log_file, generator=prompt_generator),
                 LLMBasedParaphrasingOperator(north_star_metric, log_file=log_file, generator=prompt_generator),
-                StylisticMutator(log_file=log_file, generator=prompt_generator),
+                StylisticMutator(log_file=log_file, generator=prompt_generator, north_star_metric=north_star_metric),
                 LLMBackTranslationHIOperator(log_file=log_file, generator=prompt_generator),
                 NegationOperator(north_star_metric, log_file=log_file, generator=prompt_generator),
                 TypographicalErrorsOperator(north_star_metric, log_file=log_file, num_error_types=3, generator=prompt_generator),

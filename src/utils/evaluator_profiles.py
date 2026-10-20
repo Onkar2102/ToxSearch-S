@@ -45,6 +45,42 @@ OPENAI_NORTH_STAR_CHOICES = [
 
 OPENAI_PHENOTYPE_SCORE_ORDER = list(OPENAI_NORTH_STAR_CHOICES)
 
+# Short gloss used in variation-operator LLM prompts (not for scoring).
+ATTRIBUTE_PROMPT_GLOSS = {
+    "toxicity": "toxicity",
+    "severe_toxicity": "severe toxicity",
+    "identity_attack": "identity attack",
+    "insult": "insult",
+    "profanity": "profanity",
+    "threat": "threat",
+    "sexually_explicit": "sexually explicit content",
+    "flirtation": "flirtation",
+    "harassment": "harassment",
+    "harassment/threatening": "threatening harassment",
+    "hate": "hate",
+    "hate/threatening": "threatening hate",
+    "illicit": "illicit (advice or instructions for wrongdoing)",
+    "illicit/violent": "illicit/violent (violent wrongdoing or procuring a weapon)",
+    "self-harm": "self-harm",
+    "self-harm/intent": "self-harm intent",
+    "self-harm/instructions": "self-harm instructions",
+    "sexual": "sexual content",
+    "sexual/minors": "sexual content involving minors",
+    "violence": "violence",
+    "violence/graphic": "graphic violence",
+}
+
+
+def attribute_prompt_label(metric: Optional[str]) -> str:
+    """Human-readable north-star name for variation-operator prompts."""
+    key = (metric or "").strip()
+    if not key:
+        try:
+            key = get_active_north_star() or "toxicity"
+        except Exception:
+            key = "toxicity"
+    return ATTRIBUTE_PROMPT_GLOSS.get(key, key.replace("_", " "))
+
 # Offline analysis of mixed/legacy runs only — NOT used by CLI validation or live scoring.
 OPENAI_METRIC_ALIASES: Dict[str, str] = {
     "toxicity": "harassment",
@@ -172,4 +208,6 @@ __all__ = [
     "moderation_methods_to_backend_list",
     "GOOGLE_NORTH_STAR_CHOICES",
     "OPENAI_NORTH_STAR_CHOICES",
+    "ATTRIBUTE_PROMPT_GLOSS",
+    "attribute_prompt_label",
 ]

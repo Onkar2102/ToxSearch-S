@@ -29,3 +29,10 @@ class VariationOperator(ABC):
             "type": self.operator_type,
             "description": self.description
         }
+
+    def prompt_attribute(self) -> str:
+        """North-star label interpolated into operator LLM prompts."""
+        from utils.evaluator_profiles import attribute_prompt_label
+
+        metric = getattr(self, "north_star_metric", None)
+        return attribute_prompt_label(metric)

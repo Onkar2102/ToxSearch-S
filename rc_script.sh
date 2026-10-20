@@ -1,17 +1,17 @@
 #!/bin/bash -l
 #
-# SLURM: 10 independent incremental DBSCAN + d_E (embedding) replicates.
-# Radii and live budget from RQ1 freeze (full-archive operating point t=0.10):
-#   --distance embedding  --clustering-method dbscan
-#   --theta-sim 0.1  --dbscan-eps 0.1  --dbscan-min-samples 2
-#   --max-total-genomes 1000
+# SLURM: 10 independent leader--follower + d_E (embedding) replicates.
+# RQ1 freeze on the full archive: t=0.10 on d_E. OpenAI omni-moderation oracle.
+#   --distance embedding  --clustering-method leader_follower
+#   --theta-sim 0.1  --theta-merge 0.1
+#   --max-total-genomes 2000  --evaluator openai  --north-star-metric violence
 #
 # RIT RC:
 #   https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
 #
 # Submit (default / preferred here): one GPU, 10 seeds in sequence.
 #   sbatch rc_script.sh
-# Each seed writes data/outputs/rq1_incdbscan_embedding_t010/rep{i}_s{seed}.
+# Each seed writes data/outputs/rq2_lf_embedding_openai_t010_n2000/rep{i}_s{seed}.
 # SKIP_IF_DONE=1 so a resubmit continues from the first incomplete replicate.
 #
 # Optional (one GPU per seed, at most 2 at a time):
@@ -20,8 +20,8 @@
 # Override PROJECT_ROOT if your tree is elsewhere.
 # Termination: --max-total-genomes (required).
 
-#SBATCH --job-name=rq1_inc_de
-# 10 sequential N=1000 embedding runs on one GPU. 14h is only enough for ~1 replicate.
+#SBATCH --job-name=rq2_lf_oai
+# 10 sequential N=2000 LF + OpenAI runs on one GPU.
 #SBATCH --time=05-12:00:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
@@ -100,31 +100,36 @@ if [ -f ".env" ]; then
     set -u
 fi
 
+if [ -n "${OPENAI_API_KEY:-}" ]; then
+    export OPENAI_API_KEY
+fi
 if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
     export PERSPECTIVE_API_KEY
     unset PERSPECTIVE_API_KEYS || true
 fi
 
 # ---------------------------------------------------------------------------
-# 7) RQ1 live cell: IncDBSCAN + embedding (d_E) @ eps=0.1, N_max=1000
+# 7) RQ2 live cell: LF + embedding (d_E) @ theta=0.1, N_max=2000, OpenAI
 # ---------------------------------------------------------------------------
 export PYTHONPATH="${PROJECT_ROOT}/src"
 
 N_REPLICATES="${N_REPLICATES:-10}"
 SEED_BASE="${SEED_BASE:-0}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq1_incdbscan_embedding_t010}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq2_lf_embedding_openai_t010_n2000}"
 
-EVALUATOR="google"
-NORTH_STAR_METRIC="toxicity"
+EVALUATOR="openai"
+# OpenAI has no "toxicity" key; CLI default for --evaluator openai is violence.
+NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-violence}"
+OPENAI_MODEL="${OPENAI_MODEL:-omni-moderation-latest}"
 DISTANCE_METHOD="embedding"
-CLUSTERING_METHOD="dbscan"
-# RQ1 selected t=0.10 on d_E (full archive). Same number is theta_sim and eps.
+CLUSTERING_METHOD="leader_follower"
+# RQ1 selected t=0.10 on d_E (full archive).
 THETA_SIM="${THETA_SIM:-0.1}"
 THETA_MERGE="${THETA_MERGE:-0.1}"
 DBSCAN_EPS="${DBSCAN_EPS:-0.1}"
 DBSCAN_MIN_SAMPLES="${DBSCAN_MIN_SAMPLES:-2}"
 
-MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-1000}"
+MAX_TOTAL_GENOMES="${MAX_TOTAL_GENOMES:-2000}"
 OPERATORS="${OPERATORS:-all}"
 MAX_VARIANTS="${MAX_VARIANTS:-1}"
 SEED_FILE="${SEED_FILE:-data/prompt.csv}"
@@ -153,7 +158,7 @@ EXECUTION_MODE="${EXECUTION_MODE:-auto}"  # auto | array | loop
 REPLICATE_RUNS=()
 for ((i = 0; i < N_REPLICATES; i++)); do
     seed=$((SEED_BASE + i))
-    rid="Inc_dE_t010_rep${i}_s${seed}"
+    rid="LF_dE_oai_t010_n2000_rep${i}_s${seed}"
     out="${OUTPUT_ROOT}/rep${i}_s${seed}"
     REPLICATE_RUNS+=("${rid}|${out}|${seed}")
 done
@@ -191,8 +196,8 @@ preflight() {
         echo "ERROR: GGUF missing (RG=${RG_MODEL}, PG=${PG_MODEL})" >&2
         exit 1
     fi
-    if [ -z "${PERSPECTIVE_API_KEY:-}" ] && [ -z "${PERSPECTIVE_API_KEYS:-}" ]; then
-        echo "ERROR: PERSPECTIVE_API_KEY or PERSPECTIVE_API_KEYS required" >&2
+    if [ -z "${OPENAI_API_KEY:-}" ]; then
+        echo "ERROR: OPENAI_API_KEY required for --evaluator openai" >&2
         exit 1
     fi
     awk -v m="$THETA_MERGE" -v s="$THETA_SIM" 'BEGIN { if (m > s) exit 1 }' || {
@@ -212,12 +217,12 @@ run_one_execution() {
     fi
 
     echo "=========================================="
-    echo "SLURM ToxSearch-S: RQ1 IncDBSCAN + d_E @ eps=0.1"
+    echo "SLURM ToxSearch-S: RQ2 LF + d_E @ theta=0.1, OpenAI, N=2000"
     echo "  run_id=${run_id}"
-    echo "  evaluator=${EVALUATOR}  north_star=${NORTH_STAR_METRIC}"
+    echo "  evaluator=${EVALUATOR}  north_star=${NORTH_STAR_METRIC}  openai_model=${OPENAI_MODEL}"
     echo "  distance=${DISTANCE_METHOD}  clustering=${CLUSTERING_METHOD}"
     echo "  max_total_genomes=${MAX_TOTAL_GENOMES}  seed=${run_seed}  seed_file=${SEED_FILE}"
-    echo "  theta_sim=${THETA_SIM}  dbscan_eps=${DBSCAN_EPS}  min_samples=${DBSCAN_MIN_SAMPLES}"
+    echo "  theta_sim=${THETA_SIM}  theta_merge=${THETA_MERGE}  capacity=${SPECIES_CAPACITY}  stag=${SPECIES_STAGNATION}"
     echo "  output_dir=${output_dir}"
     echo "  array_task=${SLURM_ARRAY_TASK_ID:-n/a}  job=${SLURM_JOB_ID:-local}"
     echo "=========================================="
@@ -228,6 +233,7 @@ run_one_execution() {
         --max-total-genomes "$MAX_TOTAL_GENOMES" \
         --evaluator "$EVALUATOR" \
         --north-star-metric "$NORTH_STAR_METRIC" \
+        --openai-model "$OPENAI_MODEL" \
         --operators "$OPERATORS" \
         --max-variants "$MAX_VARIANTS" \
         --stagnation-limit "$STAGNATION_LIMIT" \
@@ -295,7 +301,7 @@ if [ "$EXECUTION_MODE" = "auto" ]; then
 fi
 
 echo "[DEBUG] EXECUTION_MODE=${EXECUTION_MODE}  N_REPLICATES=${#REPLICATE_RUNS[@]}"
-echo "[DEBUG] THETA_SIM=${THETA_SIM}  DBSCAN_EPS=${DBSCAN_EPS}  MIN_SAMPLES=${DBSCAN_MIN_SAMPLES}  OUTPUT_ROOT=${OUTPUT_ROOT}"
+echo "[DEBUG] THETA_SIM=${THETA_SIM}  CLUSTERING=${CLUSTERING_METHOD}  EVALUATOR=${EVALUATOR}  N_MAX=${MAX_TOTAL_GENOMES}  OUTPUT_ROOT=${OUTPUT_ROOT}"
 
 case "$EXECUTION_MODE" in
     array)
