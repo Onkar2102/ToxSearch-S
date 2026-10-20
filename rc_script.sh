@@ -1,25 +1,30 @@
 #!/bin/bash -l
 #
-# SLURM run script: 10 independent L–F + embedding replicates
-# (Google Perspective / toxicity, theta_sim = theta_merge = 0.1).
+# SLURM: 10 independent leader-follower + d_E (embedding) replicates.
+# Radii and live budget from RQ1 freeze (full-archive operating point t=0.10):
+#   --distance embedding  --clustering-method leader_follower
+#   --theta-sim 0.1  --theta-merge 0.1  --max-total-genomes 1000
+# LF knobs: min-stability-gens 3, species-capacity 25, species-stagnation 7.
 #
-# RIT RC job arrays:
+# RIT RC:
 #   https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
 #
-# Submit (preferred — one GPU task per replicate, seeds 42..51):
-#   sbatch --array=0-9%2 rc_script.sh
+# Submit (default / preferred here): one GPU, 10 seeds in sequence.
+#   sbatch rc_script.sh
+# Each seed writes data/outputs/rq1_lf_embedding_t010/rep{i}_s{seed}.
+# SKIP_IF_DONE=1 so a resubmit continues from the first incomplete replicate.
 #
-# Or one allocation, sequential:
-#   EXECUTION_MODE=loop sbatch rc_script.sh
+# Optional (one GPU per seed, at most 2 at a time):
+#   sbatch --array=0-9%2 rc_script.sh
 #
 # Override PROJECT_ROOT if your tree is elsewhere.
 # Termination: --max-total-genomes (required).
 
-#SBATCH --job-name=txsp_lf_r01
-#SBATCH --time=00-13:59:00
-# Use %A (array job id) and %a (task id) so array tasks do not clobber logs.
-#SBATCH --output=%x_%A_%a.out
-#SBATCH --error=%x_%A_%a.err
+#SBATCH --job-name=rq1_lf_de
+# 10 sequential N=1000 embedding runs on one GPU. 14h is only enough for ~1 replicate.
+#SBATCH --time=05-12:00:00
+#SBATCH --output=%x_%j.out
+#SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
@@ -30,8 +35,7 @@
 #SBATCH --mail-type=ALL
 #SBATCH --gres=gpu:a100:1
 #SBATCH --chdir=/home/os9660/Downloads/ToxSearch-S
-# Array is OFF by default so EXECUTION_MODE=loop is one allocation.
-# Prefer: sbatch --array=0-9%2 rc_script.sh
+# Array is OFF: plain sbatch → EXECUTION_MODE=loop (one allocation, 10 folders).
 ##SBATCH --array=0-9%2
 
 set -euo pipefail
@@ -102,18 +106,19 @@ if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 7) Fixed experiment: L–F + embedding + Perspective/toxicity @ r=0.1
+# 7) RQ1 live cell: L–F + embedding (d_E) @ theta_sim=0.1, N_max=1000
 # ---------------------------------------------------------------------------
 export PYTHONPATH="${PROJECT_ROOT}/src"
 
 N_REPLICATES="${N_REPLICATES:-10}"
-SEED_BASE="${SEED_BASE:-2027}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/lf_tox_r01}"
+SEED_BASE="${SEED_BASE:-0}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq1_lf_embedding_t010}"
 
 EVALUATOR="google"
 NORTH_STAR_METRIC="toxicity"
 DISTANCE_METHOD="embedding"
 CLUSTERING_METHOD="leader_follower"
+# RQ1 selected t=0.10 on d_E (full archive). Frozen match is ~0.0998; use 0.1.
 THETA_SIM="${THETA_SIM:-0.1}"
 THETA_MERGE="${THETA_MERGE:-0.1}"
 
@@ -124,7 +129,7 @@ SEED_FILE="${SEED_FILE:-data/prompt.csv}"
 STAGNATION_LIMIT="${STAGNATION_LIMIT:-5}"
 
 MIN_STABILITY_GENS="${MIN_STABILITY_GENS:-3}"
-SPECIES_CAPACITY="${SPECIES_CAPACITY:-20}"
+SPECIES_CAPACITY="${SPECIES_CAPACITY:-25}"
 SPECIES_STAGNATION="${SPECIES_STAGNATION:-7}"
 
 EMBEDDING_MODEL="${EMBEDDING_MODEL:-all-MiniLM-L6-v2}"
@@ -144,7 +149,7 @@ EXECUTION_MODE="${EXECUTION_MODE:-auto}"  # auto | array | loop
 REPLICATE_RUNS=()
 for ((i = 0; i < N_REPLICATES; i++)); do
     seed=$((SEED_BASE + i))
-    rid="LF_tox_r01_rep${i}_s${seed}"
+    rid="LF_dE_t010_rep${i}_s${seed}"
     out="${OUTPUT_ROOT}/rep${i}_s${seed}"
     REPLICATE_RUNS+=("${rid}|${out}|${seed}")
 done
@@ -203,7 +208,7 @@ run_one_execution() {
     fi
 
     echo "=========================================="
-    echo "SLURM ToxSearch-S: L–F embedding @ r=0.1"
+    echo "SLURM ToxSearch-S: RQ1 L–F + d_E @ theta_sim=0.1"
     echo "  run_id=${run_id}"
     echo "  evaluator=${EVALUATOR}  north_star=${NORTH_STAR_METRIC}"
     echo "  distance=${DISTANCE_METHOD}  clustering=${CLUSTERING_METHOD}"
@@ -214,6 +219,7 @@ run_one_execution() {
     echo "=========================================="
 
     mkdir -p "$output_dir"
+    set +e
     python src/main.py \
         --max-total-genomes "$MAX_TOTAL_GENOMES" \
         --evaluator "$EVALUATOR" \
@@ -238,8 +244,14 @@ run_one_execution() {
         --seed-file "$SEED_FILE" \
         --seed "$run_seed" \
         --output-dir "$output_dir"
-
+    local rc=$?
+    set -e
+    if [ "$rc" -ne 0 ]; then
+        echo "[FAIL] ${run_id} exit=${rc} → ${output_dir}"
+        return "$rc"
+    fi
     echo "[DONE] ${run_id} → ${output_dir}"
+    return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -296,6 +308,7 @@ case "$EXECUTION_MODE" in
         fi
         n_ok=0
         n_skip=0
+        n_fail=0
         for spec in "${REPLICATE_RUNS[@]}"; do
             IFS='|' read -r RUN_ID OUTPUT_DIR RUN_SEED <<<"$spec"
             if cell_already_done "$OUTPUT_DIR"; then
@@ -303,10 +316,17 @@ case "$EXECUTION_MODE" in
                 n_skip=$((n_skip + 1))
                 continue
             fi
-            run_one_execution "$RUN_ID" "$OUTPUT_DIR" "$RUN_SEED"
-            n_ok=$((n_ok + 1))
+            if run_one_execution "$RUN_ID" "$OUTPUT_DIR" "$RUN_SEED"; then
+                n_ok=$((n_ok + 1))
+            else
+                n_fail=$((n_fail + 1))
+                echo "[WARN] continuing loop after ${RUN_ID} failed"
+            fi
         done
-        echo "Loop finished: launched=${n_ok} skipped_done=${n_skip}"
+        echo "Loop finished: launched_ok=${n_ok} skipped_done=${n_skip} failed=${n_fail}"
+        if [ "$n_fail" -gt 0 ]; then
+            exit 1
+        fi
         ;;
 
     *)

@@ -177,7 +177,7 @@ def generate(batch: str, sweeps_dir: Path, out: Path, n: int) -> None:
     setup_body = [
         (
             f"Held-out batch & Fitness-top $N{{=}}{n}$ prompts "
-            r"(B500 $\subset$ B1000 $\subset$ B2000) \\"
+            r"(B500 $\subset$ B1000 $\subset$ B2000 $\subset$ B3139) \\"
         ),
         r"Distances & $d_E$, $d_{EP}$, $d_N$, $d_{\neg E}$ (plus $d_P$ for calibration only) \\",
         (

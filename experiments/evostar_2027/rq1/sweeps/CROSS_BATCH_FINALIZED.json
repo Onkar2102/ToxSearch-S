@@ -1,0 +1,9 @@
+{
+  "ok": true,
+  "batches": ["B500", "B1000", "B2000", "B3139"],
+  "paper": "notes/LaTeX2e+Proceedings+Templates+download/paper.pdf",
+  "tables": [
+    "rq1_cross_batch_tables.tex",
+    "rq1_b500_tables.tex"
+  ]
+}

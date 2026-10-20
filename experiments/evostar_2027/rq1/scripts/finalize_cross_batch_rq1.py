@@ -351,60 +351,122 @@ def update_notebook(batches: List[Dict[str, Any]]) -> None:
 
 
 def write_cross_batch_tex(batches: List[Dict[str, Any]]) -> None:
-    lines = [
-        "% Auto-generated cross-batch RQ1 summary — do not hand-edit.",
-        "",
-        r"\begin{table}[htbp]",
-        r"\centering",
-        r"\caption{Cross-batch RQ1 calibration and calibrated Incremental DBSCAN structure "
-        r"($d_E$ reference radius $0.1$; $\textit{min\_samples}=2$).}",
-        r"\label{tab:rq1-cross-calib-structure}",
-        r"\scriptsize",
-        r"\setlength{\tabcolsep}{3.0pt}",
-        r"\begin{tabular}{@{}llrrrr@{}}",
-        r"\toprule",
-        r"Batch & Distance & $\varepsilon$ & \thead{Number of\\clusters} & "
-        r"\thead{Maximum\\cluster size} & \thead{Noise\\fraction} \\",
-        r"\midrule",
-    ]
     dist_tex = {
         "d_E": r"$d_E$",
         "d_EP": r"$d_{EP}$",
         "d_N": r"$d_N$",
         "d_negE": r"$d_{\neg E}$",
     }
+    lines = [
+        "% Auto-generated cross-batch RQ1 summary — do not hand-edit.",
+        "",
+    ]
+
+    spearman_path = RQ1 / "sweeps" / "spearman_upper.csv"
+    if spearman_path.is_file():
+        sp = pd.read_csv(spearman_path)
+        lines += [
+            r"\begin{table}[htbp]",
+            r"\centering",
+            r"\caption{Spearman rank correlation of pairwise distances. "
+            r"Larger prefixes use $5{\times}10^5$ sampled pairs.}",
+            r"\label{tab:rq1-cross-spearman}",
+            r"\scriptsize",
+            r"\setlength{\tabcolsep}{3.2pt}",
+            r"\begin{tabular}{@{}lrrrrrr@{}}",
+            r"\toprule",
+            r"Batch & $d_E,d_{EP}$ & $d_E,d_N$ & $d_E,d_{\neg E}$ & "
+            r"$d_{EP},d_N$ & $d_{EP},d_{\neg E}$ & $d_N,d_{\neg E}$ \\",
+            r"\midrule",
+        ]
+        for _, r in sp.iterrows():
+            lines.append(
+                f"{r['batch']} & {float(r['d_E_d_EP']):.2f} & {float(r['d_E_d_N']):.2f} & "
+                f"{float(r['d_E_d_negE']):.2f} & {float(r['d_EP_d_N']):.2f} & "
+                f"{float(r['d_EP_d_negE']):.2f} & {float(r['d_N_d_negE']):.2f} \\\\"
+            )
+        lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+
+    lines += [
+        r"\begin{table}[htbp]",
+        r"\centering",
+        r"\caption{Assignment radius that matches the neighbor rate of $d_E$ at $0.1$. "
+        r"The embedding radius stays near $0.10$; NLI radii shrink as $N$ grows.}",
+        r"\label{tab:rq1-cross-calib}",
+        r"\scriptsize",
+        r"\setlength{\tabcolsep}{3.0pt}",
+        r"\begin{tabular}{@{}lrrrrrr@{}}",
+        r"\toprule",
+        r"Batch & $N$ & Target & $\varepsilon(d_E)$ & $\varepsilon(d_{EP})$ & "
+        r"$\varepsilon(d_N)$ & $\varepsilon(d_{\neg E})$ \\",
+        r"\midrule",
+    ]
+    for d in batches:
+        cal = d["calib"]
+        n = int(cal["N"].iloc[0])
+        tgt = float(cal[cal["distance"] == "d_E"].iloc[0]["target_fraction"])
+        eps = {}
+        for dist in ("d_E", "d_EP", "d_N", "d_negE"):
+            c = cal[cal["distance"] == dist]
+            if c.empty:
+                continue
+            eps[dist] = float(c.iloc[0]["eps"])
+        if len(eps) < 4:
+            continue
+        lines.append(
+            f"{d['batch']} & {n} & {tgt:.3f} & {eps['d_E']:.4f} & {eps['d_EP']:.4f} & "
+            f"{eps['d_N']:.4f} & {eps['d_negE']:.4f} \\\\"
+        )
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+
+    lines += [
+        r"\begin{table}[htbp]",
+        r"\centering",
+        r"\caption{Incremental DBSCAN at the matched radius ($\textit{min\_samples}=2$). "
+        r"Embedding keeps a bounded largest cluster; NLI does not.}",
+        r"\label{tab:rq1-cross-structure}",
+        r"\scriptsize",
+        r"\setlength{\tabcolsep}{2.6pt}",
+        r"\begin{tabular}{@{}llrrrr@{}}",
+        r"\toprule",
+        r"Batch & Distance & $\varepsilon$ & Clusters & \thead{Max size\\(frac.\ of $N$)} & Noise \\",
+        r"\midrule",
+    ]
     for d in batches:
         struct = d["struct"]
         calib = d["calib"]
+        n = int(calib["N"].iloc[0])
         for dist in ("d_E", "d_EP", "d_N", "d_negE"):
             c = calib[calib["distance"] == dist]
             s = struct[(struct["distance"] == dist) & (struct["min_samples"] == 2)]
             if c.empty or s.empty:
                 continue
+            mx = float(s.iloc[0]["max_cluster"])
             lines.append(
                 f"{d['batch']} & {dist_tex[dist]} & {float(c.iloc[0]['eps']):.4f} & "
-                f"{int(s.iloc[0]['n_clusters'])} & {int(float(s.iloc[0]['max_cluster']))} & "
+                f"{int(s.iloc[0]['n_clusters'])} & {int(mx)} ({mx/n:.2f}) & "
                 f"{float(s.iloc[0]['noise_frac']):.3f} \\\\"
             )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
 
-    # Working-band snapshot at t=0.10
     lines += [
         r"\begin{table}[htbp]",
         r"\centering",
-        r"\caption{Cross-batch working-band snapshot at $t{=}0.10$ on $d_E$/$d_{EP}$ "
-        r"(Leader--Follower mature niches; Incremental DBSCAN clusters; Separation on embedding canvas).}",
+        r"\caption{Clustering at $t{=}0.10$ on $d_E$ and $d_{EP}$. "
+        r"Separation and silhouette are measured in embedding space. "
+        r"LF: leader--follower (mature niches). Inc: incremental DBSCAN (clusters). "
+        r"OK: usable under the size filters in Section~\ref{sec:rq1}.}",
         r"\label{tab:rq1-cross-working-band}",
         r"\scriptsize",
-        r"\setlength{\tabcolsep}{2.8pt}",
-        r"\begin{tabular}{@{}lllrrrr@{}}",
+        r"\setlength{\tabcolsep}{2.4pt}",
+        r"\begin{tabular}{@{}lllrrrrl@{}}",
         r"\toprule",
-        r"Batch & Method & Distance & Niches/clusters & Max size & Separation & Healthy \\",
+        r"Batch & Meth. & Dist. & Units & Max$/N$ & Sep@$d_E$ & Sil@$d_E$ & OK \\",
         r"\midrule",
     ]
     for d in batches:
         n = int(d["calib"]["N"].iloc[0])
-        for method, mlabel in [("leader_follower", "LF"), ("incdbscan", "IncDBSCAN")]:
+        for method, mlabel in [("leader_follower", "LF"), ("incdbscan", "Inc")]:
             for dist in ("d_E", "d_EP"):
                 g = d["grid"][
                     (d["grid"]["method"] == method)
@@ -418,19 +480,65 @@ def write_cross_batch_tex(batches: List[Dict[str, Any]]) -> None:
                 niches = int(float(r["n_mature" if method == "leader_follower" else "n_clusters"]))
                 mx = int(float(r["max_cluster"]))
                 sep = float(c["separation"]) if c is not None and pd.notna(c.get("separation")) else float("nan")
+                sil = (
+                    float(c["silhouette_d_E"])
+                    if c is not None and pd.notna(c.get("silhouette_d_E"))
+                    else float("nan")
+                )
                 healthy = "Yes" if c is not None and bool(c["structurally_healthy"]) else "No"
                 sep_s = f"{sep:.2f}" if sep == sep else "---"
+                sil_s = f"{sil:.2f}" if sil == sil else "---"
                 lines.append(
                     f"{d['batch']} & {mlabel} & {dist_tex[dist]} & {niches} & "
-                    f"{mx}/{n} & {sep_s} & {healthy} \\\\"
+                    f"{mx}/{n} & {sep_s} & {sil_s} & {healthy} \\\\"
                 )
     lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+
+    lines += [
+        r"\begin{table}[htbp]",
+        r"\centering",
+        r"\caption{Largest incremental-DBSCAN cluster as a fraction of $N$ under NLI. "
+        r"Even $t{=}0.05$ covers about half the archive; embedding silhouette is negative.}",
+        r"\label{tab:rq1-cross-nli-collapse}",
+        r"\scriptsize",
+        r"\setlength{\tabcolsep}{3.0pt}",
+        r"\begin{tabular}{@{}llrrrr@{}}",
+        r"\toprule",
+        r"Batch & Dist. & $t{=}0.05$ & $t{=}0.10$ & $t{=}0.15$ & Sil@$d_E$ ($t{=}0.05$) \\",
+        r"\midrule",
+    ]
+    for d in batches:
+        n = int(d["calib"]["N"].iloc[0])
+        for dist in ("d_N", "d_negE"):
+            fracs = []
+            sil05 = "---"
+            for t in (0.05, 0.10, 0.15):
+                g = d["grid"][
+                    (d["grid"]["method"] == "incdbscan")
+                    & (d["grid"]["distance"] == dist)
+                    & (abs(d["grid"]["threshold"].astype(float) - t) < 1e-9)
+                ]
+                if g.empty:
+                    fracs.append("---")
+                    continue
+                fracs.append(f"{float(g.iloc[0]['max_cluster'])/n:.2f}")
+            c = _cell_metrics(d["coh"], "incdbscan", dist, 0.05)
+            if c is not None and pd.notna(c.get("silhouette_d_E")):
+                sil05 = f"{float(c['silhouette_d_E']):.2f}"
+            lines.append(
+                f"{d['batch']} & {dist_tex[dist]} & {fracs[0]} & {fracs[1]} & {fracs[2]} & {sil05} \\\\"
+            )
+    lines += [r"\bottomrule", r"\end{tabular}", r"\end{table}", ""]
+
     CROSS_TEX.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"Wrote {CROSS_TEX}")
 
 
 def update_experimentation_tex(batches: List[Dict[str, Any]]) -> None:
     text = EXP_TEX.read_text(encoding="utf-8")
+    if "nested fitness-top prefixes" in text and "\\input{rq1_cross_batch_tables}" in text:
+        print(f"[SKIP] {EXP_TEX} already has the hand-written RQ1 results section")
+        return
     # Ensure inputs for B1000/B2000 + cross tables exist after B500 input
     for name in ("rq1_cross_batch_tables", "rq1_b1000_tables", "rq1_b2000_tables"):
         needle = f"\\input{{{name}}}"
