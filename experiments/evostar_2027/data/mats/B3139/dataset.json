@@ -5,12 +5,11 @@
   "distances": {
     "d_E": "experiments/evostar_2027/data/mats/B3139/d_E.npy",
     "d_P": "experiments/evostar_2027/data/mats/B3139/d_P.npy",
-    "d_EP": "experiments/evostar_2027/data/mats/B3139/d_EP.npy"
+    "d_EP": "experiments/evostar_2027/data/mats/B3139/d_EP.npy",
+    "d_N": "experiments/evostar_2027/data/mats/B3139/d_N.npy",
+    "d_negE": "experiments/evostar_2027/data/mats/B3139/d_negE.npy"
   },
-  "missing_distances": [
-    "d_N",
-    "d_negE"
-  ],
+  "missing_distances": [],
   "provisional_radii": {
     "theta_sim": 0.1,
     "eps": 0.1,

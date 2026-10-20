@@ -1,20 +1,20 @@
 {
-  "started_at": "2026-10-19T14:50:52.361502+00:00",
+  "started_at": "2026-10-19T21:03:41.395775+00:00",
   "stages": [
     "nli",
     "materialize",
     "p1d",
     "p1e",
-    "finalize",
-    "pilots"
+    "finalize"
   ],
   "smoke": false,
-  "nli_max_n": 2000,
+  "nli_max_n": 3139,
   "run_p1d": true,
   "batches": [
     500,
     1000,
-    2000
+    2000,
+    3139
   ],
   "threshold_grid": {
     "t_min": 0.05,
@@ -26,5 +26,5 @@
     "eps": 0.1
   },
   "part1d": "enabled",
-  "finished_at": "2026-10-19T14:50:52.363914+00:00"
+  "finished_at": "2026-10-20T02:24:44.108900+00:00"
 }

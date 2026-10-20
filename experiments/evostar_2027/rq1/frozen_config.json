@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "campaign": "rq2_factorial",
-  "frozen_at": "2026-10-19T18:30:23.319501+00:00",
+  "frozen_at": "2026-10-20T02:24:43.050349+00:00",
   "source": "experiments/evostar_2027/rq1 Part 1 offline (B500 radii)",
   "seed_file": "data/prompt.csv",
   "max_total_genomes": 2000,

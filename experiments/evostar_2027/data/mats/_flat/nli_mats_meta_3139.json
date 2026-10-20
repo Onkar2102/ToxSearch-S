@@ -1,0 +1,34 @@
+{
+  "N": 3139,
+  "p0_analysis": "experiments/evostar_2027/data/pool/p0_full.pkl",
+  "which": "both",
+  "batch_size": 256,
+  "checkpoint_every": 10,
+  "nli_model": "cross-encoder/nli-deberta-v3-small",
+  "files": {
+    "d_N": "experiments/evostar_2027/data/mats/_flat/d_N_3139.npy",
+    "d_negE": "experiments/evostar_2027/data/mats/_flat/d_negE_3139.npy"
+  },
+  "timing": {
+    "d_N": {
+      "wall_seconds": 7623.962,
+      "wall_hours": 2.1178,
+      "pairs_per_sec": 646.0,
+      "pairs_total": 4925091,
+      "complete": true,
+      "source": "progress.json"
+    },
+    "d_negE": {
+      "wall_seconds": 7501.662,
+      "wall_hours": 2.0838,
+      "pairs_per_sec": 656.53,
+      "pairs_total": 4925091,
+      "complete": true,
+      "source": "progress.json"
+    }
+  },
+  "timing_total_wall_seconds": 15125.624,
+  "timing_total_wall_hours": 4.2016,
+  "updated_at": "2026-10-20T01:16:57.993957+00:00",
+  "resume_full_n2000": "PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --max-n 2000 --which both --checkpoint-every 10 --batch-size 256"
+}

@@ -1,0 +1,898 @@
+[DEBUG] PROJECT_ROOT=/home/os9660/Downloads/ToxSearch-S  pwd=/home/os9660/Downloads/ToxSearch-S  SLURM_JOB_ID=21927396
+[DEBUG] CUDA_ROOT=/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view
+Mon Oct 19 17:03:39 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.43.02              KMD Version: 610.43.02     CUDA UMD Version: 13.3     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA A100-PCIE-40GB          On  |   00000000:86:00.0 Off |                    0 |
+| N/A   31C    P0             34W /  250W |       0MiB /  40960MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+==========================================
+RQ1 pipeline (resume remaining Part 1 + Part 2)
+  stages=nli,materialize,p1d,p1e,finalize
+  smoke=0 dry_run=0 force=0
+  nli_max_n=3139 batch_size=256
+  run_p1d=1 batches=500,1000,2000,3139 t=0.05:0.05:0.5
+  freeze_batch=500 freeze_cli=embedding,nli_entail
+  run_pilots=0 (live EA → rc_rq2.sh)
+  job=21927396
+==========================================
+{
+  "started_at": "2026-10-19T21:03:41.395775+00:00",
+  "stages": [
+    "nli",
+    "materialize",
+    "p1d",
+    "p1e",
+    "finalize"
+  ],
+  "smoke": false,
+  "nli_max_n": 3139,
+  "run_p1d": true,
+  "batches": [
+    500,
+    1000,
+    2000,
+    3139
+  ],
+  "threshold_grid": {
+    "t_min": 0.05,
+    "t_max": 0.5,
+    "t_step": 0.05
+  },
+  "provisional_radii": {
+    "theta_sim": 0.1,
+    "eps": 0.1
+  },
+  "part1d": "enabled"
+}
+
+===== STAGE: nli =====
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1c_d_negE_and_d_N_mats.py --p0-dir experiments/evostar_2027/data/pool --mats-dir experiments/evostar_2027/data/mats/_flat --max-n 3139 --which both --checkpoint-every 10 --batch-size 256 --allow-large-n --nli-model cross-encoder/nli-deberta-v3-small
+[17:04:30] [INFO] [DeviceManager]: Log level set to: INFO
+NLI mats for N=3139 → experiments/evostar_2027/data/mats/_flat
+Resume tip: re-run the same command; incomplete .npy/.progress.json continue from next_i. Larger N auto-seeds from a complete smaller prefix (e.g. 2000→3139).
+  will seed d_N from experiments/evostar_2027/data/mats/_flat/d_N_2000.npy
+  computing d_N → experiments/evostar_2027/data/mats/_flat/d_N_3139.npy
+  seeded d_N[:2000,:2000] from experiments/evostar_2027/data/mats/_flat/d_N_2000.npy (1999000 pairs cached; border remains)
+[17:05:04] [INFO] [NLIDistance]: Log level set to: INFO
+[17:05:04] [INFO] [NLIDistance]: Loading torch NLI model cross-encoder/nli-deberta-v3-small for batched pairwise d_N
+  d_N checkpoint row 10/3139 pairs=2010390/4925091 (40.8%) rate=74.6/s ETA=10.9h wall=0.04h model_passes=22780
+  d_N checkpoint row 20/3139 pairs=2021780/4925091 (41.1%) rate=125.2/s ETA=6.4h wall=0.05h model_passes=45560
+  d_N checkpoint row 30/3139 pairs=2033170/4925091 (41.3%) rate=164.7/s ETA=4.9h wall=0.06h model_passes=68340
+  d_N checkpoint row 40/3139 pairs=2044560/4925091 (41.5%) rate=192.4/s ETA=4.2h wall=0.07h model_passes=91120
+  d_N checkpoint row 50/3139 pairs=2055950/4925091 (41.7%) rate=211.6/s ETA=3.8h wall=0.07h model_passes=113900
+  d_N checkpoint row 60/3139 pairs=2067340/4925091 (42.0%) rate=226.8/s ETA=3.5h wall=0.08h model_passes=136680
+  d_N checkpoint row 70/3139 pairs=2078730/4925091 (42.2%) rate=239.0/s ETA=3.3h wall=0.09h model_passes=159460
+  d_N checkpoint row 80/3139 pairs=2090120/4925091 (42.4%) rate=250.5/s ETA=3.1h wall=0.10h model_passes=182240
+  d_N checkpoint row 90/3139 pairs=2101510/4925091 (42.7%) rate=260.4/s ETA=3.0h wall=0.11h model_passes=205020
+  d_N checkpoint row 100/3139 pairs=2112900/4925091 (42.9%) rate=270.5/s ETA=2.9h wall=0.12h model_passes=227800
+  d_N checkpoint row 110/3139 pairs=2124290/4925091 (43.1%) rate=278.8/s ETA=2.8h wall=0.12h model_passes=250580
+  d_N checkpoint row 120/3139 pairs=2135680/4925091 (43.4%) rate=285.8/s ETA=2.7h wall=0.13h model_passes=273360
+  d_N checkpoint row 130/3139 pairs=2147070/4925091 (43.6%) rate=290.0/s ETA=2.7h wall=0.14h model_passes=296140
+  d_N checkpoint row 140/3139 pairs=2158460/4925091 (43.8%) rate=293.2/s ETA=2.6h wall=0.15h model_passes=318920
+  d_N checkpoint row 150/3139 pairs=2169850/4925091 (44.1%) rate=298.7/s ETA=2.6h wall=0.16h model_passes=341700
+  d_N checkpoint row 160/3139 pairs=2181240/4925091 (44.3%) rate=301.7/s ETA=2.5h wall=0.17h model_passes=364480
+  d_N checkpoint row 170/3139 pairs=2192630/4925091 (44.5%) rate=306.0/s ETA=2.5h wall=0.18h model_passes=387260
+  d_N checkpoint row 180/3139 pairs=2204020/4925091 (44.8%) rate=309.1/s ETA=2.4h wall=0.18h model_passes=410040
+  d_N checkpoint row 190/3139 pairs=2215410/4925091 (45.0%) rate=310.6/s ETA=2.4h wall=0.19h model_passes=432820
+  d_N checkpoint row 200/3139 pairs=2226800/4925091 (45.2%) rate=313.4/s ETA=2.4h wall=0.20h model_passes=455600
+  d_N checkpoint row 210/3139 pairs=2238190/4925091 (45.4%) rate=312.9/s ETA=2.4h wall=0.21h model_passes=478380
+  d_N checkpoint row 220/3139 pairs=2249580/4925091 (45.7%) rate=315.8/s ETA=2.4h wall=0.22h model_passes=501160
+  d_N checkpoint row 230/3139 pairs=2260970/4925091 (45.9%) rate=318.5/s ETA=2.3h wall=0.23h model_passes=523940
+  d_N checkpoint row 240/3139 pairs=2272360/4925091 (46.1%) rate=321.0/s ETA=2.3h wall=0.24h model_passes=546720
+  d_N checkpoint row 250/3139 pairs=2283750/4925091 (46.4%) rate=322.7/s ETA=2.3h wall=0.25h model_passes=569500
+  d_N checkpoint row 260/3139 pairs=2295140/4925091 (46.6%) rate=325.5/s ETA=2.2h wall=0.25h model_passes=592280
+  d_N checkpoint row 270/3139 pairs=2306530/4925091 (46.8%) rate=327.1/s ETA=2.2h wall=0.26h model_passes=615060
+  d_N checkpoint row 280/3139 pairs=2317920/4925091 (47.1%) rate=328.9/s ETA=2.2h wall=0.27h model_passes=637840
+  d_N checkpoint row 290/3139 pairs=2329310/4925091 (47.3%) rate=329.9/s ETA=2.2h wall=0.28h model_passes=660620
+  d_N checkpoint row 300/3139 pairs=2340700/4925091 (47.5%) rate=331.6/s ETA=2.2h wall=0.29h model_passes=683400
+  d_N checkpoint row 310/3139 pairs=2352090/4925091 (47.8%) rate=333.6/s ETA=2.1h wall=0.29h model_passes=706180
+  d_N checkpoint row 320/3139 pairs=2363480/4925091 (48.0%) rate=335.6/s ETA=2.1h wall=0.30h model_passes=728960
+  d_N checkpoint row 330/3139 pairs=2374870/4925091 (48.2%) rate=335.3/s ETA=2.1h wall=0.31h model_passes=751740
+  d_N checkpoint row 340/3139 pairs=2386260/4925091 (48.5%) rate=336.8/s ETA=2.1h wall=0.32h model_passes=774520
+  d_N checkpoint row 350/3139 pairs=2397650/4925091 (48.7%) rate=337.8/s ETA=2.1h wall=0.33h model_passes=797300
+  d_N checkpoint row 360/3139 pairs=2409040/4925091 (48.9%) rate=339.3/s ETA=2.1h wall=0.34h model_passes=820080
+  d_N checkpoint row 370/3139 pairs=2420430/4925091 (49.1%) rate=339.5/s ETA=2.0h wall=0.34h model_passes=842860
+  d_N checkpoint row 380/3139 pairs=2431820/4925091 (49.4%) rate=339.7/s ETA=2.0h wall=0.35h model_passes=865640
+  d_N checkpoint row 390/3139 pairs=2443210/4925091 (49.6%) rate=341.2/s ETA=2.0h wall=0.36h model_passes=888420
+  d_N checkpoint row 400/3139 pairs=2454600/4925091 (49.8%) rate=342.7/s ETA=2.0h wall=0.37h model_passes=911200
+  d_N checkpoint row 410/3139 pairs=2465990/4925091 (50.1%) rate=344.2/s ETA=2.0h wall=0.38h model_passes=933980
+  d_N checkpoint row 420/3139 pairs=2477380/4925091 (50.3%) rate=344.4/s ETA=2.0h wall=0.39h model_passes=956760
+  d_N checkpoint row 430/3139 pairs=2488770/4925091 (50.5%) rate=345.6/s ETA=2.0h wall=0.39h model_passes=979540
+  d_N checkpoint row 440/3139 pairs=2500160/4925091 (50.8%) rate=345.3/s ETA=2.0h wall=0.40h model_passes=1002320
+  d_N checkpoint row 450/3139 pairs=2511550/4925091 (51.0%) rate=346.7/s ETA=1.9h wall=0.41h model_passes=1025100
+  d_N checkpoint row 460/3139 pairs=2522940/4925091 (51.2%) rate=347.8/s ETA=1.9h wall=0.42h model_passes=1047880
+  d_N checkpoint row 470/3139 pairs=2534330/4925091 (51.5%) rate=348.9/s ETA=1.9h wall=0.43h model_passes=1070660
+  d_N checkpoint row 480/3139 pairs=2545720/4925091 (51.7%) rate=350.2/s ETA=1.9h wall=0.43h model_passes=1093440
+  d_N checkpoint row 490/3139 pairs=2557110/4925091 (51.9%) rate=350.5/s ETA=1.9h wall=0.44h model_passes=1116220
+  d_N checkpoint row 500/3139 pairs=2568500/4925091 (52.2%) rate=349.8/s ETA=1.9h wall=0.45h model_passes=1139000
+  d_N checkpoint row 510/3139 pairs=2579890/4925091 (52.4%) rate=349.1/s ETA=1.9h wall=0.46h model_passes=1161780
+  d_N checkpoint row 520/3139 pairs=2591280/4925091 (52.6%) rate=350.0/s ETA=1.9h wall=0.47h model_passes=1184560
+  d_N checkpoint row 530/3139 pairs=2602670/4925091 (52.8%) rate=349.0/s ETA=1.8h wall=0.48h model_passes=1207340
+  d_N checkpoint row 540/3139 pairs=2614060/4925091 (53.1%) rate=350.0/s ETA=1.8h wall=0.49h model_passes=1230120
+  d_N checkpoint row 550/3139 pairs=2625450/4925091 (53.3%) rate=351.1/s ETA=1.8h wall=0.50h model_passes=1252900
+  d_N checkpoint row 560/3139 pairs=2636840/4925091 (53.5%) rate=352.1/s ETA=1.8h wall=0.50h model_passes=1275680
+  d_N checkpoint row 570/3139 pairs=2648230/4925091 (53.8%) rate=353.1/s ETA=1.8h wall=0.51h model_passes=1298460
+  d_N checkpoint row 580/3139 pairs=2659620/4925091 (54.0%) rate=353.8/s ETA=1.8h wall=0.52h model_passes=1321240
+  d_N checkpoint row 590/3139 pairs=2671010/4925091 (54.2%) rate=354.9/s ETA=1.8h wall=0.53h model_passes=1344020
+  d_N checkpoint row 600/3139 pairs=2682400/4925091 (54.5%) rate=355.6/s ETA=1.8h wall=0.53h model_passes=1366800
+  d_N checkpoint row 610/3139 pairs=2693790/4925091 (54.7%) rate=356.2/s ETA=1.7h wall=0.54h model_passes=1389580
+  d_N checkpoint row 620/3139 pairs=2705180/4925091 (54.9%) rate=357.0/s ETA=1.7h wall=0.55h model_passes=1412360
+  d_N checkpoint row 630/3139 pairs=2716570/4925091 (55.2%) rate=357.1/s ETA=1.7h wall=0.56h model_passes=1435140
+  d_N checkpoint row 640/3139 pairs=2727960/4925091 (55.4%) rate=357.6/s ETA=1.7h wall=0.57h model_passes=1457920
+  d_N checkpoint row 650/3139 pairs=2739350/4925091 (55.6%) rate=357.7/s ETA=1.7h wall=0.57h model_passes=1480700
+  d_N checkpoint row 660/3139 pairs=2750740/4925091 (55.9%) rate=358.3/s ETA=1.7h wall=0.58h model_passes=1503480
+  d_N checkpoint row 670/3139 pairs=2762130/4925091 (56.1%) rate=359.2/s ETA=1.7h wall=0.59h model_passes=1526260
+  d_N checkpoint row 680/3139 pairs=2773520/4925091 (56.3%) rate=359.8/s ETA=1.7h wall=0.60h model_passes=1549040
+  d_N checkpoint row 690/3139 pairs=2784910/4925091 (56.5%) rate=360.3/s ETA=1.6h wall=0.61h model_passes=1571820
+  d_N checkpoint row 700/3139 pairs=2796300/4925091 (56.8%) rate=360.2/s ETA=1.6h wall=0.61h model_passes=1594600
+  d_N checkpoint row 710/3139 pairs=2807690/4925091 (57.0%) rate=360.9/s ETA=1.6h wall=0.62h model_passes=1617380
+  d_N checkpoint row 720/3139 pairs=2819080/4925091 (57.2%) rate=360.6/s ETA=1.6h wall=0.63h model_passes=1640160
+  d_N checkpoint row 730/3139 pairs=2830470/4925091 (57.5%) rate=360.8/s ETA=1.6h wall=0.64h model_passes=1662940
+  d_N checkpoint row 740/3139 pairs=2841860/4925091 (57.7%) rate=361.5/s ETA=1.6h wall=0.65h model_passes=1685720
+  d_N checkpoint row 750/3139 pairs=2853250/4925091 (57.9%) rate=362.0/s ETA=1.6h wall=0.66h model_passes=1708500
+  d_N checkpoint row 760/3139 pairs=2864640/4925091 (58.2%) rate=361.9/s ETA=1.6h wall=0.66h model_passes=1731280
+  d_N checkpoint row 770/3139 pairs=2876030/4925091 (58.4%) rate=362.4/s ETA=1.6h wall=0.67h model_passes=1754060
+  d_N checkpoint row 780/3139 pairs=2887420/4925091 (58.6%) rate=362.8/s ETA=1.6h wall=0.68h model_passes=1776840
+  d_N checkpoint row 790/3139 pairs=2898810/4925091 (58.9%) rate=363.3/s ETA=1.5h wall=0.69h model_passes=1799620
+  d_N checkpoint row 800/3139 pairs=2910200/4925091 (59.1%) rate=363.4/s ETA=1.5h wall=0.70h model_passes=1822400
+  d_N checkpoint row 810/3139 pairs=2921590/4925091 (59.3%) rate=364.0/s ETA=1.5h wall=0.70h model_passes=1845180
+  d_N checkpoint row 820/3139 pairs=2932980/4925091 (59.6%) rate=364.5/s ETA=1.5h wall=0.71h model_passes=1867960
+  d_N checkpoint row 830/3139 pairs=2944370/4925091 (59.8%) rate=365.1/s ETA=1.5h wall=0.72h model_passes=1890740
+  d_N checkpoint row 840/3139 pairs=2955760/4925091 (60.0%) rate=365.7/s ETA=1.5h wall=0.73h model_passes=1913520
+  d_N checkpoint row 850/3139 pairs=2967150/4925091 (60.2%) rate=366.2/s ETA=1.5h wall=0.73h model_passes=1936300
+  d_N checkpoint row 860/3139 pairs=2978540/4925091 (60.5%) rate=366.5/s ETA=1.5h wall=0.74h model_passes=1959080
+  d_N checkpoint row 870/3139 pairs=2989930/4925091 (60.7%) rate=366.3/s ETA=1.5h wall=0.75h model_passes=1981860
+  d_N checkpoint row 880/3139 pairs=3001320/4925091 (60.9%) rate=366.2/s ETA=1.5h wall=0.76h model_passes=2004640
+  d_N checkpoint row 890/3139 pairs=3012710/4925091 (61.2%) rate=366.6/s ETA=1.4h wall=0.77h model_passes=2027420
+  d_N checkpoint row 900/3139 pairs=3024100/4925091 (61.4%) rate=367.1/s ETA=1.4h wall=0.78h model_passes=2050200
+  d_N checkpoint row 910/3139 pairs=3035490/4925091 (61.6%) rate=367.6/s ETA=1.4h wall=0.78h model_passes=2072980
+  d_N checkpoint row 920/3139 pairs=3046880/4925091 (61.9%) rate=368.1/s ETA=1.4h wall=0.79h model_passes=2095760
+  d_N checkpoint row 930/3139 pairs=3058270/4925091 (62.1%) rate=368.3/s ETA=1.4h wall=0.80h model_passes=2118540
+  d_N checkpoint row 940/3139 pairs=3069660/4925091 (62.3%) rate=368.7/s ETA=1.4h wall=0.81h model_passes=2141320
+  d_N checkpoint row 950/3139 pairs=3081050/4925091 (62.6%) rate=369.0/s ETA=1.4h wall=0.81h model_passes=2164100
+  d_N checkpoint row 960/3139 pairs=3092440/4925091 (62.8%) rate=369.4/s ETA=1.4h wall=0.82h model_passes=2186880
+  d_N checkpoint row 970/3139 pairs=3103830/4925091 (63.0%) rate=369.2/s ETA=1.4h wall=0.83h model_passes=2209660
+  d_N checkpoint row 980/3139 pairs=3115220/4925091 (63.3%) rate=369.0/s ETA=1.4h wall=0.84h model_passes=2232440
+  d_N checkpoint row 990/3139 pairs=3126610/4925091 (63.5%) rate=369.5/s ETA=1.4h wall=0.85h model_passes=2255220
+  d_N checkpoint row 1000/3139 pairs=3138000/4925091 (63.7%) rate=369.3/s ETA=1.3h wall=0.86h model_passes=2278000
+  d_N checkpoint row 1010/3139 pairs=3149390/4925091 (63.9%) rate=367.5/s ETA=1.3h wall=0.87h model_passes=2300780
+  d_N checkpoint row 1020/3139 pairs=3160780/4925091 (64.2%) rate=367.9/s ETA=1.3h wall=0.88h model_passes=2323560
+  d_N checkpoint row 1030/3139 pairs=3172170/4925091 (64.4%) rate=368.1/s ETA=1.3h wall=0.89h model_passes=2346340
+  d_N checkpoint row 1040/3139 pairs=3183560/4925091 (64.6%) rate=368.4/s ETA=1.3h wall=0.89h model_passes=2369120
+  d_N checkpoint row 1050/3139 pairs=3194950/4925091 (64.9%) rate=368.7/s ETA=1.3h wall=0.90h model_passes=2391900
+  d_N checkpoint row 1060/3139 pairs=3206340/4925091 (65.1%) rate=369.0/s ETA=1.3h wall=0.91h model_passes=2414680
+  d_N checkpoint row 1070/3139 pairs=3217730/4925091 (65.3%) rate=369.2/s ETA=1.3h wall=0.92h model_passes=2437460
+  d_N checkpoint row 1080/3139 pairs=3229120/4925091 (65.6%) rate=369.4/s ETA=1.3h wall=0.92h model_passes=2460240
+  d_N checkpoint row 1090/3139 pairs=3240510/4925091 (65.8%) rate=370.0/s ETA=1.3h wall=0.93h model_passes=2483020
+  d_N checkpoint row 1100/3139 pairs=3251900/4925091 (66.0%) rate=370.3/s ETA=1.3h wall=0.94h model_passes=2505800
+  d_N checkpoint row 1110/3139 pairs=3263290/4925091 (66.3%) rate=370.6/s ETA=1.2h wall=0.95h model_passes=2528580
+  d_N checkpoint row 1120/3139 pairs=3274680/4925091 (66.5%) rate=370.5/s ETA=1.2h wall=0.96h model_passes=2551360
+  d_N checkpoint row 1130/3139 pairs=3286070/4925091 (66.7%) rate=370.8/s ETA=1.2h wall=0.96h model_passes=2574140
+  d_N checkpoint row 1140/3139 pairs=3297460/4925091 (67.0%) rate=371.2/s ETA=1.2h wall=0.97h model_passes=2596920
+  d_N checkpoint row 1150/3139 pairs=3308850/4925091 (67.2%) rate=371.4/s ETA=1.2h wall=0.98h model_passes=2619700
+  d_N checkpoint row 1160/3139 pairs=3320240/4925091 (67.4%) rate=371.9/s ETA=1.2h wall=0.99h model_passes=2642480
+  d_N checkpoint row 1170/3139 pairs=3331630/4925091 (67.6%) rate=372.2/s ETA=1.2h wall=0.99h model_passes=2665260
+  d_N checkpoint row 1180/3139 pairs=3343020/4925091 (67.9%) rate=372.5/s ETA=1.2h wall=1.00h model_passes=2688040
+  d_N checkpoint row 1190/3139 pairs=3354410/4925091 (68.1%) rate=372.3/s ETA=1.2h wall=1.01h model_passes=2710820
+  d_N checkpoint row 1200/3139 pairs=3365800/4925091 (68.3%) rate=372.7/s ETA=1.2h wall=1.02h model_passes=2733600
+  d_N checkpoint row 1210/3139 pairs=3377190/4925091 (68.6%) rate=372.4/s ETA=1.2h wall=1.03h model_passes=2756380
+  d_N checkpoint row 1220/3139 pairs=3388580/4925091 (68.8%) rate=372.8/s ETA=1.1h wall=1.04h model_passes=2779160
+  d_N checkpoint row 1230/3139 pairs=3399970/4925091 (69.0%) rate=372.9/s ETA=1.1h wall=1.04h model_passes=2801940
+  d_N checkpoint row 1240/3139 pairs=3411360/4925091 (69.3%) rate=373.2/s ETA=1.1h wall=1.05h model_passes=2824720
+  d_N checkpoint row 1250/3139 pairs=3422750/4925091 (69.5%) rate=373.4/s ETA=1.1h wall=1.06h model_passes=2847500
+  d_N checkpoint row 1260/3139 pairs=3434140/4925091 (69.7%) rate=373.6/s ETA=1.1h wall=1.07h model_passes=2870280
+  d_N checkpoint row 1270/3139 pairs=3445530/4925091 (70.0%) rate=373.8/s ETA=1.1h wall=1.07h model_passes=2893060
+  d_N checkpoint row 1280/3139 pairs=3456920/4925091 (70.2%) rate=374.1/s ETA=1.1h wall=1.08h model_passes=2915840
+  d_N checkpoint row 1290/3139 pairs=3468310/4925091 (70.4%) rate=374.4/s ETA=1.1h wall=1.09h model_passes=2938620
+  d_N checkpoint row 1300/3139 pairs=3479700/4925091 (70.7%) rate=374.7/s ETA=1.1h wall=1.10h model_passes=2961400
+  d_N checkpoint row 1310/3139 pairs=3491090/4925091 (70.9%) rate=375.0/s ETA=1.1h wall=1.11h model_passes=2984180
+  d_N checkpoint row 1320/3139 pairs=3502480/4925091 (71.1%) rate=375.3/s ETA=1.1h wall=1.11h model_passes=3006960
+  d_N checkpoint row 1330/3139 pairs=3513870/4925091 (71.3%) rate=375.5/s ETA=1.0h wall=1.12h model_passes=3029740
+  d_N checkpoint row 1340/3139 pairs=3525260/4925091 (71.6%) rate=375.7/s ETA=1.0h wall=1.13h model_passes=3052520
+  d_N checkpoint row 1350/3139 pairs=3536650/4925091 (71.8%) rate=376.0/s ETA=1.0h wall=1.14h model_passes=3075300
+  d_N checkpoint row 1360/3139 pairs=3548040/4925091 (72.0%) rate=376.3/s ETA=1.0h wall=1.14h model_passes=3098080
+  d_N checkpoint row 1370/3139 pairs=3559430/4925091 (72.3%) rate=376.6/s ETA=1.0h wall=1.15h model_passes=3120860
+  d_N checkpoint row 1380/3139 pairs=3570820/4925091 (72.5%) rate=376.8/s ETA=1.0h wall=1.16h model_passes=3143640
+  d_N checkpoint row 1390/3139 pairs=3582210/4925091 (72.7%) rate=377.0/s ETA=1.0h wall=1.17h model_passes=3166420
+  d_N checkpoint row 1400/3139 pairs=3593600/4925091 (73.0%) rate=377.2/s ETA=1.0h wall=1.17h model_passes=3189200
+  d_N checkpoint row 1410/3139 pairs=3604990/4925091 (73.2%) rate=377.4/s ETA=1.0h wall=1.18h model_passes=3211980
+  d_N checkpoint row 1420/3139 pairs=3616380/4925091 (73.4%) rate=377.7/s ETA=1.0h wall=1.19h model_passes=3234760
+  d_N checkpoint row 1430/3139 pairs=3627770/4925091 (73.7%) rate=378.1/s ETA=1.0h wall=1.20h model_passes=3257540
+  d_N checkpoint row 1440/3139 pairs=3639160/4925091 (73.9%) rate=378.3/s ETA=0.9h wall=1.20h model_passes=3280320
+  d_N checkpoint row 1450/3139 pairs=3650550/4925091 (74.1%) rate=378.6/s ETA=0.9h wall=1.21h model_passes=3303100
+  d_N checkpoint row 1460/3139 pairs=3661940/4925091 (74.4%) rate=378.9/s ETA=0.9h wall=1.22h model_passes=3325880
+  d_N checkpoint row 1470/3139 pairs=3673330/4925091 (74.6%) rate=379.2/s ETA=0.9h wall=1.23h model_passes=3348660
+  d_N checkpoint row 1480/3139 pairs=3684720/4925091 (74.8%) rate=379.4/s ETA=0.9h wall=1.23h model_passes=3371440
+  d_N checkpoint row 1490/3139 pairs=3696110/4925091 (75.0%) rate=379.2/s ETA=0.9h wall=1.24h model_passes=3394220
+  d_N checkpoint row 1500/3139 pairs=3707500/4925091 (75.3%) rate=379.3/s ETA=0.9h wall=1.25h model_passes=3417000
+  d_N checkpoint row 1510/3139 pairs=3718890/4925091 (75.5%) rate=379.5/s ETA=0.9h wall=1.26h model_passes=3439780
+  d_N checkpoint row 1520/3139 pairs=3730280/4925091 (75.7%) rate=379.6/s ETA=0.9h wall=1.27h model_passes=3462560
+  d_N checkpoint row 1530/3139 pairs=3741670/4925091 (76.0%) rate=379.8/s ETA=0.9h wall=1.27h model_passes=3485340
+  d_N checkpoint row 1540/3139 pairs=3753060/4925091 (76.2%) rate=380.1/s ETA=0.9h wall=1.28h model_passes=3508120
+  d_N checkpoint row 1550/3139 pairs=3764450/4925091 (76.4%) rate=380.3/s ETA=0.8h wall=1.29h model_passes=3530900
+  d_N checkpoint row 1560/3139 pairs=3775840/4925091 (76.7%) rate=380.5/s ETA=0.8h wall=1.30h model_passes=3553680
+  d_N checkpoint row 1570/3139 pairs=3787230/4925091 (76.9%) rate=380.8/s ETA=0.8h wall=1.30h model_passes=3576460
+  d_N checkpoint row 1580/3139 pairs=3798620/4925091 (77.1%) rate=380.9/s ETA=0.8h wall=1.31h model_passes=3599240
+  d_N checkpoint row 1590/3139 pairs=3810010/4925091 (77.4%) rate=381.0/s ETA=0.8h wall=1.32h model_passes=3622020
+  d_N checkpoint row 1600/3139 pairs=3821400/4925091 (77.6%) rate=381.2/s ETA=0.8h wall=1.33h model_passes=3644800
+  d_N checkpoint row 1610/3139 pairs=3832790/4925091 (77.8%) rate=381.5/s ETA=0.8h wall=1.34h model_passes=3667580
+  d_N checkpoint row 1620/3139 pairs=3844180/4925091 (78.1%) rate=381.7/s ETA=0.8h wall=1.34h model_passes=3690360
+  d_N checkpoint row 1630/3139 pairs=3855570/4925091 (78.3%) rate=382.0/s ETA=0.8h wall=1.35h model_passes=3713140
+  d_N checkpoint row 1640/3139 pairs=3866960/4925091 (78.5%) rate=381.9/s ETA=0.8h wall=1.36h model_passes=3735920
+  d_N checkpoint row 1650/3139 pairs=3878350/4925091 (78.7%) rate=382.1/s ETA=0.8h wall=1.37h model_passes=3758700
+  d_N checkpoint row 1660/3139 pairs=3889740/4925091 (79.0%) rate=382.3/s ETA=0.8h wall=1.37h model_passes=3781480
+  d_N checkpoint row 1670/3139 pairs=3901130/4925091 (79.2%) rate=382.6/s ETA=0.7h wall=1.38h model_passes=3804260
+  d_N checkpoint row 1680/3139 pairs=3912520/4925091 (79.4%) rate=382.8/s ETA=0.7h wall=1.39h model_passes=3827040
+  d_N checkpoint row 1690/3139 pairs=3923910/4925091 (79.7%) rate=383.0/s ETA=0.7h wall=1.40h model_passes=3849820
+  d_N checkpoint row 1700/3139 pairs=3935300/4925091 (79.9%) rate=383.3/s ETA=0.7h wall=1.40h model_passes=3872600
+  d_N checkpoint row 1710/3139 pairs=3946690/4925091 (80.1%) rate=383.5/s ETA=0.7h wall=1.41h model_passes=3895380
+  d_N checkpoint row 1720/3139 pairs=3958080/4925091 (80.4%) rate=383.6/s ETA=0.7h wall=1.42h model_passes=3918160
+  d_N checkpoint row 1730/3139 pairs=3969470/4925091 (80.6%) rate=383.9/s ETA=0.7h wall=1.43h model_passes=3940940
+  d_N checkpoint row 1740/3139 pairs=3980860/4925091 (80.8%) rate=384.0/s ETA=0.7h wall=1.43h model_passes=3963720
+  d_N checkpoint row 1750/3139 pairs=3992250/4925091 (81.1%) rate=384.2/s ETA=0.7h wall=1.44h model_passes=3986500
+  d_N checkpoint row 1760/3139 pairs=4003640/4925091 (81.3%) rate=384.4/s ETA=0.7h wall=1.45h model_passes=4009280
+  d_N checkpoint row 1770/3139 pairs=4015030/4925091 (81.5%) rate=384.6/s ETA=0.7h wall=1.46h model_passes=4032060
+  d_N checkpoint row 1780/3139 pairs=4026420/4925091 (81.8%) rate=384.8/s ETA=0.6h wall=1.46h model_passes=4054840
+  d_N checkpoint row 1790/3139 pairs=4037810/4925091 (82.0%) rate=385.0/s ETA=0.6h wall=1.47h model_passes=4077620
+  d_N checkpoint row 1800/3139 pairs=4049200/4925091 (82.2%) rate=385.3/s ETA=0.6h wall=1.48h model_passes=4100400
+  d_N checkpoint row 1810/3139 pairs=4060590/4925091 (82.4%) rate=385.5/s ETA=0.6h wall=1.49h model_passes=4123180
+  d_N checkpoint row 1820/3139 pairs=4071980/4925091 (82.7%) rate=385.7/s ETA=0.6h wall=1.49h model_passes=4145960
+  d_N checkpoint row 1830/3139 pairs=4083370/4925091 (82.9%) rate=385.9/s ETA=0.6h wall=1.50h model_passes=4168740
+  d_N checkpoint row 1840/3139 pairs=4094760/4925091 (83.1%) rate=386.1/s ETA=0.6h wall=1.51h model_passes=4191520
+  d_N checkpoint row 1850/3139 pairs=4106150/4925091 (83.4%) rate=386.1/s ETA=0.6h wall=1.52h model_passes=4214300
+  d_N checkpoint row 1860/3139 pairs=4117540/4925091 (83.6%) rate=386.2/s ETA=0.6h wall=1.52h model_passes=4237080
+  d_N checkpoint row 1870/3139 pairs=4128930/4925091 (83.8%) rate=386.4/s ETA=0.6h wall=1.53h model_passes=4259860
+  d_N checkpoint row 1880/3139 pairs=4140320/4925091 (84.1%) rate=386.6/s ETA=0.6h wall=1.54h model_passes=4282640
+  d_N checkpoint row 1890/3139 pairs=4151710/4925091 (84.3%) rate=386.8/s ETA=0.6h wall=1.55h model_passes=4305420
+  d_N checkpoint row 1900/3139 pairs=4163100/4925091 (84.5%) rate=387.0/s ETA=0.5h wall=1.55h model_passes=4328200
+  d_N checkpoint row 1910/3139 pairs=4174490/4925091 (84.8%) rate=387.2/s ETA=0.5h wall=1.56h model_passes=4350980
+  d_N checkpoint row 1920/3139 pairs=4185880/4925091 (85.0%) rate=387.3/s ETA=0.5h wall=1.57h model_passes=4373760
+  d_N checkpoint row 1930/3139 pairs=4197270/4925091 (85.2%) rate=387.5/s ETA=0.5h wall=1.58h model_passes=4396540
+  d_N checkpoint row 1940/3139 pairs=4208660/4925091 (85.5%) rate=387.7/s ETA=0.5h wall=1.58h model_passes=4419320
+  d_N checkpoint row 1950/3139 pairs=4220050/4925091 (85.7%) rate=387.9/s ETA=0.5h wall=1.59h model_passes=4442100
+  d_N checkpoint row 1960/3139 pairs=4231440/4925091 (85.9%) rate=388.1/s ETA=0.5h wall=1.60h model_passes=4464880
+  d_N checkpoint row 1970/3139 pairs=4242830/4925091 (86.1%) rate=388.2/s ETA=0.5h wall=1.61h model_passes=4487660
+  d_N checkpoint row 1980/3139 pairs=4254220/4925091 (86.4%) rate=388.4/s ETA=0.5h wall=1.61h model_passes=4510440
+  d_N checkpoint row 1990/3139 pairs=4265610/4925091 (86.6%) rate=388.6/s ETA=0.5h wall=1.62h model_passes=4533220
+  d_N checkpoint row 2000/3139 pairs=4277000/4925091 (86.8%) rate=388.8/s ETA=0.5h wall=1.63h model_passes=4556000
+  d_N checkpoint row 2010/3139 pairs=4288335/4925091 (87.1%) rate=388.8/s ETA=0.5h wall=1.64h model_passes=4578670
+  d_N checkpoint row 2020/3139 pairs=4299570/4925091 (87.3%) rate=388.8/s ETA=0.4h wall=1.64h model_passes=4601140
+  d_N checkpoint row 2030/3139 pairs=4310705/4925091 (87.5%) rate=388.9/s ETA=0.4h wall=1.65h model_passes=4623410
+  d_N checkpoint row 2040/3139 pairs=4321740/4925091 (87.7%) rate=389.0/s ETA=0.4h wall=1.66h model_passes=4645480
+  d_N checkpoint row 2050/3139 pairs=4332675/4925091 (88.0%) rate=389.1/s ETA=0.4h wall=1.67h model_passes=4667350
+  d_N checkpoint row 2060/3139 pairs=4343510/4925091 (88.2%) rate=389.1/s ETA=0.4h wall=1.67h model_passes=4689020
+  d_N checkpoint row 2070/3139 pairs=4354245/4925091 (88.4%) rate=389.0/s ETA=0.4h wall=1.68h model_passes=4710490
+  d_N checkpoint row 2080/3139 pairs=4364880/4925091 (88.6%) rate=389.0/s ETA=0.4h wall=1.69h model_passes=4731760
+  d_N checkpoint row 2090/3139 pairs=4375415/4925091 (88.8%) rate=389.2/s ETA=0.4h wall=1.70h model_passes=4752830
+  d_N checkpoint row 2100/3139 pairs=4385850/4925091 (89.1%) rate=389.3/s ETA=0.4h wall=1.70h model_passes=4773700
+  d_N checkpoint row 2110/3139 pairs=4396185/4925091 (89.3%) rate=389.4/s ETA=0.4h wall=1.71h model_passes=4794370
+  d_N checkpoint row 2120/3139 pairs=4406420/4925091 (89.5%) rate=389.5/s ETA=0.4h wall=1.72h model_passes=4814840
+  d_N checkpoint row 2130/3139 pairs=4416555/4925091 (89.7%) rate=389.5/s ETA=0.4h wall=1.72h model_passes=4835110
+  d_N checkpoint row 2140/3139 pairs=4426590/4925091 (89.9%) rate=389.7/s ETA=0.4h wall=1.73h model_passes=4855180
+  d_N checkpoint row 2150/3139 pairs=4436525/4925091 (90.1%) rate=389.8/s ETA=0.3h wall=1.74h model_passes=4875050
+  d_N checkpoint row 2160/3139 pairs=4446360/4925091 (90.3%) rate=389.9/s ETA=0.3h wall=1.74h model_passes=4894720
+  d_N checkpoint row 2170/3139 pairs=4456095/4925091 (90.5%) rate=390.1/s ETA=0.3h wall=1.75h model_passes=4914190
+  d_N checkpoint row 2180/3139 pairs=4465730/4925091 (90.7%) rate=390.2/s ETA=0.3h wall=1.76h model_passes=4933460
+  d_N checkpoint row 2190/3139 pairs=4475265/4925091 (90.9%) rate=390.3/s ETA=0.3h wall=1.76h model_passes=4952530
+  d_N checkpoint row 2200/3139 pairs=4484700/4925091 (91.1%) rate=390.4/s ETA=0.3h wall=1.77h model_passes=4971400
+  d_N checkpoint row 2210/3139 pairs=4494035/4925091 (91.2%) rate=390.5/s ETA=0.3h wall=1.77h model_passes=4990070
+  d_N checkpoint row 2220/3139 pairs=4503270/4925091 (91.4%) rate=390.6/s ETA=0.3h wall=1.78h model_passes=5008540
+  d_N checkpoint row 2230/3139 pairs=4512405/4925091 (91.6%) rate=390.7/s ETA=0.3h wall=1.79h model_passes=5026810
+  d_N checkpoint row 2240/3139 pairs=4521440/4925091 (91.8%) rate=390.7/s ETA=0.3h wall=1.79h model_passes=5044880
+  d_N checkpoint row 2250/3139 pairs=4530375/4925091 (92.0%) rate=390.8/s ETA=0.3h wall=1.80h model_passes=5062750
+  d_N checkpoint row 2260/3139 pairs=4539210/4925091 (92.2%) rate=390.8/s ETA=0.3h wall=1.81h model_passes=5080420
+  d_N checkpoint row 2270/3139 pairs=4547945/4925091 (92.3%) rate=390.7/s ETA=0.3h wall=1.81h model_passes=5097890
+  d_N checkpoint row 2280/3139 pairs=4556580/4925091 (92.5%) rate=390.7/s ETA=0.3h wall=1.82h model_passes=5115160
+  d_N checkpoint row 2290/3139 pairs=4565115/4925091 (92.7%) rate=390.7/s ETA=0.3h wall=1.82h model_passes=5132230
+  d_N checkpoint row 2300/3139 pairs=4573550/4925091 (92.9%) rate=390.6/s ETA=0.2h wall=1.83h model_passes=5149100
+  d_N checkpoint row 2310/3139 pairs=4581885/4925091 (93.0%) rate=390.5/s ETA=0.2h wall=1.84h model_passes=5165770
+  d_N checkpoint row 2320/3139 pairs=4590120/4925091 (93.2%) rate=390.5/s ETA=0.2h wall=1.84h model_passes=5182240
+  d_N checkpoint row 2330/3139 pairs=4598255/4925091 (93.4%) rate=390.5/s ETA=0.2h wall=1.85h model_passes=5198510
+  d_N checkpoint row 2340/3139 pairs=4606290/4925091 (93.5%) rate=390.4/s ETA=0.2h wall=1.86h model_passes=5214580
+  d_N checkpoint row 2350/3139 pairs=4614225/4925091 (93.7%) rate=390.3/s ETA=0.2h wall=1.86h model_passes=5230450
+  d_N checkpoint row 2360/3139 pairs=4622060/4925091 (93.8%) rate=390.2/s ETA=0.2h wall=1.87h model_passes=5246120
+  d_N checkpoint row 2370/3139 pairs=4629795/4925091 (94.0%) rate=390.2/s ETA=0.2h wall=1.87h model_passes=5261590
+  d_N checkpoint row 2380/3139 pairs=4637430/4925091 (94.2%) rate=390.2/s ETA=0.2h wall=1.88h model_passes=5276860
+  d_N checkpoint row 2390/3139 pairs=4644965/4925091 (94.3%) rate=390.2/s ETA=0.2h wall=1.88h model_passes=5291930
+  d_N checkpoint row 2400/3139 pairs=4652400/4925091 (94.5%) rate=390.2/s ETA=0.2h wall=1.89h model_passes=5306800
+  d_N checkpoint row 2410/3139 pairs=4659735/4925091 (94.6%) rate=390.1/s ETA=0.2h wall=1.89h model_passes=5321470
+  d_N checkpoint row 2420/3139 pairs=4666970/4925091 (94.8%) rate=390.1/s ETA=0.2h wall=1.90h model_passes=5335940
+  d_N checkpoint row 2430/3139 pairs=4674105/4925091 (94.9%) rate=390.1/s ETA=0.2h wall=1.91h model_passes=5350210
+  d_N checkpoint row 2440/3139 pairs=4681140/4925091 (95.0%) rate=390.0/s ETA=0.2h wall=1.91h model_passes=5364280
+  d_N checkpoint row 2450/3139 pairs=4688075/4925091 (95.2%) rate=390.0/s ETA=0.2h wall=1.92h model_passes=5378150
+  d_N checkpoint row 2460/3139 pairs=4694910/4925091 (95.3%) rate=389.9/s ETA=0.2h wall=1.92h model_passes=5391820
+  d_N checkpoint row 2470/3139 pairs=4701645/4925091 (95.5%) rate=389.8/s ETA=0.2h wall=1.93h model_passes=5405290
+  d_N checkpoint row 2480/3139 pairs=4708280/4925091 (95.6%) rate=389.8/s ETA=0.2h wall=1.93h model_passes=5418560
+  d_N checkpoint row 2490/3139 pairs=4714815/4925091 (95.7%) rate=389.7/s ETA=0.1h wall=1.94h model_passes=5431630
+  d_N checkpoint row 2500/3139 pairs=4721250/4925091 (95.9%) rate=389.6/s ETA=0.1h wall=1.94h model_passes=5444500
+  d_N checkpoint row 2510/3139 pairs=4727585/4925091 (96.0%) rate=389.5/s ETA=0.1h wall=1.95h model_passes=5457170
+  d_N checkpoint row 2520/3139 pairs=4733820/4925091 (96.1%) rate=389.4/s ETA=0.1h wall=1.95h model_passes=5469640
+  d_N checkpoint row 2530/3139 pairs=4739955/4925091 (96.2%) rate=389.2/s ETA=0.1h wall=1.96h model_passes=5481910
+  d_N checkpoint row 2540/3139 pairs=4745990/4925091 (96.4%) rate=389.0/s ETA=0.1h wall=1.96h model_passes=5493980
+  d_N checkpoint row 2550/3139 pairs=4751925/4925091 (96.5%) rate=388.9/s ETA=0.1h wall=1.97h model_passes=5505850
+  d_N checkpoint row 2560/3139 pairs=4757760/4925091 (96.6%) rate=388.7/s ETA=0.1h wall=1.97h model_passes=5517520
+  d_N checkpoint row 2570/3139 pairs=4763495/4925091 (96.7%) rate=388.5/s ETA=0.1h wall=1.98h model_passes=5528990
+  d_N checkpoint row 2580/3139 pairs=4769130/4925091 (96.8%) rate=388.3/s ETA=0.1h wall=1.98h model_passes=5540260
+  d_N checkpoint row 2590/3139 pairs=4774665/4925091 (96.9%) rate=388.1/s ETA=0.1h wall=1.99h model_passes=5551330
+  d_N checkpoint row 2600/3139 pairs=4780100/4925091 (97.1%) rate=387.9/s ETA=0.1h wall=1.99h model_passes=5562200
+  d_N checkpoint row 2610/3139 pairs=4785435/4925091 (97.2%) rate=387.6/s ETA=0.1h wall=2.00h model_passes=5572870
+  d_N checkpoint row 2620/3139 pairs=4790670/4925091 (97.3%) rate=387.4/s ETA=0.1h wall=2.00h model_passes=5583340
+  d_N checkpoint row 2630/3139 pairs=4795805/4925091 (97.4%) rate=387.3/s ETA=0.1h wall=2.01h model_passes=5593610
+  d_N checkpoint row 2640/3139 pairs=4800840/4925091 (97.5%) rate=387.1/s ETA=0.1h wall=2.01h model_passes=5603680
+  d_N checkpoint row 2650/3139 pairs=4805775/4925091 (97.6%) rate=386.9/s ETA=0.1h wall=2.01h model_passes=5613550
+  d_N checkpoint row 2660/3139 pairs=4810610/4925091 (97.7%) rate=386.8/s ETA=0.1h wall=2.02h model_passes=5623220
+  d_N checkpoint row 2670/3139 pairs=4815345/4925091 (97.8%) rate=386.6/s ETA=0.1h wall=2.02h model_passes=5632690
+  d_N checkpoint row 2680/3139 pairs=4819980/4925091 (97.9%) rate=386.5/s ETA=0.1h wall=2.03h model_passes=5641960
+  d_N checkpoint row 2690/3139 pairs=4824515/4925091 (98.0%) rate=386.3/s ETA=0.1h wall=2.03h model_passes=5651030
+  d_N checkpoint row 2700/3139 pairs=4828950/4925091 (98.0%) rate=386.1/s ETA=0.1h wall=2.04h model_passes=5659900
+  d_N checkpoint row 2710/3139 pairs=4833285/4925091 (98.1%) rate=385.9/s ETA=0.1h wall=2.04h model_passes=5668570
+  d_N checkpoint row 2720/3139 pairs=4837520/4925091 (98.2%) rate=385.7/s ETA=0.1h wall=2.04h model_passes=5677040
+  d_N checkpoint row 2730/3139 pairs=4841655/4925091 (98.3%) rate=385.6/s ETA=0.1h wall=2.05h model_passes=5685310
+  d_N checkpoint row 2740/3139 pairs=4845690/4925091 (98.4%) rate=385.4/s ETA=0.1h wall=2.05h model_passes=5693380
+  d_N checkpoint row 2750/3139 pairs=4849625/4925091 (98.5%) rate=385.2/s ETA=0.1h wall=2.06h model_passes=5701250
+  d_N checkpoint row 2760/3139 pairs=4853460/4925091 (98.5%) rate=385.0/s ETA=0.1h wall=2.06h model_passes=5708920
+  d_N checkpoint row 2770/3139 pairs=4857195/4925091 (98.6%) rate=384.8/s ETA=0.0h wall=2.06h model_passes=5716390
+  d_N checkpoint row 2780/3139 pairs=4860830/4925091 (98.7%) rate=384.5/s ETA=0.0h wall=2.07h model_passes=5723660
+  d_N checkpoint row 2790/3139 pairs=4864365/4925091 (98.8%) rate=384.3/s ETA=0.0h wall=2.07h model_passes=5730730
+  d_N checkpoint row 2800/3139 pairs=4867800/4925091 (98.8%) rate=384.1/s ETA=0.0h wall=2.07h model_passes=5737600
+  d_N checkpoint row 2810/3139 pairs=4871135/4925091 (98.9%) rate=383.9/s ETA=0.0h wall=2.08h model_passes=5744270
+  d_N checkpoint row 2820/3139 pairs=4874370/4925091 (99.0%) rate=383.7/s ETA=0.0h wall=2.08h model_passes=5750740
+  d_N checkpoint row 2830/3139 pairs=4877505/4925091 (99.0%) rate=383.4/s ETA=0.0h wall=2.09h model_passes=5757010
+  d_N checkpoint row 2840/3139 pairs=4880540/4925091 (99.1%) rate=383.2/s ETA=0.0h wall=2.09h model_passes=5763080
+  d_N checkpoint row 2850/3139 pairs=4883475/4925091 (99.2%) rate=383.0/s ETA=0.0h wall=2.09h model_passes=5768950
+  d_N checkpoint row 2860/3139 pairs=4886310/4925091 (99.2%) rate=382.7/s ETA=0.0h wall=2.10h model_passes=5774620
+  d_N checkpoint row 2870/3139 pairs=4889045/4925091 (99.3%) rate=382.5/s ETA=0.0h wall=2.10h model_passes=5780090
+  d_N checkpoint row 2880/3139 pairs=4891680/4925091 (99.3%) rate=382.4/s ETA=0.0h wall=2.10h model_passes=5785360
+  d_N checkpoint row 2890/3139 pairs=4894215/4925091 (99.4%) rate=382.6/s ETA=0.0h wall=2.10h model_passes=5790430
+  d_N checkpoint row 2900/3139 pairs=4896650/4925091 (99.4%) rate=382.7/s ETA=0.0h wall=2.10h model_passes=5795300
+  d_N checkpoint row 2910/3139 pairs=4898985/4925091 (99.5%) rate=382.8/s ETA=0.0h wall=2.10h model_passes=5799970
+  d_N checkpoint row 2920/3139 pairs=4901220/4925091 (99.5%) rate=382.9/s ETA=0.0h wall=2.11h model_passes=5804440
+  d_N checkpoint row 2930/3139 pairs=4903355/4925091 (99.6%) rate=382.9/s ETA=0.0h wall=2.11h model_passes=5808710
+  d_N checkpoint row 2940/3139 pairs=4905390/4925091 (99.6%) rate=383.0/s ETA=0.0h wall=2.11h model_passes=5812780
+  d_N checkpoint row 2950/3139 pairs=4907325/4925091 (99.6%) rate=383.1/s ETA=0.0h wall=2.11h model_passes=5816650
+  d_N checkpoint row 2960/3139 pairs=4909160/4925091 (99.7%) rate=383.2/s ETA=0.0h wall=2.11h model_passes=5820320
+  d_N checkpoint row 2970/3139 pairs=4910895/4925091 (99.7%) rate=383.3/s ETA=0.0h wall=2.11h model_passes=5823790
+  d_N checkpoint row 2980/3139 pairs=4912530/4925091 (99.7%) rate=383.3/s ETA=0.0h wall=2.11h model_passes=5827060
+  d_N checkpoint row 2990/3139 pairs=4914065/4925091 (99.8%) rate=383.4/s ETA=0.0h wall=2.11h model_passes=5830130
+  d_N checkpoint row 3000/3139 pairs=4915500/4925091 (99.8%) rate=383.5/s ETA=0.0h wall=2.11h model_passes=5833000
+  d_N checkpoint row 3010/3139 pairs=4916835/4925091 (99.8%) rate=383.5/s ETA=0.0h wall=2.11h model_passes=5835670
+  d_N checkpoint row 3020/3139 pairs=4918070/4925091 (99.9%) rate=383.6/s ETA=0.0h wall=2.11h model_passes=5838140
+  d_N checkpoint row 3030/3139 pairs=4919205/4925091 (99.9%) rate=383.6/s ETA=0.0h wall=2.11h model_passes=5840410
+  d_N checkpoint row 3040/3139 pairs=4920240/4925091 (99.9%) rate=383.6/s ETA=0.0h wall=2.12h model_passes=5842480
+  d_N checkpoint row 3050/3139 pairs=4921175/4925091 (99.9%) rate=383.7/s ETA=0.0h wall=2.12h model_passes=5844350
+  d_N checkpoint row 3060/3139 pairs=4922010/4925091 (99.9%) rate=383.7/s ETA=0.0h wall=2.12h model_passes=5846020
+  d_N checkpoint row 3070/3139 pairs=4922745/4925091 (100.0%) rate=383.7/s ETA=0.0h wall=2.12h model_passes=5847490
+  d_N checkpoint row 3080/3139 pairs=4923380/4925091 (100.0%) rate=383.7/s ETA=0.0h wall=2.12h model_passes=5848760
+  d_N checkpoint row 3090/3139 pairs=4923915/4925091 (100.0%) rate=383.8/s ETA=0.0h wall=2.12h model_passes=5849830
+  d_N checkpoint row 3100/3139 pairs=4924350/4925091 (100.0%) rate=383.8/s ETA=0.0h wall=2.12h model_passes=5850700
+  d_N checkpoint row 3110/3139 pairs=4924685/4925091 (100.0%) rate=383.8/s ETA=0.0h wall=2.12h model_passes=5851370
+  d_N checkpoint row 3120/3139 pairs=4924920/4925091 (100.0%) rate=383.8/s ETA=0.0h wall=2.12h model_passes=5851840
+  d_N checkpoint row 3130/3139 pairs=4925055/4925091 (100.0%) rate=383.8/s ETA=0.0h wall=2.12h model_passes=5852110
+  d_N checkpoint row 3139/3139 pairs=4925091/4925091 (100.0%) rate=383.8/s ETA=0.0h wall=2.12h model_passes=5852182
+  will seed d_negE from experiments/evostar_2027/data/mats/_flat/d_negE_2000.npy
+  computing d_negE → experiments/evostar_2027/data/mats/_flat/d_negE_3139.npy
+  seeded d_negE[:2000,:2000] from experiments/evostar_2027/data/mats/_flat/d_negE_2000.npy (1999000 pairs cached; border remains)
+  d_negE checkpoint row 10/3139 pairs=2010390/4925091 (40.8%) rate=434.8/s ETA=1.9h wall=0.01h model_passes=5874962
+  d_negE checkpoint row 20/3139 pairs=2021780/4925091 (41.1%) rate=409.6/s ETA=2.0h wall=0.02h model_passes=5897742
+  d_negE checkpoint row 30/3139 pairs=2033170/4925091 (41.3%) rate=419.8/s ETA=1.9h wall=0.02h model_passes=5920522
+  d_negE checkpoint row 40/3139 pairs=2044560/4925091 (41.5%) rate=411.8/s ETA=1.9h wall=0.03h model_passes=5943302
+  d_negE checkpoint row 50/3139 pairs=2055950/4925091 (41.7%) rate=398.0/s ETA=2.0h wall=0.04h model_passes=5966082
+  d_negE checkpoint row 60/3139 pairs=2067340/4925091 (42.0%) rate=390.2/s ETA=2.0h wall=0.05h model_passes=5988862
+  d_negE checkpoint row 70/3139 pairs=2078730/4925091 (42.2%) rate=384.8/s ETA=2.1h wall=0.06h model_passes=6011642
+  d_negE checkpoint row 80/3139 pairs=2090120/4925091 (42.4%) rate=384.0/s ETA=2.1h wall=0.07h model_passes=6034422
+  d_negE checkpoint row 90/3139 pairs=2101510/4925091 (42.7%) rate=384.2/s ETA=2.0h wall=0.07h model_passes=6057202
+  d_negE checkpoint row 100/3139 pairs=2112900/4925091 (42.9%) rate=387.3/s ETA=2.0h wall=0.08h model_passes=6079982
+  d_negE checkpoint row 110/3139 pairs=2124290/4925091 (43.1%) rate=388.7/s ETA=2.0h wall=0.09h model_passes=6102762
+  d_negE checkpoint row 120/3139 pairs=2135680/4925091 (43.4%) rate=389.4/s ETA=2.0h wall=0.10h model_passes=6125542
+  d_negE checkpoint row 130/3139 pairs=2147070/4925091 (43.6%) rate=386.3/s ETA=2.0h wall=0.11h model_passes=6148322
+  d_negE checkpoint row 140/3139 pairs=2158460/4925091 (43.8%) rate=383.1/s ETA=2.0h wall=0.12h model_passes=6171102
+  d_negE checkpoint row 150/3139 pairs=2169850/4925091 (44.1%) rate=384.6/s ETA=2.0h wall=0.12h model_passes=6193882
+  d_negE checkpoint row 160/3139 pairs=2181240/4925091 (44.3%) rate=382.9/s ETA=2.0h wall=0.13h model_passes=6216662
+  d_negE checkpoint row 170/3139 pairs=2192630/4925091 (44.5%) rate=383.7/s ETA=2.0h wall=0.14h model_passes=6239442
+  d_negE checkpoint row 180/3139 pairs=2204020/4925091 (44.8%) rate=383.3/s ETA=2.0h wall=0.15h model_passes=6262222
+  d_negE checkpoint row 190/3139 pairs=2215410/4925091 (45.0%) rate=380.9/s ETA=2.0h wall=0.16h model_passes=6285002
+  d_negE checkpoint row 200/3139 pairs=2226800/4925091 (45.2%) rate=380.8/s ETA=2.0h wall=0.17h model_passes=6307782
+  d_negE checkpoint row 210/3139 pairs=2238190/4925091 (45.4%) rate=376.5/s ETA=2.0h wall=0.18h model_passes=6330562
+  d_negE checkpoint row 220/3139 pairs=2249580/4925091 (45.7%) rate=377.2/s ETA=2.0h wall=0.18h model_passes=6353342
+  d_negE checkpoint row 230/3139 pairs=2260970/4925091 (45.9%) rate=377.9/s ETA=2.0h wall=0.19h model_passes=6376122
+  d_negE checkpoint row 240/3139 pairs=2272360/4925091 (46.1%) rate=378.3/s ETA=1.9h wall=0.20h model_passes=6398902
+  d_negE checkpoint row 250/3139 pairs=2283750/4925091 (46.4%) rate=378.0/s ETA=1.9h wall=0.21h model_passes=6421682
+  d_negE checkpoint row 260/3139 pairs=2295140/4925091 (46.6%) rate=379.5/s ETA=1.9h wall=0.22h model_passes=6444462
+  d_negE checkpoint row 270/3139 pairs=2306530/4925091 (46.8%) rate=379.5/s ETA=1.9h wall=0.23h model_passes=6467242
+  d_negE checkpoint row 280/3139 pairs=2317920/4925091 (47.1%) rate=379.7/s ETA=1.9h wall=0.23h model_passes=6490022
+  d_negE checkpoint row 290/3139 pairs=2329310/4925091 (47.3%) rate=379.0/s ETA=1.9h wall=0.24h model_passes=6512802
+  d_negE checkpoint row 300/3139 pairs=2340700/4925091 (47.5%) rate=379.5/s ETA=1.9h wall=0.25h model_passes=6535582
+  d_negE checkpoint row 310/3139 pairs=2352090/4925091 (47.8%) rate=380.3/s ETA=1.9h wall=0.26h model_passes=6558362
+  d_negE checkpoint row 320/3139 pairs=2363480/4925091 (48.0%) rate=381.1/s ETA=1.9h wall=0.27h model_passes=6581142
+  d_negE checkpoint row 330/3139 pairs=2374870/4925091 (48.2%) rate=379.4/s ETA=1.9h wall=0.28h model_passes=6603922
+  d_negE checkpoint row 340/3139 pairs=2386260/4925091 (48.5%) rate=379.9/s ETA=1.9h wall=0.28h model_passes=6626702
+  d_negE checkpoint row 350/3139 pairs=2397650/4925091 (48.7%) rate=379.8/s ETA=1.8h wall=0.29h model_passes=6649482
+  d_negE checkpoint row 360/3139 pairs=2409040/4925091 (48.9%) rate=380.6/s ETA=1.8h wall=0.30h model_passes=6672262
+  d_negE checkpoint row 370/3139 pairs=2420430/4925091 (49.1%) rate=379.6/s ETA=1.8h wall=0.31h model_passes=6695042
+  d_negE checkpoint row 380/3139 pairs=2431820/4925091 (49.4%) rate=378.7/s ETA=1.8h wall=0.32h model_passes=6717822
+  d_negE checkpoint row 390/3139 pairs=2443210/4925091 (49.6%) rate=379.5/s ETA=1.8h wall=0.33h model_passes=6740602
+  d_negE checkpoint row 400/3139 pairs=2454600/4925091 (49.8%) rate=380.2/s ETA=1.8h wall=0.33h model_passes=6763382
+  d_negE checkpoint row 410/3139 pairs=2465990/4925091 (50.1%) rate=381.0/s ETA=1.8h wall=0.34h model_passes=6786162
+  d_negE checkpoint row 420/3139 pairs=2477380/4925091 (50.3%) rate=380.4/s ETA=1.8h wall=0.35h model_passes=6808942
+  d_negE checkpoint row 430/3139 pairs=2488770/4925091 (50.5%) rate=381.0/s ETA=1.8h wall=0.36h model_passes=6831722
+  d_negE checkpoint row 440/3139 pairs=2500160/4925091 (50.8%) rate=379.9/s ETA=1.8h wall=0.37h model_passes=6854502
+  d_negE checkpoint row 450/3139 pairs=2511550/4925091 (51.0%) rate=380.7/s ETA=1.8h wall=0.37h model_passes=6877282
+  d_negE checkpoint row 460/3139 pairs=2522940/4925091 (51.2%) rate=381.4/s ETA=1.7h wall=0.38h model_passes=6900062
+  d_negE checkpoint row 470/3139 pairs=2534330/4925091 (51.5%) rate=381.9/s ETA=1.7h wall=0.39h model_passes=6922842
+  d_negE checkpoint row 480/3139 pairs=2545720/4925091 (51.7%) rate=382.6/s ETA=1.7h wall=0.40h model_passes=6945622
+  d_negE checkpoint row 490/3139 pairs=2557110/4925091 (51.9%) rate=382.2/s ETA=1.7h wall=0.41h model_passes=6968402
+  d_negE checkpoint row 500/3139 pairs=2568500/4925091 (52.2%) rate=380.7/s ETA=1.7h wall=0.42h model_passes=6991182
+  d_negE checkpoint row 510/3139 pairs=2579890/4925091 (52.4%) rate=379.4/s ETA=1.7h wall=0.43h model_passes=7013962
+  d_negE checkpoint row 520/3139 pairs=2591280/4925091 (52.6%) rate=379.9/s ETA=1.7h wall=0.43h model_passes=7036742
+  d_negE checkpoint row 530/3139 pairs=2602670/4925091 (52.8%) rate=378.2/s ETA=1.7h wall=0.44h model_passes=7059522
+  d_negE checkpoint row 540/3139 pairs=2614060/4925091 (53.1%) rate=378.8/s ETA=1.7h wall=0.45h model_passes=7082302
+  d_negE checkpoint row 550/3139 pairs=2625450/4925091 (53.3%) rate=379.5/s ETA=1.7h wall=0.46h model_passes=7105082
+  d_negE checkpoint row 560/3139 pairs=2636840/4925091 (53.5%) rate=380.3/s ETA=1.7h wall=0.47h model_passes=7127862
+  d_negE checkpoint row 570/3139 pairs=2648230/4925091 (53.8%) rate=380.9/s ETA=1.7h wall=0.47h model_passes=7150642
+  d_negE checkpoint row 580/3139 pairs=2659620/4925091 (54.0%) rate=381.2/s ETA=1.7h wall=0.48h model_passes=7173422
+  d_negE checkpoint row 590/3139 pairs=2671010/4925091 (54.2%) rate=382.0/s ETA=1.6h wall=0.49h model_passes=7196202
+  d_negE checkpoint row 600/3139 pairs=2682400/4925091 (54.5%) rate=382.4/s ETA=1.6h wall=0.50h model_passes=7218982
+  d_negE checkpoint row 610/3139 pairs=2693790/4925091 (54.7%) rate=382.7/s ETA=1.6h wall=0.50h model_passes=7241762
+  d_negE checkpoint row 620/3139 pairs=2705180/4925091 (54.9%) rate=383.2/s ETA=1.6h wall=0.51h model_passes=7264542
+  d_negE checkpoint row 630/3139 pairs=2716570/4925091 (55.2%) rate=382.9/s ETA=1.6h wall=0.52h model_passes=7287322
+  d_negE checkpoint row 640/3139 pairs=2727960/4925091 (55.4%) rate=383.1/s ETA=1.6h wall=0.53h model_passes=7310102
+  d_negE checkpoint row 650/3139 pairs=2739350/4925091 (55.6%) rate=382.8/s ETA=1.6h wall=0.54h model_passes=7332882
+  d_negE checkpoint row 660/3139 pairs=2750740/4925091 (55.9%) rate=383.2/s ETA=1.6h wall=0.55h model_passes=7355662
+  d_negE checkpoint row 670/3139 pairs=2762130/4925091 (56.1%) rate=383.8/s ETA=1.6h wall=0.55h model_passes=7378442
+  d_negE checkpoint row 680/3139 pairs=2773520/4925091 (56.3%) rate=384.1/s ETA=1.6h wall=0.56h model_passes=7401222
+  d_negE checkpoint row 690/3139 pairs=2784910/4925091 (56.5%) rate=384.3/s ETA=1.5h wall=0.57h model_passes=7424002
+  d_negE checkpoint row 700/3139 pairs=2796300/4925091 (56.8%) rate=383.9/s ETA=1.5h wall=0.58h model_passes=7446782
+  d_negE checkpoint row 710/3139 pairs=2807690/4925091 (57.0%) rate=384.4/s ETA=1.5h wall=0.58h model_passes=7469562
+  d_negE checkpoint row 720/3139 pairs=2819080/4925091 (57.2%) rate=383.8/s ETA=1.5h wall=0.59h model_passes=7492342
+  d_negE checkpoint row 730/3139 pairs=2830470/4925091 (57.5%) rate=383.6/s ETA=1.5h wall=0.60h model_passes=7515122
+  d_negE checkpoint row 740/3139 pairs=2841860/4925091 (57.7%) rate=384.2/s ETA=1.5h wall=0.61h model_passes=7537902
+  d_negE checkpoint row 750/3139 pairs=2853250/4925091 (57.9%) rate=384.5/s ETA=1.5h wall=0.62h model_passes=7560682
+  d_negE checkpoint row 760/3139 pairs=2864640/4925091 (58.2%) rate=384.1/s ETA=1.5h wall=0.63h model_passes=7583462
+  d_negE checkpoint row 770/3139 pairs=2876030/4925091 (58.4%) rate=384.3/s ETA=1.5h wall=0.63h model_passes=7606242
+  d_negE checkpoint row 780/3139 pairs=2887420/4925091 (58.6%) rate=384.5/s ETA=1.5h wall=0.64h model_passes=7629022
+  d_negE checkpoint row 790/3139 pairs=2898810/4925091 (58.9%) rate=384.8/s ETA=1.5h wall=0.65h model_passes=7651802
+  d_negE checkpoint row 800/3139 pairs=2910200/4925091 (59.1%) rate=384.6/s ETA=1.5h wall=0.66h model_passes=7674582
+  d_negE checkpoint row 810/3139 pairs=2921590/4925091 (59.3%) rate=384.9/s ETA=1.4h wall=0.67h model_passes=7697362
+  d_negE checkpoint row 820/3139 pairs=2932980/4925091 (59.6%) rate=385.2/s ETA=1.4h wall=0.67h model_passes=7720142
+  d_negE checkpoint row 830/3139 pairs=2944370/4925091 (59.8%) rate=385.6/s ETA=1.4h wall=0.68h model_passes=7742922
+  d_negE checkpoint row 840/3139 pairs=2955760/4925091 (60.0%) rate=386.0/s ETA=1.4h wall=0.69h model_passes=7765702
+  d_negE checkpoint row 850/3139 pairs=2967150/4925091 (60.2%) rate=386.2/s ETA=1.4h wall=0.70h model_passes=7788482
+  d_negE checkpoint row 860/3139 pairs=2978540/4925091 (60.5%) rate=386.3/s ETA=1.4h wall=0.70h model_passes=7811262
+  d_negE checkpoint row 870/3139 pairs=2989930/4925091 (60.7%) rate=385.9/s ETA=1.4h wall=0.71h model_passes=7834042
+  d_negE checkpoint row 880/3139 pairs=3001320/4925091 (60.9%) rate=385.6/s ETA=1.4h wall=0.72h model_passes=7856822
+  d_negE checkpoint row 890/3139 pairs=3012710/4925091 (61.2%) rate=385.8/s ETA=1.4h wall=0.73h model_passes=7879602
+  d_negE checkpoint row 900/3139 pairs=3024100/4925091 (61.4%) rate=386.0/s ETA=1.4h wall=0.74h model_passes=7902382
+  d_negE checkpoint row 910/3139 pairs=3035490/4925091 (61.6%) rate=386.3/s ETA=1.4h wall=0.75h model_passes=7925162
+  d_negE checkpoint row 920/3139 pairs=3046880/4925091 (61.9%) rate=386.7/s ETA=1.3h wall=0.75h model_passes=7947942
+  d_negE checkpoint row 930/3139 pairs=3058270/4925091 (62.1%) rate=386.8/s ETA=1.3h wall=0.76h model_passes=7970722
+  d_negE checkpoint row 940/3139 pairs=3069660/4925091 (62.3%) rate=387.0/s ETA=1.3h wall=0.77h model_passes=7993502
+  d_negE checkpoint row 950/3139 pairs=3081050/4925091 (62.6%) rate=387.1/s ETA=1.3h wall=0.78h model_passes=8016282
+  d_negE checkpoint row 960/3139 pairs=3092440/4925091 (62.8%) rate=387.4/s ETA=1.3h wall=0.78h model_passes=8039062
+  d_negE checkpoint row 970/3139 pairs=3103830/4925091 (63.0%) rate=386.9/s ETA=1.3h wall=0.79h model_passes=8061842
+  d_negE checkpoint row 980/3139 pairs=3115220/4925091 (63.3%) rate=386.5/s ETA=1.3h wall=0.80h model_passes=8084622
+  d_negE checkpoint row 990/3139 pairs=3126610/4925091 (63.5%) rate=386.8/s ETA=1.3h wall=0.81h model_passes=8107402
+  d_negE checkpoint row 1000/3139 pairs=3138000/4925091 (63.7%) rate=386.5/s ETA=1.3h wall=0.82h model_passes=8130182
+  d_negE checkpoint row 1010/3139 pairs=3149390/4925091 (63.9%) rate=384.4/s ETA=1.3h wall=0.83h model_passes=8152962
+  d_negE checkpoint row 1020/3139 pairs=3160780/4925091 (64.2%) rate=384.6/s ETA=1.3h wall=0.84h model_passes=8175742
+  d_negE checkpoint row 1030/3139 pairs=3172170/4925091 (64.4%) rate=384.7/s ETA=1.3h wall=0.85h model_passes=8198522
+  d_negE checkpoint row 1040/3139 pairs=3183560/4925091 (64.6%) rate=384.9/s ETA=1.3h wall=0.85h model_passes=8221302
+  d_negE checkpoint row 1050/3139 pairs=3194950/4925091 (64.9%) rate=384.9/s ETA=1.2h wall=0.86h model_passes=8244082
+  d_negE checkpoint row 1060/3139 pairs=3206340/4925091 (65.1%) rate=385.1/s ETA=1.2h wall=0.87h model_passes=8266862
+  d_negE checkpoint row 1070/3139 pairs=3217730/4925091 (65.3%) rate=385.1/s ETA=1.2h wall=0.88h model_passes=8289642
+  d_negE checkpoint row 1080/3139 pairs=3229120/4925091 (65.6%) rate=385.3/s ETA=1.2h wall=0.89h model_passes=8312422
+  d_negE checkpoint row 1090/3139 pairs=3240510/4925091 (65.8%) rate=385.7/s ETA=1.2h wall=0.89h model_passes=8335202
+  d_negE checkpoint row 1100/3139 pairs=3251900/4925091 (66.0%) rate=385.9/s ETA=1.2h wall=0.90h model_passes=8357982
+  d_negE checkpoint row 1110/3139 pairs=3263290/4925091 (66.3%) rate=386.1/s ETA=1.2h wall=0.91h model_passes=8380762
+  d_negE checkpoint row 1120/3139 pairs=3274680/4925091 (66.5%) rate=385.9/s ETA=1.2h wall=0.92h model_passes=8403542
+  d_negE checkpoint row 1130/3139 pairs=3286070/4925091 (66.7%) rate=386.1/s ETA=1.2h wall=0.93h model_passes=8426322
+  d_negE checkpoint row 1140/3139 pairs=3297460/4925091 (67.0%) rate=386.4/s ETA=1.2h wall=0.93h model_passes=8449102
+  d_negE checkpoint row 1150/3139 pairs=3308850/4925091 (67.2%) rate=386.5/s ETA=1.2h wall=0.94h model_passes=8471882
+  d_negE checkpoint row 1160/3139 pairs=3320240/4925091 (67.4%) rate=386.9/s ETA=1.2h wall=0.95h model_passes=8494662
+  d_negE checkpoint row 1170/3139 pairs=3331630/4925091 (67.6%) rate=387.0/s ETA=1.1h wall=0.96h model_passes=8517442
+  d_negE checkpoint row 1180/3139 pairs=3343020/4925091 (67.9%) rate=387.2/s ETA=1.1h wall=0.96h model_passes=8540222
+  d_negE checkpoint row 1190/3139 pairs=3354410/4925091 (68.1%) rate=387.0/s ETA=1.1h wall=0.97h model_passes=8563002
+  d_negE checkpoint row 1200/3139 pairs=3365800/4925091 (68.3%) rate=387.2/s ETA=1.1h wall=0.98h model_passes=8585782
+  d_negE checkpoint row 1210/3139 pairs=3377190/4925091 (68.6%) rate=386.8/s ETA=1.1h wall=0.99h model_passes=8608562
+  d_negE checkpoint row 1220/3139 pairs=3388580/4925091 (68.8%) rate=387.0/s ETA=1.1h wall=1.00h model_passes=8631342
+  d_negE checkpoint row 1230/3139 pairs=3399970/4925091 (69.0%) rate=387.1/s ETA=1.1h wall=1.01h model_passes=8654122
+  d_negE checkpoint row 1240/3139 pairs=3411360/4925091 (69.3%) rate=387.3/s ETA=1.1h wall=1.01h model_passes=8676902
+  d_negE checkpoint row 1250/3139 pairs=3422750/4925091 (69.5%) rate=387.4/s ETA=1.1h wall=1.02h model_passes=8699682
+  d_negE checkpoint row 1260/3139 pairs=3434140/4925091 (69.7%) rate=387.5/s ETA=1.1h wall=1.03h model_passes=8722462
+  d_negE checkpoint row 1270/3139 pairs=3445530/4925091 (70.0%) rate=387.7/s ETA=1.1h wall=1.04h model_passes=8745242
+  d_negE checkpoint row 1280/3139 pairs=3456920/4925091 (70.2%) rate=387.8/s ETA=1.1h wall=1.04h model_passes=8768022
+  d_negE checkpoint row 1290/3139 pairs=3468310/4925091 (70.4%) rate=388.0/s ETA=1.0h wall=1.05h model_passes=8790802
+  d_negE checkpoint row 1300/3139 pairs=3479700/4925091 (70.7%) rate=388.2/s ETA=1.0h wall=1.06h model_passes=8813582
+  d_negE checkpoint row 1310/3139 pairs=3491090/4925091 (70.9%) rate=388.3/s ETA=1.0h wall=1.07h model_passes=8836362
+  d_negE checkpoint row 1320/3139 pairs=3502480/4925091 (71.1%) rate=388.5/s ETA=1.0h wall=1.08h model_passes=8859142
+  d_negE checkpoint row 1330/3139 pairs=3513870/4925091 (71.3%) rate=388.4/s ETA=1.0h wall=1.08h model_passes=8881922
+  d_negE checkpoint row 1340/3139 pairs=3525260/4925091 (71.6%) rate=388.6/s ETA=1.0h wall=1.09h model_passes=8904702
+  d_negE checkpoint row 1350/3139 pairs=3536650/4925091 (71.8%) rate=388.8/s ETA=1.0h wall=1.10h model_passes=8927482
+  d_negE checkpoint row 1360/3139 pairs=3548040/4925091 (72.0%) rate=389.1/s ETA=1.0h wall=1.11h model_passes=8950262
+  d_negE checkpoint row 1370/3139 pairs=3559430/4925091 (72.3%) rate=389.3/s ETA=1.0h wall=1.11h model_passes=8973042
+  d_negE checkpoint row 1380/3139 pairs=3570820/4925091 (72.5%) rate=389.3/s ETA=1.0h wall=1.12h model_passes=8995822
+  d_negE checkpoint row 1390/3139 pairs=3582210/4925091 (72.7%) rate=389.4/s ETA=1.0h wall=1.13h model_passes=9018602
+  d_negE checkpoint row 1400/3139 pairs=3593600/4925091 (73.0%) rate=389.5/s ETA=0.9h wall=1.14h model_passes=9041382
+  d_negE checkpoint row 1410/3139 pairs=3604990/4925091 (73.2%) rate=389.7/s ETA=0.9h wall=1.14h model_passes=9064162
+  d_negE checkpoint row 1420/3139 pairs=3616380/4925091 (73.4%) rate=390.0/s ETA=0.9h wall=1.15h model_passes=9086942
+  d_negE checkpoint row 1430/3139 pairs=3627770/4925091 (73.7%) rate=390.3/s ETA=0.9h wall=1.16h model_passes=9109722
+  d_negE checkpoint row 1440/3139 pairs=3639160/4925091 (73.9%) rate=390.5/s ETA=0.9h wall=1.17h model_passes=9132502
+  d_negE checkpoint row 1450/3139 pairs=3650550/4925091 (74.1%) rate=390.7/s ETA=0.9h wall=1.17h model_passes=9155282
+  d_negE checkpoint row 1460/3139 pairs=3661940/4925091 (74.4%) rate=390.9/s ETA=0.9h wall=1.18h model_passes=9178062
+  d_negE checkpoint row 1470/3139 pairs=3673330/4925091 (74.6%) rate=391.0/s ETA=0.9h wall=1.19h model_passes=9200842
+  d_negE checkpoint row 1480/3139 pairs=3684720/4925091 (74.8%) rate=391.2/s ETA=0.9h wall=1.20h model_passes=9223622
+  d_negE checkpoint row 1490/3139 pairs=3696110/4925091 (75.0%) rate=390.9/s ETA=0.9h wall=1.21h model_passes=9246402
+  d_negE checkpoint row 1500/3139 pairs=3707500/4925091 (75.3%) rate=391.0/s ETA=0.9h wall=1.21h model_passes=9269182
+  d_negE checkpoint row 1510/3139 pairs=3718890/4925091 (75.5%) rate=391.1/s ETA=0.9h wall=1.22h model_passes=9291962
+  d_negE checkpoint row 1520/3139 pairs=3730280/4925091 (75.7%) rate=391.1/s ETA=0.8h wall=1.23h model_passes=9314742
+  d_negE checkpoint row 1530/3139 pairs=3741670/4925091 (76.0%) rate=391.3/s ETA=0.8h wall=1.24h model_passes=9337522
+  d_negE checkpoint row 1540/3139 pairs=3753060/4925091 (76.2%) rate=391.4/s ETA=0.8h wall=1.24h model_passes=9360302
+  d_negE checkpoint row 1550/3139 pairs=3764450/4925091 (76.4%) rate=391.6/s ETA=0.8h wall=1.25h model_passes=9383082
+  d_negE checkpoint row 1560/3139 pairs=3775840/4925091 (76.7%) rate=391.8/s ETA=0.8h wall=1.26h model_passes=9405862
+  d_negE checkpoint row 1570/3139 pairs=3787230/4925091 (76.9%) rate=392.0/s ETA=0.8h wall=1.27h model_passes=9428642
+  d_negE checkpoint row 1580/3139 pairs=3798620/4925091 (77.1%) rate=392.0/s ETA=0.8h wall=1.28h model_passes=9451422
+  d_negE checkpoint row 1590/3139 pairs=3810010/4925091 (77.4%) rate=392.1/s ETA=0.8h wall=1.28h model_passes=9474202
+  d_negE checkpoint row 1600/3139 pairs=3821400/4925091 (77.6%) rate=392.2/s ETA=0.8h wall=1.29h model_passes=9496982
+  d_negE checkpoint row 1610/3139 pairs=3832790/4925091 (77.8%) rate=392.4/s ETA=0.8h wall=1.30h model_passes=9519762
+  d_negE checkpoint row 1620/3139 pairs=3844180/4925091 (78.1%) rate=392.6/s ETA=0.8h wall=1.31h model_passes=9542542
+  d_negE checkpoint row 1630/3139 pairs=3855570/4925091 (78.3%) rate=392.8/s ETA=0.8h wall=1.31h model_passes=9565322
+  d_negE checkpoint row 1640/3139 pairs=3866960/4925091 (78.5%) rate=392.6/s ETA=0.7h wall=1.32h model_passes=9588102
+  d_negE checkpoint row 1650/3139 pairs=3878350/4925091 (78.7%) rate=392.8/s ETA=0.7h wall=1.33h model_passes=9610882
+  d_negE checkpoint row 1660/3139 pairs=3889740/4925091 (79.0%) rate=392.9/s ETA=0.7h wall=1.34h model_passes=9633662
+  d_negE checkpoint row 1670/3139 pairs=3901130/4925091 (79.2%) rate=393.1/s ETA=0.7h wall=1.34h model_passes=9656442
+  d_negE checkpoint row 1680/3139 pairs=3912520/4925091 (79.4%) rate=393.3/s ETA=0.7h wall=1.35h model_passes=9679222
+  d_negE checkpoint row 1690/3139 pairs=3923910/4925091 (79.7%) rate=393.5/s ETA=0.7h wall=1.36h model_passes=9702002
+  d_negE checkpoint row 1700/3139 pairs=3935300/4925091 (79.9%) rate=393.7/s ETA=0.7h wall=1.37h model_passes=9724782
+  d_negE checkpoint row 1710/3139 pairs=3946690/4925091 (80.1%) rate=393.8/s ETA=0.7h wall=1.37h model_passes=9747562
+  d_negE checkpoint row 1720/3139 pairs=3958080/4925091 (80.4%) rate=393.8/s ETA=0.7h wall=1.38h model_passes=9770342
+  d_negE checkpoint row 1730/3139 pairs=3969470/4925091 (80.6%) rate=394.0/s ETA=0.7h wall=1.39h model_passes=9793122
+  d_negE checkpoint row 1740/3139 pairs=3980860/4925091 (80.8%) rate=394.1/s ETA=0.7h wall=1.40h model_passes=9815902
+  d_negE checkpoint row 1750/3139 pairs=3992250/4925091 (81.1%) rate=394.2/s ETA=0.7h wall=1.40h model_passes=9838682
+  d_negE checkpoint row 1760/3139 pairs=4003640/4925091 (81.3%) rate=394.4/s ETA=0.6h wall=1.41h model_passes=9861462
+  d_negE checkpoint row 1770/3139 pairs=4015030/4925091 (81.5%) rate=394.5/s ETA=0.6h wall=1.42h model_passes=9884242
+  d_negE checkpoint row 1780/3139 pairs=4026420/4925091 (81.8%) rate=394.7/s ETA=0.6h wall=1.43h model_passes=9907022
+  d_negE checkpoint row 1790/3139 pairs=4037810/4925091 (82.0%) rate=394.9/s ETA=0.6h wall=1.43h model_passes=9929802
+  d_negE checkpoint row 1800/3139 pairs=4049200/4925091 (82.2%) rate=395.1/s ETA=0.6h wall=1.44h model_passes=9952582
+  d_negE checkpoint row 1810/3139 pairs=4060590/4925091 (82.4%) rate=395.2/s ETA=0.6h wall=1.45h model_passes=9975362
+  d_negE checkpoint row 1820/3139 pairs=4071980/4925091 (82.7%) rate=395.3/s ETA=0.6h wall=1.46h model_passes=9998142
+  d_negE checkpoint row 1830/3139 pairs=4083370/4925091 (82.9%) rate=395.5/s ETA=0.6h wall=1.46h model_passes=10020922
+  d_negE checkpoint row 1840/3139 pairs=4094760/4925091 (83.1%) rate=395.7/s ETA=0.6h wall=1.47h model_passes=10043702
+  d_negE checkpoint row 1850/3139 pairs=4106150/4925091 (83.4%) rate=395.7/s ETA=0.6h wall=1.48h model_passes=10066482
+  d_negE checkpoint row 1860/3139 pairs=4117540/4925091 (83.6%) rate=395.7/s ETA=0.6h wall=1.49h model_passes=10089262
+  d_negE checkpoint row 1870/3139 pairs=4128930/4925091 (83.8%) rate=395.8/s ETA=0.6h wall=1.49h model_passes=10112042
+  d_negE checkpoint row 1880/3139 pairs=4140320/4925091 (84.1%) rate=396.0/s ETA=0.6h wall=1.50h model_passes=10134822
+  d_negE checkpoint row 1890/3139 pairs=4151710/4925091 (84.3%) rate=396.1/s ETA=0.5h wall=1.51h model_passes=10157602
+  d_negE checkpoint row 1900/3139 pairs=4163100/4925091 (84.5%) rate=396.3/s ETA=0.5h wall=1.52h model_passes=10180382
+  d_negE checkpoint row 1910/3139 pairs=4174490/4925091 (84.8%) rate=396.4/s ETA=0.5h wall=1.52h model_passes=10203162
+  d_negE checkpoint row 1920/3139 pairs=4185880/4925091 (85.0%) rate=396.4/s ETA=0.5h wall=1.53h model_passes=10225942
+  d_negE checkpoint row 1930/3139 pairs=4197270/4925091 (85.2%) rate=396.6/s ETA=0.5h wall=1.54h model_passes=10248722
+  d_negE checkpoint row 1940/3139 pairs=4208660/4925091 (85.5%) rate=396.8/s ETA=0.5h wall=1.55h model_passes=10271502
+  d_negE checkpoint row 1950/3139 pairs=4220050/4925091 (85.7%) rate=396.9/s ETA=0.5h wall=1.55h model_passes=10294282
+  d_negE checkpoint row 1960/3139 pairs=4231440/4925091 (85.9%) rate=397.0/s ETA=0.5h wall=1.56h model_passes=10317062
+  d_negE checkpoint row 1970/3139 pairs=4242830/4925091 (86.1%) rate=397.1/s ETA=0.5h wall=1.57h model_passes=10339842
+  d_negE checkpoint row 1980/3139 pairs=4254220/4925091 (86.4%) rate=397.2/s ETA=0.5h wall=1.58h model_passes=10362622
+  d_negE checkpoint row 1990/3139 pairs=4265610/4925091 (86.6%) rate=397.4/s ETA=0.5h wall=1.58h model_passes=10385402
+  d_negE checkpoint row 2000/3139 pairs=4277000/4925091 (86.8%) rate=397.5/s ETA=0.5h wall=1.59h model_passes=10408182
+  d_negE checkpoint row 2010/3139 pairs=4288335/4925091 (87.1%) rate=397.5/s ETA=0.4h wall=1.60h model_passes=10430852
+  d_negE checkpoint row 2020/3139 pairs=4299570/4925091 (87.3%) rate=397.5/s ETA=0.4h wall=1.61h model_passes=10453322
+  d_negE checkpoint row 2030/3139 pairs=4310705/4925091 (87.5%) rate=397.6/s ETA=0.4h wall=1.62h model_passes=10475592
+  d_negE checkpoint row 2040/3139 pairs=4321740/4925091 (87.7%) rate=397.5/s ETA=0.4h wall=1.62h model_passes=10497662
+  d_negE checkpoint row 2050/3139 pairs=4332675/4925091 (88.0%) rate=397.6/s ETA=0.4h wall=1.63h model_passes=10519532
+  d_negE checkpoint row 2060/3139 pairs=4343510/4925091 (88.2%) rate=397.5/s ETA=0.4h wall=1.64h model_passes=10541202
+  d_negE checkpoint row 2070/3139 pairs=4354245/4925091 (88.4%) rate=397.4/s ETA=0.4h wall=1.65h model_passes=10562672
+  d_negE checkpoint row 2080/3139 pairs=4364880/4925091 (88.6%) rate=397.4/s ETA=0.4h wall=1.65h model_passes=10583942
+  d_negE checkpoint row 2090/3139 pairs=4375415/4925091 (88.8%) rate=397.5/s ETA=0.4h wall=1.66h model_passes=10605012
+  d_negE checkpoint row 2100/3139 pairs=4385850/4925091 (89.1%) rate=397.6/s ETA=0.4h wall=1.67h model_passes=10625882
+  d_negE checkpoint row 2110/3139 pairs=4396185/4925091 (89.3%) rate=397.7/s ETA=0.4h wall=1.67h model_passes=10646552
+  d_negE checkpoint row 2120/3139 pairs=4406420/4925091 (89.5%) rate=397.7/s ETA=0.4h wall=1.68h model_passes=10667022
+  d_negE checkpoint row 2130/3139 pairs=4416555/4925091 (89.7%) rate=397.7/s ETA=0.4h wall=1.69h model_passes=10687292
+  d_negE checkpoint row 2140/3139 pairs=4426590/4925091 (89.9%) rate=397.8/s ETA=0.3h wall=1.70h model_passes=10707362
+  d_negE checkpoint row 2150/3139 pairs=4436525/4925091 (90.1%) rate=397.9/s ETA=0.3h wall=1.70h model_passes=10727232
+  d_negE checkpoint row 2160/3139 pairs=4446360/4925091 (90.3%) rate=398.0/s ETA=0.3h wall=1.71h model_passes=10746902
+  d_negE checkpoint row 2170/3139 pairs=4456095/4925091 (90.5%) rate=398.1/s ETA=0.3h wall=1.71h model_passes=10766372
+  d_negE checkpoint row 2180/3139 pairs=4465730/4925091 (90.7%) rate=398.1/s ETA=0.3h wall=1.72h model_passes=10785642
+  d_negE checkpoint row 2190/3139 pairs=4475265/4925091 (90.9%) rate=398.2/s ETA=0.3h wall=1.73h model_passes=10804712
+  d_negE checkpoint row 2200/3139 pairs=4484700/4925091 (91.1%) rate=398.3/s ETA=0.3h wall=1.73h model_passes=10823582
+  d_negE checkpoint row 2210/3139 pairs=4494035/4925091 (91.2%) rate=398.4/s ETA=0.3h wall=1.74h model_passes=10842252
+  d_negE checkpoint row 2220/3139 pairs=4503270/4925091 (91.4%) rate=398.4/s ETA=0.3h wall=1.75h model_passes=10860722
+  d_negE checkpoint row 2230/3139 pairs=4512405/4925091 (91.6%) rate=398.5/s ETA=0.3h wall=1.75h model_passes=10878992
+  d_negE checkpoint row 2240/3139 pairs=4521440/4925091 (91.8%) rate=398.5/s ETA=0.3h wall=1.76h model_passes=10897062
+  d_negE checkpoint row 2250/3139 pairs=4530375/4925091 (92.0%) rate=398.5/s ETA=0.3h wall=1.76h model_passes=10914932
+  d_negE checkpoint row 2260/3139 pairs=4539210/4925091 (92.2%) rate=398.5/s ETA=0.3h wall=1.77h model_passes=10932602
+  d_negE checkpoint row 2270/3139 pairs=4547945/4925091 (92.3%) rate=398.4/s ETA=0.3h wall=1.78h model_passes=10950072
+  d_negE checkpoint row 2280/3139 pairs=4556580/4925091 (92.5%) rate=398.4/s ETA=0.3h wall=1.78h model_passes=10967342
+  d_negE checkpoint row 2290/3139 pairs=4565115/4925091 (92.7%) rate=398.3/s ETA=0.3h wall=1.79h model_passes=10984412
+  d_negE checkpoint row 2300/3139 pairs=4573550/4925091 (92.9%) rate=398.2/s ETA=0.2h wall=1.80h model_passes=11001282
+  d_negE checkpoint row 2310/3139 pairs=4581885/4925091 (93.0%) rate=398.1/s ETA=0.2h wall=1.80h model_passes=11017952
+  d_negE checkpoint row 2320/3139 pairs=4590120/4925091 (93.2%) rate=398.0/s ETA=0.2h wall=1.81h model_passes=11034422
+  d_negE checkpoint row 2330/3139 pairs=4598255/4925091 (93.4%) rate=397.9/s ETA=0.2h wall=1.81h model_passes=11050692
+  d_negE checkpoint row 2340/3139 pairs=4606290/4925091 (93.5%) rate=397.8/s ETA=0.2h wall=1.82h model_passes=11066762
+  d_negE checkpoint row 2350/3139 pairs=4614225/4925091 (93.7%) rate=397.7/s ETA=0.2h wall=1.83h model_passes=11082632
+  d_negE checkpoint row 2360/3139 pairs=4622060/4925091 (93.8%) rate=397.6/s ETA=0.2h wall=1.83h model_passes=11098302
+  d_negE checkpoint row 2370/3139 pairs=4629795/4925091 (94.0%) rate=397.6/s ETA=0.2h wall=1.84h model_passes=11113772
+  d_negE checkpoint row 2380/3139 pairs=4637430/4925091 (94.2%) rate=397.5/s ETA=0.2h wall=1.84h model_passes=11129042
+  d_negE checkpoint row 2390/3139 pairs=4644965/4925091 (94.3%) rate=397.5/s ETA=0.2h wall=1.85h model_passes=11144112
+  d_negE checkpoint row 2400/3139 pairs=4652400/4925091 (94.5%) rate=397.4/s ETA=0.2h wall=1.85h model_passes=11158982
+  d_negE checkpoint row 2410/3139 pairs=4659735/4925091 (94.6%) rate=397.4/s ETA=0.2h wall=1.86h model_passes=11173652
+  d_negE checkpoint row 2420/3139 pairs=4666970/4925091 (94.8%) rate=397.3/s ETA=0.2h wall=1.87h model_passes=11188122
+  d_negE checkpoint row 2430/3139 pairs=4674105/4925091 (94.9%) rate=397.2/s ETA=0.2h wall=1.87h model_passes=11202392
+  d_negE checkpoint row 2440/3139 pairs=4681140/4925091 (95.0%) rate=397.2/s ETA=0.2h wall=1.88h model_passes=11216462
+  d_negE checkpoint row 2450/3139 pairs=4688075/4925091 (95.2%) rate=397.1/s ETA=0.2h wall=1.88h model_passes=11230332
+  d_negE checkpoint row 2460/3139 pairs=4694910/4925091 (95.3%) rate=397.0/s ETA=0.2h wall=1.89h model_passes=11244002
+  d_negE checkpoint row 2470/3139 pairs=4701645/4925091 (95.5%) rate=396.9/s ETA=0.2h wall=1.89h model_passes=11257472
+  d_negE checkpoint row 2480/3139 pairs=4708280/4925091 (95.6%) rate=396.9/s ETA=0.2h wall=1.90h model_passes=11270742
+  d_negE checkpoint row 2490/3139 pairs=4714815/4925091 (95.7%) rate=396.8/s ETA=0.1h wall=1.90h model_passes=11283812
+  d_negE checkpoint row 2500/3139 pairs=4721250/4925091 (95.9%) rate=396.7/s ETA=0.1h wall=1.91h model_passes=11296682
+  d_negE checkpoint row 2510/3139 pairs=4727585/4925091 (96.0%) rate=396.5/s ETA=0.1h wall=1.91h model_passes=11309352
+  d_negE checkpoint row 2520/3139 pairs=4733820/4925091 (96.1%) rate=396.4/s ETA=0.1h wall=1.92h model_passes=11321822
+  d_negE checkpoint row 2530/3139 pairs=4739955/4925091 (96.2%) rate=396.1/s ETA=0.1h wall=1.92h model_passes=11334092
+  d_negE checkpoint row 2540/3139 pairs=4745990/4925091 (96.4%) rate=396.0/s ETA=0.1h wall=1.93h model_passes=11346162
+  d_negE checkpoint row 2550/3139 pairs=4751925/4925091 (96.5%) rate=395.8/s ETA=0.1h wall=1.93h model_passes=11358032
+  d_negE checkpoint row 2560/3139 pairs=4757760/4925091 (96.6%) rate=395.5/s ETA=0.1h wall=1.94h model_passes=11369702
+  d_negE checkpoint row 2570/3139 pairs=4763495/4925091 (96.7%) rate=395.3/s ETA=0.1h wall=1.94h model_passes=11381172
+  d_negE checkpoint row 2580/3139 pairs=4769130/4925091 (96.8%) rate=395.1/s ETA=0.1h wall=1.95h model_passes=11392442
+  d_negE checkpoint row 2590/3139 pairs=4774665/4925091 (96.9%) rate=394.9/s ETA=0.1h wall=1.95h model_passes=11403512
+  d_negE checkpoint row 2600/3139 pairs=4780100/4925091 (97.1%) rate=394.7/s ETA=0.1h wall=1.96h model_passes=11414382
+  d_negE checkpoint row 2610/3139 pairs=4785435/4925091 (97.2%) rate=394.4/s ETA=0.1h wall=1.96h model_passes=11425052
+  d_negE checkpoint row 2620/3139 pairs=4790670/4925091 (97.3%) rate=394.2/s ETA=0.1h wall=1.97h model_passes=11435522
+  d_negE checkpoint row 2630/3139 pairs=4795805/4925091 (97.4%) rate=394.0/s ETA=0.1h wall=1.97h model_passes=11445792
+  d_negE checkpoint row 2640/3139 pairs=4800840/4925091 (97.5%) rate=393.9/s ETA=0.1h wall=1.98h model_passes=11455862
+  d_negE checkpoint row 2650/3139 pairs=4805775/4925091 (97.6%) rate=393.7/s ETA=0.1h wall=1.98h model_passes=11465732
+  d_negE checkpoint row 2660/3139 pairs=4810610/4925091 (97.7%) rate=393.5/s ETA=0.1h wall=1.98h model_passes=11475402
+  d_negE checkpoint row 2670/3139 pairs=4815345/4925091 (97.8%) rate=393.3/s ETA=0.1h wall=1.99h model_passes=11484872
+  d_negE checkpoint row 2680/3139 pairs=4819980/4925091 (97.9%) rate=393.1/s ETA=0.1h wall=1.99h model_passes=11494142
+  d_negE checkpoint row 2690/3139 pairs=4824515/4925091 (98.0%) rate=392.9/s ETA=0.1h wall=2.00h model_passes=11503212
+  d_negE checkpoint row 2700/3139 pairs=4828950/4925091 (98.0%) rate=392.7/s ETA=0.1h wall=2.00h model_passes=11512082
+  d_negE checkpoint row 2710/3139 pairs=4833285/4925091 (98.1%) rate=392.5/s ETA=0.1h wall=2.01h model_passes=11520752
+  d_negE checkpoint row 2720/3139 pairs=4837520/4925091 (98.2%) rate=392.4/s ETA=0.1h wall=2.01h model_passes=11529222
+  d_negE checkpoint row 2730/3139 pairs=4841655/4925091 (98.3%) rate=392.2/s ETA=0.1h wall=2.01h model_passes=11537492
+  d_negE checkpoint row 2740/3139 pairs=4845690/4925091 (98.4%) rate=392.0/s ETA=0.1h wall=2.02h model_passes=11545562
+  d_negE checkpoint row 2750/3139 pairs=4849625/4925091 (98.5%) rate=391.7/s ETA=0.1h wall=2.02h model_passes=11553432
+  d_negE checkpoint row 2760/3139 pairs=4853460/4925091 (98.5%) rate=391.5/s ETA=0.1h wall=2.03h model_passes=11561102
+  d_negE checkpoint row 2770/3139 pairs=4857195/4925091 (98.6%) rate=391.3/s ETA=0.0h wall=2.03h model_passes=11568572
+  d_negE checkpoint row 2780/3139 pairs=4860830/4925091 (98.7%) rate=391.0/s ETA=0.0h wall=2.03h model_passes=11575842
+  d_negE checkpoint row 2790/3139 pairs=4864365/4925091 (98.8%) rate=390.8/s ETA=0.0h wall=2.04h model_passes=11582912
+  d_negE checkpoint row 2800/3139 pairs=4867800/4925091 (98.8%) rate=390.6/s ETA=0.0h wall=2.04h model_passes=11589782
+  d_negE checkpoint row 2810/3139 pairs=4871135/4925091 (98.9%) rate=390.3/s ETA=0.0h wall=2.04h model_passes=11596452
+  d_negE checkpoint row 2820/3139 pairs=4874370/4925091 (99.0%) rate=390.1/s ETA=0.0h wall=2.05h model_passes=11602922
+  d_negE checkpoint row 2830/3139 pairs=4877505/4925091 (99.0%) rate=389.8/s ETA=0.0h wall=2.05h model_passes=11609192
+  d_negE checkpoint row 2840/3139 pairs=4880540/4925091 (99.1%) rate=389.6/s ETA=0.0h wall=2.05h model_passes=11615262
+  d_negE checkpoint row 2850/3139 pairs=4883475/4925091 (99.2%) rate=389.3/s ETA=0.0h wall=2.06h model_passes=11621132
+  d_negE checkpoint row 2860/3139 pairs=4886310/4925091 (99.2%) rate=389.1/s ETA=0.0h wall=2.06h model_passes=11626802
+  d_negE checkpoint row 2870/3139 pairs=4889045/4925091 (99.3%) rate=388.8/s ETA=0.0h wall=2.06h model_passes=11632272
+  d_negE checkpoint row 2880/3139 pairs=4891680/4925091 (99.3%) rate=388.8/s ETA=0.0h wall=2.07h model_passes=11637542
+  d_negE checkpoint row 2890/3139 pairs=4894215/4925091 (99.4%) rate=388.9/s ETA=0.0h wall=2.07h model_passes=11642612
+  d_negE checkpoint row 2900/3139 pairs=4896650/4925091 (99.4%) rate=389.0/s ETA=0.0h wall=2.07h model_passes=11647482
+  d_negE checkpoint row 2910/3139 pairs=4898985/4925091 (99.5%) rate=389.1/s ETA=0.0h wall=2.07h model_passes=11652152
+  d_negE checkpoint row 2920/3139 pairs=4901220/4925091 (99.5%) rate=389.2/s ETA=0.0h wall=2.07h model_passes=11656622
+  d_negE checkpoint row 2930/3139 pairs=4903355/4925091 (99.6%) rate=389.2/s ETA=0.0h wall=2.07h model_passes=11660892
+  d_negE checkpoint row 2940/3139 pairs=4905390/4925091 (99.6%) rate=389.3/s ETA=0.0h wall=2.07h model_passes=11664962
+  d_negE checkpoint row 2950/3139 pairs=4907325/4925091 (99.6%) rate=389.4/s ETA=0.0h wall=2.07h model_passes=11668832
+  d_negE checkpoint row 2960/3139 pairs=4909160/4925091 (99.7%) rate=389.5/s ETA=0.0h wall=2.08h model_passes=11672502
+  d_negE checkpoint row 2970/3139 pairs=4910895/4925091 (99.7%) rate=389.6/s ETA=0.0h wall=2.08h model_passes=11675972
+  d_negE checkpoint row 2980/3139 pairs=4912530/4925091 (99.7%) rate=389.6/s ETA=0.0h wall=2.08h model_passes=11679242
+  d_negE checkpoint row 2990/3139 pairs=4914065/4925091 (99.8%) rate=389.7/s ETA=0.0h wall=2.08h model_passes=11682312
+  d_negE checkpoint row 3000/3139 pairs=4915500/4925091 (99.8%) rate=389.7/s ETA=0.0h wall=2.08h model_passes=11685182
+  d_negE checkpoint row 3010/3139 pairs=4916835/4925091 (99.8%) rate=389.8/s ETA=0.0h wall=2.08h model_passes=11687852
+  d_negE checkpoint row 3020/3139 pairs=4918070/4925091 (99.9%) rate=389.8/s ETA=0.0h wall=2.08h model_passes=11690322
+  d_negE checkpoint row 3030/3139 pairs=4919205/4925091 (99.9%) rate=389.9/s ETA=0.0h wall=2.08h model_passes=11692592
+  d_negE checkpoint row 3040/3139 pairs=4920240/4925091 (99.9%) rate=389.9/s ETA=0.0h wall=2.08h model_passes=11694662
+  d_negE checkpoint row 3050/3139 pairs=4921175/4925091 (99.9%) rate=389.9/s ETA=0.0h wall=2.08h model_passes=11696532
+  d_negE checkpoint row 3060/3139 pairs=4922010/4925091 (99.9%) rate=390.0/s ETA=0.0h wall=2.08h model_passes=11698202
+  d_negE checkpoint row 3070/3139 pairs=4922745/4925091 (100.0%) rate=390.0/s ETA=0.0h wall=2.08h model_passes=11699672
+  d_negE checkpoint row 3080/3139 pairs=4923380/4925091 (100.0%) rate=390.0/s ETA=0.0h wall=2.08h model_passes=11700942
+  d_negE checkpoint row 3090/3139 pairs=4923915/4925091 (100.0%) rate=390.0/s ETA=0.0h wall=2.08h model_passes=11702012
+  d_negE checkpoint row 3100/3139 pairs=4924350/4925091 (100.0%) rate=390.1/s ETA=0.0h wall=2.08h model_passes=11702882
+  d_negE checkpoint row 3110/3139 pairs=4924685/4925091 (100.0%) rate=390.1/s ETA=0.0h wall=2.08h model_passes=11703552
+  d_negE checkpoint row 3120/3139 pairs=4924920/4925091 (100.0%) rate=390.1/s ETA=0.0h wall=2.08h model_passes=11704022
+  d_negE checkpoint row 3130/3139 pairs=4925055/4925091 (100.0%) rate=390.1/s ETA=0.0h wall=2.08h model_passes=11704292
+  d_negE checkpoint row 3139/3139 pairs=4925091/4925091 (100.0%) rate=390.1/s ETA=0.0h wall=2.08h model_passes=11704364
+Wrote experiments/evostar_2027/data/mats/_flat/nli_mats_meta_3139.json (total NLI wall ≈ 4.2016 h)
+
+===== STAGE: materialize =====
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1_materialize_data.py --data-dir experiments/evostar_2027/data --src-p0 experiments/evostar_2027/data/pool --src-mats experiments/evostar_2027/rq1/mats --skip-existing
+Pool N=3139 → experiments/evostar_2027/data/pool
+[SKIP] batches already present under experiments/evostar_2027/data/batches
+[SKIP] cheap mats already present under experiments/evostar_2027/data/mats/B*
+  NLI experiments/evostar_2027/data/mats/B500/d_N.npy from d_N_3139.npy ([:500,:500])
+  NLI experiments/evostar_2027/data/mats/B1000/d_N.npy from d_N_3139.npy ([:1000,:1000])
+  NLI experiments/evostar_2027/data/mats/B2000/d_N.npy from d_N_3139.npy ([:2000,:2000])
+  NLI experiments/evostar_2027/data/mats/B3139/d_N.npy from d_N_3139.npy ([:3139,:3139])
+  NLI experiments/evostar_2027/data/mats/B500/d_negE.npy from d_negE_3139.npy ([:500,:500])
+  NLI experiments/evostar_2027/data/mats/B1000/d_negE.npy from d_negE_3139.npy ([:1000,:1000])
+  NLI experiments/evostar_2027/data/mats/B2000/d_negE.npy from d_negE_3139.npy ([:2000,:2000])
+  NLI experiments/evostar_2027/data/mats/B3139/d_negE.npy from d_negE_3139.npy ([:3139,:3139])
+  wrote experiments/evostar_2027/data/mats/B500/dataset.json (missing=[])
+  wrote experiments/evostar_2027/data/mats/B1000/dataset.json (missing=[])
+  wrote experiments/evostar_2027/data/mats/B2000/dataset.json (missing=[])
+  wrote experiments/evostar_2027/data/mats/B3139/dataset.json (missing=[])
+Wrote experiments/evostar_2027/data/PART1_STATUS.json
+Part 1d: HELD
+
+===== STAGE: p1d =====
+
+----- backfill NLI timing -----
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/backfill_nli_timing.py --mats-dir experiments/evostar_2027/data/mats/_flat --max-n 3139
+Backfill N=3139 under experiments/evostar_2027/data/mats/_flat (log=experiments/evostar_2027/data/mats/_flat/p1c_n3139.log)
+Wrote experiments/evostar_2027/data/mats/_flat/nli_mats_meta_3139.json total_h=4.2016
+p1d batches=[500, 1000, 2000, 3139]  t=[0.05, 0.5] step=0.05
+[SKIP] B500: threshold_grid+coherence already present (use --force to redo)
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py --batch B500 --sweeps-dir experiments/evostar_2027/rq1/sweeps/B500 --out notes/LaTeX2e+Proceedings+Templates+download/rq1_b500_tables.tex --n 500
+Wrote notes/LaTeX2e+Proceedings+Templates+download/rq1_b500_tables.tex (714 lines)
+[SKIP] B1000: threshold_grid+coherence already present (use --force to redo)
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py --batch B1000 --sweeps-dir experiments/evostar_2027/rq1/sweeps/B1000 --out notes/LaTeX2e+Proceedings+Templates+download/rq1_b1000_tables.tex --n 1000
+Wrote notes/LaTeX2e+Proceedings+Templates+download/rq1_b1000_tables.tex (715 lines)
+[SKIP] B2000: threshold_grid+coherence already present (use --force to redo)
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py --batch B2000 --sweeps-dir experiments/evostar_2027/rq1/sweeps/B2000 --out notes/LaTeX2e+Proceedings+Templates+download/rq1_b2000_tables.tex --n 2000
+Wrote notes/LaTeX2e+Proceedings+Templates+download/rq1_b2000_tables.tex (715 lines)
+
+----- B3139: hparam sweep -----
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_hparam_sweep.py --mats-dir experiments/evostar_2027/data/mats/B3139 --sweeps-dir experiments/evostar_2027/rq1/sweeps/B3139 --prefer-n 3139 --p0 experiments/evostar_2027/data/batches/B3139/p0.pkl --reference-radius 0.1
+[21:17:25] [INFO] [DeviceManager]: Log level set to: INFO
+  loaded d_E N=3139 from experiments/evostar_2027/data/mats/B3139/d_E.npy
+  loaded d_P N=3139 from experiments/evostar_2027/data/mats/B3139/d_P.npy
+  loaded d_EP N=3139 from experiments/evostar_2027/data/mats/B3139/d_EP.npy
+  loaded d_N N=3139 from experiments/evostar_2027/data/mats/B3139/d_N.npy
+  loaded d_negE N=3139 from experiments/evostar_2027/data/mats/B3139/d_negE.npy
+IncDBSCAN order = fitness-desc from experiments/evostar_2027/data/batches/B3139/p0.pkl (N=3139)
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/calibration.csv
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/structure.csv
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/shortlist_proposal.json
+Shortlist CLI: ['embedding', 'embedding+objective', 'nli', 'nli_entail']
+
+----- B3139: threshold grid -----
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_threshold_grid.py --mats-dir experiments/evostar_2027/data/mats/B3139 --p0 experiments/evostar_2027/data/batches/B3139/p0.pkl --sweeps-dir experiments/evostar_2027/rq1/sweeps/B3139 --t-min 0.05 --t-max 0.5 --t-step 0.05
+[21:18:21] [INFO] [DeviceManager]: Log level set to: INFO
+  loaded d_E N=3139
+  loaded d_EP N=3139
+  loaded d_N N=3139
+  loaded d_negE N=3139
+threshold grid (10): [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]
+methods: leader_follower, incdbscan
+LF order = fitness-desc from experiments/evostar_2027/data/batches/B3139/p0.pkl (N=3139)
+=== d_E ===
+  LF  t=0.05: mature=325 singletons=1626 max=54 frac_mature=0.482 neigh=0.519
+  DB  t=0.05 ms=2: clusters=237 mature=237 noise=0.481 max=148
+  LF  t=0.10: mature=356 singletons=955 max=126 frac_mature=0.696 neigh=0.751
+  DB  t=0.10 ms=2: clusters=167 mature=167 noise=0.249 max=334
+  LF  t=0.15: mature=333 singletons=499 max=178 frac_mature=0.841 neigh=0.893
+  DB  t=0.15 ms=2: clusters=83 mature=83 noise=0.107 max=1520
+  LF  t=0.20: mature=265 singletons=257 max=219 frac_mature=0.918 neigh=0.958
+  DB  t=0.20 ms=2: clusters=20 mature=20 noise=0.042 max=2885
+  LF  t=0.25: mature=196 singletons=95 max=228 frac_mature=0.970 neigh=0.987
+  DB  t=0.25 ms=2: clusters=5 mature=5 noise=0.013 max=3084
+  LF  t=0.30: mature=123 singletons=31 max=320 frac_mature=0.990 neigh=0.997
+  DB  t=0.30 ms=2: clusters=1 mature=1 noise=0.003 max=3129
+  LF  t=0.35: mature=67 singletons=5 max=366 frac_mature=0.998 neigh=1.000
+  DB  t=0.35 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.40: mature=36 singletons=1 max=668 frac_mature=1.000 neigh=1.000
+  DB  t=0.40 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.45: mature=12 singletons=1 max=1185 frac_mature=1.000 neigh=1.000
+  DB  t=0.45 ms=2: clusters=1 mature=1 noise=0.000 max=3139
+  LF  t=0.50: mature=5 singletons=0 max=2189 frac_mature=1.000 neigh=1.000
+  DB  t=0.50 ms=2: clusters=1 mature=1 noise=0.000 max=3139
+=== d_EP ===
+  LF  t=0.05: mature=414 singletons=1535 max=19 frac_mature=0.511 neigh=0.561
+  DB  t=0.05 ms=2: clusters=235 mature=235 noise=0.439 max=158
+  LF  t=0.10: mature=422 singletons=672 max=85 frac_mature=0.786 neigh=0.847
+  DB  t=0.10 ms=2: clusters=129 mature=129 noise=0.153 max=429
+  LF  t=0.15: mature=309 singletons=253 max=184 frac_mature=0.919 neigh=0.960
+  DB  t=0.15 ms=2: clusters=18 mature=18 noise=0.040 max=2906
+  LF  t=0.20: mature=186 singletons=57 max=207 frac_mature=0.982 neigh=0.995
+  DB  t=0.20 ms=2: clusters=2 mature=2 noise=0.005 max=3120
+  LF  t=0.25: mature=92 singletons=5 max=233 frac_mature=0.998 neigh=1.000
+  DB  t=0.25 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.30: mature=35 singletons=1 max=308 frac_mature=1.000 neigh=1.000
+  DB  t=0.30 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.35: mature=10 singletons=0 max=697 frac_mature=1.000 neigh=1.000
+  DB  t=0.35 ms=2: clusters=1 mature=1 noise=0.000 max=3139
+  LF  t=0.40: mature=4 singletons=0 max=1325 frac_mature=1.000 neigh=1.000
+  DB  t=0.40 ms=2: clusters=1 mature=1 noise=0.000 max=3139
+  LF  t=0.45: mature=2 singletons=0 max=2052 frac_mature=1.000 neigh=1.000
+  DB  t=0.45 ms=2: clusters=1 mature=1 noise=0.000 max=3139
+  LF  t=0.50: mature=2 singletons=0 max=2082 frac_mature=1.000 neigh=1.000
+  DB  t=0.50 ms=2: clusters=1 mature=1 noise=0.000 max=3139
+=== d_N ===
+  LF  t=0.05: mature=462 singletons=1541 max=86 frac_mature=0.509 neigh=0.686
+  DB  t=0.05 ms=2: clusters=94 mature=94 noise=0.314 max=1863
+  LF  t=0.10: mature=470 singletons=1434 max=37 frac_mature=0.543 neigh=0.744
+  DB  t=0.10 ms=2: clusters=64 mature=64 noise=0.256 max=2141
+  LF  t=0.15: mature=480 singletons=1325 max=71 frac_mature=0.578 neigh=0.781
+  DB  t=0.15 ms=2: clusters=49 mature=49 noise=0.219 max=2323
+  LF  t=0.20: mature=484 singletons=1267 max=56 frac_mature=0.596 neigh=0.816
+  DB  t=0.20 ms=2: clusters=38 mature=38 noise=0.184 max=2453
+  LF  t=0.25: mature=494 singletons=1063 max=46 frac_mature=0.661 neigh=0.869
+  DB  t=0.25 ms=2: clusters=29 mature=29 noise=0.131 max=2649
+  LF  t=0.30: mature=450 singletons=378 max=105 frac_mature=0.880 neigh=0.999
+  DB  t=0.30 ms=2: clusters=1 mature=1 noise=0.001 max=3137
+  LF  t=0.35: mature=415 singletons=301 max=146 frac_mature=0.904 neigh=1.000
+  DB  t=0.35 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.40: mature=385 singletons=243 max=161 frac_mature=0.923 neigh=1.000
+  DB  t=0.40 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.45: mature=320 singletons=152 max=305 frac_mature=0.952 neigh=1.000
+  DB  t=0.45 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+  LF  t=0.50: mature=111 singletons=30 max=1692 frac_mature=0.990 neigh=1.000
+  DB  t=0.50 ms=2: clusters=1 mature=1 noise=0.000 max=3138
+=== d_negE ===
+  LF  t=0.05: mature=427 singletons=1688 max=36 frac_mature=0.462 neigh=0.630
+  DB  t=0.05 ms=2: clusters=107 mature=107 noise=0.370 max=1651
+  LF  t=0.10: mature=463 singletons=1571 max=36 frac_mature=0.500 neigh=0.697
+  DB  t=0.10 ms=2: clusters=86 mature=86 noise=0.303 max=1929
+  LF  t=0.15: mature=464 singletons=1471 max=40 frac_mature=0.531 neigh=0.733
+  DB  t=0.15 ms=2: clusters=66 mature=66 noise=0.267 max=2095
+  LF  t=0.20: mature=477 singletons=1398 max=42 frac_mature=0.555 neigh=0.756
+  DB  t=0.20 ms=2: clusters=58 mature=58 noise=0.244 max=2199
+  LF  t=0.25: mature=477 singletons=1355 max=49 frac_mature=0.568 neigh=0.776
+  DB  t=0.25 ms=2: clusters=50 mature=50 noise=0.224 max=2299
+  LF  t=0.30: mature=481 singletons=1288 max=86 frac_mature=0.590 neigh=0.791
+  DB  t=0.30 ms=2: clusters=41 mature=41 noise=0.209 max=2374
+  LF  t=0.35: mature=485 singletons=1271 max=45 frac_mature=0.595 neigh=0.809
+  DB  t=0.35 ms=2: clusters=40 mature=40 noise=0.191 max=2430
+  LF  t=0.40: mature=488 singletons=1224 max=52 frac_mature=0.610 neigh=0.828
+  DB  t=0.40 ms=2: clusters=33 mature=33 noise=0.172 max=2505
+  LF  t=0.45: mature=484 singletons=1161 max=55 frac_mature=0.630 neigh=0.845
+  DB  t=0.45 ms=2: clusters=26 mature=26 noise=0.155 max=2569
+  LF  t=0.50: mature=486 singletons=998 max=63 frac_mature=0.682 neigh=0.904
+  DB  t=0.50 ms=2: clusters=12 mature=12 noise=0.096 max=2804
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/threshold_grid.csv (80 rows)
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/threshold_grid_prompt_samples.json
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/species/index.json (80 species configs)
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/threshold_grid_meta.json (grid wall=3817.6s)
+
+----- B3139: coherence -----
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_cluster_coherence.py --species-dir experiments/evostar_2027/rq1/sweeps/B3139/species --mats-dir experiments/evostar_2027/data/mats/B3139 --p0 experiments/evostar_2027/data/batches/B3139/p0.pkl --out experiments/evostar_2027/rq1/sweeps/B3139/coherence.csv
+canvases=['d_E', 'd_EP', 'd_N', 'd_negE'] N=3139
+emb shape=(3139, 384) from experiments/evostar_2027/data/batches/B3139/p0.pkl
+scoring species in experiments/evostar_2027/rq1/sweeps/B3139/species
+Wrote experiments/evostar_2027/rq1/sweeps/B3139/coherence.csv (80 rows)
+Top healthy by Separation@d_E:
+ rank          method distance  threshold  separation  separation_on_forming  silhouette_d_E  silhouette_on_forming  davies_bouldin  calinski_harabasz  max_cluster  n_mature
+    1 leader_follower      d_E       0.05   14.068961              14.068961        0.572558               0.572558        0.433811          20.339408         54.0       325
+    2       incdbscan      d_E       0.05   12.202059              12.202059        0.577493               0.577493        0.737166          49.649126        148.0       237
+    3 leader_follower     d_EP       0.05   11.524639               9.127486        0.379915               0.408964        0.557252          18.249265         19.0       414
+    4       incdbscan     d_EP       0.05   10.047655               8.113204        0.505903               0.462331        0.866980          43.484212        158.0       235
+    5 leader_follower      d_E       0.10    6.569660               6.569660        0.393124               0.393124        0.659216          14.037406        126.0       356
+    6       incdbscan   d_negE       0.10    6.461052               9.719268       -0.397543              -0.077430        1.369928           3.155995       1929.0        86
+    7       incdbscan      d_N       0.05    6.388938              11.456163       -0.391099              -0.229124        1.371072           3.221775       1863.0        94
+    8       incdbscan   d_negE       0.05    6.317435              11.808785       -0.389872              -0.109790        1.356392           3.197149       1651.0       107
+    9       incdbscan   d_negE       0.15    5.908039               8.843976       -0.342326              -0.035620        1.385086           3.236228       2095.0        66
+   10       incdbscan      d_N       0.10    5.599967               9.936641       -0.339554              -0.218632        1.399859           3.108436       2141.0        64
+
+----- B3139: LaTeX tables -----
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py --batch B3139 --sweeps-dir experiments/evostar_2027/rq1/sweeps/B3139 --out notes/LaTeX2e+Proceedings+Templates+download/rq1_b3139_tables.tex --n 3139
+Wrote notes/LaTeX2e+Proceedings+Templates+download/rq1_b3139_tables.tex (715 lines)
+Wrote experiments/evostar_2027/rq1/sweeps/CROSS_BATCH_READY.json
+
+===== STAGE: p1e =====
+p1e freeze from experiments/evostar_2027/rq1/sweeps/B500/shortlist_proposal.json
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1e_freeze_config.py --sweeps-dir experiments/evostar_2027/rq1/sweeps/B500 --force --max-total-genomes 2000 --pilot-seeds 0,1,2,3,4,5,6,7,8,9 --cli-methods embedding,nli_entail --clustering-methods leader_follower,dbscan
+Wrote experiments/evostar_2027/rq1/frozen_config.json
+  methods: ['embedding', 'nli_entail']
+  clustering: ['leader_follower', 'dbscan']
+  N_max=2000 seeds=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9] cells=40
+
+===== STAGE: finalize =====
++ /home/os9660/etg/.spvenv/bin/python /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/finalize_cross_batch_rq1.py
+Wrote /home/os9660/Downloads/ToxSearch-S/notes/LaTeX2e+Proceedings+Templates+download/rq1_b1000_tables.tex (715 lines)
+Wrote /home/os9660/Downloads/ToxSearch-S/notes/LaTeX2e+Proceedings+Templates+download/rq1_b2000_tables.tex (715 lines)
+Wrote /home/os9660/Downloads/ToxSearch-S/notes/LaTeX2e+Proceedings+Templates+download/rq1_b3139_tables.tex (715 lines)
+Wrote /home/os9660/Downloads/ToxSearch-S/notes/LaTeX2e+Proceedings+Templates+download/rq1_cross_batch_tables.tex
+[SKIP] notebook missing (not fatal): /home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/notebooks/B500_rq1_summary.ipynb
+[WARN] finalize failed (exit 1); grids/tables are still usable — sync and finalize locally if needed.
+
+[OK] RQ1 pipeline finished.
+[DONE] RQ1 pipeline  SLURM_JOB_ID=21927396

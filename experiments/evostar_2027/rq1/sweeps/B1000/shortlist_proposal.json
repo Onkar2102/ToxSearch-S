@@ -1,0 +1,69 @@
+{
+  "shortlist_plan_names": [
+    "d_E",
+    "d_EP",
+    "d_N",
+    "d_negE"
+  ],
+  "shortlist_cli_methods": [
+    "embedding",
+    "embedding+objective",
+    "nli",
+    "nli_entail"
+  ],
+  "clustering_to_pilot": [
+    "leader_follower",
+    "dbscan"
+  ],
+  "locked_min_samples": 2,
+  "reference_radius_d_E": 0.1,
+  "target_neighbor_fraction": 0.78,
+  "per_distance": {
+    "d_E": {
+      "cli_method": "embedding",
+      "theta_sim": 0.09984880215658216,
+      "eps": 0.09984880215658215,
+      "dbscan_eps": 0.09984880215658215,
+      "min_samples": 2,
+      "N_used": 1000,
+      "smoke_sized": false
+    },
+    "d_EP": {
+      "cli_method": "embedding+objective",
+      "theta_sim": 0.08562473999033197,
+      "eps": 0.08562473999033196,
+      "dbscan_eps": 0.08562473999033196,
+      "min_samples": 2,
+      "N_used": 1000,
+      "smoke_sized": false
+    },
+    "d_N": {
+      "cli_method": "nli",
+      "theta_sim": 0.2310416400432587,
+      "eps": 0.23104164004325867,
+      "dbscan_eps": 0.23104164004325867,
+      "min_samples": 2,
+      "N_used": 1000,
+      "smoke_sized": false
+    },
+    "d_negE": {
+      "cli_method": "nli_entail",
+      "theta_sim": 0.4386091828346253,
+      "eps": 0.43860918283462524,
+      "dbscan_eps": 0.43860918283462524,
+      "min_samples": 2,
+      "N_used": 1000,
+      "smoke_sized": false
+    }
+  },
+  "notes": [],
+  "timing": {
+    "wall_seconds": 5.907,
+    "wall_hours": 0.0016,
+    "finished_at": "2026-10-19T19:00:01.200553+00:00"
+  },
+  "files": {
+    "calibration": "experiments/evostar_2027/rq1/sweeps/B1000/calibration.csv",
+    "structure": "experiments/evostar_2027/rq1/sweeps/B1000/structure.csv"
+  }
+}

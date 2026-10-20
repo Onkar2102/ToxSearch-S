@@ -1,0 +1,22 @@
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1792422516.961870 1526844 cuda_dnn.cc:8310] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+E0000 00:00:1792422517.050167 1526844 cuda_blas.cc:1418] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+  File "/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py", line 255
+    )
+    ^
+SyntaxError: f-string expression part cannot include a backslash
+Traceback (most recent call last):
+  File "/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py", line 708, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py", line 698, in main
+    dispatch[s](args)
+  File "/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py", line 325, in stage_p1d
+    _run_batch_p1d(args, n)
+  File "/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py", line 209, in _run_batch_p1d
+    _run(
+  File "/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/run_rq1_pipeline.py", line 66, in _run
+    subprocess.check_call(list(cmd), cwd=str(ROOT))
+  File "/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view/lib/python3.11/subprocess.py", line 413, in check_call
+    raise CalledProcessError(retcode, cmd)
+subprocess.CalledProcessError: Command '['/home/os9660/etg/.spvenv/bin/python', '/home/os9660/Downloads/ToxSearch-S/experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py', '--batch', 'B500', '--sweeps-dir', 'experiments/evostar_2027/rq1/sweeps/B500', '--out', 'notes/LaTeX2e+Proceedings+Templates+download/rq1_b500_tables.tex', '--n', '500']' returned non-zero exit status 1.

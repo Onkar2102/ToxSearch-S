@@ -1,0 +1,17 @@
+{
+  "method": "incdbscan",
+  "distance": "d_EP",
+  "threshold": 0.45,
+  "min_samples": 2,
+  "n_clusters": 1,
+  "n_mature": 1,
+  "n_singletons": 0,
+  "noise_frac": 0.0,
+  "max_cluster": 3139.0,
+  "median_cluster": 3139.0,
+  "median_mature": 3139.0,
+  "singleton_frac": 0.0,
+  "frac_in_mature": 1.0,
+  "neighbor_frac_lf": 1.0,
+  "N": 3139
+}

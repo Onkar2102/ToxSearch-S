@@ -33,27 +33,15 @@
   "nli": {
     "attached": {
       "d_N": {
-        "source": "experiments/evostar_2027/data/mats/_flat/d_N_500.npy",
-        "source_N": 500
+        "source": "experiments/evostar_2027/data/mats/_flat/d_N_3139.npy",
+        "source_N": 3139
       },
       "d_negE": {
-        "source": "experiments/evostar_2027/data/mats/_flat/d_negE_500.npy",
-        "source_N": 500
+        "source": "experiments/evostar_2027/data/mats/_flat/d_negE_3139.npy",
+        "source_N": 3139
       }
     },
-    "missing": [],
-    "pending_larger": {
-      "d_N": [
-        1000,
-        2000,
-        3139
-      ],
-      "d_negE": [
-        1000,
-        2000,
-        3139
-      ]
-    }
+    "missing": []
   },
   "part1d": "held \u2014 do not run p1d_hparam_sweep until NLI mats ready and review begins",
   "next_nli_commands": [

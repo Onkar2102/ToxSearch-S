@@ -1,0 +1,17 @@
+{
+  "method": "leader_follower",
+  "distance": "d_N",
+  "threshold": 0.35,
+  "min_samples": null,
+  "n_clusters": 481,
+  "n_mature": 271,
+  "n_singletons": 210,
+  "noise_frac": 0.0,
+  "max_cluster": 112.0,
+  "median_cluster": 2.0,
+  "median_mature": 4.0,
+  "singleton_frac": 0.4365904365904366,
+  "frac_in_mature": 0.895,
+  "neighbor_frac_lf": 0.9995,
+  "N": 2000
+}

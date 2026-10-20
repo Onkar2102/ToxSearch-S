@@ -1,1 +1,1 @@
-{"next_i": 170, "n": 2000, "label": "d_negE"}
+{"next_i": 2000, "n": 2000, "label": "d_negE", "wall_seconds": 6695.43, "wall_hours": 1.8598, "session_wall_seconds": 6695.43, "prior_wall_seconds": 0.0, "pairs_done": 1999000, "pairs_total": 1999000, "pairs_per_sec": 298.56, "updated_at": "2026-10-19T16:59:12.435679+00:00", "complete": true, "finished_at": "2026-10-19T16:59:12.435708+00:00", "batch_size": 256}
