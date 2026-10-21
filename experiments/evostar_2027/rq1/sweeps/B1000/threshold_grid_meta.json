@@ -8,22 +8,23 @@
     "d_negE"
   ],
   "methods": [
-    "leader_follower",
     "incdbscan"
   ],
   "t_min": 0.05,
   "t_max": 0.5,
   "t_step": 0.05,
   "min_samples": [
-    2
+    2,
+    3,
+    5
   ],
   "lf_semantics": "offline fitness-desc; join nearest leader if d < theta; else new leader",
   "incdbscan_semantics": "true IncDBSCAN seed_from_precomputed_matrix; fitness-desc inserts; eps=t; min_samples as given; same insert logic as live clustering_method=dbscan",
   "timing": {
-    "wall_seconds": 147.529,
-    "wall_hours": 0.041,
-    "n_grid_rows": 80,
-    "finished_at": "2026-10-19T19:02:33.351938+00:00"
+    "wall_seconds": 114.836,
+    "wall_hours": 0.0319,
+    "n_grid_rows": 120,
+    "finished_at": "2026-10-20T23:40:01.037025+00:00"
   },
   "files": {
     "threshold_grid": "experiments/evostar_2027/rq1/sweeps/B1000/threshold_grid.csv",

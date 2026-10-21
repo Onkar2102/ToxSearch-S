@@ -290,8 +290,21 @@ def score_species_dir(
         raise SystemExit(f"emb N={emb.shape[0]} != d_E N={N}")
     rng = np.random.default_rng(seed)
     rows: List[Dict[str, Any]] = []
+    skip_stems: set = set()
+    existing_path = getattr(score_species_dir, "_existing_out", None)
+    if existing_path and Path(existing_path).is_file():
+        try:
+            prev = pd.read_csv(existing_path)
+            if "stem" in prev.columns:
+                skip_stems = set(prev["stem"].astype(str))
+                rows.extend(prev.to_dict(orient="records"))
+                print(f"  reuse {len(skip_stems)} scored stems from {existing_path}")
+        except Exception as e:
+            print(f"  [warn] could not reuse {existing_path}: {e}")
 
     for ent in entries:
+        if ent.get("stem") in skip_stems:
+            continue
         labels_path = Path(ent["labels"])
         summary_path = Path(ent["summary"])
         if not labels_path.is_file():
@@ -363,6 +376,8 @@ def score_species_dir(
         rows.append(row)
 
     df = pd.DataFrame(rows)
+    if "rank" in df.columns:
+        df = df.drop(columns=["rank"])
     if not df.empty and "separation" in df.columns:
         df["_rank_key"] = df.apply(
             lambda r: (0 if r["structurally_healthy"] else 1, -(r["separation"] or -1.0)),
@@ -382,6 +397,12 @@ def main() -> int:
     p.add_argument("--emb", type=Path, default=None, help="Optional (N, D) embeddings .npy")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument(
+        "--reuse-out",
+        action="store_true",
+        default=True,
+        help="Skip stems already present in --out (default on)",
+    )
     args = p.parse_args()
 
     canvases = _load_canvases(mats_dir=args.mats_dir, d_e_path=args.d_e)
@@ -390,7 +411,9 @@ def main() -> int:
     print(f"emb shape={emb.shape} from {args.emb or args.p0}")
     print(f"scoring species in {args.species_dir}")
 
+    score_species_dir._existing_out = str(args.out) if args.reuse_out else None
     df = score_species_dir(args.species_dir, canvases, emb, seed=args.seed)
+    score_species_dir._existing_out = None
     args.out.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.out, index=False)
     print(f"Wrote {args.out} ({len(df)} rows)")

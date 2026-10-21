@@ -1,5 +1,5 @@
 {
-  "n_entries": 80,
+  "n_entries": 160,
   "entries": [
     {
       "method": "leader_follower",
@@ -12,16 +12,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.05_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.05,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.05_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_E",
       "threshold": 0.1,
@@ -30,16 +20,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.10_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.10_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.10_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.1,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.10_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -52,16 +32,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.15_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.15,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.15_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_E",
       "threshold": 0.2,
@@ -70,16 +40,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.20_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.20_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.20_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.2,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.20_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -92,16 +52,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.25_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.25,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.25_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_E",
       "threshold": 0.3,
@@ -110,16 +60,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.30_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.30_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.30_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.3,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.30_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -132,16 +72,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.35_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.35,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.35_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_E",
       "threshold": 0.4,
@@ -150,16 +80,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.40_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.40_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.40_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.4,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.40_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -172,16 +92,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.45_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.45,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.45_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_E",
       "threshold": 0.5,
@@ -190,16 +100,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.50_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.50_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_E__t0.50_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_E",
-      "threshold": 0.5,
-      "min_samples": 2,
-      "stem": "incdbscan__d_E__t0.50_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -212,16 +112,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.05_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.05,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.05_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_EP",
       "threshold": 0.1,
@@ -230,16 +120,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.10_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.10_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.10_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.1,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.10_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -252,16 +132,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.15_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.15,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.15_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_EP",
       "threshold": 0.2,
@@ -270,16 +140,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.20_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.20_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.20_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.2,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.20_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -292,16 +152,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.25_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.25,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.25_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_EP",
       "threshold": 0.3,
@@ -310,16 +160,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.30_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.30_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.30_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.3,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.30_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -332,16 +172,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.35_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.35,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.35_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_EP",
       "threshold": 0.4,
@@ -350,16 +180,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.40_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.40_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.40_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.4,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.40_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -372,16 +192,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.45_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.45,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.45_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_EP",
       "threshold": 0.5,
@@ -390,16 +200,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.50_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.50_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_EP__t0.50_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_EP",
-      "threshold": 0.5,
-      "min_samples": 2,
-      "stem": "incdbscan__d_EP__t0.50_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -412,16 +212,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.05_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.05,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.05_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_N",
       "threshold": 0.1,
@@ -430,16 +220,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.10_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.10_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.10_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.1,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.10_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -452,16 +232,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.15_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.15,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.15_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_N",
       "threshold": 0.2,
@@ -470,16 +240,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.20_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.20_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.20_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.2,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.20_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -492,16 +252,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.25_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.25,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.25_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_N",
       "threshold": 0.3,
@@ -510,16 +260,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.30_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.30_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.30_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.3,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.30_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -532,16 +272,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.35_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.35,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.35_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_N",
       "threshold": 0.4,
@@ -550,16 +280,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.40_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.40_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.40_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.4,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.40_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -572,16 +292,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.45_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.45,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.45_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_N",
       "threshold": 0.5,
@@ -590,16 +300,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.50_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.50_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_N__t0.50_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_N",
-      "threshold": 0.5,
-      "min_samples": 2,
-      "stem": "incdbscan__d_N__t0.50_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -612,16 +312,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.05_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.05,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.05_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_negE",
       "threshold": 0.1,
@@ -630,16 +320,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.10_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.10_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.10_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.1,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.10_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -652,16 +332,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.15_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.15,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.15_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_negE",
       "threshold": 0.2,
@@ -670,16 +340,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.20_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.20_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.20_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.2,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.20_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -692,16 +352,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.25_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.25,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.25_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_negE",
       "threshold": 0.3,
@@ -710,16 +360,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.30_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.30_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.30_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.3,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.30_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -732,16 +372,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.35_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.35,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.35_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_negE",
       "threshold": 0.4,
@@ -752,16 +382,6 @@
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.40_prompts.json"
     },
     {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.4,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.40_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms2_prompts.json"
-    },
-    {
       "method": "leader_follower",
       "distance": "d_negE",
       "threshold": 0.45,
@@ -770,16 +390,6 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.45_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.45_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/leader_follower__d_negE__t0.45_prompts.json"
-    },
-    {
-      "method": "incdbscan",
-      "distance": "d_negE",
-      "threshold": 0.45,
-      "min_samples": 2,
-      "stem": "incdbscan__d_negE__t0.45_ms2",
-      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms2_labels.npy",
-      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms2_summary.json",
-      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms2_prompts.json"
     },
     {
       "method": "leader_follower",
@@ -793,6 +403,1176 @@
     },
     {
       "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.05,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.05_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.05,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.05_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.05,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.05_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.05_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.1,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.10_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.1,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.10_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.1,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.10_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.10_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.15,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.15_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.15,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.15_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.15,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.15_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.15_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.2,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.20_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.2,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.20_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.2,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.20_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.20_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.25,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.25_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.25,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.25_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.25,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.25_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.25_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.3,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.30_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.3,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.30_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.3,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.30_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.30_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.35,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.35_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.35,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.35_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.35,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.35_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.35_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.4,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.40_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.4,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.40_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.4,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.40_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.40_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.45,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.45_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.45,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.45_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.45,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.45_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.45_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.5,
+      "min_samples": 2,
+      "stem": "incdbscan__d_E__t0.50_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.5,
+      "min_samples": 3,
+      "stem": "incdbscan__d_E__t0.50_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_E",
+      "threshold": 0.5,
+      "min_samples": 5,
+      "stem": "incdbscan__d_E__t0.50_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_E__t0.50_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.05,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.05_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.05,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.05_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.05,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.05_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.05_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.1,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.10_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.1,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.10_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.1,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.10_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.10_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.15,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.15_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.15,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.15_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.15,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.15_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.15_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.2,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.20_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.2,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.20_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.2,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.20_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.20_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.25,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.25_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.25,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.25_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.25,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.25_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.25_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.3,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.30_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.3,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.30_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.3,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.30_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.30_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.35,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.35_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.35,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.35_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.35,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.35_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.35_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.4,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.40_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.4,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.40_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.4,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.40_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.40_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.45,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.45_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.45,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.45_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.45,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.45_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.45_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.5,
+      "min_samples": 2,
+      "stem": "incdbscan__d_EP__t0.50_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.5,
+      "min_samples": 3,
+      "stem": "incdbscan__d_EP__t0.50_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_EP",
+      "threshold": 0.5,
+      "min_samples": 5,
+      "stem": "incdbscan__d_EP__t0.50_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_EP__t0.50_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.05,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.05_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.05,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.05_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.05,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.05_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.05_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.1,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.10_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.1,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.10_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.1,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.10_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.10_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.15,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.15_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.15,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.15_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.15,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.15_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.15_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.2,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.20_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.2,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.20_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.2,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.20_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.20_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.25,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.25_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.25,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.25_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.25,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.25_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.25_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.3,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.30_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.3,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.30_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.3,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.30_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.30_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.35,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.35_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.35,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.35_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.35,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.35_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.35_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.4,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.40_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.4,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.40_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.4,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.40_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.40_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.45,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.45_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.45,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.45_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.45,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.45_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.45_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.5,
+      "min_samples": 2,
+      "stem": "incdbscan__d_N__t0.50_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.5,
+      "min_samples": 3,
+      "stem": "incdbscan__d_N__t0.50_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_N",
+      "threshold": 0.5,
+      "min_samples": 5,
+      "stem": "incdbscan__d_N__t0.50_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_N__t0.50_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.05,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.05_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.05,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.05_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.05,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.05_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.05_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.1,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.10_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.1,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.10_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.1,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.10_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.10_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.15,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.15_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.15,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.15_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.15,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.15_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.15_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.2,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.20_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.2,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.20_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.2,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.20_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.20_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.25,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.25_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.25,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.25_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.25,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.25_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.25_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.3,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.30_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.3,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.30_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.3,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.30_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.30_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.35,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.35_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.35,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.35_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.35,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.35_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.35_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.4,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.40_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.4,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.40_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.4,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.40_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.40_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.45,
+      "min_samples": 2,
+      "stem": "incdbscan__d_negE__t0.45_ms2",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms2_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms2_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.45,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.45_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.45,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.45_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.45_ms5_prompts.json"
+    },
+    {
+      "method": "incdbscan",
       "distance": "d_negE",
       "threshold": 0.5,
       "min_samples": 2,
@@ -800,6 +1580,26 @@
       "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms2_labels.npy",
       "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms2_summary.json",
       "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms2_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.5,
+      "min_samples": 3,
+      "stem": "incdbscan__d_negE__t0.50_ms3",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms3_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms3_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms3_prompts.json"
+    },
+    {
+      "method": "incdbscan",
+      "distance": "d_negE",
+      "threshold": 0.5,
+      "min_samples": 5,
+      "stem": "incdbscan__d_negE__t0.50_ms5",
+      "labels": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms5_labels.npy",
+      "summary": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms5_summary.json",
+      "prompts": "experiments/evostar_2027/rq1/sweeps/B500/species/incdbscan__d_negE__t0.50_ms5_prompts.json"
     }
   ]
 }

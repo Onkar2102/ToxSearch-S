@@ -183,6 +183,60 @@ def _species_stem(method: str, distance: str, t: float, ms: Optional[int] = None
     return stem
 
 
+def _labels_path(species_dir: Path, method: str, distance: str, t: float, ms: Optional[int] = None) -> Path:
+    return species_dir / f"{_species_stem(method, distance, t, ms)}_labels.npy"
+
+
+def _load_existing_summary(
+    species_dir: Path,
+    method: str,
+    distance: str,
+    t: float,
+    ms: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
+    stem = _species_stem(method, distance, t, ms)
+    path = species_dir / f"{stem}_summary.json"
+    if not path.is_file() or not _labels_path(species_dir, method, distance, t, ms).is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _row_key(distance: str, method: str, t: float, ms: Any) -> tuple:
+    ms_key = None if ms is None or (isinstance(ms, float) and np.isnan(ms)) else int(ms)
+    return (str(distance), str(method), round(float(t), 2), ms_key)
+
+
+def _merge_grid_csv(path: Path, new_rows: List[Dict[str, Any]]) -> pd.DataFrame:
+    new = pd.DataFrame(new_rows)
+    if path.is_file() and path.stat().st_size > 2:
+        old = pd.read_csv(path)
+        keep = []
+        new_keys = {
+            _row_key(r["distance"], r["method"], r["threshold"], r.get("min_samples"))
+            for r in new_rows
+        }
+        for rec in old.to_dict(orient="records"):
+            if _row_key(rec["distance"], rec["method"], rec["threshold"], rec.get("min_samples")) not in new_keys:
+                keep.append(rec)
+        if keep:
+            new = pd.concat([pd.DataFrame(keep), new], ignore_index=True)
+    sort_cols = [c for c in ("distance", "method", "threshold", "min_samples") if c in new.columns]
+    return new.sort_values(sort_cols, na_position="first").reset_index(drop=True)
+
+
+def _merge_species_index(path: Path, new_entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    old = []
+    if path.is_file():
+        try:
+            old = json.loads(path.read_text(encoding="utf-8")).get("entries", [])
+        except Exception:
+            old = []
+    new_stems = {e.get("stem") for e in new_entries}
+    merged = [e for e in old if e.get("stem") not in new_stems]
+    merged.extend(new_entries)
+    return merged
+
+
 def _write_species_artifacts(
     species_dir: Path,
     *,
@@ -234,20 +288,31 @@ def main() -> int:
     p.add_argument("--p0", type=Path, default=None)
     p.add_argument("--sweeps-dir", type=Path, required=True)
     p.add_argument("--distances", type=str, default=",".join(DEFAULT_DISTANCES))
+    p.add_argument("--methods", type=str, default="leader_follower,incdbscan",
+                   help="Comma list: leader_follower, incdbscan")
     p.add_argument("--t-min", type=float, default=0.1)
     p.add_argument("--t-max", type=float, default=0.5)
     p.add_argument("--t-step", type=float, default=0.05)
-    p.add_argument("--min-samples", type=int, nargs="+", default=[2],
-                   help="IncDBSCAN/DBSCAN min_samples values")
+    p.add_argument("--min-samples", type=int, nargs="+", default=[2, 3, 5],
+                   help="IncDBSCAN MinPts / min_samples values (default: 2 3 5)")
+    p.add_argument("--skip-existing", action="store_true", default=True,
+                   help="Reuse species/*_labels.npy when present (default on)")
+    p.add_argument("--force", action="store_true",
+                   help="Recompute even if labels already exist")
     p.add_argument("--top-k-clusters", type=int, default=5)
     p.add_argument("--prompts-per-cluster", type=int, default=5)
     args = p.parse_args()
 
     names = tuple(x.strip() for x in args.distances.split(",") if x.strip())
+    methods = tuple(x.strip() for x in args.methods.split(",") if x.strip())
+    unknown = [m for m in methods if m not in ("leader_follower", "incdbscan")]
+    if unknown:
+        raise SystemExit(f"Unknown --methods {unknown}; use leader_follower,incdbscan")
+    skip_existing = bool(args.skip_existing) and not args.force
     mats = _load_plain_mats(args.mats_dir, names)
     grid = _threshold_grid(args.t_min, args.t_max, args.t_step)
     print(f"threshold grid ({len(grid)}): {grid}")
-    print("methods: leader_follower, incdbscan")
+    print(f"methods: {list(methods)}  min_samples={list(args.min_samples)}  skip_existing={skip_existing}")
     t_grid0 = time.time()
 
     prompts: Optional[List[str]] = None
@@ -275,7 +340,8 @@ def main() -> int:
         "t_max": args.t_max,
         "t_step": args.t_step,
         "grid": grid,
-        "methods": ["leader_follower", "incdbscan"],
+        "methods": list(methods),
+        "min_samples": list(args.min_samples),
         "by_distance": {},
     }
     sweeps_dir = args.sweeps_dir
@@ -289,65 +355,91 @@ def main() -> int:
         for t in grid:
             neigh = stage_a.neighbor_fraction(m, t, strict=True)
 
-            # --- Leader–Follower ---
-            lf_lab = lf_offline_labels(m, t, order)
-            lf_sum = _summarize_labels(lf_lab, noise_label=-1)
-            lf_sum["noise_frac"] = 0.0  # LF assigns every point (singletons = size-1 niches)
-
-            row_lf = {
-                "distance": name,
-                "cli_method": PLAN_TO_CLI.get(name, name),
-                "method": "leader_follower",
-                "N": int(m.shape[0]),
-                "threshold": t,
-                "theta_sim": t,
-                "eps": None,
-                "min_samples": None,
-                "neighbor_frac_lf": neigh,
-                **lf_sum,
-            }
-            rows.append(row_lf)
-            key = f"t={t:.2f}"
-            lf_clusters = None
-            if prompts is not None:
-                lf_clusters = _cluster_prompt_samples(
-                    lf_lab, prompts, fitness_list,
-                    top_k_clusters=args.top_k_clusters,
-                    prompts_per_cluster=args.prompts_per_cluster,
-                    noise_label=-1,
+            if "leader_follower" in methods:
+                reused = skip_existing and _load_existing_summary(
+                    species_dir, "leader_follower", name, t, None
                 )
-                dist_samples["leader_follower"][key] = {
-                    "threshold": t,
-                    "neighbor_frac_lf": neigh,
-                    **{k: lf_sum[k] for k in lf_sum},
-                    "clusters": lf_clusters,
-                }
-            art = _write_species_artifacts(
-                species_dir,
-                method="leader_follower",
-                distance=name,
-                t=t,
-                labels=lf_lab,
-                summary={**lf_sum, "neighbor_frac_lf": neigh, "N": int(m.shape[0])},
-                clusters=lf_clusters,
-            )
-            species_index.append({
-                "method": "leader_follower",
-                "distance": name,
-                "threshold": t,
-                "min_samples": None,
-                **art,
-            })
-            print(
-                f"  LF  t={t:.2f}: mature={lf_sum['n_mature']} singletons={lf_sum['n_singletons']} "
-                f"max={lf_sum['max_cluster']:.0f} frac_mature={lf_sum['frac_in_mature']:.3f} "
-                f"neigh={neigh:.3f}"
-            )
+                if reused is not None:
+                    lf_sum = {k: reused[k] for k in (
+                        "n_clusters", "n_mature", "n_singletons", "noise_frac",
+                        "max_cluster", "median_cluster", "median_mature",
+                        "singleton_frac", "frac_in_mature",
+                    ) if k in reused}
+                    lf_lab = np.load(_labels_path(species_dir, "leader_follower", name, t, None))
+                    print(f"  LF  t={t:.2f}: reuse mature={lf_sum.get('n_mature')}")
+                else:
+                    lf_lab = lf_offline_labels(m, t, order)
+                    lf_sum = _summarize_labels(lf_lab, noise_label=-1)
+                    lf_sum["noise_frac"] = 0.0
 
-            # --- IncDBSCAN (true incremental seed on precomputed mat) ---
+                row_lf = {
+                    "distance": name,
+                    "cli_method": PLAN_TO_CLI.get(name, name),
+                    "method": "leader_follower",
+                    "N": int(m.shape[0]),
+                    "threshold": t,
+                    "theta_sim": t,
+                    "eps": None,
+                    "min_samples": None,
+                    "neighbor_frac_lf": neigh,
+                    **lf_sum,
+                }
+                rows.append(row_lf)
+                key = f"t={t:.2f}"
+                lf_clusters = None
+                if prompts is not None:
+                    lf_clusters = _cluster_prompt_samples(
+                        lf_lab, prompts, fitness_list,
+                        top_k_clusters=args.top_k_clusters,
+                        prompts_per_cluster=args.prompts_per_cluster,
+                        noise_label=-1,
+                    )
+                    dist_samples["leader_follower"][key] = {
+                        "threshold": t,
+                        "neighbor_frac_lf": neigh,
+                        **{k: lf_sum[k] for k in lf_sum},
+                        "clusters": lf_clusters,
+                    }
+                art = _write_species_artifacts(
+                    species_dir,
+                    method="leader_follower",
+                    distance=name,
+                    t=t,
+                    labels=lf_lab,
+                    summary={**lf_sum, "neighbor_frac_lf": neigh, "N": int(m.shape[0])},
+                    clusters=lf_clusters,
+                )
+                species_index.append({
+                    "method": "leader_follower",
+                    "distance": name,
+                    "threshold": t,
+                    "min_samples": None,
+                    **art,
+                })
+                if reused is None:
+                    print(
+                        f"  LF  t={t:.2f}: mature={lf_sum['n_mature']} singletons={lf_sum['n_singletons']} "
+                        f"max={lf_sum['max_cluster']:.0f} frac_mature={lf_sum['frac_in_mature']:.3f} "
+                        f"neigh={neigh:.3f}"
+                    )
+
+            if "incdbscan" not in methods:
+                continue
             for ms in args.min_samples:
-                db_lab = incdbscan_labels(m, t, ms, order)
-                db_sum = _summarize_labels(db_lab, noise_label=-1)
+                reused = skip_existing and _load_existing_summary(
+                    species_dir, "incdbscan", name, t, ms
+                )
+                if reused is not None:
+                    db_sum = {k: reused[k] for k in (
+                        "n_clusters", "n_mature", "n_singletons", "noise_frac",
+                        "max_cluster", "median_cluster", "median_mature",
+                        "singleton_frac", "frac_in_mature",
+                    ) if k in reused}
+                    db_lab = np.load(_labels_path(species_dir, "incdbscan", name, t, ms))
+                    print(f"  DB  t={t:.2f} ms={ms}: reuse clusters={db_sum.get('n_clusters')}")
+                else:
+                    db_lab = incdbscan_labels(m, t, ms, order)
+                    db_sum = _summarize_labels(db_lab, noise_label=-1)
                 row_db = {
                     "distance": name,
                     "cli_method": PLAN_TO_CLI.get(name, name),
@@ -394,35 +486,51 @@ def main() -> int:
                     "min_samples": ms,
                     **art,
                 })
-                print(
-                    f"  DB  t={t:.2f} ms={ms}: clusters={db_sum['n_clusters']} "
-                    f"mature={db_sum['n_mature']} noise={db_sum['noise_frac']:.3f} "
-                    f"max={db_sum['max_cluster']:.0f}"
-                )
+                if reused is None:
+                    print(
+                        f"  DB  t={t:.2f} ms={ms}: clusters={db_sum['n_clusters']} "
+                        f"mature={db_sum['n_mature']} noise={db_sum['noise_frac']:.3f} "
+                        f"max={db_sum['max_cluster']:.0f}"
+                    )
 
         samples_out["by_distance"][name] = dist_samples
 
     grid_path = sweeps_dir / "threshold_grid.csv"
-    pd.DataFrame(rows).to_csv(grid_path, index=False)
-    print(f"Wrote {grid_path} ({len(rows)} rows)")
+    grid_df = _merge_grid_csv(grid_path, rows)
+    grid_df.to_csv(grid_path, index=False)
+    print(f"Wrote {grid_path} ({len(grid_df)} rows)")
 
     samples_path = sweeps_dir / "threshold_grid_prompt_samples.json"
+    if samples_path.is_file() and samples_path.stat().st_size > 2:
+        try:
+            prev = json.loads(samples_path.read_text(encoding="utf-8"))
+            by = prev.get("by_distance", {})
+            for dist, blocks in samples_out["by_distance"].items():
+                by.setdefault(dist, {"leader_follower": {}, "incdbscan": {}})
+                for method, keys in blocks.items():
+                    by[dist].setdefault(method, {}).update(keys)
+            prev["by_distance"] = by
+            prev["min_samples"] = sorted(set(prev.get("min_samples", []) + list(args.min_samples)))
+            samples_out = prev
+        except Exception:
+            pass
     samples_path.write_text(json.dumps(samples_out, indent=2), encoding="utf-8")
     print(f"Wrote {samples_path}")
 
     index_path = species_dir / "index.json"
+    merged_index = _merge_species_index(index_path, species_index)
     index_path.write_text(
-        json.dumps({"n_entries": len(species_index), "entries": species_index}, indent=2),
+        json.dumps({"n_entries": len(merged_index), "entries": merged_index}, indent=2),
         encoding="utf-8",
     )
-    print(f"Wrote {index_path} ({len(species_index)} species configs)")
+    print(f"Wrote {index_path} ({len(merged_index)} species configs)")
 
     wall_s = time.time() - t_grid0
     meta = {
         "mats_dir": str(args.mats_dir),
         "p0": str(args.p0) if args.p0 else None,
         "distances": list(mats.keys()),
-        "methods": ["leader_follower", "incdbscan"],
+        "methods": list(methods),
         "t_min": args.t_min,
         "t_max": args.t_max,
         "t_step": args.t_step,

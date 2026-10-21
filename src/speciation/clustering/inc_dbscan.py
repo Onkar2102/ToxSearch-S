@@ -252,11 +252,8 @@ def seed_from_precomputed_matrix(
                 labels[0] = SINGLETON_SPECIES_ID
             continue
 
-        nbrs = {
-            k
-            for k, orig_j in enumerate(orig_of)
-            if float(D[orig_i, orig_j]) <= eps
-        }
+        already = np.asarray(orig_of, dtype=np.int64)
+        nbrs = set(np.flatnonzero(D[orig_i, already] <= eps).tolist())
         labels.append(NOISE_LABEL)
         neighbors.append(set(nbrs) | {new_idx})
         is_core.append(False)
