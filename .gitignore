@@ -129,6 +129,7 @@ celerybeat.pid
 
 # Environments
 .env
+rc_rq2_openai_key.sh
 .venv
 .analysis_venv
 env/
