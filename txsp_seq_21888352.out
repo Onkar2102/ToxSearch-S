@@ -1,4 +1,0 @@
-[DEBUG] PROJECT_ROOT=/home/os9660/Downloads/ToxSearch-S  pwd=/home/os9660/Downloads/ToxSearch-S
-[DEBUG] NVCC_PATH=/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view/bin/nvcc
-[DEBUG] CUDA_ROOT=/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view
-[DEBUG] LD_LIBRARY_PATH=/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view/lib64:/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view/lib:/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view/mkl/2024.0/lib:.:/.autofs/tools/spack/var/spack/environments/default-nlp-x86_64-25111801/.spack-env/view/lib

@@ -1,6 +1,0 @@
-# Copy to rc_rq2_openai_key.sh and paste the key (that file is gitignored).
-# All four RQ2 cells source it. Edit the key there; later resubmits pick up the same value.
-#
-#   cp rc_rq2_openai_key.sh.example rc_rq2_openai_key.sh
-#
-OPENAI_API_KEY_PIN=""
