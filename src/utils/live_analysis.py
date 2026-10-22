@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import matplotlib
@@ -88,6 +88,59 @@ def _max_total_genomes_xlim(tracker: Dict[str, Any], xs: List[int]) -> float:
     return float(max(xs) if xs else 0)
 
 
+def _finite_or_none(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed != parsed:
+        return None
+    return parsed
+
+
+def _fitness_plot_series(
+    generations: List[Dict[str, Any]],
+) -> Tuple[List[float], List[float], List[float], List[float]]:
+    """Split this-generation max from best-so-far.
+
+    ``max_score_variants`` is the max among variants created this generation.
+    ``population_max_fitness`` / ``best_fitness`` is the durable-store best-so-far.
+    Cumulative is monotone: max(prior, durable best, this-gen max). Missing
+    this-gen max is 0.0, never substituted with the durable max.
+    """
+    per_gen_max: List[float] = []
+    min_scores: List[float] = []
+    avg_scores: List[float] = []
+    cumulative_best: List[float] = []
+    current_max = 0.0
+    for gen in generations:
+        this_gen = _finite_or_none(gen.get("max_score_variants"))
+        durable = _finite_or_none(gen.get("population_max_fitness"))
+        if durable is None:
+            durable = _finite_or_none(gen.get("best_fitness"))
+        if durable is None:
+            durable = _finite_or_none(gen.get("population_max_toxicity"))
+        per_gen = 0.0 if this_gen is None else this_gen
+        per_gen_max.append(per_gen)
+
+        this_min = _finite_or_none(gen.get("min_score_variants"))
+        min_scores.append(0.0 if this_min is None else this_min)
+
+        this_avg = _finite_or_none(gen.get("avg_fitness_generation"))
+        if this_avg is None:
+            this_avg = _finite_or_none(gen.get("avg_fitness"))
+        avg_scores.append(0.0 if this_avg is None else this_avg)
+
+        candidates = [current_max, per_gen]
+        if durable is not None:
+            candidates.append(durable)
+        current_max = max(candidates)
+        cumulative_best.append(current_max)
+    return per_gen_max, min_scores, avg_scores, cumulative_best
+
+
 def load_evolution_tracker(outputs_path: Optional[str] = None) -> Dict[str, Any]:
     
     if outputs_path is None:
@@ -116,28 +169,10 @@ def generate_fitness_evolution_plot(outputs_path: Optional[str] = None, logger=N
             return None
         
         x_genomes = _cumulative_genome_counts(generations)
-
-        # Population max/avg over durable store; this-gen min from variant cohort.
-        max_scores = [
-            float(
-                g.get("population_max_fitness")
-                or g.get("best_fitness")
-                or g.get("max_score_variants")
-                or 0.0
-            )
-            for g in generations
-        ]
-        min_scores = [float(g.get("min_score_variants", 0.0) or 0.0) for g in generations]
-        avg_scores = [float(g.get("avg_fitness_generation", g.get("avg_fitness", 0.0)) or 0.0) for g in generations]
-        
-        cumulative_best = []
-        current_max = 0.0
-        for score in max_scores:
-            current_max = max(current_max, float(score))
-            cumulative_best.append(current_max)
+        max_scores, min_scores, avg_scores, cumulative_best = _fitness_plot_series(generations)
         
         plt.figure(figsize=(10, 6))
-        plt.plot(x_genomes, max_scores, 'o-', label='Max Fitness (population)', linewidth=2, markersize=6, color='#1f77b4')
+        plt.plot(x_genomes, max_scores, 'o-', label='Max Fitness (this gen)', linewidth=2, markersize=6, color='#1f77b4')
         plt.plot(x_genomes, min_scores, '^-', label='Min Fitness (this gen)', linewidth=2, markersize=6, color='#2ca02c')
         plt.plot(x_genomes, avg_scores, 's-', label='Avg Fitness (population)', linewidth=2, markersize=6, color='#ff7f0e')
         plt.plot(x_genomes, cumulative_best, '--', label='Cumulative Max Score', linewidth=2, color='red', alpha=0.75)
