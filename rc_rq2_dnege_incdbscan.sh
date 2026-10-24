@@ -5,6 +5,14 @@
 #
 # Paste the OpenAI key in OPENAI_API_KEY_PIN below. All 10 seeds in this
 # script use that pin. If you change it, later resubmits pick up the new key.
+#
+# Re-execution after job 21937934 (cancel that job first if it is still up).
+# Seeds 0 and 1 died at ~1400/2000 with sqlite3.OperationalError: disk I/O
+# error on the shared home-NFS NLI WAL. Hit rate was ~0.13% (~54s saved).
+# Default: NLI_CACHE_MODE=off (in-memory pair cache only) and
+# RESET_INCOMPLETE=1 (move status!=complete dirs aside, start those seeds
+# from gen 0). Complete seeds are still skipped. Override:
+#   NLI_CACHE_MODE=scratch|home   RESET_INCOMPLETE=0
 
 #SBATCH --job-name=rq2_nli_inc
 #SBATCH --time=05-12:00:00
@@ -31,7 +39,11 @@ THETA_SIM="0.1"
 DBSCAN_EPS="0.1"
 DBSCAN_MIN_SAMPLES="5"
 OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq2_inc_nli_entail_openai_t010_ms5_n2000}"
-NLI_CACHE_FILE="${NLI_CACHE_FILE:-data/cache/nli_pairs_rq2_dnege_inc.sqlite}"
+# off = RAM only (default; avoids the job-21937934 home-NFS WAL crash).
+# scratch = $SLURM_TMPDIR per seed (lost when the job ends).
+# home = shared data/cache/nli_pairs_rq2_dnege_inc.sqlite (not recommended).
+NLI_CACHE_MODE="${NLI_CACHE_MODE:-off}"
+NLI_CACHE_HOME="${NLI_CACHE_HOME:-data/cache/nli_pairs_rq2_dnege_inc.sqlite}"
 
 set -euo pipefail
 PROJECT_ROOT="${PROJECT_ROOT:-/home/os9660/Downloads/ToxSearch-S}"
@@ -85,6 +97,15 @@ if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
     unset PERSPECTIVE_API_KEYS || true
 fi
 
+# .env may set NLI_CACHE_FILE / NLI_PAIR_CACHE to the old shared home WAL.
+# Mode wins. Empty --nli-cache-file is not enough if NLI_PAIR_CACHE is set.
+NLI_CACHE_MODE="${NLI_CACHE_MODE:-off}"
+NLI_CACHE_HOME="${NLI_CACHE_HOME:-data/cache/nli_pairs_rq2_dnege_inc.sqlite}"
+if [ "$NLI_CACHE_MODE" = "off" ] || [ "$NLI_CACHE_MODE" = "none" ] || [ "$NLI_CACHE_MODE" = "ram" ]; then
+    unset NLI_PAIR_CACHE || true
+    unset NLI_CACHE_FILE || true
+fi
+
 N_REPLICATES="${N_REPLICATES:-10}"
 SEED_BASE="${SEED_BASE:-0}"
 
@@ -113,6 +134,9 @@ PG_MODEL="${PG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruc
 SMOKE_GGUF="${SMOKE_GGUF:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf}"
 
 SKIP_IF_DONE="${SKIP_IF_DONE:-1}"
+# Incomplete output dirs cannot resume past the speciation crash (last
+# EvolutionTracker row is a zeroed stub). Move them aside and start clean.
+RESET_INCOMPLETE="${RESET_INCOMPLETE:-1}"
 EXECUTION_MODE="${EXECUTION_MODE:-auto}"
 
 REPLICATE_RUNS=()
@@ -122,6 +146,28 @@ for ((i = 0; i < N_REPLICATES; i++)); do
     out="${OUTPUT_ROOT}/rep${i}_s${seed}"
     REPLICATE_RUNS+=("${rid}|${out}|${seed}")
 done
+
+resolve_nli_cache_file() {
+    local run_id="$1"
+    case "$NLI_CACHE_MODE" in
+        off|none|ram)
+            NLI_CACHE_RESOLVED=""
+            ;;
+        scratch|tmpdir)
+            local root="${SLURM_TMPDIR:-/tmp}"
+            mkdir -p "$root"
+            NLI_CACHE_RESOLVED="${root}/nli_pairs_${run_id}.sqlite"
+            ;;
+        home|shared)
+            NLI_CACHE_RESOLVED="${NLI_CACHE_HOME}"
+            echo "[WARN] NLI_CACHE_MODE=${NLI_CACHE_MODE}: shared home WAL ${NLI_CACHE_RESOLVED} (job 21937934 died here)"
+            ;;
+        *)
+            echo "ERROR: NLI_CACHE_MODE must be off|scratch|home (got: ${NLI_CACHE_MODE})" >&2
+            exit 1
+            ;;
+    esac
+}
 
 cell_already_done() {
     local out="$1"
@@ -142,6 +188,29 @@ except Exception:
     sys.exit(1)
 sys.exit(0 if str(t.get("status", "")).lower() == "complete" else 1)
 DONEPY
+}
+
+reset_incomplete_output() {
+    local out="$1"
+    local run_id="$2"
+    if [ "${RESET_INCOMPLETE}" != "1" ]; then
+        return 0
+    fi
+    if cell_already_done "$out"; then
+        return 0
+    fi
+    if [ ! -e "$out" ]; then
+        return 0
+    fi
+    if [ ! -f "${out}/EvolutionTracker.json" ] && [ ! -f "${out}/temp.json" ]; then
+        return 0
+    fi
+    local stamp bak
+    stamp="$(date +%Y%m%dT%H%M%S)"
+    bak="${out}.incomplete_${stamp}"
+    echo "[RESET] ${run_id}: not complete → moving ${out} → ${bak}"
+    mv "$out" "$bak"
+    mkdir -p "$out"
 }
 
 preflight() {
@@ -173,6 +242,16 @@ run_one_execution() {
         return 0
     fi
 
+    reset_incomplete_output "$output_dir" "$run_id"
+    resolve_nli_cache_file "$run_id"
+    local nli_cache_args=()
+    if [ -n "${NLI_CACHE_RESOLVED}" ]; then
+        nli_cache_args=(--nli-cache-file "$NLI_CACHE_RESOLVED")
+    else
+        unset NLI_PAIR_CACHE || true
+        unset NLI_CACHE_FILE || true
+    fi
+
     echo "=========================================="
     echo "SLURM ToxSearch-S: RQ2 ${CELL_TAG}  OpenAI  N=${MAX_TOTAL_GENOMES}"
     echo "  run_id=${run_id}"
@@ -180,6 +259,7 @@ run_one_execution() {
     echo "  distance=${DISTANCE_METHOD}  clustering=${CLUSTERING_METHOD}"
     echo "  theta=${THETA_SIM}  eps=${DBSCAN_EPS}  min_samples=${DBSCAN_MIN_SAMPLES}"
     echo "  capacity=${SPECIES_CAPACITY}  stag=${SPECIES_STAGNATION}  seed=${run_seed}"
+    echo "  nli_cache_mode=${NLI_CACHE_MODE}  nli_cache=${NLI_CACHE_RESOLVED:-RAM_ONLY}"
     echo "  output_dir=${output_dir}"
     echo "  array_task=${SLURM_ARRAY_TASK_ID:-n/a}  job=${SLURM_JOB_ID:-local}"
     echo "=========================================="
@@ -205,7 +285,7 @@ run_one_execution() {
         --distance-method "$DISTANCE_METHOD" \
         --distance-alpha "$DISTANCE_ALPHA" \
         --nli-model "$NLI_MODEL" \
-        --nli-cache-file "$NLI_CACHE_FILE" \
+        "${nli_cache_args[@]}" \
         --clustering-method "$CLUSTERING_METHOD" \
         --dbscan-eps "$DBSCAN_EPS" \
         --dbscan-min-samples "$DBSCAN_MIN_SAMPLES" \
@@ -253,6 +333,7 @@ fi
 
 echo "[DEBUG] EXECUTION_MODE=${EXECUTION_MODE}  N_REPLICATES=${#REPLICATE_RUNS[@]}"
 echo "[DEBUG] CELL=${CELL_TAG}  DIST=${DISTANCE_METHOD}  CLUST=${CLUSTERING_METHOD}  t=${THETA_SIM}  ms=${DBSCAN_MIN_SAMPLES}  OUT=${OUTPUT_ROOT}"
+echo "[DEBUG] NLI_CACHE_MODE=${NLI_CACHE_MODE}  RESET_INCOMPLETE=${RESET_INCOMPLETE}  SKIP_IF_DONE=${SKIP_IF_DONE}"
 echo "[DEBUG] OPENAI_API_KEY is $([ -n "${OPENAI_API_KEY:-}" ] && echo set || echo missing)  pin=$([ -n "${OPENAI_API_KEY_PIN:-}" ] && echo set || echo empty)"
 
 case "$EXECUTION_MODE" in
