@@ -220,6 +220,79 @@ def test_nli_entail_distance_symmetrized() -> None:
         clear_nli_cache()
 
 
+def test_nli_entail_distances_batch_uses_injected_scorer() -> None:
+    """IncDBSCAN insert path must honor injected scorers (no silent torch load)."""
+    from speciation.distance import (
+        clear_nli_cache,
+        distances_to_query,
+        nli_entail_distances_batch,
+        set_nli_scorer,
+    )
+
+    def _mixed(a: str, b: str):
+        if a == "q" and b == "u":
+            return (0.2, 0.3, 0.5)
+        if a == "u" and b == "q":
+            return (0.4, 0.1, 0.5)
+        if a == "q" and b == "v":
+            return (1.0, 0.0, 0.0)
+        if a == "v" and b == "q":
+            return (1.0, 0.0, 0.0)
+        return (1.0 / 3.0,) * 3
+
+    set_nli_scorer(_mixed)
+    try:
+        # 1 - 0.5*(0.2+0.4) = 0.7 ; identical entailment → 0
+        got = nli_entail_distances_batch("q", ["u", "q", "v"])
+        assert got[0] == pytest.approx(0.7)
+        assert got[1] == pytest.approx(0.0)
+        assert got[2] == pytest.approx(0.0)
+        via_query = distances_to_query("nli_entail", query_text="q", texts=["u", "q", "v"])
+        np.testing.assert_allclose(via_query, got)
+    finally:
+        set_nli_scorer(None)
+        clear_nli_cache()
+
+
+def test_nli_entail_distances_batch_routes_to_torch_when_no_inject(monkeypatch) -> None:
+    from speciation.distance_metrics import nli
+
+    nli.set_nli_scorer(None)
+    nli.clear_nli_cache()
+    called = {}
+
+    def _fake_torch(query_text, texts, batch_size=256, max_length=256):
+        called["args"] = (query_text, list(texts), batch_size)
+        return np.asarray([0.25, 0.0], dtype=np.float64)
+
+    monkeypatch.setattr(nli, "nli_entail_distances_from_query_torch", _fake_torch)
+    nli._logged_torch_batch = False
+    got = nli.nli_entail_distances_batch("q", ["a", "q"])
+    np.testing.assert_allclose(got, [0.25, 0.0])
+    assert called["args"] == ("q", ["a", "q"], 256)
+
+
+def test_nli_entail_distances_batch_falls_back_on_torch_runtime_error(monkeypatch) -> None:
+    from speciation.distance_metrics import nli
+
+    nli.set_nli_scorer(None)
+    nli.clear_nli_cache()
+    nli.set_nli_scorer(lambda a, b: (0.0, 0.0, 1.0))
+    # Force the torch branch even though a scorer is present (production uses default HF).
+    nli._nli_scorer_injected = False
+
+    def _boom(query_text, texts, batch_size=256, max_length=256):
+        raise RuntimeError("cuda out of memory")
+
+    monkeypatch.setattr(nli, "nli_entail_distances_from_query_torch", _boom)
+    try:
+        got = nli.nli_entail_distances_batch("q", ["x"])
+        assert got[0] == pytest.approx(1.0)
+    finally:
+        nli.set_nli_scorer(None)
+        nli.clear_nli_cache()
+
+
 def test_nli_requires_non_empty_text() -> None:
     from speciation.distance import clear_nli_cache, pair_distance, set_entailment_scorer
 

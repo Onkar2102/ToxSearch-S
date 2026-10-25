@@ -44,11 +44,14 @@ _nli_scorer: Optional[NLIScorer] = None
 _default_model_name = "cross-encoder/nli-deberta-v3-small"
 _model_name: str = _default_model_name
 _pair_cache: Dict[Tuple[str, str], NLIProbs] = {}
+# True when set_nli_scorer / set_entailment_scorer injected a test/custom scorer.
+_nli_scorer_injected = False
 # Cumulative per process: directional model passes, cache hits, symmetric d_N evaluations.
 _stats: Dict[str, int] = {"model_passes": 0, "cache_hits": 0, "distance_calls": 0, "disk_hits": 0}
 _cache_db_path: Optional[Path] = None
 _cache_db: Optional[sqlite3.Connection] = None
 _cache_db_pending = 0
+_logged_torch_batch = False
 
 
 def get_nli_stats() -> Dict[str, int]:
@@ -65,6 +68,7 @@ def set_nli_model_name(model_name: Optional[str]) -> None:
             _model_name = name
             _nli_scorer = None
             _pair_cache = {}
+            _reset_torch_nli_locked()
 
 
 def get_nli_model_name() -> str:
@@ -74,9 +78,10 @@ def get_nli_model_name() -> str:
 
 def set_nli_scorer(scorer: Optional[NLIScorer]) -> None:
     """Inject or clear the directional (P_E, P_N, P_C) scorer."""
-    global _nli_scorer, _pair_cache
+    global _nli_scorer, _pair_cache, _nli_scorer_injected
     with _scorer_lock:
         _nli_scorer = scorer
+        _nli_scorer_injected = scorer is not None
         _pair_cache = {}
 
 
@@ -380,16 +385,24 @@ def nli_entail_distance(text_a: str, text_b: str, *, logger=None) -> float:
     return float(1.0 - 0.5 * (pe_ab + pe_ba))
 
 
+def _nli_distances_batch_sequential(
+    query_text: str,
+    texts: Sequence[str],
+    *,
+    entail: bool,
+    logger=None,
+) -> np.ndarray:
+    fn = nli_entail_distance if entail else nli_distance
+    return np.asarray([fn(query_text, t, logger=logger) for t in texts], dtype=np.float64)
+
+
 def nli_distances_batch(
     query_text: str,
     texts: Sequence[str],
     *,
     logger=None,
 ) -> np.ndarray:
-    return np.asarray(
-        [nli_distance(query_text, t, logger=logger) for t in texts],
-        dtype=np.float64,
-    )
+    return _nli_query_distances(query_text, texts, entail=False, logger=logger)
 
 
 def nli_entail_distances_batch(
@@ -398,10 +411,35 @@ def nli_entail_distances_batch(
     *,
     logger=None,
 ) -> np.ndarray:
-    return np.asarray(
-        [nli_entail_distance(query_text, t, logger=logger) for t in texts],
-        dtype=np.float64,
-    )
+    r"""Query-to-many \(d_{\neg E}\). Uses batched torch (RQ1 path) unless a test scorer is injected."""
+    return _nli_query_distances(query_text, texts, entail=True, logger=logger)
+
+
+def _nli_query_distances(
+    query_text: str,
+    texts: Sequence[str],
+    *,
+    entail: bool,
+    logger=None,
+) -> np.ndarray:
+    if not texts:
+        return np.zeros(0, dtype=np.float64)
+    with _scorer_lock:
+        injected = _nli_scorer_injected
+    if injected:
+        return _nli_distances_batch_sequential(query_text, texts, entail=entail, logger=logger)
+    global _logged_torch_batch
+    torch_fn = nli_entail_distances_from_query_torch if entail else nli_distances_from_query_torch
+    log = logger or get_logger("NLIDistance")
+    try:
+        out = torch_fn(query_text, texts, batch_size=256)
+    except (ImportError, RuntimeError, OSError) as exc:
+        log.warning("Batched torch NLI failed (%s); falling back to sequential pairs", exc)
+        return _nli_distances_batch_sequential(query_text, texts, entail=entail, logger=logger)
+    if not _logged_torch_batch:
+        log.info("NLI query distances: batched torch (batch_size=256, entail=%s)", entail)
+        _logged_torch_batch = True
+    return out
 
 
 def _pipeline_from_default_scorer(scorer: NLIScorer):
@@ -496,6 +534,14 @@ _torch_device = None
 _torch_label_idx = None  # (entail, neutral, contradict)
 
 
+def _reset_torch_nli_locked() -> None:
+    global _torch_tok, _torch_model, _torch_device, _torch_label_idx
+    _torch_tok = None
+    _torch_model = None
+    _torch_device = None
+    _torch_label_idx = None
+
+
 def _ensure_torch_nli(logger=None):
     """Lazy-load tokenizer+model for high-throughput MPS/CUDA batching."""
     global _torch_tok, _torch_model, _torch_device, _torch_label_idx
@@ -506,9 +552,16 @@ def _ensure_torch_nli(logger=None):
 
     log = logger or get_logger("NLIDistance")
     name = get_nli_model_name()
-    log.info("Loading torch NLI model %s for batched pairwise d_N", name)
-    _torch_tok = AutoTokenizer.from_pretrained(name)
-    _torch_model = AutoModelForSequenceClassification.from_pretrained(name)
+    with _scorer_lock:
+        pipe = _pipeline_from_default_scorer(_nli_scorer) if _nli_scorer is not None else None
+    if pipe is not None and hasattr(pipe, "model") and hasattr(pipe, "tokenizer"):
+        log.info("Reusing loaded HF pipeline weights for batched torch NLI (%s)", name)
+        _torch_tok = pipe.tokenizer
+        _torch_model = pipe.model
+    else:
+        log.info("Loading torch NLI model %s for batched pairwise d_N", name)
+        _torch_tok = AutoTokenizer.from_pretrained(name)
+        _torch_model = AutoModelForSequenceClassification.from_pretrained(name)
     if torch.backends.mps.is_available():
         _torch_device = torch.device("mps")
     elif torch.cuda.is_available():
