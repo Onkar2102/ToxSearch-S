@@ -9,12 +9,14 @@ score topic-clustering quality on **every available** distance canvas
 - mean **inter-cluster** pairwise distance (random cross-cluster pairs)
 - ``separation = inter / intra``
 - **silhouette** on that precomputed canvas (noise / tiny clusters dropped)
+- **Davies–Bouldin** / **Calinski–Harabasz** on that canvas (medoids; lower / higher better)
 
 Primary ranking columns stay on the held-out embedding canvas ``d_E``
 (``intra_d_E``, ``inter_d_E``, ``separation``, ``silhouette_d_E``).
-Cross columns are ``{intra,inter,separation,silhouette}_on_<canvas>``.
+Cross columns are ``{intra,inter,separation,silhouette,davies_bouldin,calinski_harabasz}_on_<canvas>``.
 
-Davies–Bouldin / Calinski–Harabasz use MiniLM embedding vectors (feature space).
+Feature-space Davies–Bouldin / Calinski–Harabasz still use MiniLM embedding vectors
+(``davies_bouldin``, ``calinski_harabasz``).
 
 Example (B500)::
 
@@ -174,6 +176,79 @@ def _calinski_harabasz_emb(
         return None
 
 
+def _cluster_medoid(D: np.ndarray, idxs: np.ndarray) -> int:
+    if len(idxs) == 1:
+        return int(idxs[0])
+    sub = D[np.ix_(idxs, idxs)]
+    return int(idxs[int(np.argmin(sub.sum(axis=1)))])
+
+
+def _davies_bouldin_precomputed(
+    D: np.ndarray,
+    labels: np.ndarray,
+    *,
+    noise_label: int = -1,
+) -> Optional[float]:
+    """Medoid Davies–Bouldin on a precomputed dissimilarity canvas."""
+    ids = sorted({int(c) for c in labels if int(c) != noise_label})
+    if len(ids) < 2:
+        return None
+    medoids: Dict[int, int] = {}
+    spreads: Dict[int, float] = {}
+    for c in ids:
+        idxs = np.where(labels == c)[0]
+        if len(idxs) == 0:
+            continue
+        m = _cluster_medoid(D, idxs)
+        medoids[c] = m
+        spreads[c] = 0.0 if len(idxs) == 1 else float(np.mean(D[idxs, m]))
+    if len(medoids) < 2:
+        return None
+    ratios: List[float] = []
+    for ci in medoids:
+        best = 0.0
+        found = False
+        for cj in medoids:
+            if cj == ci:
+                continue
+            dij = float(D[medoids[ci], medoids[cj]])
+            if dij <= 1e-12:
+                continue
+            found = True
+            best = max(best, (spreads[ci] + spreads[cj]) / dij)
+        if found:
+            ratios.append(best)
+    if not ratios:
+        return None
+    return float(np.mean(ratios))
+
+
+def _calinski_harabasz_precomputed(
+    D: np.ndarray,
+    labels: np.ndarray,
+    *,
+    noise_label: int = -1,
+) -> Optional[float]:
+    """Medoid Calinski–Harabasz on a precomputed dissimilarity canvas."""
+    idxs_all = np.where(labels != noise_label)[0]
+    ids = sorted({int(c) for c in labels[idxs_all]})
+    n = int(len(idxs_all))
+    k = int(len(ids))
+    if k < 2 or n <= k:
+        return None
+    gmed = _cluster_medoid(D, idxs_all)
+    within = 0.0
+    between = 0.0
+    for c in ids:
+        idxs = np.where(labels == c)[0]
+        m = _cluster_medoid(D, idxs)
+        within += float(np.sum(np.square(D[idxs, m])))
+        between += float(len(idxs)) * float(D[m, gmed] ** 2)
+    if within <= 1e-12:
+        return None
+    return (between / (k - 1)) / (within / (n - k))
+
+
 def _health_flags(
     summary: Dict[str, Any],
     N: int,
@@ -267,6 +342,8 @@ def _score_on_canvas(
         "inter": inter,
         "separation": sep,
         "silhouette": sil,
+        "davies_bouldin": _davies_bouldin_precomputed(D, labels),
+        "calinski_harabasz": _calinski_harabasz_precomputed(D, labels),
         "n_mature_scored": n_mature_scored,
         "n_inter_pairs": n_inter,
     }
@@ -360,6 +437,8 @@ def score_species_dir(
             row[f"inter_on_{key}"] = s["inter"]
             row[f"separation_on_{key}"] = s["separation"]
             row[f"silhouette_on_{key}"] = s["silhouette"]
+            row[f"davies_bouldin_on_{key}"] = s["davies_bouldin"]
+            row[f"calinski_harabasz_on_{key}"] = s["calinski_harabasz"]
         # Forming-distance (diagonal) convenience columns
         form = str(ent.get("distance") or "")
         if form in scored:
@@ -367,11 +446,15 @@ def score_species_dir(
             row["silhouette_on_forming"] = scored[form]["silhouette"]
             row["intra_on_forming"] = scored[form]["intra"]
             row["inter_on_forming"] = scored[form]["inter"]
+            row["davies_bouldin_on_forming"] = scored[form]["davies_bouldin"]
+            row["calinski_harabasz_on_forming"] = scored[form]["calinski_harabasz"]
         else:
             row["separation_on_forming"] = None
             row["silhouette_on_forming"] = None
             row["intra_on_forming"] = None
             row["inter_on_forming"] = None
+            row["davies_bouldin_on_forming"] = None
+            row["calinski_harabasz_on_forming"] = None
 
         rows.append(row)
 
@@ -385,6 +468,37 @@ def score_species_dir(
         )
         df = df.sort_values("_rank_key").drop(columns=["_rank_key"]).reset_index(drop=True)
         df.insert(0, "rank", np.arange(1, len(df) + 1))
+    return df
+
+
+def backfill_canvas_cluster_metrics(
+    out_csv: Path,
+    canvases: Dict[str, np.ndarray],
+) -> pd.DataFrame:
+    """Add per-canvas medoid DB/CH to an existing coherence.csv."""
+    df = pd.read_csv(out_csv)
+    if "labels" not in df.columns:
+        raise SystemExit(f"{out_csv} has no labels column")
+    n_ok = 0
+    for i, row in df.iterrows():
+        labels_path = Path(str(row["labels"]))
+        if not labels_path.is_file():
+            print(f"  skip missing labels {labels_path}")
+            continue
+        labels = np.load(labels_path)
+        for key, D in canvases.items():
+            if labels.shape[0] != D.shape[0]:
+                raise SystemExit(f"{labels_path} N={labels.shape[0]} != {key} N={D.shape[0]}")
+            df.at[i, f"davies_bouldin_on_{key}"] = _davies_bouldin_precomputed(D, labels)
+            df.at[i, f"calinski_harabasz_on_{key}"] = _calinski_harabasz_precomputed(D, labels)
+        form = str(row.get("distance") or "")
+        db_col = f"davies_bouldin_on_{form}"
+        ch_col = f"calinski_harabasz_on_{form}"
+        df.at[i, "davies_bouldin_on_forming"] = df.at[i, db_col] if db_col in df.columns else None
+        df.at[i, "calinski_harabasz_on_forming"] = df.at[i, ch_col] if ch_col in df.columns else None
+        n_ok += 1
+        if n_ok % 20 == 0:
+            print(f"  scored {n_ok}/{len(df)} labelings")
     return df
 
 
@@ -403,9 +517,22 @@ def main() -> int:
         default=True,
         help="Skip stems already present in --out (default on)",
     )
+    p.add_argument(
+        "--backfill-dbch",
+        action="store_true",
+        help="Add per-canvas medoid DB/CH onto an existing --out CSV and exit",
+    )
     args = p.parse_args()
 
     canvases = _load_canvases(mats_dir=args.mats_dir, d_e_path=args.d_e)
+    if args.backfill_dbch:
+        if not args.out.is_file():
+            raise SystemExit(f"--backfill-dbch needs an existing {args.out}")
+        print(f"backfill DB/CH canvases={list(canvases.keys())} into {args.out}")
+        df = backfill_canvas_cluster_metrics(args.out, canvases)
+        df.to_csv(args.out, index=False)
+        print(f"Wrote {args.out} ({len(df)} rows)")
+        return 0
     emb = _load_embeddings(p0=args.p0, emb_path=args.emb, N=int(canvases["d_E"].shape[0]))
     print(f"canvases={list(canvases.keys())} N={canvases['d_E'].shape[0]}")
     print(f"emb shape={emb.shape} from {args.emb or args.p0}")

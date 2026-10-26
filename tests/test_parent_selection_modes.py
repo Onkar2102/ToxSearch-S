@@ -189,3 +189,52 @@ class TestIncDBSCANFreeze:
         assert sp.species_state == "active"
         assert sp.stagnation == 0
         assert sp.max_fitness == pytest.approx(0.8)
+
+    def test_rebuild_then_freeze_reaches_threshold(self, tmp_path: Path):
+        """Production order: rebuild (tied champ) then freeze. Must accumulate to 7."""
+        from speciation.clustering.inc_dbscan import IncDBSCANState, _build_species_from_state
+
+        champ = Individual(id=1, prompt="q?", fitness=0.9, species_id=10)
+        other = Individual(id=2, prompt="r?", fitness=0.4, species_id=10)
+        sp = Species(
+            id=10, leader=champ, members=[champ, other], radius=0.1,
+            stagnation=0, max_fitness=0.9, species_state="active",
+            created_at=1, last_improvement=1,
+        )
+        state = IncDBSCANState(eps=0.1, min_samples=2, genome_ids=[1, 2], labels=[10, 10])
+        genomes = [_g(1, 10, 0.9), _g(2, 10, 0.4)]
+        outputs = tmp_path
+        state_path = outputs / "speciation_state.json"
+        (outputs / "parents.json").write_text(json.dumps([
+            {"id": 1, "species_id": 10, "toxicity": 0.9},
+        ]))
+        logger = MagicMock()
+        frozen_gen = None
+        for gen in range(1, 9):
+            prev_max = {10: float(sp.max_fitness)}
+            state_path.write_text(json.dumps({
+                "species": {"10": {"max_fitness": sp.max_fitness, "species_state": sp.species_state, "stagnation": sp.stagnation}},
+                "prev_max_fitness": prev_max,
+            }))
+            rebuilt = _build_species_from_state(
+                state, genomes, [champ, other], current_generation=gen,
+                eps=0.1, origin="inc_dbscan_growth", existing={10: sp},
+            )
+            sp = rebuilt[10]
+            frozen = apply_inc_dbscan_stagnation_freeze(
+                {10: sp},
+                genomes,
+                current_generation=gen,
+                species_stagnation=7,
+                outputs_path=outputs,
+                state_path=state_path,
+                north_star_metric="toxicity",
+                logger=logger,
+            )
+            if frozen:
+                frozen_gen = gen
+                break
+        assert frozen_gen == 7
+        assert sp.species_state == "frozen"
+        assert sp.stagnation >= 7
+        assert sp.last_improvement == 1

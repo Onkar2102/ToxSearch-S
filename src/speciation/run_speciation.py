@@ -1689,7 +1689,10 @@ def process_generation(current_generation: int,
             state["logger"].debug("Metrics validation passed - all metrics match file contents")
     
     with PerformanceLogger(state["logger"], "Speciation metrics: save state files"):
-        save_state(str(get_outputs_path() / "speciation_state.json"))
+        save_state(
+            str(get_outputs_path() / "speciation_state.json"),
+            generation=current_generation,
+        )
         if "_events_tracker" in state:
             state["_events_tracker"].save()
         if "_genome_tracker" in state:
@@ -1733,7 +1736,7 @@ def _individual_to_genome_dict(ind: Individual, current_generation: int) -> Dict
     return genome
 
 
-def save_state(path: str) -> None:
+def save_state(path: str, generation: Optional[int] = None) -> None:
     
     import numpy as np
     
@@ -1875,6 +1878,10 @@ def save_state(path: str) -> None:
     # Archive (-1) stays in archive.json and is not listed under noise.
     noise_entry = build_noise_entry(collect_noise_ids_from_genomes(elites_genomes))
     
+    if generation is None:
+        history = getattr(state.get("metrics_tracker"), "history", None) or []
+        generation = history[-1].generation if history else 0
+
     state_dict = {
         "species": species_dict,
         "incubators": sorted(incubator_ids),
@@ -1883,6 +1890,7 @@ def save_state(path: str) -> None:
         "noise": noise_entry,
         "noise_count": noise_entry["count"],
         "singleton_species_count": noise_entry["count"],
+        "generation": int(generation),
         "global_best_id": state["global_best"].id if state["global_best"] else None,
         "metrics": state["metrics_tracker"].to_dict(),
         "config": state["config"].to_dict(),
@@ -2293,6 +2301,12 @@ def run_speciation(
                 "success": True,
                 "error": None
             }
+            lf_noise = _noise_counts_from_speciation_state(
+                loaded_state=loaded_state if state_path.exists() else None,
+            )
+            if lf_noise is not None:
+                no_genomes_result["noise_count"] = lf_noise[0]
+                no_genomes_result["singleton_species_count"] = lf_noise[1]
             
             try:
                 outputs_path_tracker = get_outputs_path()
@@ -2408,6 +2422,10 @@ def run_speciation(
             "success": True,
             "speciation_duration_seconds": speciation_duration_seconds,
         }
+        lf_noise = _noise_counts_from_speciation_state(outputs_path)
+        if lf_noise is not None:
+            result["noise_count"] = lf_noise[0]
+            result["singleton_species_count"] = lf_noise[1]
         
         if current_metrics:
             result["inter_species_diversity"] = round(current_metrics.inter_species_diversity, 4)
@@ -2582,6 +2600,37 @@ def get_speciation_statistics(log_file: Optional[str] = None) -> Dict[str, Any]:
         }
 
 
+def _noise_counts_from_speciation_state(
+    outputs_path: Optional[Path] = None,
+    loaded_state: Optional[Dict[str, Any]] = None,
+) -> Optional[Tuple[int, int]]:
+    """LF singleton/noise counts from speciation_state.json, never EvolutionTracker.
+
+    Returns ``(noise_count, singleton_species_count)`` or ``None`` if state is
+    missing. Both fields are the shared non-mature pool (species_id == 0).
+    """
+    data = loaded_state
+    if data is None:
+        path = Path(outputs_path or get_outputs_path()) / "speciation_state.json"
+        if not path.exists():
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            return None
+    if not isinstance(data, dict):
+        return None
+    noise_block = data.get("noise") if isinstance(data.get("noise"), dict) else {}
+    listed = len(noise_block.get("genome_ids") or [])
+    raw_noise = data.get("noise_count", listed)
+    raw_singleton = data.get("singleton_species_count", raw_noise)
+    try:
+        return int(raw_noise or 0), int(raw_singleton or 0)
+    except (TypeError, ValueError):
+        return None
+
+
 def update_evolution_tracker_with_speciation(
     evolution_tracker_path: str,
     current_generation: int,
@@ -2630,8 +2679,13 @@ def update_evolution_tracker_with_speciation(
         density_size = int(speciation_result.get("density_size", 0) or 0)
         noise_count = int(speciation_result.get("noise_count", 0) or 0)
         singleton_count = int(speciation_result.get("singleton_species_count", 0) or 0)
+        if not is_inc:
+            # LF empties temp.json; tracker labels are not the singleton source.
+            state_noise = _noise_counts_from_speciation_state()
+            if state_noise is not None:
+                noise_count, singleton_count = state_noise
         # IncDBSCAN: noise_count already includes singleton pool + residual (-1).
-        # LF: noise_count is the non-elite / archive-adjacent pool.
+        # LF: noise_count is the non-mature elite pool from speciation_state.
         clustered_count = max(0, density_size - noise_count) if density_size else 0
         if is_inc and speciation_result.get("clustered_count") is not None:
             clustered_count = int(speciation_result["clustered_count"])
@@ -2721,11 +2775,20 @@ def update_evolution_tracker_with_speciation(
             
             best_fitness_value = max(all_fitness) if all_fitness else 0.0
             
+            inter = speciation_result.get("inter_species_diversity")
+            intra = speciation_result.get("intra_species_diversity")
+            cluster_quality = speciation_result.get("cluster_quality")
             speciation_summary.update({
-                "inter_species_diversity": 0.0,
-                "intra_species_diversity": 0.0,
+                "inter_species_diversity": (
+                    round(float(inter), 4) if inter is not None else 0.0
+                ),
+                "intra_species_diversity": (
+                    round(float(intra), 4) if intra is not None else 0.0
+                ),
                 "total_population": total_pop,
             })
+            if cluster_quality:
+                speciation_summary["cluster_quality"] = cluster_quality
         
         
         generations = evolution_tracker.get("generations", [])

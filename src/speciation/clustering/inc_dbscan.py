@@ -385,8 +385,12 @@ def _build_species_from_state(
             sp = prev
             sp.leader = champ
             sp.members = list(members)
-            sp.max_fitness = max(sp.max_fitness, champ.fitness)
-            if champ.fitness >= sp.max_fitness:
+            # Tie is not an improvement. Compare against the old max before updating
+            # (same `>` as `_absorb_member`). `>=` after max(...) zeroed stagnation
+            # every generation and IncDBSCAN never reached the freeze threshold.
+            old_max = float(sp.max_fitness or 0.0)
+            if champ.fitness > old_max:
+                sp.max_fitness = champ.fitness
                 sp.last_improvement = current_generation
                 sp.stagnation = 0
             sp.cluster_origin = prev.cluster_origin or origin

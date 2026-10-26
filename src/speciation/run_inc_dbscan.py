@@ -75,6 +75,130 @@ def _load_parent_species_ids(outputs_path: Path, logger) -> Set[int]:
     return selected
 
 
+def _summarize_inc_metrics(history: list) -> Dict[str, Any]:
+    """LF-style ``metrics.summary`` totals accumulated from Inc history rows."""
+    if not history:
+        return {}
+    last = history[-1] if isinstance(history[-1], dict) else {}
+
+    def _sum_key(key: str) -> int:
+        total = 0
+        for row in history:
+            if not isinstance(row, dict):
+                continue
+            try:
+                total += int(row.get(key, 0) or 0)
+            except (TypeError, ValueError):
+                continue
+        return total
+
+    bests: list = []
+    for row in history:
+        if not isinstance(row, dict):
+            continue
+        try:
+            bests.append(float(row.get("best_fitness", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            continue
+    try:
+        final_species = int(last.get("species_count", 0) or 0)
+    except (TypeError, ValueError):
+        final_species = 0
+    return {
+        "total_generations": len(history),
+        "final_species_count": final_species,
+        "best_fitness_ever": max(bests) if bests else 0.0,
+        "total_speciation_events": _sum_key("speciation_events"),
+        "total_merge_events": _sum_key("merge_events"),
+        "total_extinction_events": _sum_key("extinction_events"),
+    }
+
+
+def _append_inc_metrics_history(state_path: Path, entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Append one generation of LF-style metrics onto speciation_state history."""
+    history: list = []
+    if state_path.exists():
+        try:
+            with open(state_path, "r", encoding="utf-8") as f:
+                prev = json.load(f)
+            history = list((prev.get("metrics") or {}).get("history") or [])
+        except Exception:
+            history = []
+    history.append(entry)
+    return {"history": history, "summary": _summarize_inc_metrics(history)}
+
+
+def record_inc_cluster_metrics(
+    species: Dict[int, Species],
+    genomes: list,
+    *,
+    cfg: SpeciationConfig,
+    outputs_path: Path,
+    temp_path: str,
+    current_generation: int,
+    logger,
+    speciation_events: int = 0,
+    merge_events: int = 0,
+    extinction_events: int = 0,
+) -> Dict[str, Any]:
+    """Same diversity + sklearn/QD path as L–F ``record_generation``.
+
+    Official silhouette / DB / CH still need ≥2 mature species (sid > 0).
+    """
+    from .metrics import compute_diversity_metrics
+
+    inter, intra = compute_diversity_metrics(
+        species,
+        w_genotype=float(cfg.w_genotype),
+        w_phenotype=float(cfg.w_phenotype),
+        elites_path=None,
+    )
+    cluster_quality = None
+    n_mature = len([sp for sp in species.values() if int(sp.id) > 0])
+    if n_mature > 1 and len(genomes) >= 4:
+        try:
+            from utils.cluster_quality import calculate_cluster_quality_metrics
+
+            cluster_quality = calculate_cluster_quality_metrics(
+                outputs_path=str(outputs_path),
+                temp_path=temp_path,
+                num_species_total=n_mature,
+                logger=logger,
+            )
+        except Exception as e:
+            logger.debug("IncDBSCAN cluster quality failed: %s", e)
+    scores: list = []
+    for genome in genomes:
+        raw = genome.get("fitness", genome.get("toxicity"))
+        try:
+            scores.append(float(raw or 0.0))
+        except (TypeError, ValueError):
+            continue
+    n_scores = len(scores)
+    best = max(scores) if scores else 0.0
+    avg = (sum(scores) / n_scores) if scores else 0.0
+    if n_scores > 1:
+        mean = avg
+        std = (sum((s - mean) ** 2 for s in scores) / n_scores) ** 0.5
+    else:
+        std = 0.0
+    return {
+        "generation": int(current_generation),
+        "species_count": n_mature,
+        "total_population": len(genomes),
+        "archive_size": 0,
+        "best_fitness": round(float(best), 4),
+        "avg_fitness": round(float(avg), 4),
+        "fitness_std": round(float(std), 4),
+        "speciation_events": int(speciation_events),
+        "merge_events": int(merge_events),
+        "extinction_events": int(extinction_events),
+        "inter_species_diversity": round(float(inter), 4),
+        "intra_species_diversity": round(float(intra), 4),
+        "cluster_quality": cluster_quality,
+    }
+
+
 def _load_prev_max_fitness(state_path: Path) -> Dict[int, float]:
     if not state_path.exists():
         return {}
@@ -233,6 +357,9 @@ def process_generation_inc_dbscan(
         "genomes_updated": 0,
         "elites_moved": 0,
         "archive_moved": 0,
+        "inter_species_diversity": 0.0,
+        "intra_species_diversity": 0.0,
+        "cluster_quality": None,
         "error": None,
     }
     if not genomes:
@@ -331,12 +458,27 @@ def process_generation_inc_dbscan(
     prev_max_payload = {
         str(sid): float(sp.max_fitness or 0.0) for sid, sp in species.items() if sid > 0
     }
+    quality = record_inc_cluster_metrics(
+        species,
+        genomes,
+        cfg=cfg,
+        outputs_path=outputs,
+        temp_path=temp_p,
+        current_generation=current_generation,
+        logger=logger,
+        speciation_events=speciation_events,
+        merge_events=merge_events,
+        extinction_events=frozen_this_gen,
+    )
     write_species_and_config(
         state_path,
         species,
         current_generation,
         inc_state,
-        extra={"prev_max_fitness": prev_max_payload},
+        extra={
+            "prev_max_fitness": prev_max_payload,
+            "metrics": _append_inc_metrics_history(state_path, quality),
+        },
     )
 
     updates = {}
@@ -396,6 +538,9 @@ def process_generation_inc_dbscan(
         "genomes_updated": genomes_updated,
         "elites_moved": 0,
         "archive_moved": 0,
+        "inter_species_diversity": quality["inter_species_diversity"],
+        "intra_species_diversity": quality["intra_species_diversity"],
+        "cluster_quality": quality["cluster_quality"],
         "error": None,
     }
     logger.info(

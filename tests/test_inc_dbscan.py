@@ -10,13 +10,15 @@ import numpy as np
 
 from speciation.clustering._io import SINGLETON_SPECIES_ID
 from speciation.clustering.inc_dbscan import (
+    IncDBSCANState,
+    _build_species_from_state,
     insert_point,
+    process_unlabeled,
     seed_from_incremental,
     seed_from_precomputed_matrix,
-    process_unlabeled,
 )
 from speciation.density_memory import NOISE_LABEL, is_labeled, set_density_label
-from speciation.species import Individual, SpeciesIdGenerator
+from speciation.species import Individual, Species, SpeciesIdGenerator
 from utils.evaluator_profiles import set_active_evaluator, set_active_north_star
 
 
@@ -281,6 +283,58 @@ class TestIncDBSCANPrecomputedMatrix(unittest.TestCase):
         d = seed_from_precomputed_matrix(D, order2, eps=0.05, min_samples=2)
         np.testing.assert_array_equal(c, d)
         del rng
+
+
+class TestRebuildStagnation(unittest.TestCase):
+    """Tied champion must not wipe species.stagnation (RQ2 Inc freeze bug)."""
+
+    def _state(self, genome_ids, labels):
+        return IncDBSCANState(eps=0.1, min_samples=2, genome_ids=list(genome_ids), labels=list(labels))
+
+    def test_tied_champ_preserves_stagnation(self):
+        champ = Individual(id=1, prompt="q?", fitness=0.9, species_id=1)
+        other = Individual(id=2, prompt="r?", fitness=0.4, species_id=1)
+        prev = Species(
+            id=1, leader=champ, members=[champ, other], radius=0.1,
+            stagnation=6, max_fitness=0.9, species_state="active",
+            created_at=1, last_improvement=3,
+        )
+        rebuilt = _build_species_from_state(
+            self._state([1, 2], [1, 1]),
+            [{"id": 1}, {"id": 2}],
+            [champ, other],
+            current_generation=20,
+            eps=0.1,
+            origin="inc_dbscan_growth",
+            existing={1: prev},
+        )
+        sp = rebuilt[1]
+        self.assertEqual(sp.stagnation, 6)
+        self.assertEqual(sp.last_improvement, 3)
+        self.assertAlmostEqual(sp.max_fitness, 0.9)
+        self.assertEqual(sp.species_state, "active")
+
+    def test_true_gain_resets_stagnation(self):
+        old = Individual(id=1, prompt="q?", fitness=0.9, species_id=1)
+        better = Individual(id=3, prompt="s?", fitness=0.95, species_id=1)
+        prev = Species(
+            id=1, leader=old, members=[old], radius=0.1,
+            stagnation=6, max_fitness=0.9, species_state="active",
+            created_at=1, last_improvement=3,
+        )
+        rebuilt = _build_species_from_state(
+            self._state([1, 3], [1, 1]),
+            [{"id": 1}, {"id": 3}],
+            [old, better],
+            current_generation=20,
+            eps=0.1,
+            origin="inc_dbscan_growth",
+            existing={1: prev},
+        )
+        sp = rebuilt[1]
+        self.assertEqual(sp.stagnation, 0)
+        self.assertEqual(sp.last_improvement, 20)
+        self.assertAlmostEqual(sp.max_fitness, 0.95)
 
 
 if __name__ == "__main__":

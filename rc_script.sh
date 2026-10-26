@@ -4,7 +4,7 @@
 # RQ1 freeze on the full archive: t=0.10 on d_E. OpenAI omni-moderation oracle.
 #   --distance embedding  --clustering-method leader_follower
 #   --theta-sim 0.1  --theta-merge 0.1
-#   --max-total-genomes 2000  --evaluator openai  --north-star-metric violence
+#   --max-total-genomes 2000  --evaluator openai  --north-star-metric illicit
 #
 # RIT RC:
 #   https://research-computing.git-pages.rit.edu/docs/slurm_tutorial_2.html
@@ -118,8 +118,8 @@ SEED_BASE="${SEED_BASE:-0}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/rq2_lf_embedding_openai_t010_n2000}"
 
 EVALUATOR="openai"
-# OpenAI has no "toxicity" key; CLI default for --evaluator openai is violence.
-NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-violence}"
+# OpenAI has no "toxicity" key; RQ2 default is illicit (override with NORTH_STAR_METRIC).
+NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-illicit}"
 OPENAI_MODEL="${OPENAI_MODEL:-omni-moderation-latest}"
 DISTANCE_METHOD="embedding"
 CLUSTERING_METHOD="leader_follower"
