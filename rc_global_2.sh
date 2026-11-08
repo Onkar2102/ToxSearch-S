@@ -1,14 +1,18 @@
 #!/bin/bash -l
 #
-# Experiment C baseline: Global-EA (clustering-method=none), 10 seeds, N=2000, OpenAI.
-# Matched to LF embedding cell operators/budget/evaluator; no niche mating restriction.
-# sbatch rc_global_ea.sh
+# Global-EA baseline (no speciation): embedding distance tag, OpenAI illicit, N=2000.
+# Launcher shard 2/5 — paste this shard's OpenAI key in OPENAI_API_KEY_PIN.
+# Seeds in this shard: 2 3
 #
-# Paste the OpenAI key in OPENAI_API_KEY_PIN below. All 10 seeds in this
-# script use that pin. If you change it, later resubmits pick up the new key.
+# Explicit shared output directory (all 5 shards write here, different seed dirs):
+#   data/outputs/evostar2027/global_ea_embedding_openai_illicit_n2000/rep{i}_s{seed}
+#
+# sbatch rc_global_2.sh
+#
+# Paste the OpenAI key in OPENAI_API_KEY_PIN below. Only this shard uses that pin.
 
-#SBATCH --job-name=global_ea
-#SBATCH --time=05-12:00:00
+#SBATCH --job-name=global_2
+#SBATCH --time=03-00:00:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
@@ -25,14 +29,14 @@
 
 OPENAI_API_KEY_PIN=""
 
-CELL_TAG="GlobalEA_oai_n2000"
+CELL_TAG="GlobalEA_embedding_openai_illicit_n2000"
 DISTANCE_METHOD="embedding"
 CLUSTERING_METHOD="none"
 THETA_SIM="0.1"
 DBSCAN_EPS="0.1"
 DBSCAN_MIN_SAMPLES="2"
-OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/evostar2027/global_ea}"
-NLI_CACHE_FILE="${NLI_CACHE_FILE:-data/cache/nli_pairs_global_ea.sqlite}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/evostar2027/global_ea_embedding_openai_illicit_n2000}"
+NLI_CACHE_FILE="${NLI_CACHE_FILE:-data/cache/nli_pairs_global_ea_embedding.sqlite}"
 
 set -euo pipefail
 PROJECT_ROOT="${PROJECT_ROOT:-/home/os9660/Downloads/ToxSearch-S}"
@@ -86,8 +90,8 @@ if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
     unset PERSPECTIVE_API_KEYS || true
 fi
 
-N_REPLICATES="${N_REPLICATES:-10}"
-SEED_BASE="${SEED_BASE:-0}"
+N_REPLICATES="${N_REPLICATES:-2}"
+SEED_BASE="${SEED_BASE:-2}"
 
 EVALUATOR="openai"
 NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-illicit}"
@@ -175,7 +179,7 @@ run_one_execution() {
     fi
 
     echo "=========================================="
-    echo "SLURM ToxSearch-S: Global-EA ${CELL_TAG}  OpenAI  N=${MAX_TOTAL_GENOMES}"
+    echo "SLURM ToxSearch-S: Global-EA (no speciation) ${CELL_TAG}  OpenAI  N=${MAX_TOTAL_GENOMES}"
     echo "  run_id=${run_id}"
     echo "  evaluator=${EVALUATOR}  north_star=${NORTH_STAR_METRIC}  openai_model=${OPENAI_MODEL}"
     echo "  distance=${DISTANCE_METHOD}  clustering=${CLUSTERING_METHOD}"
@@ -253,7 +257,7 @@ if [ "$EXECUTION_MODE" = "auto" ]; then
 fi
 
 echo "[DEBUG] EXECUTION_MODE=${EXECUTION_MODE}  N_REPLICATES=${#REPLICATE_RUNS[@]}"
-echo "[DEBUG] CELL=${CELL_TAG}  DIST=${DISTANCE_METHOD}  CLUST=${CLUSTERING_METHOD}  t=${THETA_SIM}  ms=${DBSCAN_MIN_SAMPLES}  OUT=${OUTPUT_ROOT}"
+echo "[DEBUG] SHARD=2/5  CELL=${CELL_TAG}  DIST=${DISTANCE_METHOD}  CLUST=${CLUSTERING_METHOD}  SEED_BASE=${SEED_BASE}  N_REPLICATES=${N_REPLICATES}  OUT=${OUTPUT_ROOT}"
 echo "[DEBUG] OPENAI_API_KEY is $([ -n "${OPENAI_API_KEY:-}" ] && echo set || echo missing)  pin=$([ -n "${OPENAI_API_KEY_PIN:-}" ] && echo set || echo empty)"
 
 case "$EXECUTION_MODE" in
