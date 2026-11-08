@@ -1,0 +1,30 @@
+{
+  "thresholds": [
+    0.05,
+    0.1,
+    0.15
+  ],
+  "min_samples": [
+    2,
+    3,
+    5
+  ],
+  "mats": {
+    "d_E": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq1/mats/d_E_3139.npy",
+    "d_negE": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/data/mats/B3139/d_negE.npy"
+  },
+  "n_archive_rows": 18,
+  "n_online_rows": 20,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "n_runs": 40,
+  "primary_estimand": "fixed top-100 fitness-selected elites E_r,100 (dispersion + study/cal coverage)",
+  "tau_sensitivity": 0.8,
+  "deltas": [
+    0.1,
+    0.2,
+    0.3,
+    0.4
+  ],
+  "primary_delta": 0.2,
+  "ks": [
+    10,
+    50,
+    100
+  ],
+  "novelty_k": 5,
+  "rare_ms": [
+    5,
+    10,
+    25
+  ],
+  "reference_cal": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/data/pool/p0_full.pkl",
+  "reference_study": "subsampled union of unique prompts across 40 runs (empirical reference, not hold-out)",
+  "n_study_ref": 5000,
+  "n_study_full": 77190,
+  "max_ref": 5000,
+  "reference_note": "Primary=study pool; cal=B3139 descriptive (also RQ1). Not behavioral diversity.",
+  "claim_boundary": "semantic representation-space exploration, not behavioral diversity"
+}

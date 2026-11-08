@@ -1,0 +1,4 @@
+cell_id,distance,clustering,seed,status
+embedding__leader_follower__seed9,embedding,leader_follower,9,missing_run
+nli_entail__dbscan__seed8,nli_entail,dbscan,8,missing_run
+nli_entail__dbscan__seed9,nli_entail,dbscan,9,missing_run

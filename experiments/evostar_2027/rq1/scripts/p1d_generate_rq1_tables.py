@@ -8,7 +8,7 @@ Example::
     PYTHONPATH=src:. python experiments/evostar_2027/rq1/scripts/p1d_generate_rq1_tables.py \\
       --batch B1000 \\
       --sweeps-dir experiments/evostar_2027/rq1/sweeps/B1000 \\
-      --out notes/LaTeX2e+Proceedings+Templates+download/rq1_b1000_tables.tex
+      --out notes/rough_draft/rq1_b1000_tables.tex
 """
 
 from __future__ import annotations

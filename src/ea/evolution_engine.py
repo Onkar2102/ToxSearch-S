@@ -64,13 +64,20 @@ class EvolutionEngine:
         self.outputs_path = outputs_path
         get_logger, _, _, _ = get_custom_logging()
         self.logger = get_logger("EvolutionEngine", log_file)
-        from speciation.clustering_mode import is_inc_dbscan_mode
+        from speciation.clustering_mode import is_inc_dbscan_mode, is_global_mode
+        _out = str(outputs_path) if outputs_path else None
         self.use_inc_dbscan = is_inc_dbscan_mode(
-            clustering_method=clustering_method, outputs_path=str(outputs_path) if outputs_path else None
+            clustering_method=clustering_method, outputs_path=_out
+        )
+        self.use_global = is_global_mode(
+            clustering_method=clustering_method, outputs_path=_out
         )
         if self.use_inc_dbscan:
             from .inc_dbscan_parent_selector import IncDBSCANParentSelector
             self.parent_selector = IncDBSCANParentSelector(north_star_metric, log_file)
+        elif self.use_global:
+            from .global_parent_selector import GlobalParentSelector
+            self.parent_selector = GlobalParentSelector(north_star_metric, log_file)
         else:
             self.parent_selector = ParentSelector(north_star_metric, log_file)
         self.prompt_generator = get_prompt_generator()
@@ -78,7 +85,13 @@ class EvolutionEngine:
 
         self.operator_stats = OperatorStatistics()
 
-        self.logger.debug(f"EvolutionEngine initialized with next_id={self.next_id}, north_star_metric={north_star_metric}, current_cycle={current_cycle}, max_variants={max_variants}, adaptive_selection_after={adaptive_selection_after}, max_num_parents={max_num_parents}, operators={operators}, use_steady_state=True, use_inc_dbscan={self.use_inc_dbscan}")
+        self.logger.debug(
+            f"EvolutionEngine initialized with next_id={self.next_id}, "
+            f"north_star_metric={north_star_metric}, current_cycle={current_cycle}, "
+            f"max_variants={max_variants}, adaptive_selection_after={adaptive_selection_after}, "
+            f"max_num_parents={max_num_parents}, operators={operators}, use_steady_state=True, "
+            f"use_inc_dbscan={self.use_inc_dbscan}, use_global={self.use_global}"
+        )
 
     @property
     def genomes(self):

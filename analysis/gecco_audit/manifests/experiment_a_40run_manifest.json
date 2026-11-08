@@ -1,0 +1,419 @@
+{
+  "created_utc": "2026-11-08T00:00:36.954142+00:00",
+  "n_runs": 40,
+  "n_complete": 40,
+  "policy": "Experiment A primary frozen factorial; do not delete/replace/rerun unless implementation bug invalidates them.",
+  "key_files": [
+    "EvolutionTracker.json",
+    "run_config.json",
+    "species_snapshots.jsonl",
+    "elites.json",
+    "archive.json",
+    "temp.json",
+    "inc_dbscan_state.json",
+    "genome_tracker.json",
+    "events_tracker.json"
+  ],
+  "full_file_hashes": [
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 0,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep0_s0",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 904919, \"sha256\": \"598d43e7be0cba29e09d1c9931d310002baafb760cdf25e9e84cb6ada848ed83\"}, \"archive.json\": {\"bytes\": 5130429, \"sha256\": \"e6ddd992c622cef2f697e99252f3db3be4ce71dffb641e7ec432513f195feacf\"}, \"elites.json\": {\"bytes\": 24143814, \"sha256\": \"08eda319765634b93de8fa40a61d28caf38242899fc639f76da43c843ec02e0c\"}, \"events_tracker.json\": {\"bytes\": 1161818, \"sha256\": \"8022dfd329944412c0023a1d9a7755def2c824e309912861acc6b0925abe62d0\"}, \"genome_tracker.json\": {\"bytes\": 351899, \"sha256\": \"94ce90767274cb46154963d7ccffd59b23a7fb4c77dea0f1a0fd3296f7df078a\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"584f956dce746e4c9993e18febf22c5e722318392a962bf9a583a8d88dc21988\"}, \"species_snapshots.jsonl\": {\"bytes\": 3929477, \"sha256\": \"766a695bbdcf2b59d5c3a07ebb1e0182cf4ae2f44f73a3f4c3779459c9916f4a\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 1,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep1_s1",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 669659, \"sha256\": \"1eb3079c1286609d8adc8e5d9f9ecb806e74356afe8c7abc927794f681b84f56\"}, \"archive.json\": {\"bytes\": 5836241, \"sha256\": \"69768c25d714879a837fff27a97005c120e99961d3c9e3edf11b576be01b2ff0\"}, \"elites.json\": {\"bytes\": 23751223, \"sha256\": \"8d0aed548b5f20d6c8e7efd15f7de14f8a75500b386cf52423eefab69bfe32d5\"}, \"events_tracker.json\": {\"bytes\": 1176464, \"sha256\": \"0f6e9388627ac76d320fa12899a826237d4ded90a3102ea4b1f0a1152ea435b1\"}, \"genome_tracker.json\": {\"bytes\": 351344, \"sha256\": \"a9e6ad3e974170c7c89fb8c7a4dc03cb7171e0c8afd8b04cd956398990454c39\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"b6c6c1cc1edcc0ea2fc47e7d8e4fbd6ded64017513c9ee298983b2d9c22133c4\"}, \"species_snapshots.jsonl\": {\"bytes\": 2830889, \"sha256\": \"09a3cbc37986edae3e2592e2d5b6b765870512c88486b8169d3283779fe195ba\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 2,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep2_s2",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 787997, \"sha256\": \"cef4e3717680f362f7b304e477a57107284e6e7aa7f06f7cdfc4449e30ee78f3\"}, \"archive.json\": {\"bytes\": 8798375, \"sha256\": \"5e0e337cdef9b73ab930c29e4183972752de3a4fba0df115c5aed2bc26be6790\"}, \"elites.json\": {\"bytes\": 20941737, \"sha256\": \"d8248e5b3e31f8c91d0f42e2047d645e79809311899579edced60253b23665b6\"}, \"events_tracker.json\": {\"bytes\": 1204885, \"sha256\": \"6c48ef432e9c123995c39b2da60da736900c402ceb51444c4f79e26caff408a2\"}, \"genome_tracker.json\": {\"bytes\": 351307, \"sha256\": \"704e662d0986bb5437c63d1620f1cdbdd1c2caf3b7ffe9df9c651d08610177dd\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"bc512adcd812d9876c5d70aac9ce6e35361e9aea215874cd340e3ea90d3f3465\"}, \"species_snapshots.jsonl\": {\"bytes\": 3098353, \"sha256\": \"636e1be3c809c834c1138b393f35fc211bd2d4cc9bd6ab1757b9e1eaec4c17f4\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 3,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep3_s3",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1111663, \"sha256\": \"a49d4ab2be7da6f561b99a469e34a97d87ab42813339b907f60f38c320bf014b\"}, \"archive.json\": {\"bytes\": 3385705, \"sha256\": \"72ec7c37daf6e785b51150f403d76c194cfc2c795c5b78021ce30e12f32d7f89\"}, \"elites.json\": {\"bytes\": 24553970, \"sha256\": \"75031025f169b06339e167d3d7ad2d3bdd219be1c99806cff00343228f62a757\"}, \"events_tracker.json\": {\"bytes\": 1151339, \"sha256\": \"8cb9a700e8ea01a8c1697cd41c748431e7abf70aa62cb4952dac8a378d988a23\"}, \"genome_tracker.json\": {\"bytes\": 351835, \"sha256\": \"7ffbf71482cf04bc8ebefb6b7b6573e68cd1eefb247e2602a10445073bd9acf8\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"754cc22631154e3f29787174c7d3a73c326fb1b87cb4294a5d199fd2abe71661\"}, \"species_snapshots.jsonl\": {\"bytes\": 4985499, \"sha256\": \"8c4eb15e6bfe5f9e42ddee36900ea7825ba7ee5158135c71893c609f48ccff83\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 4,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep4_s4",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 813843, \"sha256\": \"0851e5b001a9cda4745adec178824358c937b669832940a36c68356bcb5cac6e\"}, \"archive.json\": {\"bytes\": 10632905, \"sha256\": \"0e1a7a2304733c6cff32db8891c8b2e2179da3420484c828ffb0bcc9743b8d9a\"}, \"elites.json\": {\"bytes\": 19794911, \"sha256\": \"ff7b8f1246d7d7586cbba968ac704506e9015ca04f64d3036cb722bdfa290030\"}, \"events_tracker.json\": {\"bytes\": 1242798, \"sha256\": \"c7ee9f567f567684e583598dd43944ecfe3c5c17f6fa0ada257d5723523dd236\"}, \"genome_tracker.json\": {\"bytes\": 351110, \"sha256\": \"ea291be270ae9c0b29a5710f86c992127ed98d64b5a249e7f690d7bb99f78763\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"f7cf4fc5a419409ef529c3eebfdcbf182db22a6cb1c019256a8b02585f9dba18\"}, \"species_snapshots.jsonl\": {\"bytes\": 3042075, \"sha256\": \"895c9fd559cde9d911b55132806309f82265c634a501bbb1d5e6198a4e927dd3\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 5,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep5_s5",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 875131, \"sha256\": \"11c70c253ac30eeaa51f27c73cbd3003b9688a82593a892f9dde13912e4e73ab\"}, \"archive.json\": {\"bytes\": 3754394, \"sha256\": \"e3fdae3f79c83709adb8196a72dbd7c5a2ae7bdb244a6934c92007d2b6b9d1a0\"}, \"elites.json\": {\"bytes\": 25084979, \"sha256\": \"a87c2310c15951d1bd22342d321f53baee93aafcf4f38598fc43caa5b049f934\"}, \"events_tracker.json\": {\"bytes\": 1131775, \"sha256\": \"7869e4cb534f6dfe6c6eaa8c546eb49210355ace3989c31e1204eb7bf2155f53\"}, \"genome_tracker.json\": {\"bytes\": 351589, \"sha256\": \"972c8cfce00687064761620b4ecc741a203584d66df64fdf8a3a67f2bcda3b9b\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"b1d2d9aff544816f79d51e357f13932c8465886a44d0e4a0188c2b3c096e8b13\"}, \"species_snapshots.jsonl\": {\"bytes\": 3774122, \"sha256\": \"47364baa814b63d6acf65f5aeb2af94bd3419c74c81bb97b126ac103634f154b\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 6,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep6_s6",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 937250, \"sha256\": \"647510a41da19adce06dce472236e51666d3fc16d14742f1580ebd4a364a4a34\"}, \"archive.json\": {\"bytes\": 1109946, \"sha256\": \"d08d7766bee504c92fbacd46f5e56b84a511be0f4c554101fdfd95a57774b2f1\"}, \"elites.json\": {\"bytes\": 26738754, \"sha256\": \"7df3402a16bcff9b7b0a7de493be8f257781600fb849b932a290148a8ab66ab4\"}, \"events_tracker.json\": {\"bytes\": 1104863, \"sha256\": \"da237139e0213ecc37e6e19ca6385cbf5126a569132f0dbd3a37ade4ad1fb7ab\"}, \"genome_tracker.json\": {\"bytes\": 353054, \"sha256\": \"66939cc401fed65f526ab6eeeb1ed3d932bd175933cf55f1ab4864191f0699e2\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"56cfa05d503c9859d26256f2fd5dee25e1204489e3f6f1ed262d1e4c6062ea94\"}, \"species_snapshots.jsonl\": {\"bytes\": 5370140, \"sha256\": \"cddac06eb8b6dff79721c895bff2b81c793a0224273ab3a2d552f8eed1ace530\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 7,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep7_s7",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 788307, \"sha256\": \"ae81325beb1167e69aed6de98e71e9abd33967f108c7221cca772c6e8509dbc8\"}, \"archive.json\": {\"bytes\": 7100033, \"sha256\": \"525c3e32437c68789fcc3f6f640a9b29f0a0054a4f5d011f04a5708767abbb07\"}, \"elites.json\": {\"bytes\": 21924785, \"sha256\": \"3949fb6086c6e201e67efd30748a2ccd07c855f6ef70b9f0466defd1c6491501\"}, \"events_tracker.json\": {\"bytes\": 1222042, \"sha256\": \"c091753171486ff3d5b57d26a5b20755b4debe38a73992d877e0a79bdeee0c25\"}, \"genome_tracker.json\": {\"bytes\": 351115, \"sha256\": \"10ccef7a96f9fb7fa2faa510187889f17a5c0a5f8a7e9886d8eb4e4877f9cee4\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"43ede454a4162534dedf163af79d61796718c1e657bfd536e3101d7054e508dc\"}, \"species_snapshots.jsonl\": {\"bytes\": 2724140, \"sha256\": \"b1764021aa33d3394084fc29e63521d2c5c44aca93b52b5d1461011040a052a2\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 8,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep8_s8",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1048732, \"sha256\": \"241a87a058ce9cfc8b18e8cd8164b8e0abf72d245dc694ab503503e05504fc23\"}, \"archive.json\": {\"bytes\": 4302860, \"sha256\": \"36d1901401e37cfa8a20e49958923c87885dee181490e42c94e81732c074e5b6\"}, \"elites.json\": {\"bytes\": 24158481, \"sha256\": \"f0633c75184b1ff09240d1e5139a76f2aeac71b393742c72f649250a8a52a7bb\"}, \"events_tracker.json\": {\"bytes\": 1167708, \"sha256\": \"8d9474b8b5c785b46f3898c60e336f456748ad223401e887039f0995fd59ae04\"}, \"genome_tracker.json\": {\"bytes\": 351457, \"sha256\": \"44344e23b725887096b6f5581145b5ce13e203bb7354016361a6daed6fdaca64\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"2e0e570b44eba1679ece20fab538b43dbd09fa2619a8ce73286e745731c9505d\"}, \"species_snapshots.jsonl\": {\"bytes\": 4201679, \"sha256\": \"0f597651fcd7d4d0d2bfcc4c872693e92382c749246dff3a06f56607588ca895\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 9,
+      "folder": "lf_embedding",
+      "run_dir": "data/outputs/evostar2027/lf_embedding/rep9_s9",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1352679, \"sha256\": \"077ca8e48b83cc366fd9a8519da8b966c0f07b8c99c056a4a6c89d213eeb3468\"}, \"archive.json\": {\"bytes\": 4433667, \"sha256\": \"cda173cbe953189a847dcddec43a94b765b57c6438e38f1c3624a1d8ceefdd4c\"}, \"elites.json\": {\"bytes\": 24247661, \"sha256\": \"617904ed2dd020637dbf5c68a7e8f24324cf9002f5152ffd90504477587afb15\"}, \"events_tracker.json\": {\"bytes\": 1196834, \"sha256\": \"42af61c449e55de1178a3be3224199e2d32811888ec6c76a9b2b6d41c35dd743\"}, \"genome_tracker.json\": {\"bytes\": 352700, \"sha256\": \"0857ca4959ff03b088e5c8dc43fae2328a208cc7b3c89160334c464d05e08409\"}, \"run_config.json\": {\"bytes\": 1306, \"sha256\": \"25c4c1f7fdfde68b00a7c12039845e725135089f27e8fd4239cedd520e77c173\"}, \"species_snapshots.jsonl\": {\"bytes\": 6097926, \"sha256\": \"84ef4e46e23d62d3a8e2d065ca241a56aaa1ed52f1524cebf657992cff7724ad\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 0,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep0_s0",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 841575, \"sha256\": \"877dd234a89c43fb966e480febceeea22184e1f7a9b70088bb1e108cf7a4f1de\"}, \"archive.json\": {\"bytes\": 13605197, \"sha256\": \"45102a90c04cc903a7d677055bcb7ca23fdd4ef4377a2cb48fbd4c2964b2c544\"}, \"elites.json\": {\"bytes\": 15802785, \"sha256\": \"6e0ec9d8a8e9ca89dc9626e83347b0bd43dd33ab1d3bd588db1827cfcbe8d945\"}, \"events_tracker.json\": {\"bytes\": 1430296, \"sha256\": \"6e7bd4c11a4943a7948a85b6f8b1bec1b62dfd7adbcbb6fcd32623b9bc2e31fc\"}, \"genome_tracker.json\": {\"bytes\": 350803, \"sha256\": \"9330c1cae513849e77b0ed10507a82efee2757171cd9dcabf0e06445670ef5db\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"8dd91fe7b17c6b966da065eb1a0c7da8802c5cc0df04d24e371466406dbadda0\"}, \"species_snapshots.jsonl\": {\"bytes\": 2738834, \"sha256\": \"e4e60b209ef5898a014e11298905a6943d205f13b1c771eca643871c95eee951\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 1,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep1_s1",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 757307, \"sha256\": \"fc68d98f396bc785e138537e412b66e5ac9d31279f2b6e579ea20e168db577a0\"}, \"archive.json\": {\"bytes\": 1683605, \"sha256\": \"f22f043068d07591ae545e125e87d91b8af8fa4b7c704abea02fa429065bf2c8\"}, \"elites.json\": {\"bytes\": 27050919, \"sha256\": \"f2882b4d67bd5694e7aae5d52ef0fc60dd6845bb8143a6c4842e6d5ed6397b6b\"}, \"events_tracker.json\": {\"bytes\": 1179552, \"sha256\": \"d5df85523fa4c97c01895999b3d9682ffcefe572393b8058af8d3ce757d66694\"}, \"genome_tracker.json\": {\"bytes\": 350956, \"sha256\": \"87fa4fecd1e91a7ce69d565df03b7f782b8dad7133aa37fab29fd69162ebe245\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"2e0a72a19799086599e68831e2090c52634c87c055470351ee742cf9e1116c5d\"}, \"species_snapshots.jsonl\": {\"bytes\": 3404357, \"sha256\": \"4685566e47d9f3964027326520c751b32a58acf9f00d8a0310600ea85ecfd352\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 2,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep2_s2",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 787006, \"sha256\": \"64501f1c1b9d87ccdbd1d8cbe5f254a4204d9f6d681a4e97b613291d63b9bdc2\"}, \"archive.json\": {\"bytes\": 11770426, \"sha256\": \"616bf65a287aeb230803c197c81bfb06d92b5b8c54ff4ff2e1a340df68cc1b5b\"}, \"elites.json\": {\"bytes\": 17583474, \"sha256\": \"91dedd6eab68c9d67f4d7d5e71bba0c4418b859b16055ee566d087de00c61e7a\"}, \"events_tracker.json\": {\"bytes\": 1447162, \"sha256\": \"6642a73f8a1ad5b8284427544aaf975c6d67913b75bd684b75af23c3f1a16d3b\"}, \"genome_tracker.json\": {\"bytes\": 350716, \"sha256\": \"a5f6acc83d8d85fd20682b01fff05df8253c1751d5d81f48615985b5ac90cd25\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"53fcef060af876db39cf5d1ae72bd03a5c60dae83d25ce372bfd511fd7435c5a\"}, \"species_snapshots.jsonl\": {\"bytes\": 2390043, \"sha256\": \"aaf6e2f59521351cdf5468c65bb5c6e8fcd535bed3407049d390b61ab987d5b0\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 3,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep3_s3",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1204755, \"sha256\": \"ad03350f6d7f2865de2e01f61433eb790152fd9a89cdf80d969d7c207fccd077\"}, \"archive.json\": {\"bytes\": 4694183, \"sha256\": \"3fdccce305ccf2d57c01c2f2d8de50a0d2d3ea737775eb652aa005a331f8de73\"}, \"elites.json\": {\"bytes\": 23635579, \"sha256\": \"bf47b3de1b1a0e3d7767322df0439bf310121741850962cf2297b183c7a8b94e\"}, \"events_tracker.json\": {\"bytes\": 1318708, \"sha256\": \"198ecf24b76714b039a2d3ffc4e657358b291fa252766f32f51e98fdd5b288ee\"}, \"genome_tracker.json\": {\"bytes\": 351769, \"sha256\": \"40ccbd702bf89ffc0d8597e6133e304d647f2450e48c9ca9593376e9c65e7baf\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"c36ce09157cf8138b5810c37747a9ff6ea1cde3d72a09863f6fb79cdf0236a00\"}, \"species_snapshots.jsonl\": {\"bytes\": 5302892, \"sha256\": \"cc5ac644224fadfa204a8a05e1da8c7666f85bd673df4dfdb1ba1e3ef9bcfe28\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 4,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep4_s4",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 949329, \"sha256\": \"f1c9b9434157787e2a6e752f87cbb39af1c4174f1a8d7ad0740fd1607d61ed54\"}, \"archive.json\": {\"bytes\": 5134794, \"sha256\": \"9bfa3f5a248ff4cc635ab6aedfb3cad46be218464161fe2f51cf021c0fbbe4c6\"}, \"elites.json\": {\"bytes\": 23904063, \"sha256\": \"f25646f4f78c7574901570452d739d6f7fa045f26772d4c2cba539751ef4e212\"}, \"events_tracker.json\": {\"bytes\": 1271888, \"sha256\": \"20aa3dc59d712dcd270c72724bb739ee5bfc1e2b6a4948c3792bf02c56cfc107\"}, \"genome_tracker.json\": {\"bytes\": 351177, \"sha256\": \"c424ad318a68b76f88efc016afb0fc1fbf4f9fa45110c176c4eade05deba690f\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"1cb0cd2f8d9b7c3097f905f4c649228c024782fa81df728a2b8c5b49ee8db42a\"}, \"species_snapshots.jsonl\": {\"bytes\": 3860571, \"sha256\": \"a7fd3cf862f2d250f51646775356948a97003cbd3749325d6dcb4b17dc1a2a17\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 5,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep5_s5",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 845554, \"sha256\": \"c1ff54fc8564523f4844440b1fc2ca866d00c4497d7ac1bae019ed02bbb20363\"}, \"archive.json\": {\"bytes\": 8657806, \"sha256\": \"fb83b9cb062daeaa0b39b99dc3132d2b6219ff39a0e3dae05e1e73762d008ce2\"}, \"elites.json\": {\"bytes\": 23210896, \"sha256\": \"e5546b8bd34be50a1f123b783042953e27cddc0869993276c38eddebe323c59b\"}, \"events_tracker.json\": {\"bytes\": 1306619, \"sha256\": \"c0d110fa587bbb1b83692b0b41bbad5e8d4662b201cb395b7a20255d45a21762\"}, \"genome_tracker.json\": {\"bytes\": 350948, \"sha256\": \"ac17a529c2ff2275e4bc29024d0e5cd80e0e3aec5b94af737a8d8dde072b9128\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"8d422c69a83b6409cfe975d63db1ab8ec5332343ac7450c4f988a78e9aad51d0\"}, \"species_snapshots.jsonl\": {\"bytes\": 2687666, \"sha256\": \"9f51c213c3ad99ac4bb5581b0767013ba34f125d1751d738e463cb4ee0e64701\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 6,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep6_s6",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 895853, \"sha256\": \"9072305fd8231004a0e188a7ab6e17c2bce515c71e8f68f448b9fa01f5a1d7e3\"}, \"archive.json\": {\"bytes\": 1359995, \"sha256\": \"968d3f257f37c167bac78fc498e98f156e44f93486f66612a006566beaefe8ca\"}, \"elites.json\": {\"bytes\": 26584333, \"sha256\": \"c9a26cc2fc836add359d77149c2d695a141ca50975f0cf427e7704d85b23d15d\"}, \"events_tracker.json\": {\"bytes\": 1164131, \"sha256\": \"6d7c9ed528678faa1f9df334a66939093efe10146213a5a8f5f8e3cad7d070fb\"}, \"genome_tracker.json\": {\"bytes\": 350735, \"sha256\": \"eaa303c1479c05924d0ef4a166e541dcb3fed054fa68d8b16dbb66a5f35ee079\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"4b259181957e0ac8a478bfed27b01c30e7bbde8c17f19daadb8a9773b1a21428\"}, \"species_snapshots.jsonl\": {\"bytes\": 3807999, \"sha256\": \"eff3591b4c174f71697907fa4c8a4bc6163b2274be261181bd8a522859ed886a\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 7,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep7_s7",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1033054, \"sha256\": \"6451222d246baa63514a4fec70e85c79f0c9c0569d6ff88834874d4035955f66\"}, \"archive.json\": {\"bytes\": 6703901, \"sha256\": \"698f61c7e1ad92c74a0a610dd437fa641506ebac542791d0d210a6734060cb86\"}, \"elites.json\": {\"bytes\": 22238692, \"sha256\": \"a9d1d9cfb224b07cc7298e5023c94be78c8db786d49d08a3820e157768dca6da\"}, \"events_tracker.json\": {\"bytes\": 1350966, \"sha256\": \"2ea594d30e77ca590cec79c901c6421037502df28e8fb784ac8fbdd23436636f\"}, \"genome_tracker.json\": {\"bytes\": 351528, \"sha256\": \"e245e3da509b6a3a1b78851d3301ef3df1f61d12583e083e609a7ea78b5aa314\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"212cfa011aa876a5c8697c4ab4f9ed6972c4cbd4726d55c606f5b9908efeb981\"}, \"species_snapshots.jsonl\": {\"bytes\": 3707665, \"sha256\": \"109bc5cadda4bb28e397b88f75ac2a78104f806cabb684b1cb4a78dc37faf714\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 8,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep8_s8",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1175501, \"sha256\": \"567cf53f5a1933802d6afca362280c1b5dbbfbe2bded2b7e05e44bd26c9254a5\"}, \"archive.json\": {\"bytes\": 8694479, \"sha256\": \"a53bffe5b4f364d534a67289f7cee5c1e9f4f3e844d65bc4d9fbf812355446c4\"}, \"elites.json\": {\"bytes\": 20181370, \"sha256\": \"3c64e42299db0a348bfac1b93e4ab4682c75058a89d692df141fb76a89c83a16\"}, \"events_tracker.json\": {\"bytes\": 1374550, \"sha256\": \"a8524b119f001791a8cf9e1610913b0f54998ffe749c041b689122e14ad36546\"}, \"genome_tracker.json\": {\"bytes\": 351602, \"sha256\": \"78e52d69d066a8d9358329ac2c3d8ccc3e08622a9006a8d52463e703ef54ba20\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"9f1fb8822183b4012e3f273dfa0ade8d59fd9576c57f4f37e7395cbf7baedd09\"}, \"species_snapshots.jsonl\": {\"bytes\": 3441244, \"sha256\": \"e1afb3d62d1c53fbe4ccfee819f0f8c7ccf836f233d7b0b6ecfa190f1ba1c404\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 9,
+      "folder": "lf_nli",
+      "run_dir": "data/outputs/evostar2027/lf_nli/rep9_s9",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1010247, \"sha256\": \"f4202d23ac8a2096a2fb9dd119bdd9833800daef59aac8c6f16a37f64ce46698\"}, \"archive.json\": {\"bytes\": 3900553, \"sha256\": \"d67ff112abc9671686b5a595abee8863559b94e99c25b576b3a94685cf970619\"}, \"elites.json\": {\"bytes\": 24867772, \"sha256\": \"fe39a9e1dce7e0f1a7b95d71fc38f40cf8346ad924dc530ef7954ef6636ac674\"}, \"events_tracker.json\": {\"bytes\": 1228003, \"sha256\": \"96dd5b1f48f5bdce44deeecdd24bcd80c018b2a85b9573c3396b702cc9aa47b0\"}, \"genome_tracker.json\": {\"bytes\": 350926, \"sha256\": \"9c7f1aad682d4f326b2fec4008df8de3c192dddcd01ff214f3289d8a631326e4\"}, \"run_config.json\": {\"bytes\": 1311, \"sha256\": \"bad92496823eef7facd2eefc1a03fbd1a93fcd97038f128d9330990f10f81c1b\"}, \"species_snapshots.jsonl\": {\"bytes\": 3753572, \"sha256\": \"3326b610a9935c9f2f7649b8d2bad4dfd29e8af533532386ecf46a3071aece15\"}, \"temp.json\": {\"bytes\": 2, \"sha256\": \"4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 0,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep0_s0",
+      "status": "complete",
+      "n_unique": 2005,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 741994, \"sha256\": \"b079aeff2d8dadce7fb9a76fd1ee91ec52b4b6026efc352d46e4f0ee199c4029\"}, \"events_tracker.json\": {\"bytes\": 795234, \"sha256\": \"e0944b0ecc45726cd056921f9862ec27b5811fb19b36d57589387ea7e6940a04\"}, \"genome_tracker.json\": {\"bytes\": 353241, \"sha256\": \"82ae6d80a7761be4980611acf712585a272eb205a6d807172105e49eec5b2944\"}, \"inc_dbscan_state.json\": {\"bytes\": 23739597, \"sha256\": \"888a84de9964d8c394c13fd17c42bb2639566a399cca4458dd85741e8475da17\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"574fbd6e6a4c65d957595b21196fb188af82fda9c98dc5ddc1fd6c75dfbf65e2\"}, \"species_snapshots.jsonl\": {\"bytes\": 3094450, \"sha256\": \"bf71fa50c589fd8c4889f8314fab67ca7944b5c7a4d70eaab4110e2ab300a8bc\"}, \"temp.json\": {\"bytes\": 29408110, \"sha256\": \"1d3337b8bcf80b7ce9c7441fd6b69701ed3cecc8e9930b3fb5356ad0862e4f8d\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 1,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep1_s1",
+      "status": "complete",
+      "n_unique": 2012,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 604881, \"sha256\": \"97fd0a541f62fc434cb0783b6909e5767c8886928d37b6a8eaff18dcd98e101d\"}, \"events_tracker.json\": {\"bytes\": 799270, \"sha256\": \"458ecea26ece7ce8d3ebdf1843a6aee6e089ffced818a130e2480a264c628112\"}, \"genome_tracker.json\": {\"bytes\": 353766, \"sha256\": \"426ca68b3c2558df51f8af11cd4428f018c27ad0ca72218ec8918b62ca8b295d\"}, \"inc_dbscan_state.json\": {\"bytes\": 23321762, \"sha256\": \"1cbe1e521511adc53aa7bb93f5f54915783796de640ecd465f7720f52594ddde\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"96d36ccc55fd4cb5d8e158ba5edf1b467d7dddffa9bf8b5e7c703699decf27a5\"}, \"species_snapshots.jsonl\": {\"bytes\": 2439577, \"sha256\": \"b4355e9eb1c1527984690bc5eae9a3aa4968940283ad4af62a08ddf8bcffbe92\"}, \"temp.json\": {\"bytes\": 28990209, \"sha256\": \"0360a363cb6b8a9ef9818f759a5ed49cb82226218e15e97b0f25a6a3c93fc9ab\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 2,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep2_s2",
+      "status": "complete",
+      "n_unique": 2002,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 864741, \"sha256\": \"8d6ddb83b7f16e5d0c208e4b04add361aef9d0084bacb87ed2b36d4fe11277f8\"}, \"events_tracker.json\": {\"bytes\": 799218, \"sha256\": \"486b907f0b1c7f9eb2b7c70ee3bedf3d7d6d4f4385975a80e1ba10f97d85ff11\"}, \"genome_tracker.json\": {\"bytes\": 352137, \"sha256\": \"554a23ddb4ec8bd7afa9813a5749937aced6c40df706a3e3cbe963411ab3d335\"}, \"inc_dbscan_state.json\": {\"bytes\": 23643479, \"sha256\": \"993f95dfb7361b6ae8fc2174fdd9717e1fc62c121cb49da903c745d71e8e781f\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"64432ab620ace93408ed5cb95c63648f7732e363faaa1931d9ea13d79ab2e8a1\"}, \"species_snapshots.jsonl\": {\"bytes\": 3424514, \"sha256\": \"8aafea28bfc3fe9945d7633d2c4255c7452f5e7f7701ca79db2d58c01491beda\"}, \"temp.json\": {\"bytes\": 28780387, \"sha256\": \"ce6c5826fb0ccd0907242f70d0af110a960801460a47adbc056f8d50f59ac4ae\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 3,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep3_s3",
+      "status": "complete",
+      "n_unique": 2005,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 863641, \"sha256\": \"6a45fec8b393373241fc282f0cdab45c853bcfa289adf75ec7c811abf3e6c0c0\"}, \"events_tracker.json\": {\"bytes\": 809019, \"sha256\": \"b86327d801d6d208c45c33571a9fddf995002c7b651ed692dc96699d47fcf100\"}, \"genome_tracker.json\": {\"bytes\": 353209, \"sha256\": \"3afd3a18d09986471608d06a5c887e9f028ca85876b0a497c5f14688061ffdeb\"}, \"inc_dbscan_state.json\": {\"bytes\": 23565074, \"sha256\": \"a4dab0d53c006edc57e052230e48a62c4807871709c162918009c29f94a181d1\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"046ff0cf9754d80bcc3d511e9394ed29fae18edf22fb34c010b9192971d1909a\"}, \"species_snapshots.jsonl\": {\"bytes\": 3374644, \"sha256\": \"461450f52656de993b172d7e03fc30b5898c017503e57a1b04c0ac28d8e84a6b\"}, \"temp.json\": {\"bytes\": 28806110, \"sha256\": \"ac0a792fb657d44d25ef1e66d5d270b4ba5e992287192aa9138630891b29a022\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 4,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep4_s4",
+      "status": "complete",
+      "n_unique": 2002,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 672584, \"sha256\": \"44f0c1e0e74d2d999dbcae77fb1c690b314ac9c141b53260b77b69cbef11548b\"}, \"events_tracker.json\": {\"bytes\": 769349, \"sha256\": \"a1868c26c14adf291b61a617b19e02e2a30ff1483e274011ea70959bbed223a1\"}, \"genome_tracker.json\": {\"bytes\": 352220, \"sha256\": \"eedfcb8edc168fae16940099ce994bb6ac6d51c1a538e29fde3ff4ccdd241828\"}, \"inc_dbscan_state.json\": {\"bytes\": 24403168, \"sha256\": \"66ef6dd71e8f51c25a6dae5e20b2efe9e0ae53bb42a79e0c591664272366399f\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"ea6caf91720322bb097f1764917ac0021bcf1768bfb4fd95138ba6773af13b3d\"}, \"species_snapshots.jsonl\": {\"bytes\": 2597312, \"sha256\": \"6135d174e396a31cbb229ea79468f7ad823df672a07c18eeac40390f6e85a1a7\"}, \"temp.json\": {\"bytes\": 30027856, \"sha256\": \"92bf5ca518ee628083226426197171fd5775d550ac32aee460efc8193ea746f3\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 5,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep5_s5",
+      "status": "complete",
+      "n_unique": 2013,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 846033, \"sha256\": \"9dc52e88b13f114c3749d844f372d157cb442339f804b4ff7f36ad8e534d6f4e\"}, \"events_tracker.json\": {\"bytes\": 804104, \"sha256\": \"d893e82c4c0c332edcb2a53e04f7cf549128ce6236f00b0c6aa49cbbb6a064f0\"}, \"genome_tracker.json\": {\"bytes\": 353864, \"sha256\": \"bf5b0c7c1ab5f2d80a4b7e9b0fc650677d7d543dc386ed58f53571f347ee93ce\"}, \"inc_dbscan_state.json\": {\"bytes\": 23662691, \"sha256\": \"c4c53406f0318019b328c02163173c8d024af3f294ef3b36c23a94745f993063\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"bb5c4241982dfc44c63414c76189720ed683e0d722d43b00dff28928b4e32239\"}, \"species_snapshots.jsonl\": {\"bytes\": 3027550, \"sha256\": \"f1bd83475a863301047c00c57733ab467c960e559d34f578890259a8c1d2f697\"}, \"temp.json\": {\"bytes\": 29326203, \"sha256\": \"97a6dedddfed657554caa5e1baee90ef0736d32a8a2401731f4e02dea63e4cd2\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 6,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep6_s6",
+      "status": "complete",
+      "n_unique": 2006,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 652884, \"sha256\": \"c35fb4e4fbb7ea89747670d3512db3fcde1982d1267db6ea001b56aecf9c9efd\"}, \"events_tracker.json\": {\"bytes\": 763530, \"sha256\": \"5092ee463e218564cfd9f196e079fd395a0735decfa2894c0e4ded60e63cd217\"}, \"genome_tracker.json\": {\"bytes\": 352786, \"sha256\": \"8cbc1b5a8cb3ce4eb09f48995aecdfcf694307b14bd2b315bfef7e5614714fc6\"}, \"inc_dbscan_state.json\": {\"bytes\": 23485043, \"sha256\": \"c468332382d800771b60d3651ce5293296443be23a12fdeed2176823ab813c76\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"e4cd5ec6e7f3b589a671c2e485ce3c5d5e84ebcd3ceec7d8fa40177502c7d083\"}, \"species_snapshots.jsonl\": {\"bytes\": 2576275, \"sha256\": \"72c11cd042b5d2cfbbb623d9e7de613a4cc79444d3e7fe06f27448de6a5cd887\"}, \"temp.json\": {\"bytes\": 28642425, \"sha256\": \"16525f3884d7c7a4c4088b4e6ce6c9eca1d88580bbafc6295bdae95256bff3a4\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 7,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep7_s7",
+      "status": "complete",
+      "n_unique": 2007,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 786785, \"sha256\": \"8d0bee2fa751628c7d886aa22ec844411f5861fb89cf4b3b4ef357da586ac8a9\"}, \"events_tracker.json\": {\"bytes\": 808790, \"sha256\": \"f6965f7620c8937b318b7915a2d5b6537a3c9acd5ee24f5a1c15a2a33f657995\"}, \"genome_tracker.json\": {\"bytes\": 353442, \"sha256\": \"a1fd642be386f47e902fc217f8c23c9b0d9eda3f7a6386de3559d3bcf13ce201\"}, \"inc_dbscan_state.json\": {\"bytes\": 23316407, \"sha256\": \"da87bf48b11db0ef98c3a8db01c1380190a98638b735d3e363f4bac22bb96090\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"562b634040ad636fccc0a7bc3919641c936c420f24f74841754e64bea7c05d4d\"}, \"species_snapshots.jsonl\": {\"bytes\": 3316041, \"sha256\": \"f06b0c46155e6be2e9079c44428a629bfe466c36bdc52675ffe32541a95eceea\"}, \"temp.json\": {\"bytes\": 29002589, \"sha256\": \"9a1e9b8dc3bb12837408228f70152811482fc2441aa53e3d508484b76ea21b8e\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 8,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep8_s8",
+      "status": "complete",
+      "n_unique": 2000,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1356321, \"sha256\": \"650b8174425e619f290723bc9247fccf05733174087247afa14a4e2febdd5172\"}, \"events_tracker.json\": {\"bytes\": 799318, \"sha256\": \"faa7b55e04bc1ab83909e63cfdb26686e9c29e6cc43f9067eb5244c63d35b43c\"}, \"genome_tracker.json\": {\"bytes\": 353414, \"sha256\": \"658f378f531a900f75c476cd15326f75d8f0069582743b0fd6884568d9f83b79\"}, \"inc_dbscan_state.json\": {\"bytes\": 23238029, \"sha256\": \"00dffaf3967e531b4a69b38cb08e8610c37554bbdcac98ef4fe7b65c9c329919\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"f8f2ea06908d3db84462670371ffb08bfafa65bad0b8779e6500674671974683\"}, \"species_snapshots.jsonl\": {\"bytes\": 6369592, \"sha256\": \"1f7ad45eb3fad7fb71662b9ebc249e6668892025c671c33c1b98805077fcfdf5\"}, \"temp.json\": {\"bytes\": 28317575, \"sha256\": \"a26c09206639e66805ff161f44d0383cd7e20aaab4ac7ca09b95b98ddccd7a5e\"}}"
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 9,
+      "folder": "inc_embedding",
+      "run_dir": "data/outputs/evostar2027/inc_embedding/rep9_s9",
+      "status": "complete",
+      "n_unique": 2002,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 905941, \"sha256\": \"b30fed4257c46c84ca6b579eebf121fee57a1eccace7ed386bb1b973dbc69763\"}, \"events_tracker.json\": {\"bytes\": 807826, \"sha256\": \"8007b9b236996021a1dbb004c65152b8bb1ac6f8cef21ecabad7ddabff9b9216\"}, \"genome_tracker.json\": {\"bytes\": 352637, \"sha256\": \"e7ba5b7b735b396ae4f4cec513c020aef4340f49c97e025f662b018446c30ed5\"}, \"inc_dbscan_state.json\": {\"bytes\": 23679701, \"sha256\": \"febd3c0e555e59ed24d797f681360cf467b80543b519a6f18c7c0874de3afe3b\"}, \"run_config.json\": {\"bytes\": 1303, \"sha256\": \"acf8f30385a924cb8331b215d4a1945014735c8d799dd2a97a43f76764f81321\"}, \"species_snapshots.jsonl\": {\"bytes\": 3775898, \"sha256\": \"971b8ccc884673e20af8766da50416cba28cd4415905c425900b5733fd4208f7\"}, \"temp.json\": {\"bytes\": 28831114, \"sha256\": \"8225e8abb1df5d697e5aa2f5f5ca46f523b8e2e1a4a04558b26f16c99a982c84\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 0,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep0_s0",
+      "status": "complete",
+      "n_unique": 2001,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 834931, \"sha256\": \"52e8eef55a01cc06ed09cefede1ab332872647c3534a6ac65246aecacb1d73c4\"}, \"events_tracker.json\": {\"bytes\": 866843, \"sha256\": \"ae95609ffbb1f560ddb832e5e9d9871687456ed290bdd91a77940bec21cf377a\"}, \"genome_tracker.json\": {\"bytes\": 350492, \"sha256\": \"05e05091684b063bfa21e8f06e99aaf4a5299972c7d8d21d90be19510595dfa9\"}, \"inc_dbscan_state.json\": {\"bytes\": 23055971, \"sha256\": \"1bdcf4d5b128315bb4e6d2c0186c380cbd400bd4fdb0a9fba55de1520f437479\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"c87cca56ac97c018bf1a715f0135474bbbc31ec570743646445a74489bec2ba7\"}, \"species_snapshots.jsonl\": {\"bytes\": 2553745, \"sha256\": \"7bb41b39a927aed7bfbb9c8942236a6bb3e5371b2fcceb1d74a43297ca8ad536\"}, \"temp.json\": {\"bytes\": 28565505, \"sha256\": \"41d58bae975e4a76364edbe8f7d356a2f729bad2aaedc1579700e52ff8b1255a\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 1,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep1_s1",
+      "status": "complete",
+      "n_unique": 2007,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 653879, \"sha256\": \"112c841fb1fbdd1b83d0f9db619f7c275f3967f48f0c71b5f0651ed566bb6f0f\"}, \"events_tracker.json\": {\"bytes\": 888018, \"sha256\": \"d93c7b0e1c221c2e6d4628febc25e90b5cc3e0b8ff4bf84be50020059e8b8f41\"}, \"genome_tracker.json\": {\"bytes\": 351341, \"sha256\": \"8a1715627d42169b5de0762e938081a86eb11537916ca593c28da1aff3517c7e\"}, \"inc_dbscan_state.json\": {\"bytes\": 23141079, \"sha256\": \"83ef11175c78e0bc2d9f06db00586b96c48fcc863b1c49a4cc40f3f1e99f9296\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"a6a8e709be69202a4168cdafe4a579bed4d8177a5f7558f7a86c228766469810\"}, \"species_snapshots.jsonl\": {\"bytes\": 1842975, \"sha256\": \"eadd62fdb2b17826c42d8bbf54905435a967b5ab361ecfe2ec42e888f2b59776\"}, \"temp.json\": {\"bytes\": 30184007, \"sha256\": \"efa7e1a84fa7619297ce7be5c2202fcfc44e2ecbb44169600e307bcb8ef7ab4d\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 2,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep2_s2",
+      "status": "complete",
+      "n_unique": 2004,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 906162, \"sha256\": \"3ef1272ecc5d94c10cdcbc9c1ebfcc1b5b7472532a1bc3f928146ab2d58bc4b5\"}, \"events_tracker.json\": {\"bytes\": 840545, \"sha256\": \"04794249997435bccd8fad2cc06283dbfbaddc08830152d1e8132c2d4e14e28a\"}, \"genome_tracker.json\": {\"bytes\": 351186, \"sha256\": \"412a3ae04252cded9c376c698b09a0c43e4686e6313791427798dca6c11f6bb4\"}, \"inc_dbscan_state.json\": {\"bytes\": 23805607, \"sha256\": \"499b29232fb9bdb523beeabca3719bdeb9d2b6a2b84443af16edf411f4431021\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"857c2add19bc96c211c847b55d2cadc964cdd3f3bd1e8aad7e9d31987aa5b114\"}, \"species_snapshots.jsonl\": {\"bytes\": 2623329, \"sha256\": \"fba8d549aa0adfac67289afb65d1617f6cf4889f22df06810d11b8749c104406\"}, \"temp.json\": {\"bytes\": 30442606, \"sha256\": \"deee3da51c688506f79467cf947ac0d570bb4e23c2506f6d3750867d26c35785\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 3,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep3_s3",
+      "status": "complete",
+      "n_unique": 2004,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 916121, \"sha256\": \"9c31dbdd8e988a5043eacd80a45c3bfe81bbbf37eb0a6897e01d40904984f5c5\"}, \"events_tracker.json\": {\"bytes\": 849212, \"sha256\": \"1c35b70594e22b1c8debd920fa22ab6caf7f856043cce66fb276c9a33bba9f9b\"}, \"genome_tracker.json\": {\"bytes\": 351168, \"sha256\": \"b16f050ac3c5e760829c08f5149869cdc70a2e5646721c239ff4a10079b27d7e\"}, \"inc_dbscan_state.json\": {\"bytes\": 23165651, \"sha256\": \"8b2b07d202e39b58360ec9895ccbfb0c4fee55a97f63716c509fe42986c851d1\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"17e57e8412e4ab4d7dce904d04f270a4c674544e8b0154616efe06bc076b9ee2\"}, \"species_snapshots.jsonl\": {\"bytes\": 2651949, \"sha256\": \"1691c57e46467ed5680798d03cc5e07f1f2a6e35f62f2be4984ec99e337f5c16\"}, \"temp.json\": {\"bytes\": 27872067, \"sha256\": \"96eaa234a66f3d5a2479d12f7dfbed5007575f5666b5fad4847be70a9de7d268\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 4,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep4_s4",
+      "status": "complete",
+      "n_unique": 2008,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 763306, \"sha256\": \"1a5ce594fe75926deff9184d7eb6c3bc2366fdf0e2c296d48b3d17bece379b76\"}, \"events_tracker.json\": {\"bytes\": 925293, \"sha256\": \"8dfb18369bd0b0d785d583c66bd964c8720955b6c411e09e09f5decab7d6594d\"}, \"genome_tracker.json\": {\"bytes\": 351770, \"sha256\": \"f7a6931d6cd47309d4296bf1a26738817ce1d2df93546a478412f6f563d3161f\"}, \"inc_dbscan_state.json\": {\"bytes\": 23067507, \"sha256\": \"24c7a97705c4dc1da6dbae570ae62b20f27f675788551d1e8b9fb289affae1a3\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"81582935e6c4ef4874df3d338625fd25c2e2104b88f7e2d5130ac67033509d3f\"}, \"species_snapshots.jsonl\": {\"bytes\": 2185728, \"sha256\": \"a9c245804a96445cce1755438ee7fdadea4ac440cbc1b02e047b01fbd8bf93da\"}, \"temp.json\": {\"bytes\": 29000906, \"sha256\": \"da6f414394c227340e51c687dc0024c2704dd6adf5b69927fa181830bd775c62\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 5,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep5_s5",
+      "status": "complete",
+      "n_unique": 2004,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 873688, \"sha256\": \"4f8e319f215bd0cc224cedd1a4144c06c4226b86428ce6e6300cee58f5ca7471\"}, \"events_tracker.json\": {\"bytes\": 850428, \"sha256\": \"70e8ae826415e91680d385826844c9a4c005efc49b99582dffb68ccf6752cbfc\"}, \"genome_tracker.json\": {\"bytes\": 351063, \"sha256\": \"6eff4cae477e43449d7397d98eeb40dfcdc26a2969990c5293415c768417bf47\"}, \"inc_dbscan_state.json\": {\"bytes\": 23179196, \"sha256\": \"5a7eaf2c0dff540f941ba05d3ca400c36d6476245b2b4c52d23cd6cce36548ba\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"6c27b5e32c9b91a11ae2e3ebcb57068ea63f2224cec0cd1cd56cf315d0aee705\"}, \"species_snapshots.jsonl\": {\"bytes\": 2651715, \"sha256\": \"3170a51e650c6fd723cac0c8c21dbeb399f833b8eeebb6d83251bf815a146c08\"}, \"temp.json\": {\"bytes\": 29117082, \"sha256\": \"456c38c9aea7a395ef2141bb755a34d8e7c8b93a09404073a2a6aefa6e2de644\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 6,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep6_s6",
+      "status": "complete",
+      "n_unique": 2008,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 702201, \"sha256\": \"70f3dba27a99d85b548df8a43e3300a8db63f5ad9db34438e3f97a374131597d\"}, \"events_tracker.json\": {\"bytes\": 850175, \"sha256\": \"bfce9de4989ce6e74219491a833dff4bba2033d8bf8737e47106158be0b894e2\"}, \"genome_tracker.json\": {\"bytes\": 351721, \"sha256\": \"baf94be33cb8dc0835555b2384beb4b6f8557cc1a0f43205c195a6a9f53ea20a\"}, \"inc_dbscan_state.json\": {\"bytes\": 23298851, \"sha256\": \"6f635a8dbd1a7a435e3a0f6f0cffe0a08aae7c4dad72274aaff8ec9fdc982cef\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"92f61107b7fc15de834ab53dd060a8394aa2e83765f11bd0e4223448ca82335c\"}, \"species_snapshots.jsonl\": {\"bytes\": 1940808, \"sha256\": \"324b47c43e963ece76bf75b75c23e5214c4ffa10be0b3c6629390c72e6083460\"}, \"temp.json\": {\"bytes\": 28745506, \"sha256\": \"cb34961f2a0be7130459ba9450103ab03843a959a32f3653fd51026a0f94e567\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 7,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep7_s7",
+      "status": "complete",
+      "n_unique": 2004,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 874864, \"sha256\": \"20a734004702e8d79f3df18604c97d444e73e454a61c823381329154870ca913\"}, \"events_tracker.json\": {\"bytes\": 795869, \"sha256\": \"02a4397b95a3a20953211f4994014ac8ec07bb71a03dbbc4fa029bb18f454163\"}, \"genome_tracker.json\": {\"bytes\": 351208, \"sha256\": \"171dd6770ebd35124f10f37106a3568223085eadbc00fbd7d043be31247b62ce\"}, \"inc_dbscan_state.json\": {\"bytes\": 23079047, \"sha256\": \"79fa0e2d25ecd3b011ae4b135b56d48936476ffa46a499a8d1f89ef35db36215\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"3307179c97ef4c51307417e085638c70733fb21810e88d6f6d0ffe5b2a7c4c9b\"}, \"species_snapshots.jsonl\": {\"bytes\": 2584033, \"sha256\": \"d5348899f92bcc4cca4d56b6a9ef46a4e9c1e6fd8d16aee1fffb063d0aa188ad\"}, \"temp.json\": {\"bytes\": 27944261, \"sha256\": \"1d037f6819c8cc382495731652e11889c0a7fb4a820837848aa7885234fb9647\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 8,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep8_s8",
+      "status": "complete",
+      "n_unique": 2003,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 1466476, \"sha256\": \"33db44c4975f27b11e5b85f340073369e0d62d985719afa39dd4b0fd03531762\"}, \"events_tracker.json\": {\"bytes\": 903498, \"sha256\": \"07bd18644d240802188ae286438756e8098aecb95df28249526f39b353d0932d\"}, \"genome_tracker.json\": {\"bytes\": 351532, \"sha256\": \"86c1ccb130eccf21c2bc82eb4efccaea28705a98ee1a1bc13aeebb23964e0095\"}, \"inc_dbscan_state.json\": {\"bytes\": 22992161, \"sha256\": \"e823f6587b1ca9ae1ca0babdc8c9424de3ef639e809edb619c3b6ad6d1c3ce9f\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"1752e667f85eb5639ee50e9b4ceb83ebf41c48abd7b1c81f58b79418ae7cc5da\"}, \"species_snapshots.jsonl\": {\"bytes\": 3831136, \"sha256\": \"fad4648138d9277da22dbd610584fceddf3ddf25bc84c34af991a16178f54314\"}, \"temp.json\": {\"bytes\": 28893325, \"sha256\": \"0555480750a9ed637d2eb8dd882f08272b6c9822dd4e3085ce1f8865d21f8726\"}}"
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 9,
+      "folder": "inc_nli",
+      "run_dir": "data/outputs/evostar2027/inc_nli/rep9_s9",
+      "status": "complete",
+      "n_unique": 2003,
+      "files_json": "{\"EvolutionTracker.json\": {\"bytes\": 690517, \"sha256\": \"20c8677475bc4d72ce765802998d6a73f40ffe46ff22e88c402db1d35d3d4274\"}, \"events_tracker.json\": {\"bytes\": 807677, \"sha256\": \"ce8e76db10e69a360c26733674ed86ee00c5bc424546e940a5b7d405ffcb82e0\"}, \"genome_tracker.json\": {\"bytes\": 351183, \"sha256\": \"fd8ebf03115c1fa6dc3b9a9a26b0eedf48ded7db0f4e211e8cf3cc51265cf49f\"}, \"inc_dbscan_state.json\": {\"bytes\": 24272811, \"sha256\": \"66a563265b8afdd0b14280ea39173992dbcd1760645a46211aedbac5aec6e699\"}, \"run_config.json\": {\"bytes\": 1269, \"sha256\": \"f0c1f343d13e0236da1c4f850acd50e15a3bea7a285681d9f467c7ee95a1d09b\"}, \"species_snapshots.jsonl\": {\"bytes\": 1766065, \"sha256\": \"a1ca86b8c7281f4e43f4be546fd47983680e2f609cf8d178ae70a40ee63d0e1f\"}, \"temp.json\": {\"bytes\": 28993649, \"sha256\": \"8589ff0581344171edf730afc472ebbeca4a8dc959375430d207ac56fc2b6096\"}}"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "mpnet_model": "sentence-transformers/all-mpnet-base-v2",
+  "tfidf": "char_wb ngram 3-5 max_features=50000",
+  "n_perm": 500,
+  "n_unique_prompts": 77190,
+  "n_runs": 40,
+  "prompt_hash": "f7a190f6f3f2",
+  "summaries": [
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "mpnet_z_sep": 298.55672005039565,
+      "mpnet_within": 0.06634357559409851,
+      "mpnet_sep": 5.738770843799953,
+      "tfidf_z_sep": 196.89973988681817,
+      "tfidf_within": 0.15887114561822227,
+      "tfidf_sep": 2.723241408521497,
+      "n_sig_mpnet": 10,
+      "n_sig_tfidf": 10
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "mpnet_z_sep": 80.15910573726467,
+      "mpnet_within": 0.1299300774537433,
+      "mpnet_sep": 2.675187502885804,
+      "tfidf_z_sep": 57.58981578801814,
+      "tfidf_within": 0.2571259857815251,
+      "tfidf_sep": 1.6432438808678171,
+      "n_sig_mpnet": 10,
+      "n_sig_tfidf": 10
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "mpnet_z_sep": 209.55937194948825,
+      "mpnet_within": 0.09833425188027901,
+      "mpnet_sep": 4.033932994176305,
+      "tfidf_z_sep": 131.36745221842125,
+      "tfidf_within": 0.206577628034392,
+      "tfidf_sep": 2.1938039034154606,
+      "n_sig_mpnet": 10,
+      "n_sig_tfidf": 10
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "mpnet_z_sep": 15.131203945270393,
+      "mpnet_within": 0.23887254729706348,
+      "mpnet_sep": 1.4549936878752114,
+      "tfidf_z_sep": 12.780667223933424,
+      "tfidf_within": 0.3385585650575227,
+      "tfidf_sep": 1.3088640933911875,
+      "n_sig_mpnet": 6,
+      "n_sig_tfidf": 6
+    }
+  ]
+}

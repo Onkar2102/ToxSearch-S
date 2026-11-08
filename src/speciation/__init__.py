@@ -36,7 +36,8 @@ from .run_speciation import (
     redistribute_genomes,
 )
 from .run_inc_dbscan import run_inc_dbscan_speciation, process_generation_inc_dbscan
-from .clustering_mode import is_inc_dbscan_mode
+from .run_global import run_global_speciation
+from .clustering_mode import is_inc_dbscan_mode, is_global_mode
 
 __all__ = [
     "SpeciationConfig",
@@ -72,4 +73,6 @@ __all__ = [
     "run_inc_dbscan_speciation",
     "process_generation_inc_dbscan",
     "is_inc_dbscan_mode",
+    "is_global_mode",
+    "run_global_speciation",
 ]

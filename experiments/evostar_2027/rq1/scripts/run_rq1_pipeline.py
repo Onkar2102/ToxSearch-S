@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parents[4]  # ToxSearch-S
 SCRIPTS = Path(__file__).resolve().parent
 DATA = Path("experiments/evostar_2027/data")
 RQ1 = Path("experiments/evostar_2027/rq1")
-NOTES = Path("notes/LaTeX2e+Proceedings+Templates+download")
+NOTES = Path("notes/rough_draft")
 PROVISIONAL_THETA = 0.1
 PROVISIONAL_EPS = 0.1
 DEFAULT_BATCHES = (500, 1000, 2000, 3139)  # 3139 = full p0 pool

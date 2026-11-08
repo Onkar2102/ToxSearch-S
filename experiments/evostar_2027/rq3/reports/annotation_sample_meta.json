@@ -1,0 +1,14 @@
+{
+  "n_selected": 140,
+  "n_unique": 120,
+  "n_dupes": 20,
+  "tau": 0.8,
+  "per_config": 30,
+  "seed": 7,
+  "pool_sizes": {
+    "embedding__leader_follower": 261,
+    "nli_entail__leader_follower": 158,
+    "embedding__dbscan": 227,
+    "nli_entail__dbscan": 355
+  }
+}

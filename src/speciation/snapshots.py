@@ -56,9 +56,19 @@ def append_species_snapshot(
                 logger.warning("Species snapshot: could not read speciation_state.json: %s", e)
 
     res = speciation_result or {}
+    if is_inc:
+        pop_mode = "inc_dbscan"
+    elif (
+        res.get("global")
+        or res.get("population_mode") == "global"
+        or res.get("clustering_method") == "none"
+    ):
+        pop_mode = "global"
+    else:
+        pop_mode = "leader_follower"
     row = {
         "generation": int(generation),
-        "population_mode": "inc_dbscan" if is_inc else "leader_follower",
+        "population_mode": pop_mode,
         "n_genomes": len(membership),
         "membership": membership,
         "leaders": leaders,

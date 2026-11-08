@@ -1,0 +1,3 @@
+contrast,contrast_id,n_a,n_b,median_a,median_b,U,p,holm_p,cliffs_delta,cliffs_ci_lo,cliffs_ci_hi
+$d_E$: LF vs IncDBSCAN,embedding: LF vs IncDBSCAN,10,10,0.9249850000000002,0.9277950000000001,46.0,0.7958204179582041,0.7958204179582041,-0.08,-0.58,0.46
+$d_{\neg E}$: LF vs IncDBSCAN,nli_entail: LF vs IncDBSCAN,10,10,0.85286,0.918285,22.0,0.036896310368963105,0.07379262073792621,-0.56,-0.9,-0.08

@@ -1,0 +1,12 @@
+{
+  "n_expected": 40,
+  "n_complete": 40,
+  "n_remaining": 0,
+  "remaining": [],
+  "live_dir": "data/outputs/evostar2027",
+  "inference": "unpaired_mannwhitney_permutation_all_complete",
+  "upon_completion": [
+    "Recompute Table tab:rq2-factorial-summary at n=10 independent runs per cell.",
+    "Redraw Fig. fig:rq2 top-10 trajectories."
+  ]
+}

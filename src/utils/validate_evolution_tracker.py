@@ -200,7 +200,8 @@ def validate_per_generation_fields(tracker: Dict[str, Any], logger=None) -> Tupl
             archived = gen["archived_count"]
             expected_total = elites + archived
             # IncDBSCAN: D_t = mature (>0) + singleton pool (0) + residual noise (-1); archived=0
-            if gen.get("population_mode") == "inc_dbscan" or gen.get("density_size") is not None:
+            # Do not key off density_size alone — LF/Global entries often carry density_size=0.
+            if gen.get("population_mode") == "inc_dbscan":
                 dens = gen.get("density_size", total_pop)
                 clustered = gen.get("clustered_count")
                 noise = gen.get("noise_count")

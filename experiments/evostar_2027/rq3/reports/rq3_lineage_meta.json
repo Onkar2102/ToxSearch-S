@@ -1,0 +1,7 @@
+{
+  "n_perm": 5000,
+  "k": 100,
+  "null": "permute fitness within kinship connected components",
+  "R_definition": "(# top-k with ancestor in s) / (# direct offspring of members of s)",
+  "n_runs": 40
+}

@@ -10,7 +10,7 @@ PY="${ROOT}/venv/bin/python"
 FLAT="${ROOT}/experiments/evostar_2027/data/mats/_flat"
 DATA="${ROOT}/experiments/evostar_2027/data"
 RQ1="${ROOT}/experiments/evostar_2027/rq1"
-NOTES="${ROOT}/notes/LaTeX2e+Proceedings+Templates+download"
+NOTES="${ROOT}/notes/rough_draft"
 LOG="${FLAT}/post_nli_b1k_b2k.log"
 
 log() { echo "[$(date '+%H:%M:%S')] $*" | tee -a "$LOG"; }

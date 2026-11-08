@@ -1,0 +1,20 @@
+{
+  "n_perm_final": 2000,
+  "primary_tau": 0.8,
+  "taus": [
+    0.5,
+    0.7,
+    0.8,
+    0.9
+  ],
+  "budgets": [
+    250,
+    500,
+    1000,
+    1500,
+    2000
+  ],
+  "n_final_runs": 40,
+  "n_traj_rows": 200,
+  "note": "Species IDs are run-local and never pooled across executions. Fitness null permutes among mature-labelled individuals only."
+}

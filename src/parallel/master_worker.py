@@ -355,7 +355,7 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
     Returns:
         Tuple of (parents list, top_10 list).
     """
-    from speciation.clustering_mode import is_inc_dbscan_mode
+    from speciation.clustering_mode import is_inc_dbscan_mode, is_global_mode
 
     op = str(outputs_path)
 
@@ -371,6 +371,9 @@ def _select_parents(outputs_path, north_star_metric, generation_id, logger):
     if is_inc_dbscan_mode(outputs_path=op):
         from ea.inc_dbscan_parent_selector import IncDBSCANParentSelector
         selector = IncDBSCANParentSelector(north_star_metric)
+    elif is_global_mode(outputs_path=op):
+        from ea.global_parent_selector import GlobalParentSelector
+        selector = GlobalParentSelector(north_star_metric)
     else:
         from ea.parent_selector import ParentSelector
         selector = ParentSelector(north_star_metric)
@@ -1309,11 +1312,8 @@ def master_main(comm, size, K, outputs_path, north_star_metric,
                             logger=logger,
                             log_file=log_file,
                         )
-                        # IncDBSCAN budget is |D_t|; Leader–Follower uses elites + archive.
-                        if (
-                            gen_stats.get("population_mode") == "inc_dbscan"
-                            or gen_stats.get("density_size") is not None
-                        ):
+                        # IncDBSCAN budget is |D_t|; LF / Global-EA use elites + archive.
+                        if gen_stats.get("population_mode") == "inc_dbscan":
                             total_genomes = int(
                                 gen_stats.get("density_size")
                                 or gen_stats.get("total_population")

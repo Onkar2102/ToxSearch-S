@@ -79,7 +79,14 @@ def cluster(
         species = load_species_state(state_p, eps, logger=log)
         return species, set(species.keys())
 
-    raise ValueError(f"Unknown clustering_method={method!r}; use 'leader_follower' or 'dbscan'")
+    if method in ("none", "global"):
+        raise ValueError(
+            "clustering_method='none' has no cluster() path; "
+            "use run_speciation() → run_global_speciation instead"
+        )
+    raise ValueError(
+        f"Unknown clustering_method={method!r}; use 'leader_follower', 'dbscan', or 'none'"
+    )
 
 
 __all__ = [

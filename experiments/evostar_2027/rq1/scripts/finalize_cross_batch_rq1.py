@@ -18,7 +18,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[4]
 EVO = ROOT / "experiments" / "evostar_2027"
 RQ1 = EVO / "rq1"
-NOTES = ROOT / "notes" / "LaTeX2e+Proceedings+Templates+download"
+NOTES = ROOT / "notes" / "rough_draft"
 NB_PATH = RQ1 / "notebooks" / "B500_rq1_summary.ipynb"
 EXP_TEX = NOTES / "04-experimentation.tex"
 CROSS_TEX = NOTES / "rq1_cross_batch_tables.tex"
@@ -633,13 +633,9 @@ def rebuild_pdf() -> None:
     pdf = NOTES / "paper.pdf"
     if pdf.is_file():
         print(f"Rebuilt {pdf} ({pdf.stat().st_size} bytes)")
-    else:
-        # fallback: main.pdf
-        alt = NOTES / "main.pdf"
-        print(f"paper.pdf missing; main.pdf exists={alt.is_file()}")
-        if r.returncode != 0:
-            print(r.stdout[-2000:])
-            print(r.stderr[-1000:])
+    elif r.returncode != 0:
+        print(r.stdout[-2000:])
+        print(r.stderr[-1000:])
 
 
 def main() -> int:

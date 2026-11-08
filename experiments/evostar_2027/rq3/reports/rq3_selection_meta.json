@@ -1,0 +1,9 @@
+{
+  "k": 10,
+  "purity_min": 0.6,
+  "design": "A_transfer_of_evolved_species",
+  "oracle": "openai_illicit",
+  "source_model": "Llama-3.1-8B-Instruct",
+  "n_prompts": 216,
+  "n_runs": 24
+}

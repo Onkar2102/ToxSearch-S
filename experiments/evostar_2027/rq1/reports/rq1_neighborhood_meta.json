@@ -1,0 +1,27 @@
+{
+  "thresholds": [
+    0.05,
+    0.1,
+    0.15,
+    0.2,
+    0.25
+  ],
+  "min_samples": [
+    2,
+    3,
+    5
+  ],
+  "mats": {
+    "d_E": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq1/mats/d_E_3139.npy",
+    "d_negE": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/data/mats/B3139/d_negE.npy"
+  },
+  "n_density_rows": 10,
+  "n_matched_rows": 16,
+  "n_bridge_rows": 3,
+  "n_online_rows": 20,
+  "semantics_t010": {
+    "d_E": "cosine similarity >= 0.80",
+    "d_negE": "mean bidirectional entailment probability >= 0.90"
+  },
+  "minpts2_note": "With self-inclusion, MinPts=2 makes every non-isolated point a core; DBSCAN clusters equal nontrivial connected components of the threshold graph."
+}

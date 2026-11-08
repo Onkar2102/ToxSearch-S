@@ -167,11 +167,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--clustering-method",
         type=str,
-        choices=["leader_follower", "dbscan"],
+        choices=["leader_follower", "dbscan", "none", "global"],
         default=defaults.clustering_method,
         help=(
-            "Niche clustering: leader_follower (elites/archive) or dbscan "
-            "(incremental DBSCAN; temp.json = grow-only density memory, keeps noise)"
+            "Niche clustering: leader_follower (elites/archive), dbscan "
+            "(incremental DBSCAN; temp.json = grow-only density memory), "
+            "or none/global (Global-EA: no speciation / global mating)"
         ),
     )
     parser.add_argument(
@@ -431,7 +432,7 @@ def main(argv: list[str] | None = None) -> int:
             evaluator=evaluator_name,
             north_star_metric=north_star_metric,
             openai_model=args.openai_model,
-            clustering_method=args.clustering_method,
+            clustering_method=speciation_config.clustering_method,
             dbscan_eps=args.dbscan_eps,
             dbscan_min_samples=args.dbscan_min_samples,
             distance_method=args.distance_method,

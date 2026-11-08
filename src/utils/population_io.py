@@ -1390,8 +1390,11 @@ def calculate_generation_statistics(
     }
     
     try:
-        from speciation.clustering_mode import is_inc_dbscan_mode
+        from speciation.clustering_mode import is_inc_dbscan_mode, is_global_mode
         use_inc = is_inc_dbscan_mode(outputs_path=str(outputs_dir))
+        use_global = is_global_mode(outputs_path=str(outputs_dir))
+        if use_global:
+            stats["population_mode"] = "global"
 
         def _get_generation_value(genome, current_gen):
             gen_val = genome.get("generation")
@@ -1465,8 +1468,11 @@ def calculate_generation_statistics(
                 stats["avg_fitness"] = stats["avg_fitness_generation"]
             if current_generation == 0:
                 stats["initial_population_size"] = stats["total_population"]
+            # Count this generation's unique D_t rows once. labeled / non_mature
+            # partition the same genomes, so concatenating them with this_gen
+            # double- or triple-counted OpenAI calls in the tracker.
             budget_metrics = calculate_budget_metrics(
-                labeled, non_mature, this_gen, current_generation, _logger
+                this_gen, [], [], current_generation, _logger
             )
             stats.update(budget_metrics)
             _logger.info(
@@ -1734,7 +1740,16 @@ def update_evolution_tracker_with_statistics(
             "avg_fitness_elites": round(statistics.get("avg_fitness_elites", gen_entry.get("avg_fitness_elites", 0.0001)), 4),
         })
         # Keep speciation block in sync for IncDBSCAN singleton panel in live analysis.
-        if isinstance(gen_entry.get("speciation"), dict) and statistics.get("singleton_species_count") is not None:
+        # Restrict to IncDBSCAN: existing_speciation is the same dict object, so writing
+        # LF/Global default density_size=0 here would permanently clobber Global-EA density.
+        _stat_mode = statistics.get("population_mode") or (
+            gen_entry.get("speciation") or {}
+        ).get("population_mode") or gen_entry.get("population_mode")
+        if (
+            isinstance(gen_entry.get("speciation"), dict)
+            and _stat_mode == "inc_dbscan"
+            and statistics.get("singleton_species_count") is not None
+        ):
             gen_entry["speciation"]["singleton_species_count"] = statistics["singleton_species_count"]
             if statistics.get("density_size") is not None:
                 gen_entry["speciation"]["density_size"] = statistics["density_size"]
@@ -1748,9 +1763,12 @@ def update_evolution_tracker_with_statistics(
             gen_entry["generation_duration_scope"] = statistics["generation_duration_scope"]
         
         if existing_speciation is not None and isinstance(existing_speciation, dict) and existing_speciation.get("species_count") is not None:
-            gen_entry["speciation"] = existing_speciation
+            # Copy before any later mutation; existing_speciation may alias gen_entry["speciation"].
+            gen_entry["speciation"] = dict(existing_speciation)
             if statistics.get("speciation_duration_seconds") is not None:
                 gen_entry["speciation"]["speciation_duration_seconds"] = round(statistics["speciation_duration_seconds"], 3)
+            if existing_speciation.get("population_mode"):
+                gen_entry["population_mode"] = existing_speciation["population_mode"]
         elif any(statistics.get(k) is not None for k in ("species_count", "archive_size")):
             gen_entry["speciation"] = {
                 "species_count": statistics.get("species_count", 0),
@@ -1770,6 +1788,10 @@ def update_evolution_tracker_with_statistics(
                 "intra_species_diversity": statistics.get("intra_species_diversity", existing_speciation.get("intra_species_diversity", 0.0) if existing_speciation else 0.0),
                 "total_population": statistics.get("total_population", 0),
                 "cluster_quality": statistics.get("cluster_quality", existing_speciation.get("cluster_quality") if existing_speciation else None),
+                "population_mode": statistics.get(
+                    "population_mode",
+                    existing_speciation.get("population_mode") if existing_speciation else "leader_follower",
+                ),
                 "speciation_duration_seconds": round(statistics["speciation_duration_seconds"], 3) if statistics.get("speciation_duration_seconds") is not None else None,
             }
         

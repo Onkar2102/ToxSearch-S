@@ -1,0 +1,5 @@
+distance,clustering,m,n_runs,n_rarefied,median_c_hat,iqr_lo,iqr_hi,median_n_high,median_c_final
+embedding,leader_follower,5,10,7,1.47,1.175,1.8599999999999999,20.5,2.0
+nli_entail,leader_follower,5,10,7,1.82,1.35,2.25,8.5,2.0
+embedding,dbscan,5,10,8,2.66,2.5775,2.7625,25.5,4.0
+nli_entail,dbscan,5,10,10,2.4299999999999997,1.8975,2.8575,24.5,4.0

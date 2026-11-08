@@ -434,8 +434,9 @@ def run_evolution(north_star_metric, log_file=None, current_cycle=None, max_vari
     logger = get_logger("RunEvolution", log_file)
     logger.info("Starting evolution: cycle=%s, metric=%s", current_cycle, north_star_metric)
 
-    from speciation.clustering_mode import is_inc_dbscan_mode
+    from speciation.clustering_mode import is_inc_dbscan_mode, is_global_mode
     use_inc = is_inc_dbscan_mode(outputs_path=str(outputs_path))
+    use_global = is_global_mode(outputs_path=str(outputs_path))
 
     if use_inc:
         temp_path_check = outputs_path / "temp.json"
@@ -468,12 +469,19 @@ def run_evolution(north_star_metric, log_file=None, current_cycle=None, max_vari
         logger.info("Evolution completed (tracker marked complete)")
         return
 
+    if use_inc:
+        clustering_method = "dbscan"
+    elif use_global:
+        clustering_method = "none"
+    else:
+        clustering_method = "leader_follower"
+
     try:
         EvolutionEngine = get_EvolutionEngine()
         engine = EvolutionEngine(
             north_star_metric, log_file, current_cycle=current_cycle, max_variants=max_variants,
             adaptive_selection_after=5, max_num_parents=max_num_parents, operators=operators,
-            outputs_path=outputs_path, clustering_method="dbscan" if use_inc else "leader_follower",
+            outputs_path=outputs_path, clustering_method=clustering_method,
         )
         engine.update_next_id()
         logger.debug("EvolutionEngine next_id set to %d", engine.next_id)

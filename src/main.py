@@ -305,6 +305,12 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
             gen0_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
             gen0_stats["archive_moved"] = speciation_result.get("archive_moved", 0)
             gen0_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
+            if speciation_result.get("population_mode"):
+                gen0_stats["population_mode"] = speciation_result["population_mode"]
+            if speciation_result.get("largest_species_size") is not None:
+                gen0_stats["largest_species_size"] = speciation_result["largest_species_size"]
+            if speciation_result.get("average_species_size") is not None:
+                gen0_stats["average_species_size"] = speciation_result["average_species_size"]
             if speciation_result.get("speciation_duration_seconds") is not None:
                 gen0_stats["speciation_duration_seconds"] = speciation_result["speciation_duration_seconds"]
             gen0_stats["evaluated_this_generation"] = gen0_stats.get("api_calls")
@@ -826,6 +832,12 @@ def main(max_generations=None, moderation_methods=None, rg_model="models/llama3.
                             gen_stats["elites_moved"] = speciation_result.get("elites_moved", 0)
                             gen_stats["archive_moved"] = speciation_result.get("archive_moved", 0)
                             gen_stats["genomes_updated"] = speciation_result.get("genomes_updated", 0)
+                            if speciation_result.get("population_mode"):
+                                gen_stats["population_mode"] = speciation_result["population_mode"]
+                            if speciation_result.get("largest_species_size") is not None:
+                                gen_stats["largest_species_size"] = speciation_result["largest_species_size"]
+                            if speciation_result.get("average_species_size") is not None:
+                                gen_stats["average_species_size"] = speciation_result["average_species_size"]
                             if "inter_species_diversity" in speciation_result:
                                 gen_stats["inter_species_diversity"] = speciation_result.get("inter_species_diversity", 0.0)
                             if "intra_species_diversity" in speciation_result:

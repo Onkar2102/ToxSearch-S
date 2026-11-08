@@ -2139,8 +2139,21 @@ def run_speciation(
     logger.info("Starting speciation: generation=%d, metric=%s", current_generation, north_star_metric)
 
     # IncDBSCAN: temp.json is grow-only density memory D_t.
+    # Global-EA (none): LF file layout, no niche clustering.
     cfg = config or SpeciationConfig()
     method = (cfg.clustering_method or "leader_follower").strip().lower().replace("-", "_")
+    if method in ("global",):
+        method = "none"
+    if method == "none":
+        from .run_global import run_global_speciation
+        logger.info("Dispatching to Global-EA (no speciation) path")
+        return run_global_speciation(
+            temp_path=temp_path,
+            current_generation=current_generation,
+            config=cfg,
+            log_file=log_file,
+            north_star_metric=north_star_metric,
+        )
     if method == "dbscan":
         from .run_inc_dbscan import run_inc_dbscan_speciation
         logger.info("Dispatching to Incremental DBSCAN speciation path")
@@ -2656,15 +2669,20 @@ def update_evolution_tracker_with_speciation(
         metrics_summary = speciation_stats.get("metrics_summary", {})
         
         is_inc = bool(speciation_result.get("inc_dbscan"))
-        # Avoid initializing empty L–F module state on the IncDBSCAN path.
-        state = None if is_inc else _get_state()
+        is_global = bool(
+            speciation_result.get("global")
+            or speciation_result.get("population_mode") == "global"
+            or speciation_result.get("clustering_method") == "none"
+        )
+        # Avoid initializing empty L–F module state on IncDBSCAN / Global-EA paths.
+        state = None if (is_inc or is_global) else _get_state()
         current_metrics = None
         if state is not None and state["metrics_tracker"].history:
             current_metrics = state["metrics_tracker"].history[-1]
         
         frozen_species_count = speciation_result.get("frozen_species_count", 0)
-        # IncDBSCAN does not use in-memory L–F species state; trust the result dict.
-        if frozen_species_count == 0 and not is_inc:
+        # IncDBSCAN / Global-EA do not use in-memory L–F species state; trust the result dict.
+        if frozen_species_count == 0 and not is_inc and not is_global:
             state = _get_state()
             frozen_species_count = len([sp for sp in state["species"].values() if sp.species_state == "frozen"])
         
@@ -2679,7 +2697,7 @@ def update_evolution_tracker_with_speciation(
         density_size = int(speciation_result.get("density_size", 0) or 0)
         noise_count = int(speciation_result.get("noise_count", 0) or 0)
         singleton_count = int(speciation_result.get("singleton_species_count", 0) or 0)
-        if not is_inc:
+        if not is_inc and not is_global:
             # LF empties temp.json; tracker labels are not the singleton source.
             state_noise = _noise_counts_from_speciation_state()
             if state_noise is not None:
@@ -2689,6 +2707,12 @@ def update_evolution_tracker_with_speciation(
         clustered_count = max(0, density_size - noise_count) if density_size else 0
         if is_inc and speciation_result.get("clustered_count") is not None:
             clustered_count = int(speciation_result["clustered_count"])
+        if is_global:
+            pop_mode = "global"
+        elif is_inc:
+            pop_mode = "inc_dbscan"
+        else:
+            pop_mode = "leader_follower"
         speciation_summary = {
             "species_count": total_species_count,
             "active_species_count": active_species_count,
@@ -2698,9 +2722,7 @@ def update_evolution_tracker_with_speciation(
             "noise_count": noise_count,
             "singleton_species_count": singleton_count,
             "clustered_count": clustered_count,
-            "population_mode": (
-                "inc_dbscan" if is_inc else "leader_follower"
-            ),
+            "population_mode": pop_mode,
             "largest_species_size": speciation_result.get("largest_species_size", 0),
             "average_species_size": speciation_result.get("average_species_size", 0.0),
             "speciation_events": speciation_result.get("speciation_events", 0),
@@ -2740,7 +2762,11 @@ def update_evolution_tracker_with_speciation(
             # still hold the default "toxicity" if Inc path never called _init_state.
             fitness_metric = (
                 get_active_north_star()
-                if (is_inc or is_inc_dbscan_mode(outputs_path=str(outputs_path)))
+                if (
+                    is_inc
+                    or is_global
+                    or is_inc_dbscan_mode(outputs_path=str(outputs_path))
+                )
                 else _metric_from_state(state)
             )
             if pop_genomes:
@@ -2810,6 +2836,8 @@ def update_evolution_tracker_with_speciation(
             evolution_tracker["generations"] = generations
         
         gen_entry["speciation"] = speciation_summary
+        # Keep top-level mode in sync (generation stats may still default to LF).
+        gen_entry["population_mode"] = pop_mode
         
         
         if "speciation_summary" not in evolution_tracker:

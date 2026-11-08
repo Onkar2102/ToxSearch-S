@@ -231,3 +231,5 @@ rainbowplus_main/
 exaqc_main/
 
 notebooks/
+# RQ3 embedding caches (too large for GitHub)
+experiments/evostar_2027/rq3/reports/coherence_cache/

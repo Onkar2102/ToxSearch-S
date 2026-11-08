@@ -30,7 +30,7 @@ class SpeciationConfig:
     # Weight for nli+embedding hybrid: d_H = alpha * d_E + (1-alpha) * d_N
     distance_alpha: float = 0.7
 
-    # Clustering: leader_follower (default) or dbscan (= incremental DBSCAN + temp.json D_t)
+    # Clustering: leader_follower, dbscan (IncDBSCAN + temp.json D_t), or none (Global-EA)
     clustering_method: str = "leader_follower"
     dbscan_eps: Optional[float] = None  # defaults to theta_sim when None
     dbscan_min_samples: int = 2
@@ -63,8 +63,11 @@ class SpeciationConfig:
         method = (self.clustering_method or "leader_follower").strip().lower().replace("-", "_")
         if method in ("lf",):
             method = "leader_follower"
-        assert method in ("leader_follower", "dbscan"), (
-            f"clustering_method must be 'leader_follower' or 'dbscan', got '{self.clustering_method}'"
+        if method in ("global",):
+            method = "none"
+        assert method in ("leader_follower", "dbscan", "none"), (
+            f"clustering_method must be 'leader_follower', 'dbscan', or 'none', "
+            f"got '{self.clustering_method}'"
         )
         self.clustering_method = method
 
