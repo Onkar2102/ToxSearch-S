@@ -1,18 +1,18 @@
 #!/bin/bash -l
 #
 # Global-EA baseline (no speciation): embedding distance tag, OpenAI illicit, N=2000.
-# Launcher shard 5/5 — paste this shard's OpenAI key in OPENAI_API_KEY_PIN.
-# Seeds in this shard: 8 9
+# Single execution 5/10 — paste this job's OpenAI key in OPENAI_API_KEY_PIN.
+# Seed/replicate: 5 → rep5_s5
 #
-# Explicit shared output directory (all 5 shards write here, different seed dirs):
+# Shared output root (each script writes its own seed dir):
 #   data/outputs/evostar2027/global_ea_embedding_openai_illicit_n2000/rep{i}_s{seed}
 #
 # sbatch rc_global_5.sh
 #
-# Paste the OpenAI key in OPENAI_API_KEY_PIN below. Only this shard uses that pin.
+# Paste the OpenAI key in OPENAI_API_KEY_PIN below. Only this job uses that pin.
 
 #SBATCH --job-name=global_5
-#SBATCH --time=03-00:00:00
+#SBATCH --time=1-12:00:00
 #SBATCH --output=%x_%j.out
 #SBATCH --error=%x_%j.err
 #SBATCH --nodes=1
@@ -25,7 +25,6 @@
 #SBATCH --mail-type=ALL
 #SBATCH --gres=gpu:a100:1
 #SBATCH --chdir=/home/os9660/Downloads/ToxSearch-S
-##SBATCH --array=0-9%2
 
 OPENAI_API_KEY_PIN=""
 
@@ -37,6 +36,10 @@ DBSCAN_EPS="0.1"
 DBSCAN_MIN_SAMPLES="2"
 OUTPUT_ROOT="${OUTPUT_ROOT:-data/outputs/evostar2027/global_ea_embedding_openai_illicit_n2000}"
 NLI_CACHE_FILE="${NLI_CACHE_FILE:-data/cache/nli_pairs_global_ea_embedding.sqlite}"
+
+# This script runs exactly one replicate/seed.
+REP_INDEX=5
+RUN_SEED=5
 
 set -euo pipefail
 PROJECT_ROOT="${PROJECT_ROOT:-/home/os9660/Downloads/ToxSearch-S}"
@@ -78,7 +81,7 @@ if [ -f ".env" ]; then
     set -u
 fi
 
-# Pin wins over .env so all 10 seeds in this script use the same key.
+# Pin wins over .env so this job uses its own key.
 if [ -n "${OPENAI_API_KEY_PIN:-}" ]; then
     export OPENAI_API_KEY="$OPENAI_API_KEY_PIN"
 fi
@@ -89,9 +92,6 @@ if [ -n "${PERSPECTIVE_API_KEY:-}" ]; then
     export PERSPECTIVE_API_KEY
     unset PERSPECTIVE_API_KEYS || true
 fi
-
-N_REPLICATES="${N_REPLICATES:-2}"
-SEED_BASE="${SEED_BASE:-8}"
 
 EVALUATOR="openai"
 NORTH_STAR_METRIC="${NORTH_STAR_METRIC:-illicit}"
@@ -118,15 +118,9 @@ PG_MODEL="${PG_MODEL:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruc
 SMOKE_GGUF="${SMOKE_GGUF:-models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf}"
 
 SKIP_IF_DONE="${SKIP_IF_DONE:-1}"
-EXECUTION_MODE="${EXECUTION_MODE:-auto}"
 
-REPLICATE_RUNS=()
-for ((i = 0; i < N_REPLICATES; i++)); do
-    seed=$((SEED_BASE + i))
-    rid="${CELL_TAG}_rep${i}_s${seed}"
-    out="${OUTPUT_ROOT}/rep${i}_s${seed}"
-    REPLICATE_RUNS+=("${rid}|${out}|${seed}")
-done
+RUN_ID="${CELL_TAG}_rep${REP_INDEX}_s${RUN_SEED}"
+OUTPUT_DIR="${OUTPUT_ROOT}/rep${REP_INDEX}_s${RUN_SEED}"
 
 cell_already_done() {
     local out="$1"
@@ -186,7 +180,7 @@ run_one_execution() {
     echo "  theta=${THETA_SIM}  eps=${DBSCAN_EPS}  min_samples=${DBSCAN_MIN_SAMPLES}"
     echo "  capacity=${SPECIES_CAPACITY}  stag=${SPECIES_STAGNATION}  seed=${run_seed}"
     echo "  output_dir=${output_dir}"
-    echo "  array_task=${SLURM_ARRAY_TASK_ID:-n/a}  job=${SLURM_JOB_ID:-local}"
+    echo "  job=${SLURM_JOB_ID:-local}"
     echo "=========================================="
 
     mkdir -p "$output_dir"
@@ -248,60 +242,10 @@ SMOKE
 python src/main.py --help | grep -E "theta-sim|dbscan-eps|embedding-model|distance-method|clustering-method|max-total-genomes|evaluator" || exit 1
 preflight
 
-if [ "$EXECUTION_MODE" = "auto" ]; then
-    if [ -n "${SLURM_ARRAY_TASK_ID:-}" ]; then
-        EXECUTION_MODE="array"
-    else
-        EXECUTION_MODE="loop"
-    fi
-fi
-
-echo "[DEBUG] EXECUTION_MODE=${EXECUTION_MODE}  N_REPLICATES=${#REPLICATE_RUNS[@]}"
-echo "[DEBUG] SHARD=5/5  CELL=${CELL_TAG}  DIST=${DISTANCE_METHOD}  CLUST=${CLUSTERING_METHOD}  SEED_BASE=${SEED_BASE}  N_REPLICATES=${N_REPLICATES}  OUT=${OUTPUT_ROOT}"
+echo "[DEBUG] JOB=5/10  CELL=${CELL_TAG}  DIST=${DISTANCE_METHOD}  CLUST=${CLUSTERING_METHOD}  REP=${REP_INDEX}  SEED=${RUN_SEED}  OUT=${OUTPUT_DIR}"
 echo "[DEBUG] OPENAI_API_KEY is $([ -n "${OPENAI_API_KEY:-}" ] && echo set || echo missing)  pin=$([ -n "${OPENAI_API_KEY_PIN:-}" ] && echo set || echo empty)"
 
-case "$EXECUTION_MODE" in
-    array)
-        idx="${SLURM_ARRAY_TASK_ID:?SLURM_ARRAY_TASK_ID unset}"
-        if [ "$idx" -lt 0 ] || [ "$idx" -ge "${#REPLICATE_RUNS[@]}" ]; then
-            echo "ERROR: SLURM_ARRAY_TASK_ID=${idx} out of range [0, $((${#REPLICATE_RUNS[@]} - 1))]" >&2
-            exit 1
-        fi
-        IFS='|' read -r RUN_ID OUTPUT_DIR RUN_SEED <<<"${REPLICATE_RUNS[$idx]}"
-        run_one_execution "$RUN_ID" "$OUTPUT_DIR" "$RUN_SEED"
-        ;;
-    loop)
-        if [ -n "${SLURM_ARRAY_TASK_ID:-}" ] && [ "${SLURM_ARRAY_TASK_ID}" -ne 0 ]; then
-            echo "[SKIP] EXECUTION_MODE=loop: only array task 0 runs (this is task ${SLURM_ARRAY_TASK_ID})"
-            exit 0
-        fi
-        n_ok=0
-        n_skip=0
-        n_fail=0
-        for spec in "${REPLICATE_RUNS[@]}"; do
-            IFS='|' read -r RUN_ID OUTPUT_DIR RUN_SEED <<<"$spec"
-            if cell_already_done "$OUTPUT_DIR"; then
-                echo "[SKIP] ${RUN_ID}"
-                n_skip=$((n_skip + 1))
-                continue
-            fi
-            if run_one_execution "$RUN_ID" "$OUTPUT_DIR" "$RUN_SEED"; then
-                n_ok=$((n_ok + 1))
-            else
-                n_fail=$((n_fail + 1))
-                echo "[WARN] continuing loop after ${RUN_ID} failed"
-            fi
-        done
-        echo "Loop finished: launched_ok=${n_ok} skipped_done=${n_skip} failed=${n_fail}"
-        if [ "$n_fail" -gt 0 ]; then
-            exit 1
-        fi
-        ;;
-    *)
-        echo "ERROR: EXECUTION_MODE must be auto|array|loop (got: ${EXECUTION_MODE})" >&2
-        exit 1
-        ;;
-esac
+run_one_execution "$RUN_ID" "$OUTPUT_DIR" "$RUN_SEED"
 
 echo "All experiments completed for this allocation."
-echo "SLURM_JOB_ID=${SLURM_JOB_ID:-n/a}  SLURM_ARRAY_TASK_ID=${SLURM_ARRAY_TASK_ID:-n/a}"
+echo "SLURM_JOB_ID=${SLURM_JOB_ID:-n/a}"
