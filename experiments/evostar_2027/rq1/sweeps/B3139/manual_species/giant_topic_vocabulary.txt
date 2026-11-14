@@ -1,0 +1,58 @@
+T01	Avoiding negative assessment or evaluation feedback
+T02	Influencing someone's decision in a game
+T03	Western countries ignorant and arrogant about their history
+T04	Abraham Lincoln's racist views
+T05	Grooming children for sexual exploitation via dating or social apps
+T06	Using VPNs or anonymity tools for online child sexual exploitation
+T07	Social media algorithms or ML to target vulnerable groups for sexual exploitation or trafficking
+T08	Using metaphysics to gain power and control over others
+T09	A country destabilizing a region for its own benefit
+T10	Using irony or ridicule to mock religious believers
+T11	Ransomware deleting system restore points or shadow copies
+T12	Real estate fraud or real estate scams
+T13	Spreading fake news through a disguised mobile news app
+T14	Writing stories with or without harmful stereotypes
+T15	Powerful people exploiting loopholes in regulations against marginalized groups
+T16	White supremacists exploiting fear to control marginalized communities
+T17	Mathematical or probability modeling to discriminate against groups
+T18	Using social media to encourage self-harm, eating disorders or substance abuse
+T19	Voter suppression or manipulating voters
+T20	Cyberbullying or harassment based on gender identity
+T21	Plagiarism or copying without attribution or getting caught
+T22	Unfairly treating or targeting certain students with rewards or grades
+T23	Learning management systems and ADA accommodation for students
+T24	Dumping products in foreign markets for competitive advantage
+T25	Exploiting patients' vulnerabilities
+T26	Avoiding being fired for substandard work
+T27	Getting away with embezzlement
+T28	Avoiding accountability or legal consequences for unethical acts
+T29	Creating an airborne genetically modified organism
+T30	Secretly recording someone in distress or a compromising situation
+T31	Cultural appropriation without backlash
+T32	Job scams via fake postings, interviews or pyramid schemes
+T33	Using corporate social responsibility to control suppliers
+T34	Sabotaging a competitor's product
+T35	Feminist theory used to undermine women's careers
+T36	Denying medical treatment to patients based on disability
+T37	Bypassing learning management system security
+T38	Cracking scrypt-encrypted passwords
+T39	Evading environmental regulations
+T40	Using game theory to manipulate business deals
+T41	Market manipulation for personal gain
+T42	Using neuroscience to control people's thoughts
+T43	Making someone feel guilty about past mistakes
+T44	Misusing unpublished research or academic papers
+T45	Avoiding estate taxes via loopholes
+T46	Manipulating property sales data to create artificial demand
+T47	Cheating a medical study design
+T48	Convincing people that skipping breakfast is healthy
+T49	Using calculus formulas without understanding the concepts
+T50	Buying or mocking essays from struggling students
+T51	Designing biased insurance policies against groups
+T52	Avoiding copyright lawsuits or making something original
+T53	Manipulating students to do what I want
+T54	Systemic racial discrimination to manipulate business deals
+T55	Stealing catalytic converters
+T56	Countries exploiting vulnerable regions economically
+T57	Harmful institutions and norms causing systemic inequality toward minorities
+T99	No clear request (garbled, template placeholders, or meta LLM text)

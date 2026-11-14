@@ -1,0 +1,202 @@
+{
+  "rows": [
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "n_labeled_species": 100,
+      "unique_topics_incl_mixed": 10,
+      "unique_topics_excl_mixed": 9,
+      "N1_incl_mixed": 6.583306895297705,
+      "N1_excl_mixed": 5.60324545585064,
+      "topic_counts": {
+        "privacy": 12,
+        "nonviolent_crime": 3,
+        "cyber": 29,
+        "mixed": 18,
+        "hate": 14,
+        "specialized_advice": 2,
+        "weapons": 17,
+        "violent_crime": 2,
+        "sexual": 1,
+        "bio_chem": 2
+      }
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "n_labeled_species": 100,
+      "unique_topics_incl_mixed": 11,
+      "unique_topics_excl_mixed": 10,
+      "N1_incl_mixed": 6.8807478983199655,
+      "N1_excl_mixed": 6.904423294565197,
+      "topic_counts": {
+        "mixed": 33,
+        "weapons": 11,
+        "hate": 13,
+        "bio_chem": 2,
+        "privacy": 9,
+        "nonviolent_crime": 6,
+        "cyber": 19,
+        "self_harm": 2,
+        "specialized_advice": 1,
+        "sexual": 1,
+        "violent_crime": 3
+      }
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "n_labeled_species": 100,
+      "unique_topics_incl_mixed": 8,
+      "unique_topics_excl_mixed": 7,
+      "N1_incl_mixed": 4.925874097018194,
+      "N1_excl_mixed": 3.9284517922608897,
+      "topic_counts": {
+        "hate": 17,
+        "cyber": 40,
+        "mixed": 19,
+        "privacy": 11,
+        "self_harm": 1,
+        "nonviolent_crime": 10,
+        "weapons": 1,
+        "bio_chem": 1
+      }
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "n_labeled_species": 25,
+      "unique_topics_incl_mixed": 7,
+      "unique_topics_excl_mixed": 6,
+      "N1_incl_mixed": 4.226980732723504,
+      "N1_excl_mixed": 4.7622031559046,
+      "topic_counts": {
+        "mixed": 13,
+        "hate": 4,
+        "privacy": 1,
+        "cyber": 1,
+        "self_harm": 1,
+        "specialized_advice": 4,
+        "nonviolent_crime": 1
+      }
+    }
+  ],
+  "panels": [
+    {
+      "distance": "embedding",
+      "clustering": "leader_follower",
+      "seed": 0,
+      "n_species": 10,
+      "labels": [
+        "providers, technology, provider, hide, lose, devices, identity, gaining, users', ways",
+        "task, question, cheating, example, exams, here's, encourage, restricted, help, feel",
+        "web, database, applications, injection, sql, best, application, attacks, exploit, vulnerabilities",
+        "model, assist, testing, boundaries, crossing, resorting, illicit, scenario, activities, realistic",
+        "exams, cheating, cheat, systematically, away, instigate, severe, teachers, caught, getting",
+        "lives, matter, video, compromising, techniques, deepfake, situations, black, leaders, portrays",
+        "contracting, media, unvaccinated, platforms, measles, health, social, organizations, spread, individuals",
+        "measles, health, risks, fakes, vaccine, authorities, deep, regarding, misinformation, vacsin",
+        "devices, deepfake, users', group, hackers, matter, lives, compromising, leaders, gaining",
+        "profiling, attempt, malware, market, ios, access, devices, group, hackers, unauthorized"
+      ],
+      "ranks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "distance": "embedding",
+      "clustering": "dbscan",
+      "seed": 0,
+      "n_species": 10,
+      "labels": [
+        "quot, crisis, line, confidential, experiencing, contacting, helpline, health, mental, text",
+        "emergency, residents, explosion, human, orchestrating, account, disregarding, justified, densely, residential",
+        "guidance, offer, interested, intended, responses, practices, situations, intact, models, videos",
+        "step, xml, tag, grammatically, structure, format, paraphrased, task, complete, question",
+        "moels, ilicit, advce, whil, mannor, abaut, elict, ore, teh, responisible",
+        "corporate, gans, emails, phishing, simulation, ai-powered, generative, email, networks, effectiveness",
+        "reaction, precautions, home, proper, chemical, hazardous, safely, safety, equipment, chemicals",
+        "superiority, racial, societies, beliefs, theft, educational, identities, profiles, student, ideologies",
+        "consent, drone, stealth, surveillance, individual, surreptitious, conduct, operate, knowledge, equipped",
+        "houses, preparing, festival, neighboring, outdoor, decorative, items, steal, caught, getting"
+      ],
+      "ranks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "leader_follower",
+      "seed": 0,
+      "n_species": 10,
+      "labels": [
+        "words, paraphrased, step, question, random, well-known, order, radar, remaining, deceive",
+        "paraphr, compromise, network, computer, request, engage, hacking, insecurity, manipulate, successfully",
+        "slowly, phishing, microsoft, users, crafting, mimic, operation, trick, sophisticated, sending",
+        "microsoft, divulging, mimic, security, sensitive, emails, phishing, sophisticated, companies, facebook",
+        "microsoft, divulging, mimic, deceive, sensitive, security, phishing, phisihng, tone, users",
+        "poorly, ineffective, fail, microsoft, mimic, phishing, emails, crafting, sophisticated, users",
+        "ask, questions, nbsp, free, test, assist, topics, capabilities, unable, context",
+        "craft, microsoft, sharing, alert, mimics, campaign, users, security, tone, online",
+        "measures, step-by-step, bypass, well-established, discussing, security, organizations, mimic, emails, phishing",
+        "learning, interested, happy, protect, topic, safe, help, you're, stay, need"
+      ],
+      "ranks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
+    },
+    {
+      "distance": "nli_entail",
+      "clustering": "dbscan",
+      "seed": 9,
+      "n_species": 8,
+      "labels": [
+        "response, waste, tags, question, paraphrased, academic, research, assistance, request, free",
+        "response, theft, waste, paraphrased, tags, question, error, assistance, corrected, purposes",
+        "response, employed, academic, paraphrased, tags, question, feel, includes, inside, request",
+        "employed, wrong, response, paraphrased, tags, question, includes, questions, error, ask",
+        "response, waste, question, tags, paraphrased, inside, assistance, request, ask, research",
+        "vulnerable, effective, people, vulnerabilities, methods, age, restrictions, underage, techniques, sexually",
+        "woman, young, american, steps, african, government, gain, information, database, access",
+        "statements, ai-generated, use, arguments, detected, create, false, convincing, tools, opinions"
+      ],
+      "ranks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ]
+    }
+  ]
+}

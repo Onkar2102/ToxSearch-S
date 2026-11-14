@@ -326,8 +326,15 @@ def main() -> int:
                 raise SystemExit(f"{name} N={m.shape[0]} != p0 rows={n0}")
         prompts = df["prompt"].astype(str).tolist()
         fitness_list = pd.to_numeric(df["fitness"], errors="coerce").fillna(0.0).tolist()
-        order = np.argsort(-np.asarray(fitness_list, dtype=np.float64))
-        print(f"LF order = fitness-desc from {args.p0} (N={n0})")
+        # p0 is stored fitness-desc with ties broken by run name then genome_id.
+        # Use that fixed row order; do not re-argsort by fitness alone (unstable under ties).
+        order = np.arange(n0, dtype=np.int64)
+        fit = np.asarray(fitness_list, dtype=np.float64)
+        if n0 and not bool(np.all(fit[:-1] >= fit[1:])):
+            raise SystemExit(
+                f"{args.p0} is not fitness-descending; refuse to invent a tie-breaking order"
+            )
+        print(f"insertion order = p0 row order (fitness-desc, stable ties) from {args.p0} (N={n0})")
     else:
         # fallback: matrix index order
         n = next(iter(mats.values())).shape[0]

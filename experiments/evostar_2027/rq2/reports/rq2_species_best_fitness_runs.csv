@@ -1,0 +1,41 @@
+cell,distance,clustering,label,seed,n_mature,n_ge_0.7,n_ge_0.8,frac_ge_0.7,frac_ge_0.8,mean_species_best,max_species_best
+lf_embedding,embedding,leader_follower,LF $d_E$,0,93,4,2,0.043,0.0215,0.0888,0.8487
+lf_embedding,embedding,leader_follower,LF $d_E$,1,97,1,1,0.0103,0.0103,0.0891,0.9476
+lf_embedding,embedding,leader_follower,LF $d_E$,2,61,5,3,0.082,0.0492,0.224,0.9548
+lf_embedding,embedding,leader_follower,LF $d_E$,3,94,4,2,0.0426,0.0213,0.0919,0.9748
+lf_embedding,embedding,leader_follower,LF $d_E$,4,49,4,2,0.0816,0.0408,0.1409,0.9464
+lf_embedding,embedding,leader_follower,LF $d_E$,5,85,1,1,0.0118,0.0118,0.0591,0.9473
+lf_embedding,embedding,leader_follower,LF $d_E$,6,169,1,1,0.0059,0.0059,0.0523,0.8453
+lf_embedding,embedding,leader_follower,LF $d_E$,7,49,8,6,0.1633,0.1224,0.2058,0.9555
+lf_embedding,embedding,leader_follower,LF $d_E$,8,60,3,3,0.05,0.05,0.0969,0.9476
+lf_embedding,embedding,leader_follower,LF $d_E$,9,121,2,2,0.0165,0.0165,0.0585,0.9554
+inc_embedding,embedding,dbscan,Inc $d_E$,0,69,5,5,0.0725,0.0725,0.139,0.9554
+inc_embedding,embedding,dbscan,Inc $d_E$,1,49,4,3,0.0816,0.0612,0.1583,0.9538
+inc_embedding,embedding,dbscan,Inc $d_E$,2,51,6,3,0.1176,0.0588,0.1367,0.9538
+inc_embedding,embedding,dbscan,Inc $d_E$,3,57,3,3,0.0526,0.0526,0.1043,0.975
+inc_embedding,embedding,dbscan,Inc $d_E$,4,53,5,4,0.0943,0.0755,0.1254,0.9476
+inc_embedding,embedding,dbscan,Inc $d_E$,5,40,3,2,0.075,0.05,0.1209,0.9751
+inc_embedding,embedding,dbscan,Inc $d_E$,6,49,3,1,0.0612,0.0204,0.1001,0.8436
+inc_embedding,embedding,dbscan,Inc $d_E$,7,60,4,3,0.0667,0.05,0.1251,0.9462
+inc_embedding,embedding,dbscan,Inc $d_E$,8,91,3,2,0.033,0.022,0.076,0.9432
+inc_embedding,embedding,dbscan,Inc $d_E$,9,63,4,3,0.0635,0.0476,0.1022,0.9752
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,0,26,8,7,0.3077,0.2692,0.3761,0.954
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,1,105,2,0,0.019,0.0,0.0697,0.7489
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,2,18,10,7,0.5556,0.3889,0.55,0.9449
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,3,82,1,0,0.0122,0.0,0.0385,0.7039
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,4,65,4,1,0.0615,0.0154,0.1017,0.9544
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,5,35,3,2,0.0857,0.0571,0.1647,0.945
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,6,70,2,2,0.0286,0.0286,0.0495,0.9539
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,7,67,7,5,0.1045,0.0746,0.1689,0.9538
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,8,27,5,3,0.1852,0.1111,0.2521,0.9474
+lf_nli,nli_entail,leader_follower,LF $d_{\neg E}$,9,55,2,1,0.0364,0.0182,0.088,0.9434
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,0,2,1,1,0.5,0.5,0.5242,0.954
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,1,1,1,1,1.0,1.0,0.9556,0.9556
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,2,3,3,3,1.0,1.0,0.9501,0.9551
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,3,1,1,1,1.0,1.0,0.9452,0.9452
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,4,1,1,1,1.0,1.0,0.8579,0.8579
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,5,1,1,1,1.0,1.0,0.9456,0.9456
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,6,2,1,1,0.5,0.5,0.4901,0.975
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,7,3,2,2,0.6667,0.6667,0.6889,0.9542
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,8,3,2,2,0.6667,0.6667,0.6354,0.9558
+inc_nli,nli_entail,dbscan,Inc $d_{\neg E}$,9,8,6,5,0.75,0.625,0.6718,0.9538

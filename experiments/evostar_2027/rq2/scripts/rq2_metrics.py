@@ -4,11 +4,82 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
 NOISE_SIDS = {None, 0, -1, "0", "-1"}
+EMBEDDING_CACHE_NAME = "prompt_embeddings.npz"
+EMBEDDING_DIM = 384
+
+
+def embedding_cache_path(run_dir: Path) -> Path:
+    return Path(run_dir) / EMBEDDING_CACHE_NAME
+
+
+def load_embedding_cache(run_dir: Path) -> Dict[str, np.ndarray]:
+    """Load id -> (384,) vectors from ``prompt_embeddings.npz``, if present."""
+    path = embedding_cache_path(run_dir)
+    if not path.is_file():
+        return {}
+    try:
+        data = np.load(path, allow_pickle=False)
+        ids = data["ids"]
+        embs = np.asarray(data["embeddings"], dtype=np.float32)
+    except Exception:
+        return {}
+    if embs.ndim != 2 or embs.shape[1] != EMBEDDING_DIM:
+        return {}
+    out: Dict[str, np.ndarray] = {}
+    for i, rid in enumerate(ids.tolist()):
+        out[str(rid)] = embs[i]
+    return out
+
+
+def save_embedding_cache(
+    run_dir: Path,
+    ids: Sequence[str],
+    embeddings: np.ndarray,
+) -> Path:
+    """Write L2-ready MiniLM cache; ``embeddings`` must be shape (n, 384)."""
+    path = embedding_cache_path(run_dir)
+    arr = np.asarray(embeddings, dtype=np.float32)
+    if arr.ndim != 2 or arr.shape[1] != EMBEDDING_DIM:
+        raise ValueError(f"expected (n, {EMBEDDING_DIM}) embeddings, got {arr.shape}")
+    if len(ids) != arr.shape[0]:
+        raise ValueError("ids and embeddings length mismatch")
+    id_arr = np.asarray([str(x) for x in ids])
+    np.savez_compressed(path, ids=id_arr, embeddings=arr)
+    return path
+
+
+def attach_cached_embeddings(
+    genomes: Sequence[Dict[str, Any]],
+    run_dir: Path,
+    cache: Optional[Mapping[str, np.ndarray]] = None,
+) -> List[Dict[str, Any]]:
+    """Return shallow copies with ``prompt_embedding`` filled from the NPZ cache."""
+    if cache is None:
+        cache = load_embedding_cache(run_dir)
+    if not cache:
+        return list(genomes)
+    out: List[Dict[str, Any]] = []
+    for rec in genomes:
+        if not isinstance(rec, dict):
+            continue
+        e = rec.get("prompt_embedding")
+        if isinstance(e, list) and len(e) == EMBEDDING_DIM:
+            out.append(rec)
+            continue
+        rid = str(rec.get("id"))
+        vec = cache.get(rid)
+        if vec is None:
+            out.append(rec)
+            continue
+        g = dict(rec)
+        g["prompt_embedding"] = np.asarray(vec, dtype=np.float32).tolist()
+        out.append(g)
+    return out
 
 
 def load_json(path: Path) -> Any:
@@ -43,11 +114,23 @@ def illicit_of(rec: Any) -> Optional[float]:
     return None
 
 
-def load_genomes(run_dir: Path, clustering: str) -> List[Dict[str, Any]]:
+def load_genomes(
+    run_dir: Path,
+    clustering: str,
+    *,
+    attach_embeddings: bool = True,
+) -> List[Dict[str, Any]]:
+    """Load unique genomes for a run.
+
+    IncDBSCAN uses ``temp.json``; LF and Global EA (``none``) use
+    ``elites.json`` + ``archive.json``. When ``attach_embeddings`` is true,
+    missing ``prompt_embedding`` fields are filled from ``prompt_embeddings.npz``.
+    """
     recs: List[Dict[str, Any]] = []
     if clustering == "dbscan":
         names = ("temp.json",)
     else:
+        # leader_follower and none (Global EA)
         names = ("elites.json", "archive.json")
     seen = set()
     for name in names:
@@ -63,6 +146,8 @@ def load_genomes(run_dir: Path, clustering: str) -> List[Dict[str, Any]]:
             seen.add(rid)
             recs.append(rec)
     recs.sort(key=lambda r: (int(r["id"]) if str(r.get("id", "")).isdigit() else 10**9, str(r.get("id"))))
+    if attach_embeddings:
+        recs = attach_cached_embeddings(recs, run_dir)
     return recs
 
 

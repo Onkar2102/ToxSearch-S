@@ -1,0 +1,6 @@
+distance,clustering,iqr,n
+embedding,leader_follower,"0.207 [0.139, 0.280]",10
+embedding,dbscan,"0.240 [0.230, 0.306]",10
+nli_entail,leader_follower,"0.190 [0.149, 0.289]",10
+nli_entail,dbscan,"0.217 [0.074, 0.271]",10
+none,none,"0.179 [0.151, 0.284]",10

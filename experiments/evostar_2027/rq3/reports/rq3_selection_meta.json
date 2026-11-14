@@ -4,6 +4,6 @@
   "design": "A_transfer_of_evolved_species",
   "oracle": "openai_illicit",
   "source_model": "Llama-3.1-8B-Instruct",
-  "n_prompts": 216,
-  "n_runs": 24
+  "n_prompts": 325,
+  "n_runs": 40
 }

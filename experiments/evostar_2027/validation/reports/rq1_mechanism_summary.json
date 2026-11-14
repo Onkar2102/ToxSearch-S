@@ -1,0 +1,110 @@
+{
+  "percolation_note": "NLI already has giant\u22480.53 at dens\u22480.0019 (t=0.05); MiniLM transitions sharply between dens\u22480.0049 and \u22480.0177.",
+  "cross_source_at_t010": {
+    "d_E": 0.09851078750876614,
+    "d_negE": 0.4553224553224553
+  },
+  "hub_removal": [
+    {
+      "t": 0.1,
+      "n_removed": 31.0,
+      "giant_before": 0.10640331315705638,
+      "giant_after": 0.10746460746460747,
+      "edge_density": 0.0049219395134018845,
+      "hub_edge_share": 0.1624520440575884,
+      "max_degree": 159.0,
+      "cross_source_share": 0.09851078750876614,
+      "label": "d_E@0.10",
+      "distance": "d_E"
+    },
+    {
+      "t": 0.1,
+      "n_removed": 31.0,
+      "giant_before": 0.6145269194010832,
+      "giant_after": 0.4868082368082368,
+      "edge_density": 0.0026131496859651934,
+      "hub_edge_share": 0.4875679875679876,
+      "max_degree": 421.0,
+      "cross_source_share": 0.4553224553224553,
+      "label": "d_negE@0.10",
+      "distance": "d_negE"
+    },
+    {
+      "t": 0.33,
+      "n_removed": 31.0,
+      "giant_before": 0.7674418604651163,
+      "giant_after": 0.6695624195624196,
+      "edge_density": 0.0049467106293061384,
+      "hub_edge_share": 0.4245372080614046,
+      "max_degree": 847.0,
+      "cross_source_share": 0.5353609982350285,
+      "label": "d_negE@dens-match(0.33)",
+      "distance": "d_negE"
+    },
+    {
+      "t": 0.07,
+      "n_removed": 31.0,
+      "giant_before": 0.059891685250079645,
+      "giant_after": 0.05308880308880309,
+      "edge_density": 0.002468583829212496,
+      "hub_edge_share": 0.1605527224872512,
+      "max_degree": 90.0,
+      "cross_source_share": 0.11292975818391182,
+      "label": "d_E@dens-match(0.07)",
+      "distance": "d_E"
+    }
+  ],
+  "feasible_windows": {
+    "d_E|incdbscan|ms=2.0": {
+      "t_min": 0.1,
+      "t_max": 0.15,
+      "n_t": 2
+    },
+    "d_E|incdbscan|ms=3.0": {
+      "t_min": 0.1,
+      "t_max": 0.15,
+      "n_t": 2
+    },
+    "d_E|incdbscan|ms=5.0": {
+      "t_min": 0.15,
+      "t_max": 0.15,
+      "n_t": 1
+    },
+    "d_E|leader_follower|ms=": {
+      "t_min": 0.15,
+      "t_max": 0.5,
+      "n_t": 8
+    },
+    "d_EP|incdbscan|ms=2.0": {
+      "t_min": 0.1,
+      "t_max": 0.1,
+      "n_t": 1
+    },
+    "d_EP|incdbscan|ms=3.0": {
+      "t_min": 0.1,
+      "t_max": 0.1,
+      "n_t": 1
+    },
+    "d_EP|incdbscan|ms=5.0": {
+      "t_min": 0.1,
+      "t_max": 0.1,
+      "n_t": 1
+    },
+    "d_EP|leader_follower|ms=": {
+      "t_min": 0.1,
+      "t_max": 0.4,
+      "n_t": 7
+    },
+    "d_N|leader_follower|ms=": {
+      "t_min": 0.3,
+      "t_max": 0.5,
+      "n_t": 5
+    }
+  },
+  "dens_matched_thresholds": {
+    "nli_to_match_embedding_010": 0.33,
+    "embedding_to_match_nli_010": 0.07,
+    "embedding_010_density": 0.0049219395134018845,
+    "nli_010_density": 0.0026131496859651934
+  }
+}

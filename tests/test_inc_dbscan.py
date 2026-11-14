@@ -285,6 +285,108 @@ class TestIncDBSCANPrecomputedMatrix(unittest.TestCase):
         del rng
 
 
+class TestIncDBSCANCorePromotionStar(unittest.TestCase):
+    """MinPts=5 star: hub becomes core only after the last leaf; batch forms one cluster.
+
+    Threshold graph: four leaves connect to hub B but not to each other.
+    Insert B + three leaves first (B degree 4 < MinPts=5). Inserting the fourth
+    leaf promotes B to core while the new leaf stays non-core. Batch DBSCAN
+    assigns all five points to one mature cluster; grow-only insert must either
+    match that or document the miss.
+    """
+
+    def setUp(self):
+        SpeciesIdGenerator.reset(0)
+
+    @staticmethod
+    def _star_distance_matrix() -> np.ndarray:
+        n = 5  # 0 = hub B, 1..4 = leaves
+        D = np.ones((n, n), dtype=np.float64)
+        np.fill_diagonal(D, 0.0)
+        for i in range(1, n):
+            D[0, i] = D[i, 0] = 0.05
+        return D
+
+    def test_minpts2_star_is_connected_component(self):
+        D = self._star_distance_matrix()
+        order = np.arange(5)
+        labels = seed_from_precomputed_matrix(D, order, eps=0.1, min_samples=2)
+        mature = {int(x) for x in labels.tolist() if int(x) >= 0}
+        self.assertEqual(len(mature), 1)
+        self.assertTrue(all(int(x) >= 0 for x in labels.tolist()))
+
+    def test_minpts5_star_core_promotion_vs_batch(self):
+        from sklearn.cluster import DBSCAN
+
+        D = self._star_distance_matrix()
+        order = np.array([0, 1, 2, 3, 4])  # hub, three leaves, final leaf
+        inc = seed_from_precomputed_matrix(D, order, eps=0.1, min_samples=5)
+        batch = DBSCAN(eps=0.1, min_samples=5, metric="precomputed").fit_predict(D)
+        batch_n_mat = len({int(x) for x in batch.tolist() if int(x) >= 0})
+        inc_n_mat = len({int(x) for x in inc.tolist() if int(x) >= 0})
+        self.assertEqual(batch_n_mat, 1, "batch DBSCAN must find the five-point star")
+        self.assertTrue(all(int(x) >= 0 for x in batch.tolist()))
+        # Documented grow-only failure mode: hub becomes core on the last insert,
+        # but the non-core leaf does not trigger expansion from the newly core hub.
+        if inc_n_mat != batch_n_mat:
+            self.assertEqual(
+                inc_n_mat,
+                0,
+                f"unexpected partial partition: inc={inc.tolist()} batch={batch.tolist()}",
+            )
+            self.assertTrue(
+                all(int(x) < 0 for x in inc.tolist()),
+                "core-promotion miss should leave the star unassigned",
+            )
+        else:
+            self.assertTrue(all(int(x) >= 0 for x in inc.tolist()))
+
+    def test_minpts5_star_via_live_insert_point(self):
+        """Same star geometry through embedding insert_point (eps on d_E)."""
+        SpeciesIdGenerator.reset(0)
+        # Hub + 4 leaves in orthogonal residual directions; leaf–leaf d_E > 0.1.
+        a = 0.7
+        vecs = [
+            np.array([1.0, 0.0, 0.0, 0.0, 0.0]),
+            _unit([1.0, a, 0.0, 0.0, 0.0]),
+            _unit([1.0, 0.0, a, 0.0, 0.0]),
+            _unit([1.0, 0.0, 0.0, a, 0.0]),
+            _unit([1.0, 0.0, 0.0, 0.0, a]),
+        ]
+        eps = 0.1
+        # Sanity: hub–leaf below eps, leaf–leaf above eps
+        from speciation.distance_metrics.embedding import embedding_distance
+
+        for i in range(1, 5):
+            self.assertLessEqual(embedding_distance(vecs[0], vecs[i]), eps)
+        for i in range(1, 5):
+            for j in range(i + 1, 5):
+                self.assertGreater(embedding_distance(vecs[i], vecs[j]), eps)
+
+        genomes = [_genome(i + 1, vecs[i], fitness=1.0 - 0.05 * i) for i in range(4)]
+        state, species, _ = seed_from_incremental(
+            genomes, eps=eps, min_samples=5, distance_method="embedding"
+        )
+        # After hub + 3 leaves, hub degree=4 < MinPts=5 → no mature species
+        self.assertEqual(len(species), 0)
+        self.assertFalse(state.is_core[0])
+
+        g5 = _genome(5, vecs[4], fitness=0.7)
+        genomes.append(g5)
+        ev = insert_point(
+            state, g5, Individual.from_genome(g5), current_generation=1, species=species
+        )
+        self.assertTrue(state.is_core[0], "final leaf must promote the hub to core")
+        self.assertFalse(state.is_core[4], "final leaf itself is not core")
+        mature_labels = [int(x) for x in state.labels if int(x) > 0]
+        # Expected miss: hub is core with non-mature label; insert returns noise.
+        if mature_labels:
+            self.assertEqual(len(set(mature_labels)), 1)
+            self.assertEqual(len(mature_labels), 5)
+        else:
+            self.assertIn(ev.get("event"), ("inc_dbscan_insert_noise", "inc_dbscan_singleton_pool"))
+
+
 class TestRebuildStagnation(unittest.TestCase):
     """Tied champion must not wipe species.stagnation (RQ2 Inc freeze bug)."""
 

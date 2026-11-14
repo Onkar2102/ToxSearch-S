@@ -1,0 +1,8 @@
+method,distance,t,min_samples,mature_species,mixed_species,prompts_in_mature_species,prompts_in_mixed_species,prompts_outside_dominant_topic
+leader_follower,d_E,0.1,,356,3,2184,62,3
+leader_follower,d_EP,0.1,,422,7,2467,36,8
+leader_follower,d_negE,0.1,,463,51,1568,262,104
+incdbscan,d_E,0.1,2,167,5,2358,412,39
+incdbscan,d_EP,0.1,2,129,12,2660,899,221
+incdbscan,d_negE,0.1,2,86,2,2187,1931,1625
+incdbscan,d_negE,0.1,5,10,1,1921,1846,1549

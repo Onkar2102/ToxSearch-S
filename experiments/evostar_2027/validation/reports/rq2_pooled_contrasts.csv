@@ -1,0 +1,7 @@
+family,contrast,n_lf,n_inc,hl,lo,hi,delta,note
+fitness,Inc-LF|embedding,10,10,0.04297699999999993,-0.13536984999999988,0.20830400000000004,0.06,declared reanalysis; dissimilarity as block for pooled
+mpnet_disp,Inc-LF|embedding,10,10,0.04247074543824886,-0.03705303040717627,0.11824493934144477,0.3,declared reanalysis
+fitness,Inc-LF|nli_entail,10,10,0.16440099999999996,-0.026131999999999933,0.3164398,0.4,declared reanalysis; dissimilarity as block for pooled
+mpnet_disp,Inc-LF|nli_entail,10,10,-0.018032246030994445,-0.11979216357182246,0.08648679970218207,-0.1,declared reanalysis
+fitness,Inc-LF|pooled,20,20,0.09589999999999993,-0.029610825000000077,0.21062199999999998,0.245,declared reanalysis; dissimilarity as block for pooled
+mpnet_disp,Inc-LF|pooled,20,20,0.022077638425121837,-0.048828777073020885,0.08815797027791525,0.105,declared reanalysis

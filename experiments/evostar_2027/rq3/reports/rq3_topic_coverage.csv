@@ -1,0 +1,5 @@
+distance,clustering,n_labeled_species,unique_topics_incl_mixed,unique_topics_excl_mixed,N1_incl_mixed,N1_excl_mixed
+embedding,leader_follower,100,10,9,6.583306895297705,5.60324545585064
+embedding,dbscan,100,11,10,6.8807478983199655,6.904423294565197
+nli_entail,leader_follower,100,8,7,4.925874097018194,3.9284517922608897
+nli_entail,dbscan,25,7,6,4.226980732723504,4.7622031559046

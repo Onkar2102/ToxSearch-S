@@ -42,11 +42,14 @@ DIST_TEX = {"embedding": r"$d_E$", "nli_entail": r"$d_{\neg E}$"}
 CLUS_TEX = {"leader_follower": "LF", "dbscan": "IncDBSCAN"}
 
 # Folder names under data/outputs/evostar2027
+# Global EA is wired for loaders/consistency; primary k=50 tables come from
+# rq2_topk50_primary.py (do not let this script overwrite that LaTeX).
 LIVE_DIR = {
     ("embedding", "leader_follower"): "lf_embedding",
     ("nli_entail", "leader_follower"): "lf_nli",
     ("embedding", "dbscan"): "inc_embedding",
     ("nli_entail", "dbscan"): "inc_nli",
+    ("none", "none"): "no_speciation",
 }
 
 ELITE_K = 100

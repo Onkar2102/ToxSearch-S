@@ -2,7 +2,7 @@
 
 Compares grow-only IncDBSCAN partitions against classical batch DBSCAN.
 At MinPts=2 the methods must match (connected-component niching).
-At MinPts≥3 the live insert path under-merges relative to batch.
+At MinPts≥3 the live insert path can under-count mature clusters relative to batch.
 
 ## Archive (calibration matrices)
 
@@ -31,34 +31,36 @@ At MinPts≥3 the live insert path under-merges relative to batch.
 
 | cell | seed | MinPts | live n_mat | batch n_mat | ARI | exact |
 |---|---:|---:|---:|---:|---:|---:|
-| inc_embedding | 0 | 2 | 69 | 68 | 0.9485 | 0 |
-| inc_embedding | 1 | 2 | 49 | 48 | 0.8824 | 0 |
-| inc_embedding | 2 | 2 | 51 | 50 | 0.6000 | 0 |
-| inc_embedding | 3 | 2 | 57 | 56 | 0.9788 | 0 |
-| inc_embedding | 4 | 2 | 53 | 52 | 0.9481 | 0 |
-| inc_embedding | 5 | 2 | 40 | 39 | 0.9967 | 0 |
-| inc_embedding | 6 | 2 | 50 | 49 | 0.9800 | 0 |
-| inc_embedding | 7 | 2 | 61 | 60 | 0.9308 | 0 |
-| inc_embedding | 8 | 2 | 91 | 90 | 0.9752 | 0 |
-| inc_embedding | 9 | 2 | 63 | 62 | 0.9896 | 0 |
-| inc_nli | 0 | 5 | 2 | 2 | 0.0179 | 0 |
-| inc_nli | 1 | 5 | 1 | 5 | 0.0132 | 0 |
-| inc_nli | 2 | 5 | 3 | 3 | 0.0801 | 0 |
-| inc_nli | 3 | 5 | 1 | 2 | 0.0163 | 0 |
-| inc_nli | 4 | 5 | 1 | 4 | 0.0003 | 0 |
-| inc_nli | 5 | 5 | 1 | 3 | 0.0276 | 0 |
-| inc_nli | 6 | 5 | 2 | 2 | 0.0162 | 0 |
-| inc_nli | 7 | 5 | 3 | 4 | 0.1044 | 0 |
-| inc_nli | 8 | 5 | 3 | 9 | 0.0485 | 0 |
-| inc_nli | 9 | 5 | 8 | 10 | 0.9917 | 0 |
+| inc_embedding | 0 | 2 | 69 | 69 | 1.0000 | 1 |
+| inc_embedding | 1 | 2 | 49 | 49 | 1.0000 | 1 |
+| inc_embedding | 2 | 2 | 51 | 51 | 1.0000 | 1 |
+| inc_embedding | 3 | 2 | 57 | 57 | 1.0000 | 1 |
+| inc_embedding | 4 | 2 | 53 | 53 | 1.0000 | 1 |
+| inc_embedding | 5 | 2 | 40 | 40 | 1.0000 | 1 |
+| inc_embedding | 6 | 2 | 50 | 50 | 1.0000 | 1 |
+| inc_embedding | 7 | 2 | 61 | 61 | 1.0000 | 1 |
+| inc_embedding | 8 | 2 | 91 | 91 | 1.0000 | 1 |
+| inc_embedding | 9 | 2 | 63 | 63 | 1.0000 | 1 |
+| inc_nli | 0 | 5 | 2 | 3 | 0.9961 | 0 |
+| inc_nli | 1 | 5 | 1 | 6 | 0.9777 | 0 |
+| inc_nli | 2 | 5 | 3 | 4 | 0.9952 | 0 |
+| inc_nli | 3 | 5 | 1 | 3 | 0.9951 | 0 |
+| inc_nli | 4 | 5 | 1 | 5 | 0.9794 | 0 |
+| inc_nli | 5 | 5 | 1 | 4 | 0.9920 | 0 |
+| inc_nli | 6 | 5 | 2 | 3 | 0.9966 | 0 |
+| inc_nli | 7 | 5 | 3 | 5 | 0.9970 | 0 |
+| inc_nli | 8 | 5 | 3 | 10 | 0.9742 | 0 |
+| inc_nli | 9 | 5 | 8 | 11 | 0.9888 | 0 |
 
 ## Online ARI summary (median [min, max])
 
-- `inc_embedding`: 0.9618 [0.6000, 0.9967] (n=10)
-- `inc_nli`: 0.0228 [0.0003, 0.9917] (n=10)
+- `inc_embedding`: 1.0000 [1.0000, 1.0000] (n=10)
+- `inc_nli`: 0.9935 [0.9742, 0.9970] (n=10)
 
 ## Caveat
 
 The online comparison applies batch DBSCAN to the *final* ε-graph and
 therefore bounds final-partition disagreement. It does not replay the
 evolutionary trajectory under exact IncrementalDBSCAN updates.
+
+Regenerated from CSV by `validation/mandatory_checks.py`.

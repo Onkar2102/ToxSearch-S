@@ -233,3 +233,9 @@ exaqc_main/
 notebooks/
 # RQ3 embedding caches (too large for GitHub)
 experiments/evostar_2027/rq3/reports/coherence_cache/
+
+# Large local experiment caches / DBs (exceed GitHub limits; keep local only)
+*.sqlite
+experiments/evostar_2027/rq2/reports/topic_mpnet_cache.npz
+experiments/evostar_2027/rq2/reports/mpnet_disp_cache/
+~$*.xlsx

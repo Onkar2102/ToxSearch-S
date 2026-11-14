@@ -60,7 +60,7 @@ NOISE = {None, 0, -1, "0", "-1"}
 N_PERM = 10_000
 PERM_SEED = 2027
 TAU = 0.80
-ELITE_K = 100  # primary elite set size (K_{100}, pi_{100})
+ELITE_K = 50  # primary elite set size (K_{50}, pi_{50}); override with --elite-k
 
 plt.rcParams.update(
     {
@@ -327,7 +327,7 @@ def analyze_run(
     if not complete(run_dir):
         return None
     genomes = load_genomes(run_dir, clustering)
-    ids = [g.get("id") for g in genomes]
+    # Matched unique-evaluation budget: first 2000 moderated genomes by ID order.
     fitness: List[float] = []
     kept: List[Dict[str, Any]] = []
     for g in genomes:
@@ -336,6 +336,8 @@ def analyze_run(
             continue
         fitness.append(float(f))
         kept.append(g)
+        if len(kept) >= 2000:
+            break
     if len(kept) < ELITE_K:
         return None
 
@@ -349,16 +351,25 @@ def analyze_run(
         labels,
         fitness,
         n_perm=n_perm,
-        seed=PERM_SEED + seed * 17 + hash((distance, clustering, mode, label_source)) % 10_000,
+        # Deterministic seed (no Python hash randomization).
+        seed=PERM_SEED
+        + seed * 17
+        + (0 if distance == "embedding" else 1000)
+        + (0 if clustering == "leader_follower" else 100)
+        + (0 if mode == "all" else 10)
+        + (0 if label_source == "final" else 1),
         mode=mode,
     )
+    u_obs = float(stats.get("U10_obs", float("nan")))
     return {
         "distance": distance,
         "clustering": clustering,
         "seed": seed,
         "mode": mode,
         "label_source": label_source,
+        "elite_k": ELITE_K,
         "n_unique": len(kept),
+        "n_assigned_in_topk": int(ELITE_K - u_obs) if u_obs == u_obs else "",
         **stats,
     }
 
@@ -644,14 +655,16 @@ def plot_with_null(run_rows: List[Dict[str, Any]], out: Path) -> None:
 
 
 def main() -> int:
+    global ELITE_K
     p = argparse.ArgumentParser(description="RQ3 species-size occupancy null")
     p.add_argument("--n-perm", type=int, default=N_PERM)
+    p.add_argument("--elite-k", type=int, default=ELITE_K, help="Elite set size (default 50)")
     p.add_argument("--seeds", type=str, default="0,1,2,3,4,5,6,7,8,9")
     p.add_argument(
         "--modes",
         type=str,
-        default="all,assigned",
-        help="Comma-separated: all, assigned",
+        default="assigned,all",
+        help="Comma-separated: assigned, all",
     )
     p.add_argument(
         "--label-sources",
@@ -659,10 +672,18 @@ def main() -> int:
         default="final,discovery",
         help="Comma-separated: final, discovery",
     )
+    p.add_argument(
+        "--primary-mode",
+        type=str,
+        default="assigned",
+        help="Primary null population for main-text table (assigned or all)",
+    )
     args = p.parse_args()
+    ELITE_K = int(args.elite_k)
     seeds = [int(x) for x in args.seeds.split(",") if x.strip() != ""]
     modes = [x.strip() for x in args.modes.split(",") if x.strip()]
     label_sources = [x.strip() for x in args.label_sources.split(",") if x.strip()]
+    tag = f"k{ELITE_K}"
 
     all_rows: List[Dict[str, Any]] = []
     for mode in modes:
@@ -670,7 +691,7 @@ def main() -> int:
             for distance, clustering in LIVE_DIR:
                 for seed in seeds:
                     print(
-                        f"null {mode}/{label_source} {distance} {clustering} seed{seed}",
+                        f"null k={ELITE_K} {mode}/{label_source} {distance} {clustering} seed{seed}",
                         flush=True,
                     )
                     row = analyze_run(
@@ -685,14 +706,21 @@ def main() -> int:
                         all_rows.append(row)
 
     REPORT.mkdir(parents=True, exist_ok=True)
-    write_csv(REPORT / "rq3_occupancy_null_runs.csv", all_rows)
+    write_csv(REPORT / f"rq3_occupancy_null_runs_{tag}.csv", all_rows)
+    # Preserve latest alias for consumers expecting untagged name when k=50.
+    if ELITE_K == 50:
+        write_csv(REPORT / "rq3_occupancy_null_runs.csv", all_rows)
 
-    # Primary: all genomes, final labels
+    # Primary: assigned mature members (concentration within species), final labels.
     primary = [
-        r for r in all_rows if r["mode"] == "all" and r["label_source"] == "final"
+        r
+        for r in all_rows
+        if r["mode"] == args.primary_mode and r["label_source"] == "final"
     ]
     summaries = cell_summaries(primary, metric_p="K10_p")
-    write_csv(REPORT / "rq3_occupancy_null_summary.csv", summaries)
+    write_csv(REPORT / f"rq3_occupancy_null_summary_{tag}.csv", summaries)
+    if ELITE_K == 50:
+        write_csv(REPORT / "rq3_occupancy_null_summary.csv", summaries)
 
     # Also summarize other variants
     variant_summaries: List[Dict[str, Any]] = []
@@ -705,15 +733,21 @@ def main() -> int:
             ]
             for s in cell_summaries(sub, metric_p="K10_p"):
                 variant_summaries.append(s)
-    write_csv(REPORT / "rq3_occupancy_null_variants.csv", variant_summaries)
+    write_csv(REPORT / f"rq3_occupancy_null_variants_{tag}.csv", variant_summaries)
+    if ELITE_K == 50:
+        write_csv(REPORT / "rq3_occupancy_null_variants.csv", variant_summaries)
 
     write_latex(NOTES / "rq3_species_tables.tex", summaries, primary)
     write_variants_latex(NOTES / "rq3_null_variants_table.tex", variant_summaries)
-    plot_with_null(primary, FIG / "fig_rq3_species_contrib.pdf")
+    plot_with_null(primary, FIG / f"fig_rq3_species_contrib_{tag}.pdf")
+    if ELITE_K == 50:
+        plot_with_null(primary, FIG / "fig_rq3_species_contrib.pdf")
 
     meta = {
         "n_perm": args.n_perm,
         "elite_k": ELITE_K,
+        "primary_mode": args.primary_mode,
+        "budget_truncate": 2000,
         "perm_seed_base": PERM_SEED,
         "tau": TAU,
         "modes": modes,

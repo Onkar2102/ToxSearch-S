@@ -1,0 +1,5 @@
+configuration,n_runs,median_mature_species,n_ge_0.7_median,n_ge_0.7_q25,n_ge_0.7_q75,n_ge_0.8_median,n_ge_0.8_q25,n_ge_0.8_q75,n_ge_0.9_median,n_ge_0.9_q25,n_ge_0.9_q75
+lf_embedding,10,89.0,3.5,1.25,4.0,2.0,1.25,2.75,1.0,1.0,1.75
+inc_embedding,10,55.0,4.0,3.0,4.75,3.0,2.25,3.0,2.0,1.25,3.0
+lf_nli,10,60.0,3.5,2.0,6.5,2.0,1.0,4.5,1.5,1.0,2.0
+inc_nli,10,2.0,1.0,1.0,2.0,1.0,1.0,2.0,1.0,1.0,2.0

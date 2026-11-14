@@ -1,0 +1,87 @@
+{
+  "rq2_endpoint_contrasts": [
+    {
+      "family": "fitness",
+      "contrast": "Inc-LF|embedding",
+      "n_lf": 10,
+      "n_inc": 10,
+      "hl": 0.04297699999999993,
+      "lo": -0.13536984999999988,
+      "hi": 0.20830400000000004,
+      "delta": 0.06,
+      "note": "declared reanalysis; dissimilarity as block for pooled"
+    },
+    {
+      "family": "mpnet_disp",
+      "contrast": "Inc-LF|embedding",
+      "n_lf": 10,
+      "n_inc": 10,
+      "hl": 0.04247074543824886,
+      "lo": -0.03705303040717627,
+      "hi": 0.11824493934144477,
+      "delta": 0.3,
+      "note": "declared reanalysis"
+    },
+    {
+      "family": "fitness",
+      "contrast": "Inc-LF|nli_entail",
+      "n_lf": 10,
+      "n_inc": 10,
+      "hl": 0.16440099999999996,
+      "lo": -0.026131999999999933,
+      "hi": 0.3164398,
+      "delta": 0.4,
+      "note": "declared reanalysis; dissimilarity as block for pooled"
+    },
+    {
+      "family": "mpnet_disp",
+      "contrast": "Inc-LF|nli_entail",
+      "n_lf": 10,
+      "n_inc": 10,
+      "hl": -0.018032246030994445,
+      "lo": -0.11979216357182246,
+      "hi": 0.08648679970218207,
+      "delta": -0.1,
+      "note": "declared reanalysis"
+    },
+    {
+      "family": "fitness",
+      "contrast": "Inc-LF|pooled",
+      "n_lf": 20,
+      "n_inc": 20,
+      "hl": 0.09589999999999993,
+      "lo": -0.029610825000000077,
+      "hi": 0.21062199999999998,
+      "delta": 0.245,
+      "note": "declared reanalysis; dissimilarity as block for pooled"
+    },
+    {
+      "family": "mpnet_disp",
+      "contrast": "Inc-LF|pooled",
+      "n_lf": 20,
+      "n_inc": 20,
+      "hl": 0.022077638425121837,
+      "lo": -0.048828777073020885,
+      "hi": 0.08815797027791525,
+      "delta": 0.105,
+      "note": "declared reanalysis"
+    }
+  ],
+  "rq3_spearman_nmat_vs_fitness_within_cell": {
+    "rho": -0.4580645161290322,
+    "lo": -0.7148164627363737,
+    "hi": -0.032447163515018085
+  },
+  "rq3_spearman_nmat_vs_mpnet_within_cell": {
+    "rho": 0.3054505005561735,
+    "lo": -0.10612903225806451,
+    "hi": 0.6293770856507229
+  },
+  "founder_medians": {
+    "embedding|leader_follower": 5.0,
+    "embedding|dbscan": 4.0,
+    "nli_entail|leader_follower": 6.5,
+    "nli_entail|dbscan": 6.0,
+    "none|none": 9.5
+  }
+}
