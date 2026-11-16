@@ -218,6 +218,7 @@ EMNLP_*.txt
 
 # Local launch scripts (machine paths and account names)
 *.sh
+!scripts/run_mpi_tests.sh
 paper.fls
 
 *.tex
