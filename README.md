@@ -1,12 +1,21 @@
 # ToxSearch-S
 
-Evolutionary search for adversarial prompts. A local GGUF model writes each prompt and its response. Fitness is an OpenAI or Perspective moderation score. Speciation groups prompts so the search covers more than one niche.
+Evolutionary search for adversarial prompts against a local GGUF model. Fitness comes from a moderation API. Speciation groups prompts by a chosen distance.
 
-The EvoStar 2027 study and its analysis scripts are in [`experiments/evostar_2027/`](experiments/evostar_2027/ANALYSIS.md).
+## What you need
 
-## Setup
+| Requirement | Notes |
+|-------------|--------|
+| **Python** | 3.10 or newer |
+| **Dependencies** | `pip install -r requirements.txt` |
+| **GPU** | Recommended for GGUF inference |
+| **Perspective API** | Required for `--evaluator google` (at least one key in `.env`) |
+| **OpenAI API** | Required for `--evaluator openai` (`OPENAI_API_KEY` in `.env`; optional org/project IDs) |
+| **MPI (optional)** | Only for `--parallel`; Open MPI (or compatible) plus `mpi4py` built against that MPI |
 
-Python 3.10 or newer. A GPU is recommended for GGUF inference.
+## Installation
+
+From the repository root:
 
 ```bash
 python3 -m venv venv
@@ -16,42 +25,102 @@ pip install -e .
 cp env_example.txt .env
 ```
 
-Set `OPENAI_API_KEY` for OpenAI moderation, or `PERSPECTIVE_API_KEY` for Google Perspective. Place the response and prompt GGUF files under `models/`. The default path is:
+Edit `.env` and set `PERSPECTIVE_API_KEY` or `OPENAI_API_KEY`. Place GGUF weights under `models/`. The CLI flags `--rg` and `--pg` must point at those files. The defaults in `src/cli.py` expect:
 
 ```text
 models/llama3.2-1b-instruct-gguf/Llama-3.2-1B-Instruct-IQ4_XS.gguf
 ```
 
-Pass `--rg` and `--pg` if the files live somewhere else. Inference settings are in `config/RGConfig.yaml` and `config/PGConfig.yaml`.
-
-Run every command from the repository root. If you did not `pip install -e .`, set `PYTHONPATH=src` first.
-
-## Run a search
-
-`--max-total-genomes` is required. The run stops when the stored population reaches that count. Starting prompts are the `questions` column of `data/prompt.csv`.
+If your files differ:
 
 ```bash
-python src/main.py \
-  --max-total-genomes 2000 \
-  --evaluator openai \
-  --north-star-metric illicit \
-  --seed-file data/prompt.csv \
-  --seed 0 \
-  --clustering-method leader_follower \
-  --distance-method embedding \
-  --theta-sim 0.1 \
-  --operators all \
-  --output-dir data/outputs/example_run
+--rg models/<your-folder>/<model>.gguf --pg models/<your-folder>/<model>.gguf
 ```
 
-Other clustering choices are `dbscan` and `none`. Other distances include `nli_entail`. `python src/main.py --help` lists the flags. MPI runs add `--parallel` and are started with `mpiexec`.
+Inference settings are in `config/RGConfig.yaml` and `config/PGConfig.yaml`.
 
-Each run writes `run_config.json`, `EvolutionTracker.json`, `elites.json`, and `archive.json` under the output directory. The default directory is `data/outputs/<timestamp>/`. Those outputs are not committed.
+After `pip install -e .` the `toxsearch` command is the same entry as `python src/main.py`. Without the editable install, set `PYTHONPATH=src`.
 
-## Tests
+## Project parameters
+
+Defaults follow `SpeciationConfig` in `src/speciation/config.py` and `src/cli.py` unless you override them on the command line.
+
+| Parameter | Meaning |
+|-----------|---------|
+| Max total genomes | Stop when elites + archive reach this count (required termination). Set with `--max-total-genomes`. |
+| Theta similarity | Species assignment radius under `--distance-method`; followers join a leader within this radius. Set with `--theta-sim` (default **0.25**). |
+| Distance method | Clustering distance ablation: `embedding` (default), `nli`, `nli_entail`, `nli+embedding`, `objective`, `embedding+objective`. Set with `--distance-method`. |
+| NLI model | HuggingFace MNLI model for `nli` / `nli_entail` / `nli+embedding` (default `cross-encoder/nli-deberta-v3-small`). Set with `--nli-model`. |
+| Theta merge | Two species whose leaders are closer than this may merge; must be ≤ `--theta-sim`. Set with `--theta-merge`. |
+| Min stability generations | Both species must be at least this old before they are allowed to merge. Set with `--min-stability-gens`. |
+| Species capacity | Maximum individuals kept per species (excess archived by fitness). Set with `--species-capacity`. |
+| Species stagnation | Generations without improvement after which a species can freeze. Set with `--species-stagnation`. |
+| Embedding model | Sentence-transformer name for prompt embeddings in speciation. Set with `--embedding-model`. |
+| Embedding dimension | Vector size for embeddings (must match the model). Set with `--embedding-dim`. |
+| Embedding batch size | Batch size when computing embeddings. Set with `--embedding-batch-size`. |
+| Response generator | GGUF path for the model that answers the adversarial prompt. Set with `--rg`. |
+| Prompt generator | GGUF path for the model that proposes / mutates prompts. Set with `--pg`. |
+| Operators | Which evolutionary operators are enabled (`ie`, `cm`, or `all`). Set with `--operators`. |
+| Max variants | How many offspring variants to attempt per evolution cycle. Set with `--max-variants`. |
+| Seed file | CSV of starting prompts (expects a `questions` column). Set with `--seed-file`. |
+| RNG seed | Fixed seed for LLM sampling **and** Python/NumPy EA randomness (optional). Set with `--seed`. |
+| Batch size (parallel) | Master–worker merge batch threshold for MPI; also affects sequential parity defaults when omitted. Set with `--batch-size`. |
+| Parallel | Use MPI master–worker instead of a single process. Set with `--parallel`. |
+| Output directory | Run artifacts directory (default timestamped under `data/outputs/`). Set with `--output-dir`. |
+| Stagnation limit | Generations without improvement before switching explore/exploit behaviour. Set with `--stagnation-limit`. |
+| Moderation backend | Scorer backend for fitness (`google` = Perspective, `openai` = omni-moderation). Set with `--evaluator`. |
+| North-star metric | Score key driving fitness and selection; valid values depend on `--evaluator`. Set with `--north-star-metric`. |
+| OpenAI moderation model | Model name when `--evaluator openai` (default `omni-moderation-latest`). Set with `--openai-model`. |
+| Moderation methods | Deprecated alias for `--evaluator`. Set with `--moderation-methods`. |
+| Generations | Legacy generation cap; termination is still only by `--max-total-genomes`. Set with `--generations`. |
+| Profile | Write `cProfile` stats next to the run outputs. Set with `--profile`. |
+
+**Weights (ensemble distance, not on CLI):** genotype and phenotype weights sum to 1. Defaults: `SpeciationConfig.w_genotype` = `0.7`, `w_phenotype` = `0.3`.
+
+`python src/main.py --help` lists every flag.
+
+## How to run
+
+Run from the repository root so `config/`, `data/`, and `.env` resolve. `--max-total-genomes` is required. The starting prompts are `data/prompt.csv`.
+
+```bash
+export PYTHONPATH=src   # skip after pip install -e .
+```
+
+OpenAI:
+
+```bash
+python src/main.py --max-total-genomes 500 \
+  --evaluator openai \
+  --north-star-metric illicit \
+  --seed-file data/prompt.csv
+```
+
+Perspective:
+
+```bash
+python src/main.py --max-total-genomes 500 \
+  --evaluator google \
+  --seed-file data/prompt.csv
+```
+
+MPI:
+
+```bash
+mpiexec -n 5 python src/main.py --parallel --max-total-genomes 500 \
+  --seed-file data/prompt.csv
+```
+
+Each run writes `data/outputs/<YYYYMMDD_HHMM>/` unless you set `--output-dir`. The directory contains `run_config.json`, `EvolutionTracker.json`, `elites.json`, and `archive.json`.
+
+Tests:
 
 ```bash
 python -m pytest tests/ -m "not mpi" --ignore=tests/test_phase4_unit.py -q
 ```
 
-The MPI suite is `bash scripts/run_mpi_tests.sh`. It needs `mpiexec`.
+MPI tests: `bash scripts/run_mpi_tests.sh`.
+
+## EvoStar 2027
+
+The study code is `experiments/evostar_2027/`. Finished runs are read from `data/outputs/evostar2027/`. How to regenerate the reports and figures is in [experiments/evostar_2027/README.md](experiments/evostar_2027/README.md).
