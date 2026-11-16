@@ -81,11 +81,34 @@ Defaults follow `SpeciationConfig` in `src/speciation/config.py` and `src/cli.py
 
 ## How to run
 
-Run from the repository root so `config/`, `data/`, and `.env` resolve. `--max-total-genomes` is required. The starting prompts are `data/prompt.csv`.
+Run every step from the repository root so `config/`, `data/`, and `.env` resolve. After `pip install -e .` you can skip `PYTHONPATH`. Otherwise:
 
 ```bash
-export PYTHONPATH=src   # skip after pip install -e .
+export PYTHONPATH=src
 ```
+
+### 1. Load the seed data
+
+The search starts from a CSV with one `questions` column. That file is already in the repo:
+
+```text
+data/prompt.csv
+```
+
+A run loads it through `--seed-file` (the default is this path). You do not need to rebuild it.
+
+To build a different seed from CategoricalHarmfulQA, HarmfulQA, DoNotAnswer, and BeaverTails, write a new file. This downloads those datasets and does not replace `data/prompt.csv`:
+
+```bash
+PYTHONPATH=src python src/utils/data_loader.py \
+  --n-total 50 --seed 48 --output data/my_prompts.csv
+```
+
+Pass that path as `--seed-file` in the next step.
+
+### 2. Run the search
+
+`--max-total-genomes` is required. The process loads the seed, scores prompts, and writes a population until that count is reached.
 
 OpenAI:
 
@@ -111,16 +134,18 @@ mpiexec -n 5 python src/main.py --parallel --max-total-genomes 500 \
   --seed-file data/prompt.csv
 ```
 
+### 3. Read the run
+
 Each run writes `data/outputs/<YYYYMMDD_HHMM>/` unless you set `--output-dir`. The directory contains `run_config.json`, `EvolutionTracker.json`, `elites.json`, and `archive.json`.
 
-Tests:
+### 4. Analyze the EvoStar 2027 runs
+
+The study code is `experiments/evostar_2027/`. It reads finished runs from `data/outputs/evostar2027/`. Load those runs first, then run the report scripts in the order in [experiments/evostar_2027/README.md](experiments/evostar_2027/README.md).
+
+Tests, after the steps above:
 
 ```bash
 python -m pytest tests/ -m "not mpi" --ignore=tests/test_phase4_unit.py -q
 ```
 
 MPI tests: `bash scripts/run_mpi_tests.sh`.
-
-## EvoStar 2027
-
-The study code is `experiments/evostar_2027/`. Finished runs are read from `data/outputs/evostar2027/`. How to regenerate the reports and figures is in [experiments/evostar_2027/README.md](experiments/evostar_2027/README.md).
