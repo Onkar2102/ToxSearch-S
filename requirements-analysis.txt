@@ -68,7 +68,6 @@ pure_eval==0.2.3
 pyairports==0.0.1
 pycountry==26.2.16
 pynndescent==0.5.13
-# optional: -e git+https://github.com/Onkar2102/ToxSearch-S.git@849f492c11a53874e97b6d89ee11a77d4633fe4e#egg=rainbowplus&subdirectory=rainbowplus-main
 ray==2.54.0
 rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
