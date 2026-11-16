@@ -24,7 +24,7 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
 | Requirement | Notes |
 |-------------|--------|
 | **Python** | 3.10 or newer |
-| **Dependencies** | `pip install -r requirements.txt` (core); optional analysis/dev files below |
+| **Dependencies** | `pip install -r requirements.txt` |
 | **GPU** | Recommended for GGUF inference |
 | **Perspective API** | Required for `--evaluator google` (at least one key in `.env`) |
 | **OpenAI API** | Required for `--evaluator openai` (`OPENAI_API_KEY` in `.env`; optional org/project IDs) |
@@ -52,23 +52,9 @@ Evolutionary search for **adversarial prompts** against local LLMs (GGUF). The l
 
 3. **Install Python packages**
 
-   Core evolution + speciation:
-
    ```bash
    pip install -r requirements.txt
    pip install -e .
-   ```
-
-   Paper / cluster analysis (optional):
-
-   ```bash
-   pip install -r requirements-analysis.txt
-   ```
-
-   Development (tests, ruff, mypy):
-
-   ```bash
-   pip install -r requirements-dev.txt
    ```
 
    After editable install you can use `toxsearch …` instead of `python src/main.py …`.  
@@ -244,13 +230,12 @@ LLM outputs can still vary across hardware/backends even with a fixed seed; EA o
 ## Development and CI
 
 ```bash
-pip install -r requirements-dev.txt
 python -m pytest tests/ -m "not mpi" --ignore=tests/test_phase4_unit.py -q
 ruff check src/cli.py src/utils/run_config.py src/utils/rng.py src/utils/model_config_patch.py
 mypy src/speciation/distance.py src/utils/run_config.py src/utils/rng.py
 ```
 
-GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs non-MPI tests and ruff on the framework modules above. No GPU or API keys in CI.
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs non-MPI tests and ruff on the framework modules above. `pytest` is in `requirements.txt`. CI installs `ruff` and `mypy` itself. No GPU or API keys in CI.
 
 Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console script `toxsearch`).
 

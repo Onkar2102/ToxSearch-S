@@ -57,7 +57,7 @@ def build_manifest(study_name: str, root: Path) -> dict[str, Any]:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "git_commit": _git_commit(),
         "root": root.relative_to(REPO_ROOT).as_posix() if root.exists() else str(root),
-        "dependency_files": ["requirements.txt", "requirements-analysis.txt"],
+        "dependency_files": ["requirements.txt"],
         "regenerate_notes": "See experiments/ drivers and results/manifests/README.md",
         "files": files,
     }
