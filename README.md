@@ -205,8 +205,8 @@ Details: [`tests/README.md`](tests/README.md).
 | `tests/` | Unit and integration tests (tracked) |
 | `config/` | GGUF inference YAML only (`RGConfig.yaml`, `PGConfig.yaml`) |
 | `experiments/` | Analysis **drivers** (Python); do not store bulky outputs here |
-| `results/` | Generated paper/comparison artifacts (gitignored except manifests) |
-| `results/manifests/` | SHA256 study manifests (tracked) |
+| `results/` | Old generated outputs were removed. Current reports stay under `experiments/evostar_2027/` |
+| `results/manifests/` | Manifest builder for a future tracked result tree |
 | `scripts/` | Helpers (e.g. `validate_run_outputs.py`) |
 | `data/outputs/` | Live evolution runs (gitignored) |
 | `verifier/` | Lean formal audit of distance / speciation maths |
@@ -225,7 +225,7 @@ At run start the framework writes **`run_config.json`** (CLI + speciation snapsh
 - `elites.json`, `archive.json` — breeding elites and non-elites
 - Logs and optional live-analysis / GDP plots
 
-Paper analysis CSVs and figures belong under **`results/`** (e.g. `results/emnlp2026/`, `results/comparison/`), not under `experiments/`.
+Paper reports for the current study stay under `experiments/evostar_2027/`.
 
 ---
 
@@ -261,7 +261,6 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 
 - Drivers: `experiments/evostar_2027/` (RQ1 calibration, RQ2 and RQ3 reports, validation)
 - Distance matrices and prompt pools under `experiments/evostar_2027/data/` stay on disk and are gitignored
-- Manifests: `results/manifests/*.json`
 
 ---
 

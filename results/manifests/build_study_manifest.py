@@ -14,11 +14,7 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFESTS_DIR = Path(__file__).resolve().parent
 
-STUDY_ROOTS = (
-    REPO_ROOT / "results" / "emnlp2026",
-    REPO_ROOT / "results" / "comparison",
-    REPO_ROOT / "results" / "cluster_analysis",
-)
+STUDY_ROOTS = ()
 
 
 def _git_commit() -> str | None:
