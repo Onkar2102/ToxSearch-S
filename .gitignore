@@ -216,7 +216,8 @@ research_questions_*.txt
 EMNLP_*.txt
 
 
-dependency_parallel.sh
+# Local launch scripts (machine paths and account names)
+*.sh
 
 *.tex
 report/
