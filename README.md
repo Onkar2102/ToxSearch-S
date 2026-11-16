@@ -110,28 +110,71 @@ Pass that path as `--seed-file` in the next step.
 
 `--max-total-genomes` is required. The process loads the seed, scores prompts, and writes a population until that count is reached.
 
-OpenAI:
+The study is four configurations: leader–follower or incremental DBSCAN, each with embedding distance or NLI entailment distance. The commands below are seed 0 of each cell, with the settings recorded in `data/outputs/evostar2027/`. Change `--seed` and the `rep*_s*` folder for seeds 1–9. All four use the same model, budget, and seed file:
 
-```bash
-python src/main.py --max-total-genomes 500 \
-  --evaluator openai \
-  --north-star-metric illicit \
-  --seed-file data/prompt.csv
+```text
+models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf
 ```
 
-Perspective:
+Leader–follower, embedding distance:
 
 ```bash
-python src/main.py --max-total-genomes 500 \
-  --evaluator google \
-  --seed-file data/prompt.csv
+python src/main.py --max-total-genomes 2000 \
+  --evaluator openai --north-star-metric illicit --openai-model omni-moderation-latest \
+  --seed-file data/prompt.csv --seed 0 \
+  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --clustering-method leader_follower --distance embedding \
+  --theta-sim 0.1 --min-stability-gens 3 --species-capacity 25 --species-stagnation 7 \
+  --embedding-model all-MiniLM-L6-v2 \
+  --output-dir data/outputs/evostar2027/lf_embedding/rep0_s0
 ```
 
-MPI:
+Incremental DBSCAN, embedding distance (`min_samples` 2):
 
 ```bash
-mpiexec -n 5 python src/main.py --parallel --max-total-genomes 500 \
-  --seed-file data/prompt.csv
+python src/main.py --max-total-genomes 2000 \
+  --evaluator openai --north-star-metric illicit --openai-model omni-moderation-latest \
+  --seed-file data/prompt.csv --seed 0 \
+  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --clustering-method dbscan --distance embedding \
+  --theta-sim 0.1 --dbscan-eps 0.1 --dbscan-min-samples 2 \
+  --min-stability-gens 3 --species-capacity 25 --species-stagnation 7 \
+  --embedding-model all-MiniLM-L6-v2 \
+  --output-dir data/outputs/evostar2027/inc_embedding/rep0_s0
+```
+
+Leader–follower, NLI entailment distance:
+
+```bash
+python src/main.py --max-total-genomes 2000 \
+  --evaluator openai --north-star-metric illicit --openai-model omni-moderation-latest \
+  --seed-file data/prompt.csv --seed 0 \
+  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --clustering-method leader_follower --distance nli_entail \
+  --theta-sim 0.1 --nli-model cross-encoder/nli-deberta-v3-small \
+  --nli-cache-file data/cache/nli_pairs_rq2_dnege_lf.sqlite \
+  --min-stability-gens 3 --species-capacity 25 --species-stagnation 7 \
+  --embedding-model all-MiniLM-L6-v2 \
+  --output-dir data/outputs/evostar2027/lf_nli/rep0_s0
+```
+
+Incremental DBSCAN, NLI entailment distance (`min_samples` 5):
+
+```bash
+python src/main.py --max-total-genomes 2000 \
+  --evaluator openai --north-star-metric illicit --openai-model omni-moderation-latest \
+  --seed-file data/prompt.csv --seed 0 \
+  --rg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --pg models/llama3.1-8b-instruct-gguf/Meta-Llama-3.1-8B-Instruct.Q8_0.gguf \
+  --clustering-method dbscan --distance nli_entail \
+  --theta-sim 0.1 --dbscan-eps 0.1 --dbscan-min-samples 5 \
+  --nli-model cross-encoder/nli-deberta-v3-small \
+  --min-stability-gens 3 --species-capacity 25 --species-stagnation 7 \
+  --embedding-model all-MiniLM-L6-v2 \
+  --output-dir data/outputs/evostar2027/inc_nli/rep0_s0
 ```
 
 ### 3. Read the run
