@@ -1,5 +1,5 @@
 {
-  "tracker_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122/EvolutionTracker.json",
+  "tracker_path": "data/outputs/20260211_2122/EvolutionTracker.json",
   "status": "not_complete",
   "total_generations_tracker": 251,
   "n_generations_parsed": 251,

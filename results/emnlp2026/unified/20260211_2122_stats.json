@@ -1,6 +1,6 @@
 {
   "run_id": "20260211_2122",
-  "run_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122",
+  "run_path": "data/outputs/20260211_2122",
   "files": {
     "elites.json": 460,
     "reserves.json": 3,
@@ -33,7 +33,7 @@
   "fetch_openai_missing": true,
   "n_genomes": 5655,
   "n_species": 9,
-  "openai_cache_path": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_openai_cache.json",
+  "openai_cache_path": "experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_openai_cache.json",
   "n_openai_from_cache": 0,
   "n_openai_ok": 5655,
   "n_openai_failed": 0,

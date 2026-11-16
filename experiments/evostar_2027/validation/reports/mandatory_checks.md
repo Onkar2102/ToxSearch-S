@@ -2,7 +2,7 @@
 
 ## 1. Appendix Table 6 snapshot
 
-- Online CSV: `/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq2/reports/incdbscan_exactness_online.csv`
+- Online CSV: `experiments/evostar_2027/rq2/reports/incdbscan_exactness_online.csv`
 - Embedding live ARI median [min, max]: **1.000** [1.000, 1.000] (matches Table 6: True)
 - NLI live ARI median [min, max]: **0.994** [0.974, 0.997] (matches Table 6: True)
 - Note: Online ARI uses final-graph batch rebuild with noise canonicalization (live labels ≤0 and batch -1 → unassigned). Embedding MinPts=2 is exact; NLI MinPts=5 is near-exact on partition agreement but under-counts mature clusters relative to batch. Stale summary.md (low ARI) was regenerated from CSV.

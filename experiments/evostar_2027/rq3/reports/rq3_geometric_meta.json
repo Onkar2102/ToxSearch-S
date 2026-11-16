@@ -20,7 +20,7 @@
     10,
     25
   ],
-  "reference_cal": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/data/pool/p0_full.pkl",
+  "reference_cal": "experiments/evostar_2027/data/pool/p0_full.pkl",
   "reference_study": "subsampled union of unique prompts across 40 runs (empirical reference, not hold-out)",
   "n_study_ref": 5000,
   "n_study_full": 77190,

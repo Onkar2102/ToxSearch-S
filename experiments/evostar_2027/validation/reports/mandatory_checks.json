@@ -1,9 +1,9 @@
 {
   "table6": {
-    "csv_online": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq2/reports/incdbscan_exactness_online.csv",
-    "csv_archive": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq2/reports/incdbscan_exactness_archive.csv",
-    "meta": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq2/reports/incdbscan_exactness_meta.json",
-    "app_tex": "/Users/onkars/Documents/Projects/ToxSearch-S/notes/rough_draft/app_a2_correctness.tex",
+    "csv_online": "experiments/evostar_2027/rq2/reports/incdbscan_exactness_online.csv",
+    "csv_archive": "experiments/evostar_2027/rq2/reports/incdbscan_exactness_archive.csv",
+    "meta": "experiments/evostar_2027/rq2/reports/incdbscan_exactness_meta.json",
+    "app_tex": "notes/rough_draft/app_a2_correctness.tex",
     "embedding_live_ari": {
       "median": 1.0,
       "min": 1.0,
@@ -270,8 +270,8 @@
         "U_match": true
       }
     ],
-    "tex_path": "/Users/onkars/Documents/Projects/ToxSearch-S/notes/rough_draft/rq3_occupancy_main.tex",
-    "variants_path": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/rq3/reports/rq3_occupancy_null_variants.csv",
+    "tex_path": "notes/rough_draft/rq3_occupancy_main.tex",
+    "variants_path": "experiments/evostar_2027/rq3/reports/rq3_occupancy_null_variants.csv",
     "tex_present": true
   },
   "rq1_provenance": {

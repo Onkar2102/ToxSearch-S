@@ -3,5 +3,5 @@
   "min_pts": 2,
   "consistent_nli_higher_giant": true,
   "consistent_nli_higher_dominance": true,
-  "csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/evostar_2027/validation/reports/rq1_per_source_archive.csv"
+  "csv": "experiments/evostar_2027/validation/reports/rq1_per_source_archive.csv"
 }

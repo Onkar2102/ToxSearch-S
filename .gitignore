@@ -218,6 +218,7 @@ EMNLP_*.txt
 
 # Local launch scripts (machine paths and account names)
 *.sh
+paper.fls
 
 *.tex
 report/

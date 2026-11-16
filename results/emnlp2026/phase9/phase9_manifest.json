@@ -1,8 +1,8 @@
 {
   "artifacts": {
-    "cross_evaluator_robustness_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase9/cross_evaluator_robustness.csv",
-    "cross_evaluator_robustness_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase9/cross_evaluator_robustness.json",
-    "fig_cross_evaluator_summary": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase9/figures/cross_evaluator_summary.png"
+    "cross_evaluator_robustness_csv": "experiments/emnlp_data_analysis/results/phase9/cross_evaluator_robustness.csv",
+    "cross_evaluator_robustness_json": "experiments/emnlp_data_analysis/results/phase9/cross_evaluator_robustness.json",
+    "fig_cross_evaluator_summary": "experiments/emnlp_data_analysis/results/phase9/figures/cross_evaluator_summary.png"
   },
   "meta": {
     "run_id": "20260211_2122",

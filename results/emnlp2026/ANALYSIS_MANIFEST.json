@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-05-23T18:43:19.056543+00:00",
-  "results_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results",
+  "results_dir": "experiments/emnlp_data_analysis/results",
   "run_id": "20260211_2122",
   "phases": {
     "phase2": [
@@ -149,7 +149,7 @@
   },
   "phase1_manifest_json": {
     "run_id": "20260211_2122",
-    "run_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122",
+    "run_path": "data/outputs/20260211_2122",
     "phase": "complete",
     "n_genomes": 5655,
     "n_with_google_objectives": 5655,
@@ -163,10 +163,10 @@
     ],
     "n_duplicates_dropped": 0,
     "artifacts": {
-      "csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_genomes.csv",
-      "embeddings": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_embeddings.npy",
-      "genome_ids": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_genome_ids.json",
-      "stats": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_stats.json"
+      "csv": "experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_genomes.csv",
+      "embeddings": "experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_embeddings.npy",
+      "genome_ids": "experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_genome_ids.json",
+      "stats": "experiments/emnlp_4pager_data_analysis/results/unified/20260211_2122_stats.json"
     }
   },
   "phase2_phase2_global_pareto_json": {
@@ -258,25 +258,25 @@
   },
   "phase3_phase3_manifest_json": {
     "artifacts": {
-      "google_topic_summary_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/google/topic_domination_summary.csv",
-      "google_global_stats_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/google/topic_domination_global_stats.json",
-      "google_edges_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/google/topic_domination_edges.json",
-      "openai_topic_summary_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_summary.csv",
-      "openai_global_stats_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_global_stats.json",
-      "openai_edges_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_edges.json",
-      "topic_evaluator_comparison_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/topic_evaluator_comparison.csv",
-      "topic_evaluator_comparison_stats_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/topic_evaluator_comparison_stats.json",
-      "fig_topic_tdi_comparison": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures/topic_tdi_google_vs_openai.png",
-      "google_domination_matrix_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/google/topic_domination_matrix.csv",
-      "appendix_fig_domination_heatmap_google": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures/appendix/topic_domination_heatmap_google.png",
-      "openai_domination_matrix_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_matrix.csv",
-      "appendix_fig_domination_heatmap_openai": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures/appendix/topic_domination_heatmap_openai.png",
-      "fig_domination_heatmap_dual": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures/topic_domination_heatmap_dual.png",
-      "fig_domination_graph_google": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures/topic_domination_graph_google.png",
-      "appendix_fig_domination_graph_openai": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures/appendix/topic_domination_graph_openai.png",
-      "figures_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures",
-      "rank_agreement_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/evaluator_rank_agreement.csv",
-      "rank_agreement_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/evaluator_rank_agreement_summary.json"
+      "google_topic_summary_csv": "experiments/emnlp_data_analysis/results/phase3/google/topic_domination_summary.csv",
+      "google_global_stats_json": "experiments/emnlp_data_analysis/results/phase3/google/topic_domination_global_stats.json",
+      "google_edges_json": "experiments/emnlp_data_analysis/results/phase3/google/topic_domination_edges.json",
+      "openai_topic_summary_csv": "experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_summary.csv",
+      "openai_global_stats_json": "experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_global_stats.json",
+      "openai_edges_json": "experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_edges.json",
+      "topic_evaluator_comparison_csv": "experiments/emnlp_data_analysis/results/phase3/topic_evaluator_comparison.csv",
+      "topic_evaluator_comparison_stats_json": "experiments/emnlp_data_analysis/results/phase3/topic_evaluator_comparison_stats.json",
+      "fig_topic_tdi_comparison": "experiments/emnlp_data_analysis/results/phase3/figures/topic_tdi_google_vs_openai.png",
+      "google_domination_matrix_csv": "experiments/emnlp_data_analysis/results/phase3/google/topic_domination_matrix.csv",
+      "appendix_fig_domination_heatmap_google": "experiments/emnlp_data_analysis/results/phase3/figures/appendix/topic_domination_heatmap_google.png",
+      "openai_domination_matrix_csv": "experiments/emnlp_data_analysis/results/phase3/openai/topic_domination_matrix.csv",
+      "appendix_fig_domination_heatmap_openai": "experiments/emnlp_data_analysis/results/phase3/figures/appendix/topic_domination_heatmap_openai.png",
+      "fig_domination_heatmap_dual": "experiments/emnlp_data_analysis/results/phase3/figures/topic_domination_heatmap_dual.png",
+      "fig_domination_graph_google": "experiments/emnlp_data_analysis/results/phase3/figures/topic_domination_graph_google.png",
+      "appendix_fig_domination_graph_openai": "experiments/emnlp_data_analysis/results/phase3/figures/appendix/topic_domination_graph_openai.png",
+      "figures_dir": "experiments/emnlp_data_analysis/results/phase3/figures",
+      "rank_agreement_csv": "experiments/emnlp_data_analysis/results/phase3/evaluator_rank_agreement.csv",
+      "rank_agreement_summary_json": "experiments/emnlp_data_analysis/results/phase3/evaluator_rank_agreement_summary.json"
     },
     "meta": {
       "run_id": "20260211_2122",
@@ -324,7 +324,7 @@
         "max_tdi_delta_openai_minus_google": 0.1467,
         "min_tdi_delta_openai_minus_google": -0.0741
       },
-      "figures_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase3/figures",
+      "figures_dir": "experiments/emnlp_data_analysis/results/phase3/figures",
       "rank_agreement": {
         "n_genomes_both_evaluators": 5655,
         "n_google_f0": 100,

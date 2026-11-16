@@ -1,9 +1,9 @@
 {
   "artifacts": {
-    "topic_semantic_labels_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase12/topic_semantic_labels.csv",
-    "topic_exemplars_md": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase12/topic_exemplars.md",
-    "phase12_summary_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase12/phase12_summary.json",
-    "label_cache_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase12/label_cache.json"
+    "topic_semantic_labels_csv": "experiments/emnlp_data_analysis/results/phase12/topic_semantic_labels.csv",
+    "topic_exemplars_md": "experiments/emnlp_data_analysis/results/phase12/topic_exemplars.md",
+    "phase12_summary_json": "experiments/emnlp_data_analysis/results/phase12/phase12_summary.json",
+    "label_cache_json": "experiments/emnlp_data_analysis/results/phase12/label_cache.json"
   },
   "meta": {
     "n_topics": 9,

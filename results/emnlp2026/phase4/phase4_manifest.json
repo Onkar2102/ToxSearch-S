@@ -1,15 +1,15 @@
 {
   "artifacts": {
-    "timeseries_csv": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase4/timeseries_20260211_2122.csv",
-    "timeseries_stats_json": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase4/timeseries_20260211_2122_stats.json",
-    "fig_temporal_species": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase4/figures/fig1_temporal_species_count.png",
-    "figures_dir": "/Users/onkars/Documents/Projects/ToxSearch-S/experiments/emnlp_data_analysis/results/phase4/figures"
+    "timeseries_csv": "experiments/emnlp_data_analysis/results/phase4/timeseries_20260211_2122.csv",
+    "timeseries_stats_json": "experiments/emnlp_data_analysis/results/phase4/timeseries_20260211_2122_stats.json",
+    "fig_temporal_species": "experiments/emnlp_data_analysis/results/phase4/figures/fig1_temporal_species_count.png",
+    "figures_dir": "experiments/emnlp_data_analysis/results/phase4/figures"
   },
   "meta": {
     "run_id": "20260211_2122",
-    "run_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122",
+    "run_path": "data/outputs/20260211_2122",
     "stats": {
-      "tracker_path": "/Users/onkars/Documents/Projects/ToxSearch-S/data/outputs/20260211_2122/EvolutionTracker.json",
+      "tracker_path": "data/outputs/20260211_2122/EvolutionTracker.json",
       "status": "not_complete",
       "total_generations_tracker": 251,
       "n_generations_parsed": 251,
