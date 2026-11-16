@@ -259,10 +259,9 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 
 ## Analysis and paper artifacts
 
-- Drivers: `experiments/emnlp_data_analysis/`, `experiments/comparison_results/*_report.py`, `experiments/cluster_analysis/`
-- Outputs: `results/emnlp2026/`, `results/comparison/`, `results/cluster_analysis/` (gitignored; regenerate or restore from backup)
+- Drivers: `experiments/evostar_2027/` (RQ1 calibration, RQ2 and RQ3 reports, validation)
+- Distance matrices and prompt pools under `experiments/evostar_2027/data/` stay on disk and are gitignored
 - Manifests: `results/manifests/*.json`
-- Optional RainbowPlus comparison I/O: [`experiments/rainbowplus_io.py`](experiments/rainbowplus_io.py) (path install of `rainbowplus-main/` documented in analysis requirements)
 
 ---
 
@@ -270,8 +269,7 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 
 | Doc | Contents |
 |-----|----------|
-| [`docs/SPECIATION.md`](docs/SPECIATION.md) | Live speciation + next scientific report plan |
-| [`docs/EXPERIMENTATION_EXECUTION.md`](docs/EXPERIMENTATION_EXECUTION.md) | Experiment stages, runners, and RQ ↔ step map |
+| [`docs/SPECIATION.md`](docs/SPECIATION.md) | Live speciation |
 | [`docs/INCREMENTAL_DBSCAN_PLAN.md`](docs/INCREMENTAL_DBSCAN_PLAN.md) | Incremental DBSCAN population path |
 | [`tests/README.md`](tests/README.md) | How to run and interpret tests |
 | [`results/manifests/README.md`](results/manifests/README.md) | Artifact manifests |

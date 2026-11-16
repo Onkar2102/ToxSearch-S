@@ -10,7 +10,7 @@
     5
   ],
   "mats": {
-    "d_E": "experiments/evostar_2027/rq1/mats/d_E_3139.npy",
+    "d_E": "experiments/evostar_2027/data/mats/B3139/d_E.npy",
     "d_negE": "experiments/evostar_2027/data/mats/B3139/d_negE.npy"
   },
   "n_archive_rows": 18,

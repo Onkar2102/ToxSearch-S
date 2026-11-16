@@ -28,7 +28,7 @@ import numpy as np
 from sklearn.cluster import DBSCAN
 
 ROOT = Path(__file__).resolve().parents[3]
-MAT_E = ROOT / "experiments/evostar_2027/rq1/mats/d_E_3139.npy"
+MAT_E = ROOT / "experiments/evostar_2027/data/mats/B3139/d_E.npy"
 MAT_NLI = ROOT / "experiments/evostar_2027/data/mats/B3139/d_negE.npy"
 POOL = ROOT / "experiments/evostar_2027/data/pool/p0_full.pkl"
 GRID_CSV = ROOT / "experiments/evostar_2027/rq1/sweeps/B3139/threshold_grid.csv"

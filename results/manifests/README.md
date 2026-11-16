@@ -6,17 +6,17 @@ Generated CSVs, figures, and JSON under `results/` are **gitignored** except thi
 
 | Path | Role |
 |------|------|
-| `results/emnlp2026/` | EMNLP / multi-phase analysis artifacts |
-| `results/comparison/` | C1 / C2 / C3 comparison report outputs |
-| `results/cluster_analysis/` | Cluster / Pareto figure exports |
+| `results/emnlp2026/` | Earlier EMNLP analysis artifacts |
+| `results/comparison/` | Earlier comparison-report outputs |
+| `results/cluster_analysis/` | Earlier Pareto figure exports |
 | `results/manifests/` | Tracked SHA256 manifests + this README |
 
-Default analysis `RESULTS_DIR` points at `results/emnlp2026` (see `experiments/emnlp_data_analysis/analysis_utils.py`). Comparison report scripts write under `results/comparison/<study>/`.
+The current study drivers are under `experiments/evostar_2027/`. The three manifests above record earlier result trees.
 
 ## Restore vs regenerate
 
 - **Restore locally:** copy a paper backup into the matching `results/…` tree, then rebuild manifests to verify checksums.
-- **Regenerate:** run drivers in `experiments/` (EMNLP phase scripts, `*_report.py` under `comparison_results/`, cluster analysis tools).
+- **Regenerate:** run the drivers under `experiments/evostar_2027/`.
 
 ## Build manifests
 

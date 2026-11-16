@@ -1,12 +1,12 @@
 {
   "ordering": "fitness_desc_then_run_genome_id (same as p0_full)",
-  "p0_full": "experiments/evostar_2027/rq1/p0/p0_full.pkl",
+  "p0_full": "experiments/evostar_2027/data/pool/p0_full.pkl",
   "n_full": 3139,
   "batches": [
     {
       "batch_id": "B1000",
       "N": 1000,
-      "p0_path": "experiments/evostar_2027/rq1/batches/B1000/p0.pkl",
+      "p0_path": "experiments/evostar_2027/data/batches/B1000/p0.pkl",
       "fitness_min": 0.0674,
       "fitness_max": 0.7308,
       "fitness_median": 0.1269,
@@ -15,7 +15,7 @@
     {
       "batch_id": "B2000",
       "N": 2000,
-      "p0_path": "experiments/evostar_2027/rq1/batches/B2000/p0.pkl",
+      "p0_path": "experiments/evostar_2027/data/batches/B2000/p0.pkl",
       "fitness_min": 0.0233,
       "fitness_max": 0.7308,
       "fitness_median": 0.067,
@@ -24,7 +24,7 @@
     {
       "batch_id": "B3139",
       "N": 3139,
-      "p0_path": "experiments/evostar_2027/rq1/batches/B3139/p0.pkl",
+      "p0_path": "experiments/evostar_2027/data/batches/B3139/p0.pkl",
       "fitness_min": 0.0056,
       "fitness_max": 0.7308,
       "fitness_median": 0.0338,
@@ -43,19 +43,19 @@
     "w_phenotype": 0.3,
     "files_by_N": {
       "1000": {
-        "d_E": "experiments/evostar_2027/rq1/mats/d_E_1000.npy",
-        "d_P": "experiments/evostar_2027/rq1/mats/d_P_1000.npy",
-        "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_1000.npy"
+        "d_E": "experiments/evostar_2027/data/mats/B1000/d_E.npy",
+        "d_P": "experiments/evostar_2027/data/mats/B1000/d_P.npy",
+        "d_EP": "experiments/evostar_2027/data/mats/B1000/d_EP.npy"
       },
       "2000": {
-        "d_E": "experiments/evostar_2027/rq1/mats/d_E_2000.npy",
-        "d_P": "experiments/evostar_2027/rq1/mats/d_P_2000.npy",
-        "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_2000.npy"
+        "d_E": "experiments/evostar_2027/data/mats/B2000/d_E.npy",
+        "d_P": "experiments/evostar_2027/data/mats/B2000/d_P.npy",
+        "d_EP": "experiments/evostar_2027/data/mats/B2000/d_EP.npy"
       },
       "3139": {
-        "d_E": "experiments/evostar_2027/rq1/mats/d_E_3139.npy",
-        "d_P": "experiments/evostar_2027/rq1/mats/d_P_3139.npy",
-        "d_EP": "experiments/evostar_2027/rq1/mats/d_EP_3139.npy"
+        "d_E": "experiments/evostar_2027/data/mats/B3139/d_E.npy",
+        "d_P": "experiments/evostar_2027/data/mats/B3139/d_P.npy",
+        "d_EP": "experiments/evostar_2027/data/mats/B3139/d_EP.npy"
       }
     },
     "source_p0": "p0_full leading prefixes (fitness-sorted)"

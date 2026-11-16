@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from speciation.clustering.inc_dbscan import seed_from_precomputed_matrix  # noqa: E402
 
-MAT_E = ROOT / "experiments" / "evostar_2027" / "rq1" / "mats" / "d_E_3139.npy"
+MAT_E = ROOT / "experiments" / "evostar_2027" / "data" / "mats" / "B3139" / "d_E.npy"
 MAT_NLI = ROOT / "experiments" / "evostar_2027" / "data" / "mats" / "B3139" / "d_negE.npy"
 POOL = ROOT / "experiments" / "evostar_2027" / "data" / "pool" / "p0_full.pkl"
 LIVE = ROOT / "data" / "outputs" / "evostar2027"

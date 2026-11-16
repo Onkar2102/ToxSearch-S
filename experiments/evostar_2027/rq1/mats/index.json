@@ -1,6 +1,6 @@
 {
   "N": 2000,
-  "p0_analysis": "experiments/evostar_2027/rq1/p0/p0_analysis_2000.pkl",
+  "p0_analysis": "experiments/evostar_2027/data/pool/p0_analysis_2000.pkl",
   "rows": [
     {
       "i": 0,

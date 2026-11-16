@@ -6,8 +6,8 @@
   "checkpoint_every": 10,
   "nli_model": "cross-encoder/nli-deberta-v3-small",
   "files": {
-    "d_N": "experiments/evostar_2027/data/mats/_flat/d_N_3139.npy",
-    "d_negE": "experiments/evostar_2027/data/mats/_flat/d_negE_3139.npy"
+    "d_N": "experiments/evostar_2027/data/mats/B3139/d_N.npy",
+    "d_negE": "experiments/evostar_2027/data/mats/B3139/d_negE.npy"
   },
   "timing": {
     "d_N": {

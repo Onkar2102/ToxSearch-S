@@ -33,11 +33,11 @@
   "nli": {
     "attached": {
       "d_N": {
-        "source": "experiments/evostar_2027/data/mats/_flat/d_N_3139.npy",
+        "source": "experiments/evostar_2027/data/mats/B3139/d_N.npy",
         "source_N": 3139
       },
       "d_negE": {
-        "source": "experiments/evostar_2027/data/mats/_flat/d_negE_3139.npy",
+        "source": "experiments/evostar_2027/data/mats/B3139/d_negE.npy",
         "source_N": 3139
       }
     },

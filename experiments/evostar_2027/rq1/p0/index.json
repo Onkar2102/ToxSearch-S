@@ -13,8 +13,8 @@
   "embedding_model": "all-MiniLM-L6-v2",
   "analysis_n": 2000,
   "selection": "top_N_by_fitness_desc_then_run_genome_id",
-  "p0_full": "experiments/evostar_2027/rq1/p0/p0_full.pkl",
-  "p0_analysis": "experiments/evostar_2027/rq1/p0/p0_analysis_2000.pkl",
+  "p0_full": "experiments/evostar_2027/data/pool/p0_full.pkl",
+  "p0_analysis": "experiments/evostar_2027/data/pool/p0_analysis_2000.pkl",
   "analysis_index": [
     {
       "i": 0,
