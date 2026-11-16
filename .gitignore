@@ -224,8 +224,6 @@ paper.fls
 *.tex
 report/
 
-verifier/
-
 notes/
 docs/*
 

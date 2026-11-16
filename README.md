@@ -138,7 +138,7 @@ Defaults follow [`SpeciationConfig`](src/speciation/config.py) and [`src/cli.py`
 | Generations | Legacy generation cap; termination is still only by `--max-total-genomes`. Set with `--generations`. |
 | Profile | Write `cProfile` stats next to the run outputs. Set with `--profile`. |
 
-**Weights (ensemble distance, not on CLI):** genotype and phenotype weights sum to 1. Defaults: `SpeciationConfig.w_genotype` = `0.7`, `w_phenotype` = `0.3`. See [`docs/SPECIATION.md`](docs/SPECIATION.md) and [`verifier/`](verifier/).
+**Weights (ensemble distance, not on CLI):** genotype and phenotype weights sum to 1. Defaults: `SpeciationConfig.w_genotype` = `0.7`, `w_phenotype` = `0.3`. See [`docs/SPECIATION.md`](docs/SPECIATION.md).
 
 ---
 
@@ -209,7 +209,6 @@ Details: [`tests/README.md`](tests/README.md).
 | `results/manifests/` | Manifest builder for a future tracked result tree |
 | `scripts/` | MPI test runner (`run_mpi_tests.sh`) |
 | `data/outputs/` | Live evolution runs (gitignored) |
-| `verifier/` | Lean formal audit of distance / speciation maths |
 | `docs/` | Speciation and Incremental DBSCAN notes |
 | `.github/workflows/` | CI (pytest non-MPI + ruff on new modules) |
 
@@ -272,7 +271,6 @@ Packaging: [`pyproject.toml`](pyproject.toml) (`pip install -e .`, console scrip
 | [`docs/INCREMENTAL_DBSCAN_PLAN.md`](docs/INCREMENTAL_DBSCAN_PLAN.md) | Incremental DBSCAN population path |
 | [`tests/README.md`](tests/README.md) | How to run and interpret tests |
 | [`results/manifests/README.md`](results/manifests/README.md) | Artifact manifests |
-| [`verifier/README.md`](verifier/README.md) | Lean verifier |
 | [`data/dataset.md`](data/dataset.md) | Shared dataset link |
 
 Doxygen build outputs under `docs/html/` and `docs/latex/` are generated and gitignored; regenerate with the root [`Doxyfile`](Doxyfile) if needed.
