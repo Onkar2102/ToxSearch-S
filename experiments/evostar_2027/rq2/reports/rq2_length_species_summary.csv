@@ -1,0 +1,5 @@
+configuration,n_topics,median_of_median_largest,median_of_median_other_mature,median_of_median_unassigned,n_topics_with_other_mature,n_topics_with_unassigned,median_base_share_largest,median_long_quartile_share,median_long_excess,median_spearman,n_spearman
+MiniLM LF,71,124.0,141.5,117.0,52,71,0.25,0.25,0.02894736842105264,0.07264291395806143,71
+MiniLM Inc,97,103.0,125.0,121.5,50,94,0.64,0.5714285714285714,-0.0625,-0.09478890597327369,94
+NLI LF,64,120.75,147.5,118.5,40,64,0.1044127190136275,0.0,-0.07182675814751285,-0.07924750139846598,64
+NLI Inc,133,115.5,116.0,119.0,4,129,0.625,0.625,-0.06285714285714294,-0.07284789048533721,129

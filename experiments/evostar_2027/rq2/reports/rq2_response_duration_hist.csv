@@ -1,0 +1,37 @@
+configuration,bin_lo,bin_hi,count
+Overall,0.0,5.0,678
+Overall,5.0,10.0,114
+Overall,10.0,15.0,8
+Overall,15.0,20.0,10
+Overall,20.0,25.0,806
+Overall,25.0,30.0,702
+MiniLM LF,0.0,5.0,144
+MiniLM LF,5.0,10.0,25
+MiniLM LF,10.0,15.0,2
+MiniLM LF,15.0,20.0,2
+MiniLM LF,20.0,25.0,123
+MiniLM LF,25.0,30.0,182
+MiniLM Inc,0.0,5.0,117
+MiniLM Inc,5.0,10.0,25
+MiniLM Inc,10.0,15.0,1
+MiniLM Inc,15.0,20.0,3
+MiniLM Inc,20.0,25.0,195
+MiniLM Inc,25.0,30.0,147
+NLI LF,0.0,5.0,149
+NLI LF,5.0,10.0,15
+NLI LF,10.0,15.0,4
+NLI LF,15.0,20.0,2
+NLI LF,20.0,25.0,160
+NLI LF,25.0,30.0,76
+NLI Inc,0.0,5.0,174
+NLI Inc,5.0,10.0,14
+NLI Inc,10.0,15.0,1
+NLI Inc,15.0,20.0,1
+NLI Inc,20.0,25.0,276
+NLI Inc,25.0,30.0,103
+Global EA,0.0,5.0,94
+Global EA,5.0,10.0,35
+Global EA,10.0,15.0,0
+Global EA,15.0,20.0,2
+Global EA,20.0,25.0,52
+Global EA,25.0,30.0,194

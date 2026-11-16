@@ -1,0 +1,81 @@
+cell,distance,clustering,label,seed,tau,n_mature_ge_tau,n_noise_ge_tau,n_units_ge_tau,frac_noise_ge_tau
+lf_embedding,leader_follower,embedding,LF $d_E$,0,0.8,2.0,0.0,2.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,1,0.8,1.0,1.0,2.0,0.5
+lf_embedding,leader_follower,embedding,LF $d_E$,2,0.8,3.0,2.0,5.0,0.4
+lf_embedding,leader_follower,embedding,LF $d_E$,3,0.8,2.0,0.0,2.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,4,0.8,2.0,2.0,4.0,0.5
+lf_embedding,leader_follower,embedding,LF $d_E$,5,0.8,1.0,0.0,1.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,6,0.8,1.0,0.0,1.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,7,0.8,6.0,3.0,9.0,0.3333333333333333
+lf_embedding,leader_follower,embedding,LF $d_E$,8,0.8,3.0,1.0,4.0,0.25
+lf_embedding,leader_follower,embedding,LF $d_E$,9,0.8,2.0,2.0,4.0,0.5
+inc_embedding,dbscan,embedding,Inc $d_E$,0,0.8,5.0,0.0,5.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,1,0.8,3.0,0.0,3.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,2,0.8,3.0,0.0,3.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,3,0.8,3.0,0.0,3.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,4,0.8,4.0,0.0,4.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,5,0.8,2.0,2.0,4.0,0.5
+inc_embedding,dbscan,embedding,Inc $d_E$,6,0.8,1.0,0.0,1.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,7,0.8,3.0,0.0,3.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,8,0.8,2.0,0.0,2.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,9,0.8,3.0,0.0,3.0,0.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,0,0.8,7.0,14.0,21.0,0.6666666666666666
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,1,0.8,0.0,3.0,3.0,1.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,2,0.8,7.0,3.0,10.0,0.3
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,3,0.8,0.0,1.0,1.0,1.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,4,0.8,1.0,5.0,6.0,0.8333333333333334
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,5,0.8,2.0,2.0,4.0,0.5
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,6,0.8,2.0,0.0,2.0,0.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,7,0.8,5.0,3.0,8.0,0.375
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,8,0.8,3.0,1.0,4.0,0.25
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,9,0.8,1.0,2.0,3.0,0.6666666666666666
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,0,0.8,1.0,2.0,3.0,0.6666666666666666
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,1,0.8,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,2,0.8,3.0,36.0,39.0,0.9230769230769231
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,3,0.8,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,4,0.8,1.0,35.0,36.0,0.9722222222222222
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,5,0.8,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,6,0.8,1.0,2.0,3.0,0.6666666666666666
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,7,0.8,2.0,0.0,2.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,8,0.8,2.0,11.0,13.0,0.8461538461538461
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,9,0.8,5.0,0.0,5.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,0,0.9,0.0,0.0,0.0,nan
+lf_embedding,leader_follower,embedding,LF $d_E$,1,0.9,1.0,1.0,2.0,0.5
+lf_embedding,leader_follower,embedding,LF $d_E$,2,0.9,3.0,0.0,3.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,3,0.9,2.0,0.0,2.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,4,0.9,1.0,0.0,1.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,5,0.9,1.0,0.0,1.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,6,0.9,0.0,0.0,0.0,nan
+lf_embedding,leader_follower,embedding,LF $d_E$,7,0.9,3.0,2.0,5.0,0.4
+lf_embedding,leader_follower,embedding,LF $d_E$,8,0.9,1.0,0.0,1.0,0.0
+lf_embedding,leader_follower,embedding,LF $d_E$,9,0.9,1.0,2.0,3.0,0.6666666666666666
+inc_embedding,dbscan,embedding,Inc $d_E$,0,0.9,4.0,0.0,4.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,1,0.9,2.0,0.0,2.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,2,0.9,3.0,0.0,3.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,3,0.9,3.0,0.0,3.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,4,0.9,2.0,0.0,2.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,5,0.9,2.0,1.0,3.0,0.3333333333333333
+inc_embedding,dbscan,embedding,Inc $d_E$,6,0.9,0.0,0.0,0.0,nan
+inc_embedding,dbscan,embedding,Inc $d_E$,7,0.9,1.0,0.0,1.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,8,0.9,1.0,0.0,1.0,0.0
+inc_embedding,dbscan,embedding,Inc $d_E$,9,0.9,3.0,0.0,3.0,0.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,0,0.9,7.0,6.0,13.0,0.46153846153846156
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,1,0.9,0.0,1.0,1.0,1.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,2,0.9,2.0,0.0,2.0,0.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,3,0.9,0.0,0.0,0.0,nan
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,4,0.9,1.0,3.0,4.0,0.75
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,5,0.9,2.0,0.0,2.0,0.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,6,0.9,1.0,0.0,1.0,0.0
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,7,0.9,3.0,3.0,6.0,0.5
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,8,0.9,2.0,1.0,3.0,0.3333333333333333
+lf_nli,leader_follower,nli_entail,LF $d_{\neg E}$,9,0.9,1.0,1.0,2.0,0.5
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,0,0.9,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,1,0.9,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,2,0.9,3.0,34.0,37.0,0.918918918918919
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,3,0.9,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,4,0.9,0.0,28.0,28.0,1.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,5,0.9,1.0,0.0,1.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,6,0.9,1.0,1.0,2.0,0.5
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,7,0.9,2.0,0.0,2.0,0.0
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,8,0.9,2.0,7.0,9.0,0.7777777777777778
+inc_nli,dbscan,nli_entail,Inc $d_{\neg E}$,9,0.9,3.0,0.0,3.0,0.0

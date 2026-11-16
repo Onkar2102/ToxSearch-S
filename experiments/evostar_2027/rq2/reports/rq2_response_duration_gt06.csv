@@ -1,0 +1,2319 @@
+cell,label,seed,genome_id,fitness,response_duration,duration_missing,prompt_chars,species_id,mature,unassigned,topic_id,topic_source
+lf_embedding,MiniLM LF,0,240,0.8487,25.1354,False,995,1,True,False,,ancestry
+lf_embedding,MiniLM LF,0,2468,0.8448,26.1683,False,637,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2224,0.7534,25.866,False,316,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2339,0.7528,25.7223,False,642,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,1977,0.7519,5.2627,False,148,0,False,True,12,ancestry and text agree
+lf_embedding,MiniLM LF,0,2338,0.75,25.7577,False,646,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2640,0.7491,26.7391,False,755,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2408,0.749,26.2925,False,638,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2246,0.7487,25.9731,False,632,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2425,0.7483,26.6972,False,1345,0,False,True,21,ancestry and text agree
+lf_embedding,MiniLM LF,0,2331,0.7104,25.7762,False,754,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2656,0.7102,25.9925,False,648,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2562,0.71,26.3097,False,752,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,1236,0.7095,24.1537,False,116,13,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,0,2479,0.7093,26.0451,False,162,0,False,True,,conflict
+lf_embedding,MiniLM LF,0,2745,0.7086,26.2717,False,749,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2742,0.7083,26.3624,False,1620,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2642,0.7082,26.6584,False,759,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,1431,0.7059,24.8405,False,212,13,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,0,2767,0.7051,25.8295,False,632,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2685,0.705,0.2615,False,147,78,True,False,12,ancestry and text agree
+lf_embedding,MiniLM LF,0,2340,0.7048,25.6051,False,329,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2402,0.7031,26.6313,False,756,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,352,0.7026,24.5915,False,553,1,True,False,,ancestry
+lf_embedding,MiniLM LF,0,1455,0.6856,25.1961,False,154,13,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,0,2318,0.6842,26.6633,False,744,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2635,0.6826,26.1907,False,1386,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2561,0.6826,26.3753,False,1271,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,1299,0.6238,3.1746,False,224,13,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,0,2679,0.6217,2.3822,False,256,0,False,True,,conflict
+lf_embedding,MiniLM LF,0,2018,0.6217,25.7002,False,153,78,True,False,12,ancestry and text agree
+lf_embedding,MiniLM LF,0,1902,0.6217,25.8016,False,1698,0,False,True,,conflict
+lf_embedding,MiniLM LF,0,2550,0.6215,26.4261,False,638,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2021,0.6202,3.7391,False,147,78,True,False,12,ancestry and text agree
+lf_embedding,MiniLM LF,0,142,0.6202,8.073,False,545,1,True,False,,ancestry
+lf_embedding,MiniLM LF,0,2185,0.6189,25.7132,False,148,78,True,False,12,ancestry and text agree
+lf_embedding,MiniLM LF,0,2250,0.6173,26.7132,False,321,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,353,0.616,0.4299,False,1258,1,True,False,,ancestry
+lf_embedding,MiniLM LF,0,2546,0.6154,26.5641,False,635,87,True,False,,conflict
+lf_embedding,MiniLM LF,0,2687,0.6152,27.2456,False,2001,0,False,True,,conflict
+lf_embedding,MiniLM LF,0,2094,0.6125,3.089,False,154,0,False,True,,conflict
+lf_embedding,MiniLM LF,1,2003,0.9555,5.6566,False,240,0,False,True,,conflict
+lf_embedding,MiniLM LF,1,1301,0.9476,25.3073,False,746,45,True,False,14,ancestry and text agree
+lf_embedding,MiniLM LF,1,2059,0.708,2.6478,False,243,0,False,True,,conflict
+lf_embedding,MiniLM LF,1,2229,0.6228,3.4988,False,137,0,False,True,,conflict
+lf_embedding,MiniLM LF,1,2221,0.6206,24.8737,False,299,0,False,True,,ancestry
+lf_embedding,MiniLM LF,1,1664,0.6168,3.1572,False,86,0,False,True,14,ancestry and text agree
+lf_embedding,MiniLM LF,1,1072,0.6166,25.7107,False,167,22,True,False,14,ancestry and text agree
+lf_embedding,MiniLM LF,1,1731,0.6137,25.0208,False,85,62,True,False,14,ancestry and text agree
+lf_embedding,MiniLM LF,1,504,0.6137,26.9985,False,163,22,True,False,14,ancestry and text agree
+lf_embedding,MiniLM LF,2,2405,0.9548,3.1281,False,232,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2219,0.948,24.6438,False,321,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,413,0.948,0.2428,False,212,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2398,0.9479,20.9137,False,20141,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,2319,0.9479,21.3778,False,20141,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,2185,0.9479,21.0282,False,9302,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,1945,0.9477,24.9521,False,1552,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,1963,0.9476,24.7317,False,1552,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2016,0.9472,24.4693,False,1556,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,2190,0.9458,24.9596,False,1553,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,2019,0.9457,24.4781,False,1432,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,1717,0.9456,25.6621,False,4644,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2403,0.9455,25.5461,False,4652,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2125,0.9454,25.4837,False,4643,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2100,0.9454,25.816,False,4642,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2400,0.9453,25.7878,False,4646,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2321,0.9453,21.4345,False,12391,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1934,0.9453,21.0517,False,10838,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2393,0.9451,20.9679,False,24782,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,1864,0.9451,27.1713,False,6193,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1553,0.9451,24.8377,False,3104,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2394,0.945,20.3324,False,24791,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,2320,0.945,20.7172,False,10855,52,True,False,,conflict
+lf_embedding,MiniLM LF,2,2187,0.945,20.9704,False,13944,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2120,0.945,21.1479,False,9283,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1941,0.9448,25.7301,False,4649,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1726,0.9447,25.5328,False,3100,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2324,0.9444,21.3993,False,10832,52,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1198,0.9443,1.9948,False,278,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1137,0.9443,24.9809,False,377,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,130,0.9443,0.3322,False,215,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1282,0.944,25.209,False,273,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,467,0.944,0.4106,False,209,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,625,0.8578,25.1819,False,222,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1151,0.8571,24.6598,False,1545,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,415,0.8473,0.2057,False,214,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2486,0.8457,25.2128,False,236,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,266,0.8453,24.889,False,209,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1280,0.8433,25.0523,False,788,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,592,0.8432,0.1488,False,210,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,838,0.7517,24.7473,False,244,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,973,0.7514,24.9077,False,534,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2178,0.7509,0.3836,False,221,35,True,False,,conflict
+lf_embedding,MiniLM LF,2,2010,0.7498,4.5923,False,165,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,206,0.7099,0.3497,False,208,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,129,0.7097,3.3777,False,160,6,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1149,0.7068,24.5928,False,226,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1670,0.7055,24.8594,False,366,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,145,0.7048,0.2603,False,217,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2476,0.6857,3.1401,False,237,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1531,0.6844,24.4193,False,106,26,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,286,0.6844,0.3798,False,213,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,109,0.6825,24.4935,False,114,3,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,195,0.6261,24.6848,False,185,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,329,0.6258,4.8844,False,167,3,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2276,0.6254,24.8278,False,287,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1352,0.6247,0.2481,False,250,9,True,False,,conflict
+lf_embedding,MiniLM LF,2,284,0.6243,0.3739,False,257,6,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,564,0.6238,0.2006,False,341,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,207,0.6225,0.3357,False,157,6,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,115,0.6223,24.5058,False,120,3,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2442,0.6183,0.3877,False,218,9,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,523,0.6183,25.4964,False,144,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,470,0.6179,0.2047,False,195,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,621,0.6171,0.2445,False,211,9,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,638,0.6168,25.287,False,97,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1651,0.6152,0.6181,False,264,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,322,0.6142,2.4191,False,164,6,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,422,0.6131,0.3085,False,200,4,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1742,0.6125,25.2336,False,275,23,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,137,0.6152,1.2267,False,181,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1807,0.8429,25.7693,False,1550,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1637,0.6833,9.8602,False,1526,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1429,0.6156,24.3607,False,1543,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1724,0.6125,24.9081,False,1545,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1559,0.8467,24.7343,False,1550,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1482,0.8467,25.156,False,3094,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1557,0.8459,24.6703,False,1548,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1811,0.8449,26.0136,False,1539,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1487,0.8449,24.9604,False,1545,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1809,0.8441,12.8707,False,4648,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1722,0.8439,25.1128,False,1549,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1940,0.8577,25.0076,False,1562,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1805,0.8576,26.511,False,4638,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1870,0.8574,26.7322,False,4644,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1633,0.8485,25.367,False,3105,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1716,0.8483,25.9032,False,4653,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1942,0.848,26.1558,False,6188,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1802,0.8478,26.1879,False,3089,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1492,0.8475,24.9008,False,1550,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1801,0.8577,26.5782,False,6184,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1964,0.8443,24.9017,False,1530,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1490,0.8582,25.0643,False,1540,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1427,0.8581,24.561,False,1548,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1865,0.858,22.967,False,7745,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1943,0.8578,25.7032,False,4644,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1873,0.8578,25.9743,False,1550,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2015,0.8462,24.8942,False,1555,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2011,0.6137,25.702,False,3105,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,2046,0.8476,25.3992,False,4652,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1426,0.9435,24.6223,False,1545,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1876,0.8582,25.9637,False,1545,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2096,0.8577,20.9362,False,10838,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1632,0.9436,25.4847,False,3104,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1562,0.9436,24.6348,False,1539,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1489,0.9435,24.9209,False,1558,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2119,0.9435,26.0354,False,6194,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,1560,0.9443,24.6176,False,1555,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,2192,0.9443,26.1638,False,6195,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,2020,0.9442,24.6192,False,1414,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2021,0.944,25.2502,False,4641,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2118,0.9438,26.4582,False,6194,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,2186,0.9438,22.3927,False,7747,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,2195,0.8577,26.1912,False,6178,-1,False,True,,conflict
+lf_embedding,MiniLM LF,2,2099,0.9443,18.8771,False,6195,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2013,0.9443,18.8106,False,6197,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1944,0.9443,26.0114,False,6174,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1727,0.9443,25.1939,False,1552,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2325,0.944,21.3492,False,10834,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2328,0.7103,25.6703,False,1557,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2326,0.6228,25.738,False,1554,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2194,0.9444,22.5363,False,7748,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1936,0.9444,22.1907,False,7749,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1875,0.9444,26.6526,False,4641,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1872,0.9444,26.2642,False,3097,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,1806,0.9444,26.507,False,4640,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2395,0.944,21.0455,False,9290,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2401,0.8481,25.6688,False,4650,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,2,2134,0.6195,25.3033,False,179,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,3,2791,0.9748,24.9637,False,434,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2757,0.9745,25.2621,False,767,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2756,0.9744,25.4138,False,1079,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2702,0.9744,25.1483,False,588,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2489,0.9744,25.3443,False,265,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2790,0.9558,25.0885,False,765,103,True,False,,conflict
+lf_embedding,MiniLM LF,3,2789,0.9558,25.1018,False,1106,103,True,False,,conflict
+lf_embedding,MiniLM LF,3,2760,0.9558,25.1142,False,586,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2488,0.9558,25.2065,False,261,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2458,0.9558,25.0903,False,261,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2581,0.9557,25.0966,False,261,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2485,0.9556,25.2805,False,305,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2533,0.9555,25.254,False,436,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2532,0.9555,25.1007,False,309,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2788,0.9554,2.8543,False,1204,103,True,False,,conflict
+lf_embedding,MiniLM LF,3,2701,0.9552,25.3057,False,330,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2580,0.9548,25.1239,False,436,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2650,0.9543,25.1264,False,263,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2652,0.9542,2.1076,False,257,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2787,0.9539,25.3809,False,1437,103,True,False,,conflict
+lf_embedding,MiniLM LF,3,2758,0.948,25.3201,False,669,96,True,False,,conflict
+lf_embedding,MiniLM LF,3,2826,0.8057,0.6852,False,1098,103,True,False,,conflict
+lf_embedding,MiniLM LF,3,522,0.711,24.5692,False,167,4,True,False,,ancestry
+lf_embedding,MiniLM LF,3,917,0.7026,24.2407,False,132,22,True,False,,ancestry
+lf_embedding,MiniLM LF,3,1442,0.6175,24.8763,False,214,0,False,True,,ancestry
+lf_embedding,MiniLM LF,3,2808,0.6137,25.1542,False,1876,0,False,True,,conflict
+lf_embedding,MiniLM LF,3,907,0.6125,4.834,False,301,15,True,False,,ancestry
+lf_embedding,MiniLM LF,4,2181,0.9464,0.3519,False,1722,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2106,0.9464,0.35,False,1723,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1985,0.9464,0.3496,False,1720,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1948,0.9464,0.3228,False,1715,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1916,0.9448,25.1208,False,1291,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2186,0.9438,25.7676,False,4699,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1680,0.9434,0.3888,False,1286,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2107,0.8579,24.7952,False,2785,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1903,0.8579,24.921,False,2787,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,725,0.8575,24.4016,False,124,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2176,0.8573,25.7265,False,3437,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1913,0.8572,0.689,False,1711,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2253,0.8571,25.5345,False,3433,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2101,0.8571,25.8437,False,3876,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1449,0.8571,6.0849,False,1289,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1691,0.8489,25.0106,False,1285,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2254,0.8487,25.521,False,2788,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2047,0.8487,25.9696,False,4701,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2045,0.8487,25.6484,False,2347,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1982,0.8487,25.6452,False,2352,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1856,0.8487,0.7132,False,1711,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1852,0.8487,25.629,False,2780,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1987,0.8486,25.5889,False,1717,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2258,0.8484,0.6751,False,1710,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1729,0.8484,0.6892,False,1712,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2171,0.8482,25.7366,False,4073,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2170,0.8481,25.8675,False,4292,51,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,588,0.8455,24.5367,False,123,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,655,0.8453,25.0798,False,464,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1537,0.8442,0.398,False,1296,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,839,0.8442,24.7359,False,126,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2386,0.7508,25.1868,False,312,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,963,0.7499,12.6493,False,259,1,True,False,,ancestry
+lf_embedding,MiniLM LF,4,1041,0.711,24.9233,False,297,27,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1566,0.7103,2.3681,False,1284,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1163,0.709,24.6456,False,300,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1615,0.7061,4.6793,False,1286,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,169,0.7061,24.5947,False,230,6,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2335,0.705,24.6182,False,824,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,155,0.6862,24.6141,False,230,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,95,0.6859,3.7002,False,181,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2255,0.6845,24.7283,False,178,62,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1082,0.6844,24.5357,False,115,17,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,301,0.6826,24.7655,False,540,6,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,773,0.6247,5.205,False,301,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2325,0.6241,5.1414,False,125,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,711,0.6206,8.7261,False,822,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1603,0.6191,24.8383,False,475,1,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,468,0.6183,24.9605,False,277,6,True,False,,conflict
+lf_embedding,MiniLM LF,4,1707,0.6179,24.8213,False,209,56,True,False,,conflict
+lf_embedding,MiniLM LF,4,1200,0.6148,25.3503,False,683,27,True,False,,ancestry
+lf_embedding,MiniLM LF,4,1486,0.6144,3.7377,False,109,17,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1855,0.7095,2.3506,False,1288,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1915,0.6217,2.1245,False,1293,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1732,0.7096,2.3983,False,1297,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1952,0.7085,2.3583,False,1288,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1951,0.7068,25.3776,False,1284,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1689,0.7502,25.3442,False,1709,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1910,0.7491,3.1677,False,1278,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1694,0.749,2.3637,False,1284,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1917,0.7486,2.3674,False,1290,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1794,0.7103,2.3635,False,1292,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1986,0.708,5.3196,False,1285,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2038,0.7504,2.3793,False,1284,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1733,0.7519,2.6876,False,1279,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1731,0.7514,24.7504,False,1292,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1696,0.751,2.3865,False,1287,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1796,0.7504,2.3612,False,1286,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2108,0.8435,25.5989,False,3424,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1695,0.8432,25.2331,False,1284,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1793,0.8424,1.4708,False,1288,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2048,0.8423,25.5661,False,1722,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1688,0.7534,25.3356,False,1709,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2046,0.8462,25.7395,False,3434,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2100,0.846,25.8949,False,4506,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1630,0.8443,25.3619,False,1286,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1988,0.8435,2.7248,False,1287,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1727,0.8478,25.0742,False,2572,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1687,0.8478,24.9563,False,2569,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2177,0.8475,25.6157,False,3649,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2175,0.8474,3.2037,False,2574,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2182,0.7521,25.468,False,1711,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2178,0.7509,25.7142,False,3641,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1983,0.8481,25.725,False,3425,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2172,0.8478,25.8597,False,4920,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,1911,0.8478,25.3793,False,2571,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2252,0.8428,25.7657,False,4077,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2257,0.7077,24.8991,False,1292,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2256,0.6173,0.3026,False,1727,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,4,2407,0.7531,1.0592,False,1292,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,5,2068,0.9473,24.0099,False,448,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1995,0.9455,24.9549,False,389,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2270,0.9453,24.8519,False,1126,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2113,0.8474,24.8803,False,687,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1688,0.8432,24.9984,False,390,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2273,0.842,25.2082,False,683,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1469,0.7527,24.9815,False,292,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2264,0.7108,25.1356,False,1566,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2338,0.7039,24.9257,False,462,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2024,0.7027,0.309,False,1829,0,False,True,,conflict
+lf_embedding,MiniLM LF,5,2122,0.6864,24.9379,False,214,70,True,False,,conflict
+lf_embedding,MiniLM LF,5,2268,0.684,0.3587,False,887,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1638,0.6837,0.8145,False,332,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2409,0.6388,0.693,False,1573,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1321,0.6265,5.0541,False,289,0,False,True,,conflict
+lf_embedding,MiniLM LF,5,257,0.6225,24.8275,False,95,0,False,True,,conflict
+lf_embedding,MiniLM LF,5,2335,0.6183,24.8993,False,405,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,2199,0.6164,25.0682,False,683,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1360,0.614,3.1462,False,290,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1862,0.6133,25.1832,False,1271,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1881,0.6002,0.3377,False,238,52,True,False,,conflict
+lf_embedding,MiniLM LF,5,1635,0.7085,2.2211,False,433,-1,False,True,,conflict
+lf_embedding,MiniLM LF,6,2114,0.8453,1.0938,False,183,2,True,False,14,ancestry and text agree
+lf_embedding,MiniLM LF,6,56,0.7103,2.2926,False,87,0,False,True,14,ancestry and text agree
+lf_embedding,MiniLM LF,6,2985,0.7044,25.0583,False,174,0,False,True,14,ancestry and text agree
+lf_embedding,MiniLM LF,6,2697,0.6852,25.8614,False,110,0,False,True,,ancestry
+lf_embedding,MiniLM LF,6,2531,0.6175,1.1621,False,139,143,True,False,14,ancestry and text agree
+lf_embedding,MiniLM LF,6,2277,0.6152,24.6945,False,141,0,False,True,,conflict
+lf_embedding,MiniLM LF,7,2635,0.9555,25.0709,False,1998,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2500,0.955,24.8457,False,1998,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,2209,0.955,24.7168,False,2001,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2197,0.955,24.9729,False,1992,0,False,True,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,581,0.9547,24.6308,False,584,3,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2245,0.9541,25.0435,False,1994,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2435,0.954,25.4641,False,2000,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2318,0.954,25.0043,False,1989,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,825,0.948,0.6293,False,561,3,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2503,0.9474,24.592,False,2001,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2120,0.9466,25.421,False,2000,0,False,True,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2249,0.9456,24.8208,False,1994,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2242,0.9456,25.5799,False,3990,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,2577,0.9455,25.35,False,1992,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2319,0.9454,25.2595,False,3987,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,2321,0.9453,25.4067,False,2005,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2444,0.9452,25.3522,False,2000,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2501,0.9451,25.2268,False,2000,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2433,0.9449,25.4899,False,1988,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2013,0.9448,6.6039,False,141,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2248,0.9444,24.8042,False,1997,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2012,0.9443,6.7419,False,137,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2590,0.8581,24.3601,False,2002,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2391,0.858,25.5634,False,3996,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,1933,0.8578,24.854,False,279,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1239,0.8486,24.7907,False,253,38,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2315,0.8484,25.215,False,4208,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,626,0.8483,5.2996,False,465,19,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2208,0.8478,25.1442,False,1992,62,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2007,0.8475,24.7249,False,423,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2090,0.8474,24.6093,False,2528,0,False,True,,ancestry
+lf_embedding,MiniLM LF,7,1401,0.8472,4.9277,False,320,17,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2390,0.8469,25.7107,False,4003,62,True,False,,conflict
+lf_embedding,MiniLM LF,7,1475,0.8454,2.3406,False,143,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2087,0.8449,24.4838,False,143,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1607,0.8446,8.3308,False,700,17,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2086,0.843,1.3259,False,260,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1793,0.8422,5.7734,False,138,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1319,0.8421,24.0884,False,598,38,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,301,0.7528,25.2115,False,582,3,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,1862,0.7525,8.7293,False,324,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1367,0.7516,1.1163,False,318,17,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,1105,0.7507,4.9719,False,205,0,False,True,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2076,0.7497,5.198,False,199,0,False,True,,ancestry
+lf_embedding,MiniLM LF,7,2330,0.749,25.0349,False,164,0,False,True,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,605,0.7107,25.235,False,3587,0,False,True,,conflict
+lf_embedding,MiniLM LF,7,477,0.7102,2.1508,False,226,3,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2260,0.7073,4.9794,False,183,53,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,1886,0.7062,5.358,False,135,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2299,0.7056,6.4816,False,132,58,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2017,0.704,3.5397,False,166,0,False,True,,ancestry
+lf_embedding,MiniLM LF,7,2008,0.6864,6.6675,False,418,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1553,0.684,25.0788,False,637,17,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,580,0.6823,0.9489,False,224,3,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,2069,0.6258,25.1061,False,140,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2009,0.6256,5.4007,False,282,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,1398,0.6183,25.077,False,416,17,True,False,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,1813,0.6171,1.478,False,129,0,False,True,,ancestry
+lf_embedding,MiniLM LF,7,1806,0.617,4.4923,False,99,0,False,True,,ancestry
+lf_embedding,MiniLM LF,7,1785,0.6121,24.5721,False,341,37,True,False,,ancestry
+lf_embedding,MiniLM LF,7,2521,0.6012,0.3577,False,184,0,False,True,,ancestry
+lf_embedding,MiniLM LF,7,127,0.6144,24.5981,False,100,-1,False,True,21,ancestry and text agree
+lf_embedding,MiniLM LF,7,1904,0.7068,1.0162,False,231,-1,False,True,,ancestry
+lf_embedding,MiniLM LF,7,1938,0.6154,7.2801,False,143,-1,False,True,,ancestry
+lf_embedding,MiniLM LF,8,2322,0.9476,0.7079,False,184,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2207,0.9476,1.1539,False,103,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2318,0.9456,2.3099,False,328,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2012,0.9453,1.262,False,94,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,1921,0.945,1.212,False,99,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2148,0.9447,1.142,False,93,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2217,0.9443,0.8628,False,104,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2271,0.9441,0.579,False,224,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2146,0.8866,1.3334,False,201,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2374,0.858,24.9238,False,490,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,1558,0.8572,1.4606,False,102,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,2405,0.8488,2.3412,False,160,42,True,False,,conflict
+lf_embedding,MiniLM LF,8,2268,0.8481,5.1005,False,104,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2267,0.8467,24.4463,False,387,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2225,0.8466,1.1453,False,113,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2047,0.846,1.4603,False,236,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,649,0.8455,1.6543,False,60,0,False,True,,conflict
+lf_embedding,MiniLM LF,8,2008,0.8445,2.7554,False,190,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2376,0.843,1.293,False,412,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2462,0.752,1.7012,False,167,42,True,False,,conflict
+lf_embedding,MiniLM LF,8,2375,0.752,1.9592,False,291,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,1800,0.7519,0.4406,False,163,0,False,True,,conflict
+lf_embedding,MiniLM LF,8,1919,0.7499,2.2174,False,228,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,1594,0.7499,1.8714,False,101,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,2463,0.7083,24.8541,False,122,42,True,False,,conflict
+lf_embedding,MiniLM LF,8,1916,0.7076,2.8765,False,328,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,1708,0.7074,2.6933,False,325,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,580,0.7074,1.5981,False,66,0,False,True,,conflict
+lf_embedding,MiniLM LF,8,2145,0.7058,0.5946,False,280,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2459,0.705,3.4604,False,266,42,True,False,,conflict
+lf_embedding,MiniLM LF,8,2045,0.7035,1.3779,False,196,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,321,0.7035,24.7904,False,171,0,False,True,,ancestry
+lf_embedding,MiniLM LF,8,2546,0.6859,1.5725,False,57,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2046,0.6857,1.954,False,229,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2364,0.6826,4.9962,False,370,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2547,0.6261,0.5383,False,280,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,1865,0.6236,3.0523,False,328,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,1709,0.6232,1.5246,False,225,59,True,False,,conflict
+lf_embedding,MiniLM LF,8,2094,0.6202,8.2523,False,331,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,1557,0.6166,0.835,False,50,43,True,False,,conflict
+lf_embedding,MiniLM LF,8,2149,0.6041,1.2731,False,185,-1,False,True,,conflict
+lf_embedding,MiniLM LF,9,954,0.9554,24.3059,False,1404,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,986,0.9549,24.168,False,2575,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1126,0.9548,26.0032,False,1176,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,985,0.9548,24.323,False,2825,32,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1123,0.9546,26.3282,False,4229,32,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1649,0.9545,25.8828,False,1172,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1175,0.9545,26.3038,False,5657,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1038,0.9545,26.1236,False,4271,32,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1037,0.9545,26.1689,False,4253,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,2567,0.9542,25.3235,False,1171,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,2074,0.9542,26.0307,False,1171,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,987,0.9542,1.52,False,2593,32,True,False,,ancestry
+lf_embedding,MiniLM LF,9,2895,0.9541,24.1268,False,1171,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1939,0.954,25.3692,False,1173,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1244,0.954,25.3651,False,1172,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,956,0.954,24.2995,False,1173,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,864,0.954,24.526,False,1168,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,2231,0.9538,0.8705,False,1396,32,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1580,0.9481,25.8773,False,1172,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1353,0.948,26.0611,False,1172,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,2288,0.9479,2.6518,False,1336,32,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1686,0.9479,1.3744,False,1362,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1176,0.9478,26.6291,False,7105,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1274,0.9476,2.189,False,854,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,799,0.9476,2.7704,False,1160,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1348,0.9475,4.0785,False,1168,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1174,0.9475,26.0886,False,4255,32,True,False,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,650,0.8455,2.8976,False,1174,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,2766,0.7528,24.9526,False,132,0,False,True,,conflict
+lf_embedding,MiniLM LF,9,754,0.751,24.4922,False,432,6,True,False,,conflict
+lf_embedding,MiniLM LF,9,1073,0.7076,25.853,False,465,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1032,0.7067,3.3979,False,1135,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,630,0.7055,1.1623,False,959,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,723,0.7053,24.71,False,550,6,True,False,,conflict
+lf_embedding,MiniLM LF,9,802,0.7042,24.4174,False,416,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,2600,0.7034,7.2862,False,144,0,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,696,0.6254,2.5522,False,543,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,808,0.6232,24.4509,False,185,21,True,False,,conflict
+lf_embedding,MiniLM LF,9,656,0.6217,24.9562,False,377,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,652,0.6217,25.2434,False,926,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,554,0.6183,4.3873,False,233,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,791,0.6171,24.8809,False,1174,6,True,False,,conflict
+lf_embedding,MiniLM LF,9,2824,0.616,25.3448,False,227,0,False,True,,ancestry
+lf_embedding,MiniLM LF,9,2412,0.616,23.8788,False,241,0,False,True,,ancestry
+lf_embedding,MiniLM LF,9,521,0.6137,1.3627,False,227,6,True,False,,ancestry
+lf_embedding,MiniLM LF,9,1531,0.9455,1.4913,False,1172,-1,False,True,11,ancestry and text agree
+lf_embedding,MiniLM LF,9,1088,0.9469,25.4992,False,2593,-1,False,True,,ancestry
+lf_embedding,MiniLM LF,9,2616,0.9473,0.4717,False,1405,-1,False,True,,ancestry
+lf_embedding,MiniLM LF,9,1124,0.9473,26.2064,False,3997,-1,False,True,,ancestry
+inc_embedding,MiniLM Inc,0,134,0.9456,24.8958,False,1550,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,166,0.6152,0.7896,False,207,9,True,False,,conflict
+inc_embedding,MiniLM Inc,0,215,0.9467,25.5544,False,1546,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,217,0.9539,25.7647,False,1551,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,218,0.9554,25.7502,False,1556,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,256,0.709,26.1566,False,3107,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,257,0.7499,25.8013,False,3102,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,258,0.9467,26.1535,False,3096,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,259,0.9435,25.5767,False,1558,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,260,0.946,25.4813,False,1552,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,331,0.9538,8.0824,False,3105,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,332,0.9464,25.5221,False,1556,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,334,0.752,25.4641,False,147,27,True,False,22,ancestry and text agree
+inc_embedding,MiniLM Inc,0,361,0.9466,26.5973,False,4315,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,362,0.9467,26.5558,False,4319,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,363,0.9477,26.6714,False,4314,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,426,0.9472,25.0039,False,1557,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,427,0.9461,25.0505,False,1548,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,428,0.9463,24.9147,False,1549,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,429,0.9479,24.868,False,1550,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,507,0.9471,26.627,False,4311,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,508,0.8438,19.4007,False,1556,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,509,0.8429,26.1537,False,3088,11,True,False,,conflict
+inc_embedding,MiniLM Inc,0,537,0.7073,0.5627,False,1707,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,596,0.9471,26.3634,False,543,27,True,False,22,ancestry and text agree
+inc_embedding,MiniLM Inc,0,607,0.7035,6.1568,False,259,27,True,False,22,ancestry and text agree
+inc_embedding,MiniLM Inc,0,618,0.7525,24.2014,False,512,27,True,False,22,ancestry and text agree
+inc_embedding,MiniLM Inc,0,743,0.844,0.5887,False,1707,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,748,0.9435,0.6259,False,3411,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,750,0.6862,26.3086,False,3411,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,788,0.6845,25.6906,False,6555,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,789,0.7037,26.4755,False,6555,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,792,0.7525,25.1654,False,3415,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,843,0.708,26.7764,False,4389,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,844,0.6236,26.7247,False,4334,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,847,0.6859,26.5774,False,3408,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,857,0.7064,26.5428,False,2283,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,858,0.6181,26.0226,False,3419,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,860,0.7034,25.4301,False,3414,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,861,0.7097,26.6406,False,3401,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,921,0.7042,24.8988,False,6819,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,923,0.7044,24.3798,False,4354,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,925,0.7087,25.4898,False,3411,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,929,0.6845,26.6927,False,6816,34,True,False,,conflict
+inc_embedding,MiniLM Inc,0,1252,0.6236,0.3756,False,823,27,True,False,,conflict
+inc_embedding,MiniLM Inc,0,1325,0.7065,25.5292,False,477,27,True,False,22,ancestry and text agree
+inc_embedding,MiniLM Inc,0,1601,0.6148,3.39,False,190,48,True,False,,conflict
+inc_embedding,MiniLM Inc,0,1812,0.6152,25.8938,False,216,64,True,False,,conflict
+inc_embedding,MiniLM Inc,0,1875,0.6121,4.5231,False,264,64,True,False,,conflict
+inc_embedding,MiniLM Inc,0,1881,0.6196,24.9015,False,297,64,True,False,,conflict
+inc_embedding,MiniLM Inc,0,2048,0.9454,5.4449,False,207,48,True,False,,conflict
+inc_embedding,MiniLM Inc,0,2128,0.683,3.8544,False,209,48,True,False,,conflict
+inc_embedding,MiniLM Inc,0,2161,0.6239,6.0105,False,205,77,True,False,,conflict
+inc_embedding,MiniLM Inc,0,2283,0.8464,7.1641,False,210,77,True,False,,conflict
+inc_embedding,MiniLM Inc,0,2289,0.7031,4.4371,False,207,0,False,True,,conflict
+inc_embedding,MiniLM Inc,0,2340,0.7029,27.3611,False,211,77,True,False,,conflict
+inc_embedding,MiniLM Inc,0,2354,0.7495,27.7618,False,425,77,True,False,,conflict
+inc_embedding,MiniLM Inc,1,192,0.704,0.8335,False,130,12,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,1,706,0.8058,0.3247,False,115,21,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,1,740,0.6204,4.653,False,53,8,True,False,57,ancestry and text agree
+inc_embedding,MiniLM Inc,1,764,0.9449,26.3263,False,191,21,True,False,,conflict
+inc_embedding,MiniLM Inc,1,829,0.6208,25.5011,False,188,21,True,False,,conflict
+inc_embedding,MiniLM Inc,1,844,0.6864,2.4222,False,59,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,1,940,0.8453,6.3334,False,127,21,True,False,,conflict
+inc_embedding,MiniLM Inc,1,1131,0.7507,26.4285,False,189,21,True,False,,conflict
+inc_embedding,MiniLM Inc,1,1229,0.6148,26.2213,False,328,46,True,False,,conflict
+inc_embedding,MiniLM Inc,1,1335,0.6193,25.8274,False,64,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,1,1409,0.614,0.821,False,56,8,True,False,57,ancestry and text agree
+inc_embedding,MiniLM Inc,1,1422,0.8425,3.155,False,52,8,True,False,57,ancestry and text agree
+inc_embedding,MiniLM Inc,1,1667,0.9538,25.457,False,457,46,True,False,,conflict
+inc_embedding,MiniLM Inc,1,1673,0.8571,2.3368,False,328,46,True,False,,conflict
+inc_embedding,MiniLM Inc,1,1748,0.6861,2.8658,False,219,46,True,False,,conflict
+inc_embedding,MiniLM Inc,1,1875,0.6856,0.2818,False,262,46,True,False,,conflict
+inc_embedding,MiniLM Inc,1,2042,0.6856,0.3308,False,264,46,True,False,,conflict
+inc_embedding,MiniLM Inc,1,2126,0.6125,1.153,False,195,57,True,False,,conflict
+inc_embedding,MiniLM Inc,1,2136,0.625,26.5417,False,195,57,True,False,,conflict
+inc_embedding,MiniLM Inc,2,98,0.6826,0.3808,False,122,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,105,0.7489,25.2834,False,209,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,169,0.6234,0.2831,False,200,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,185,0.7495,0.5168,False,213,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,256,0.9451,4.6573,False,145,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,373,0.8577,6.5337,False,380,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,380,0.6243,0.4088,False,197,5,True,False,,conflict
+inc_embedding,MiniLM Inc,2,387,0.6823,7.022,False,96,9,True,False,16,ancestry and text agree
+inc_embedding,MiniLM Inc,2,457,0.6213,0.3471,False,210,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,460,0.6859,0.259,False,221,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,566,0.7076,25.0912,False,369,9,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,642,0.8446,25.2328,False,305,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,770,0.7486,5.1332,False,222,5,True,False,,conflict
+inc_embedding,MiniLM Inc,2,817,0.7522,4.2497,False,455,23,True,False,,conflict
+inc_embedding,MiniLM Inc,2,899,0.6844,25.8494,False,687,23,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,907,0.7032,6.0799,False,218,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,1008,0.8582,25.4189,False,148,16,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1023,0.9452,26.574,False,128,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1025,0.8436,26.1558,False,191,16,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1027,0.7516,2.0059,False,150,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1129,0.9449,5.9981,False,294,5,True,False,,conflict
+inc_embedding,MiniLM Inc,2,1183,0.8479,0.9096,False,175,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1184,0.9454,1.2121,False,148,16,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1189,0.8426,6.7058,False,188,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1205,0.8482,25.7753,False,297,16,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1207,0.7489,1.412,False,147,16,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1308,0.6258,3.1366,False,294,16,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1352,0.616,26.0871,False,147,16,True,False,,conflict
+inc_embedding,MiniLM Inc,2,1634,0.6228,2.5322,False,423,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,1671,0.6826,25.6818,False,395,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,1686,0.9479,25.8955,False,1295,60,True,False,,conflict
+inc_embedding,MiniLM Inc,2,1730,0.9538,25.914,False,1298,60,True,False,,conflict
+inc_embedding,MiniLM Inc,2,1742,0.8483,0.8398,False,1299,60,True,False,,conflict
+inc_embedding,MiniLM Inc,2,1772,0.944,25.3163,False,1294,60,True,False,,conflict
+inc_embedding,MiniLM Inc,2,1781,0.8488,26.179,False,4511,60,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1817,0.8437,3.0179,False,79,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,1838,0.8486,27.0439,False,9417,60,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1872,0.8447,2.8396,False,107,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,1917,0.9449,5.2882,False,304,5,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,2,1968,0.6156,26.3691,False,385,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,1974,0.7087,8.4874,False,248,68,True,False,,conflict
+inc_embedding,MiniLM Inc,2,2039,0.6837,25.4217,False,419,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,2041,0.9454,7.937,False,543,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,2043,0.8476,26.384,False,292,5,True,False,,conflict
+inc_embedding,MiniLM Inc,2,2103,0.944,26.1855,False,133,5,True,False,,conflict
+inc_embedding,MiniLM Inc,2,2161,0.8462,26.0502,False,717,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,2226,0.8438,25.6012,False,459,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,2237,0.9446,26.3486,False,690,5,True,False,,ancestry
+inc_embedding,MiniLM Inc,2,2313,0.9456,25.9234,False,252,5,True,False,,conflict
+inc_embedding,MiniLM Inc,3,824,0.6127,25.1523,False,692,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,865,0.6247,25.2029,False,693,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,895,0.6206,11.9319,False,1359,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,905,0.6845,25.1672,False,1733,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,955,0.7521,25.2002,False,1730,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1009,0.7064,25.8484,False,3354,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1011,0.6247,25.8911,False,4265,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1175,0.8485,0.7457,False,694,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1212,0.704,25.3194,False,2801,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1214,0.6835,25.1681,False,697,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1274,0.6202,16.2796,False,9445,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1276,0.8471,24.8985,False,694,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1308,0.8487,2.7151,False,699,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1337,0.614,26.7132,False,13050,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1339,0.8571,25.1369,False,702,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1340,0.7497,25.6092,False,693,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1350,0.683,25.3829,False,203,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1372,0.7079,25.3746,False,2234,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1375,0.8456,25.4034,False,702,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1453,0.7534,25.5402,False,700,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1463,0.6864,25.5512,False,1733,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1569,0.621,24.5762,False,561,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1617,0.8447,24.518,False,701,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1633,0.6261,0.9369,False,201,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1697,0.7108,25.889,False,203,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1736,0.7483,25.3008,False,209,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1738,0.9471,25.6636,False,200,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1782,0.9451,24.6157,False,502,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1787,0.9474,1.0372,False,201,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1789,0.9471,25.6748,False,205,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1790,0.8463,25.5646,False,405,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,1808,0.975,0.4573,False,49,63,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1871,0.9438,0.7748,False,48,63,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1877,0.9746,0.3315,False,98,63,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1881,0.7524,0.3583,False,57,63,True,False,,conflict
+inc_embedding,MiniLM Inc,3,1973,0.9451,0.7983,False,99,63,True,False,,conflict
+inc_embedding,MiniLM Inc,3,2025,0.7092,24.539,False,1287,0,False,True,,conflict
+inc_embedding,MiniLM Inc,3,2037,0.9453,25.7928,False,204,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2092,0.8487,0.6767,False,202,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2101,0.8575,25.4896,False,404,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2102,0.9435,25.5154,False,402,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2108,0.9466,25.5514,False,209,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2109,0.8456,0.6148,False,202,13,True,False,,conflict
+inc_embedding,MiniLM Inc,3,2110,0.9463,25.5613,False,200,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2111,0.8439,2.1519,False,209,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2112,0.8579,0.6122,False,205,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2113,0.9436,25.5417,False,195,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2115,0.7027,4.7177,False,227,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2179,0.9471,26.1657,False,201,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2180,0.9454,25.6928,False,202,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2250,0.8455,25.5757,False,201,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2263,0.9455,25.6605,False,201,13,True,False,31,ancestry and text agree
+inc_embedding,MiniLM Inc,3,2316,0.7513,25.9215,False,704,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,2325,0.8434,25.8584,False,700,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,2365,0.6845,4.5498,False,707,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,2366,0.6187,7.9648,False,9460,33,True,False,,conflict
+inc_embedding,MiniLM Inc,3,2379,0.9466,25.953,False,704,33,True,False,,conflict
+inc_embedding,MiniLM Inc,4,259,0.616,25.1792,False,336,10,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,373,0.8577,4.3463,False,1519,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,378,0.8454,25.1627,False,267,10,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,401,0.8454,25.7071,False,173,3,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,4,460,0.9441,4.6391,False,1508,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,503,0.8474,24.9059,False,3227,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,504,0.8581,24.6825,False,3016,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,505,0.9454,26.1069,False,5830,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,509,0.9444,25.9979,False,3024,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,550,0.848,26.6035,False,11201,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,555,0.7494,25.297,False,1510,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,626,0.7514,26.621,False,4841,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,634,0.6213,26.7259,False,11851,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,635,0.8426,25.9278,False,3644,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,638,0.9451,26.2596,False,5831,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,640,0.8454,26.4815,False,8543,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,641,0.7503,26.6291,False,8516,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,714,0.8458,27.0383,False,11868,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,715,0.6219,27.1181,False,28777,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,719,0.8442,26.1523,False,5825,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,720,0.7051,25.6387,False,8517,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,721,0.6852,26.1723,False,11202,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,722,0.7065,26.9425,False,8512,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,723,0.848,26.9711,False,11200,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,724,0.8458,26.9078,False,8512,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,725,0.6121,27.3066,False,11156,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,768,0.8576,2.7746,False,4846,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,802,0.6839,27.2716,False,11198,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,804,0.9476,27.0875,False,11204,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,806,0.6142,27.1852,False,11147,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,856,0.8444,26.9976,False,8536,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,857,0.845,26.8897,False,8538,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,859,0.8444,27.2749,False,11149,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,860,0.7027,27.5845,False,8508,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,926,0.6119,27.0362,False,16453,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,927,0.8422,26.665,False,16450,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,932,0.6181,26.8185,False,11201,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,933,0.6195,26.8683,False,11151,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,995,0.6823,26.5393,False,21819,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1000,0.8437,26.5209,False,11210,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1002,0.7491,26.4276,False,8515,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1003,0.6861,25.5596,False,8514,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1004,0.8472,25.4842,False,11158,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1005,0.7505,26.1015,False,8515,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1047,0.845,25.1784,False,8515,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1050,0.8458,25.2254,False,8505,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1051,0.7532,24.8815,False,8517,16,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1109,0.845,25.1768,False,6031,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1126,0.8458,25.2459,False,7085,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1133,0.7523,25.3437,False,11154,16,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1224,0.614,24.2539,False,428,10,True,False,29,ancestry and text agree
+inc_embedding,MiniLM Inc,4,1272,0.6221,24.3941,False,142,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1291,0.7029,24.3376,False,394,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1375,0.6847,2.1628,False,602,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1410,0.6239,24.1307,False,133,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1467,0.749,24.1211,False,271,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1481,0.6236,24.0402,False,407,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1495,0.9451,4.7945,False,139,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,1687,0.7532,8.2183,False,409,4,True,False,,conflict
+inc_embedding,MiniLM Inc,4,2008,0.7061,25.0722,False,257,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2021,0.6852,25.0866,False,266,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2075,0.6243,24.4972,False,262,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2080,0.6119,7.4173,False,263,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2143,0.6217,24.5303,False,262,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2144,0.6837,2.121,False,203,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2147,0.7108,24.5312,False,260,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2213,0.6193,24.5366,False,518,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2216,0.6142,8.2198,False,262,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2226,0.7051,24.3881,False,264,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2294,0.6148,8.3018,False,282,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2297,0.6247,24.7102,False,516,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2298,0.6189,3.9587,False,261,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2299,0.709,24.4275,False,264,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2360,0.6204,24.3333,False,528,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,4,2378,0.749,24.6182,False,267,51,True,False,,ancestry
+inc_embedding,MiniLM Inc,5,190,0.683,4.2825,False,619,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,397,0.6164,24.087,False,288,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,602,0.6383,0.6192,False,1791,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,851,0.7045,4.6504,False,241,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,951,0.6847,24.279,False,539,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,954,0.6217,2.0068,False,530,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,1312,0.6847,24.2759,False,245,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,1440,0.6375,0.6721,False,1296,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,1479,0.6228,2.4394,False,430,2,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1532,0.6121,23.7477,False,185,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,1590,0.6383,0.7462,False,2541,2,True,False,21,ancestry and text agree
+inc_embedding,MiniLM Inc,5,1683,0.843,24.3313,False,317,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1756,0.6851,24.1926,False,556,0,False,True,,conflict
+inc_embedding,MiniLM Inc,5,1812,0.9555,23.9556,False,818,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1814,0.6826,3.8674,False,599,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1853,0.6162,23.806,False,389,0,False,True,,conflict
+inc_embedding,MiniLM Inc,5,1874,0.9555,24.3888,False,1235,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1875,0.6217,24.0401,False,581,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1876,0.9552,24.4166,False,816,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1933,0.9556,24.3877,False,894,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1934,0.9555,24.3737,False,924,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1937,0.8582,24.2332,False,816,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1938,0.9551,24.4095,False,813,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1965,0.9555,24.6419,False,1711,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1966,0.9553,24.4311,False,1058,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1967,0.955,24.4749,False,980,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1971,0.6854,24.4158,False,789,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1980,0.6133,24.2789,False,126,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,1990,0.6851,24.4362,False,275,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2042,0.9553,24.2285,False,2130,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2043,0.948,24.0047,False,991,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2044,0.946,24.3041,False,1332,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2048,0.9459,24.4356,False,132,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2050,0.948,24.6199,False,888,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2054,0.9437,2.638,False,116,40,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2120,0.9537,24.76,False,1878,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2122,0.9552,24.5999,False,1274,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2192,0.684,1.8442,False,231,40,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2209,0.8571,24.2325,False,112,0,False,True,,conflict
+inc_embedding,MiniLM Inc,5,2254,0.8038,0.7674,False,702,40,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2267,0.7503,0.6631,False,367,40,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2268,0.9472,2.6123,False,119,40,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2321,0.9751,23.9884,False,132,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2327,0.8479,1.0065,False,255,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2328,0.7514,24.3047,False,256,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2329,0.9551,0.695,False,246,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2332,0.9547,24.2221,False,132,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2335,0.946,24.2791,False,123,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2377,0.9478,24.2782,False,357,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2378,0.9442,24.3378,False,266,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2379,0.9478,24.3056,False,420,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2382,0.9543,2.5903,False,254,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2384,0.9749,24.1743,False,133,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2423,0.975,24.1465,False,127,0,False,True,,conflict
+inc_embedding,MiniLM Inc,5,2424,0.9748,24.1562,False,120,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2487,0.948,24.4858,False,129,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2488,0.8464,24.1056,False,120,37,True,False,,conflict
+inc_embedding,MiniLM Inc,5,2489,0.9548,24.3238,False,128,37,True,False,,conflict
+inc_embedding,MiniLM Inc,6,147,0.6183,23.8181,False,112,7,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,6,347,0.6849,23.8662,False,220,7,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,6,408,0.6179,6.259,False,220,7,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,6,477,0.6213,24.0615,False,190,7,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,6,485,0.8436,24.0253,False,346,7,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,6,981,0.6144,5.4914,False,98,13,True,False,,conflict
+inc_embedding,MiniLM Inc,6,1263,0.6135,1.8368,False,156,13,True,False,,conflict
+inc_embedding,MiniLM Inc,6,1708,0.7024,1.2349,False,124,13,True,False,,conflict
+inc_embedding,MiniLM Inc,6,1710,0.7068,23.6831,False,116,13,True,False,,conflict
+inc_embedding,MiniLM Inc,6,1787,0.6133,3.9297,False,137,52,True,False,,conflict
+inc_embedding,MiniLM Inc,6,1801,0.6213,0.8873,False,398,13,True,False,,conflict
+inc_embedding,MiniLM Inc,6,2141,0.6208,23.5611,False,137,52,True,False,,conflict
+inc_embedding,MiniLM Inc,6,2292,0.6835,1.6422,False,137,52,True,False,,conflict
+inc_embedding,MiniLM Inc,6,2359,0.7056,2.3437,False,137,43,True,False,,conflict
+inc_embedding,MiniLM Inc,6,2378,0.7095,3.2829,False,268,43,True,False,,conflict
+inc_embedding,MiniLM Inc,6,2396,0.6168,4.3873,False,563,43,True,False,,conflict
+inc_embedding,MiniLM Inc,7,333,0.8021,0.4951,False,108,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,352,0.8449,24.0049,False,180,14,True,False,,conflict
+inc_embedding,MiniLM Inc,7,617,0.719,0.3583,False,347,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,708,0.8445,2.1779,False,429,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,709,0.707,0.5967,False,293,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,801,0.7187,0.5579,False,427,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,855,0.7169,0.7985,False,1002,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,856,0.9462,3.5798,False,1233,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,910,0.7058,3.1601,False,1233,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,974,0.75,23.9325,False,1231,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1026,0.7515,1.2706,False,318,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1047,0.7048,23.7635,False,810,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1048,0.7093,1.3779,False,1235,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1113,0.62,24.2539,False,1471,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1115,0.6232,24.1016,False,602,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1187,0.7082,24.4102,False,1702,29,True,False,,conflict
+inc_embedding,MiniLM Inc,7,1996,0.6217,24.2591,False,580,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2034,0.842,23.883,False,744,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2115,0.8422,24.2333,False,741,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2124,0.7097,24.1296,False,1484,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2125,0.8421,24.009,False,1212,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2126,0.751,23.9863,False,1215,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2127,0.7534,23.9191,False,737,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2128,0.8436,23.8903,False,742,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2129,0.6857,23.9701,False,745,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2187,0.7499,24.4643,False,1485,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2192,0.8432,24.3122,False,746,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2194,0.7524,24.4972,False,1484,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2195,0.8431,24.2703,False,737,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2260,0.7497,24.3016,False,1214,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2268,0.7108,24.3713,False,1490,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2285,0.6144,23.9846,False,572,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2331,0.7495,24.361,False,1741,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2332,0.6146,24.3166,False,1748,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2334,0.7497,24.3224,False,1215,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2345,0.7026,24.2951,False,582,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2407,0.7517,24.005,False,1208,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2409,0.8423,24.2775,False,746,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2410,0.8431,24.3469,False,740,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2412,0.7519,24.371,False,743,73,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2511,0.7029,24.2567,False,582,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2512,0.6195,24.2548,False,580,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2514,0.6823,24.3529,False,578,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2592,0.6232,24.3345,False,1164,4,True,False,,conflict
+inc_embedding,MiniLM Inc,7,2598,0.6129,24.406,False,582,4,True,False,,conflict
+inc_embedding,MiniLM Inc,8,550,0.7107,0.1909,False,82,33,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,8,596,0.6261,0.2847,False,84,33,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,8,741,0.6002,0.5217,False,85,33,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,8,839,0.7519,3.3001,False,85,33,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,8,868,0.6175,23.8651,False,254,33,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,8,1034,0.7291,0.4932,False,114,19,True,False,,ancestry
+inc_embedding,MiniLM Inc,8,1095,0.8465,23.8012,False,293,19,True,False,,ancestry
+inc_embedding,MiniLM Inc,8,1126,0.7045,23.8944,False,113,19,True,False,,ancestry
+inc_embedding,MiniLM Inc,8,1177,0.9432,23.9535,False,113,19,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1256,0.683,23.6276,False,80,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1257,0.8578,3.2037,False,77,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1314,0.6195,1.9084,False,83,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1355,0.6844,0.7215,False,162,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1474,0.6256,24.0023,False,221,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1476,0.7073,3.3759,False,224,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1549,0.6148,23.9578,False,237,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1595,0.6187,23.7135,False,83,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1680,0.6171,2.0062,False,84,33,True,False,,conflict
+inc_embedding,MiniLM Inc,8,1990,0.6133,4.1501,False,497,82,True,False,11,ancestry and text agree
+inc_embedding,MiniLM Inc,8,2121,0.7035,2.1704,False,80,89,True,False,,conflict
+inc_embedding,MiniLM Inc,8,2172,0.6198,0.5056,False,153,89,True,False,,conflict
+inc_embedding,MiniLM Inc,8,2399,0.684,24.3522,False,799,96,True,False,,conflict
+inc_embedding,MiniLM Inc,8,2431,0.6243,24.483,False,1409,96,True,False,,conflict
+inc_embedding,MiniLM Inc,8,2480,0.6243,7.2819,False,231,96,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,8,2527,0.6191,24.304,False,105,103,True,False,52,ancestry and text agree
+inc_embedding,MiniLM Inc,9,132,0.707,23.8161,False,207,8,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,409,0.6195,3.3419,False,528,16,True,False,,conflict
+inc_embedding,MiniLM Inc,9,434,0.7517,23.9462,False,344,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,481,0.9477,3.873,False,546,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,515,0.6121,24.1682,False,192,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,558,0.7505,1.8395,False,253,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,566,0.9447,1.7625,False,192,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,634,0.7489,2.4429,False,720,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,643,0.9455,23.918,False,913,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,699,0.9433,24.2878,False,1340,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,775,0.6254,24.3908,False,912,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,780,0.8474,24.3181,False,2744,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,782,0.8576,24.2284,False,2738,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,785,0.7514,24.1213,False,910,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,846,0.7497,5.8387,False,1824,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,850,0.9461,24.1499,False,912,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,851,0.751,4.2603,False,904,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,852,0.8448,24.0947,False,919,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,853,0.8475,24.4271,False,2735,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,896,0.8467,24.2355,False,3651,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,897,0.7107,24.2902,False,4565,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,898,0.8582,24.6453,False,6391,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,899,0.7079,24.25,False,2737,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,900,0.8471,24.2102,False,2739,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,947,0.7495,24.0913,False,2734,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,960,0.8447,24.4641,False,1825,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,961,0.7092,24.5844,False,3642,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,962,0.9455,24.6555,False,3642,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,964,0.7508,24.4923,False,2729,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,965,0.7035,24.3536,False,910,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,991,0.7106,24.5161,False,2726,27,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,1105,0.6125,24.2308,False,192,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,1688,0.9474,24.4929,False,1887,6,True,False,,ancestry
+inc_embedding,MiniLM Inc,9,1770,0.7498,23.7301,False,421,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1829,0.7108,23.9801,False,873,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1835,0.7491,23.8961,False,422,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1886,0.616,24.3099,False,418,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1905,0.8486,24.3509,False,847,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1941,0.9477,23.805,False,267,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1949,0.8482,23.8152,False,900,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1993,0.6175,23.9875,False,642,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,1994,0.6202,1.4641,False,270,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2042,0.8056,0.5751,False,273,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2091,0.9448,23.9915,False,876,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2092,0.7104,24.0403,False,398,0,False,True,,conflict
+inc_embedding,MiniLM Inc,9,2095,0.9749,24.4696,False,1752,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2098,0.8575,24.112,False,876,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2099,0.8483,23.7825,False,872,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2101,0.9555,24.1152,False,397,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2102,0.842,24.1233,False,435,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2128,0.9749,24.6058,False,2051,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2129,0.9556,24.7871,False,3508,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2153,0.6121,23.6282,False,140,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2181,0.9553,24.3983,False,3863,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2182,0.955,24.5454,False,3871,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2187,0.9749,24.275,False,1750,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2228,0.9551,24.9206,False,3855,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2229,0.9549,24.6389,False,3263,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2232,0.9717,1.0732,False,1748,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2235,0.9746,24.0788,False,1756,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2287,0.955,25.1317,False,3895,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2288,0.9556,24.7748,False,2127,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2289,0.7026,24.5696,False,843,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2337,0.9745,16.3382,False,2371,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2338,0.9551,24.7369,False,3855,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2389,0.9749,2.1496,False,427,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2398,0.9745,24.0201,False,867,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2399,0.9749,23.8526,False,863,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2400,0.975,23.9049,False,875,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2403,0.9744,23.8327,False,433,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2404,0.9549,23.9444,False,427,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2406,0.9552,23.9972,False,437,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2444,0.9751,1.9786,False,1327,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2450,0.9751,24.4995,False,877,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2488,0.9751,23.9945,False,3885,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2489,0.7497,24.2122,False,1756,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2494,0.9752,23.9851,False,1336,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2496,0.975,24.2271,False,1323,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2497,0.9556,24.3606,False,1328,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2500,0.7039,6.4472,False,1266,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2524,0.9752,24.7213,False,2512,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2525,0.9557,25.0148,False,3868,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2526,0.9546,24.6047,False,1235,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2527,0.9752,24.5495,False,1345,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2531,0.7099,23.7919,False,1338,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2532,0.955,24.6346,False,2632,59,True,False,,conflict
+inc_embedding,MiniLM Inc,9,2534,0.9545,24.4651,False,339,59,True,False,,conflict
+lf_nli,NLI LF,0,1130,0.954,24.1384,False,837,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2164,0.9479,24.9223,False,145,65,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,597,0.9475,0.962,False,882,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,730,0.9464,1.2392,False,1141,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1843,0.9463,25.1396,False,383,54,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1162,0.9463,24.1525,False,845,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2299,0.9461,24.9837,False,314,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2225,0.9458,24.9922,False,291,38,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,2230,0.9456,25.0406,False,146,0,False,True,56,ancestry and text agree
+lf_nli,NLI LF,0,588,0.9456,24.087,False,391,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1625,0.9454,25.6044,False,2095,38,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,145,0.9452,0.748,False,262,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2100,0.9448,25.1603,False,281,65,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,2089,0.9448,24.6616,False,140,65,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,1959,0.9447,25.6101,False,382,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,312,0.9445,24.1219,False,390,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2321,0.9443,25.4352,False,761,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2227,0.9443,24.8295,False,142,65,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,2226,0.9443,25.2066,False,209,1,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,1313,0.9443,25.0245,False,1763,37,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,596,0.9443,3.1172,False,665,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2121,0.9437,1.3159,False,615,30,True,False,,conflict
+lf_nli,NLI LF,0,2304,0.9434,24.9597,False,759,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2379,0.8483,24.8334,False,320,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,619,0.8481,24.3898,False,137,0,False,True,56,ancestry and text agree
+lf_nli,NLI LF,0,1465,0.8478,0.517,False,719,0,False,True,,ancestry
+lf_nli,NLI LF,0,1671,0.8473,1.6379,False,2097,38,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2148,0.8465,25.379,False,142,65,True,False,56,ancestry and text agree
+lf_nli,NLI LF,0,1715,0.8463,1.2961,False,2096,38,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,800,0.8459,24.7653,False,967,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1002,0.8457,5.7236,False,887,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,536,0.8457,24.4834,False,258,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,103,0.8456,24.7149,False,262,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,1973,0.8455,25.1866,False,344,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1591,0.8455,1.544,False,393,0,False,True,,ancestry
+lf_nli,NLI LF,0,324,0.8447,1.1228,False,423,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,1897,0.8439,25.4763,False,389,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2361,0.8437,25.2808,False,384,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,401,0.8426,24.3051,False,362,0,False,True,,ancestry
+lf_nli,NLI LF,0,2251,0.7533,25.1452,False,1027,39,True,False,,ancestry
+lf_nli,NLI LF,0,2294,0.7521,0.4259,False,1296,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2308,0.7294,0.4739,False,392,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2455,0.7285,0.9018,False,1080,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,507,0.7202,0.3635,False,369,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2151,0.7199,0.6448,False,357,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,1815,0.7199,0.6441,False,191,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2488,0.7168,0.2977,False,344,39,True,False,,ancestry
+lf_nli,NLI LF,0,1234,0.7099,23.9905,False,461,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,1592,0.7095,25.3631,False,458,39,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2403,0.7085,25.6257,False,1475,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,855,0.7082,1.002,False,772,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,595,0.7076,1.1206,False,1000,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1132,0.7061,4.4909,False,391,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2296,0.7059,1.0572,False,504,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1995,0.6265,0.8871,False,310,56,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,607,0.6254,1.3759,False,299,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2351,0.625,0.2618,False,176,64,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1936,0.6206,25.2776,False,1159,5,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1075,0.6195,1.1176,False,331,0,False,True,,ancestry
+lf_nli,NLI LF,0,1402,0.6191,0.431,False,161,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,2338,0.6162,25.2364,False,97,69,True,False,,conflict
+lf_nli,NLI LF,0,1165,0.6152,24.2109,False,1178,1,True,False,,conflict
+lf_nli,NLI LF,0,303,0.6125,3.053,False,683,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1156,0.6026,0.2724,False,458,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,1898,0.6024,0.391,False,255,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,0,90,0.6129,1.0644,False,131,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,673,0.9469,6.4728,False,459,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,502,0.9455,24.287,False,365,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,919,0.9446,23.8465,False,467,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,726,0.8468,24.4785,False,463,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,598,0.842,24.3968,False,395,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,306,0.7485,1.0741,False,372,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,169,0.7048,24.5627,False,287,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,837,0.6129,4.8387,False,429,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,589,0.6034,1.0824,False,1342,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,265,0.848,0.3721,False,164,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,1766,0.9446,1.3228,False,2419,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2092,0.8478,24.7742,False,372,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,0,2184,0.7525,2.7239,False,464,-1,False,True,,conflict
+lf_nli,NLI LF,0,1056,0.7045,1.6323,False,352,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,1,660,0.945,1.1703,False,79,0,False,True,,conflict
+lf_nli,NLI LF,1,973,0.8462,5.9475,False,263,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,1,250,0.8058,0.3154,False,115,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,1,2092,0.7533,3.3039,False,262,0,False,True,,conflict
+lf_nli,NLI LF,1,570,0.7514,24.8355,False,118,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,1,791,0.7489,0.2457,False,79,22,True,False,,conflict
+lf_nli,NLI LF,1,2033,0.7096,0.6473,False,140,56,True,False,,conflict
+lf_nli,NLI LF,1,540,0.7086,24.9241,False,121,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,1,325,0.7068,24.5752,False,151,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,1,1181,0.7055,25.0673,False,167,0,False,True,,conflict
+lf_nli,NLI LF,1,655,0.6263,0.809,False,60,0,False,True,,conflict
+lf_nli,NLI LF,1,661,0.6137,3.4184,False,127,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,465,0.9449,3.0546,False,314,3,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,863,0.944,3.0428,False,316,26,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1510,0.8866,5.2932,False,2253,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2291,0.8577,1.7274,False,198,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1258,0.8489,0.2609,False,215,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2202,0.8483,25.5083,False,1164,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1535,0.8474,25.3978,False,1221,3,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2082,0.8473,0.3751,False,148,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1922,0.8473,0.5127,False,202,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,638,0.8473,3.9465,False,310,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,899,0.8471,0.3359,False,210,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,948,0.847,24.9843,False,260,3,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1466,0.8467,0.3786,False,207,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1669,0.8453,25.0265,False,621,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,796,0.8449,3.3302,False,797,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,715,0.8442,0.2215,False,208,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1122,0.8435,3.3271,False,314,15,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2280,0.8434,4.0518,False,312,61,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1815,0.8426,25.5395,False,785,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1938,0.8424,25.7232,False,1787,53,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,429,0.8424,25.1442,False,270,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2053,0.7532,0.2535,False,204,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1004,0.7523,25.0467,False,733,26,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1515,0.7511,0.4928,False,195,8,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2105,0.7505,5.7776,False,318,62,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,413,0.7499,0.2528,False,205,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1461,0.7486,0.684,False,197,39,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,792,0.7161,24.5197,False,224,15,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1257,0.7103,0.2617,False,214,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2238,0.7102,0.7996,False,197,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1222,0.7102,4.144,False,219,26,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1588,0.709,25.2426,False,1308,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2151,0.7087,24.955,False,698,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1051,0.7086,0.4138,False,203,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,281,0.7083,0.3701,False,200,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,269,0.7079,24.5564,False,146,8,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1538,0.7074,25.222,False,763,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2004,0.707,25.5251,False,249,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2139,0.7047,0.3245,False,199,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2167,0.7045,25.2756,False,573,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1633,0.7042,4.5598,False,719,15,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,217,0.6864,24.5754,False,149,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1701,0.684,0.4972,False,211,39,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1288,0.625,0.8926,False,238,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,511,0.6245,0.5018,False,227,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2011,0.6238,0.4561,False,228,3,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,226,0.6232,24.3906,False,324,0,False,True,,conflict
+lf_nli,NLI LF,2,1672,0.6228,0.8307,False,313,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,552,0.6225,0.4992,False,211,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1594,0.6221,3.1132,False,146,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1069,0.6219,25.7462,False,5077,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1066,0.6217,7.3384,False,208,0,False,True,,ancestry
+lf_nli,NLI LF,2,573,0.6213,24.8091,False,113,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2023,0.6208,0.5672,False,407,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1927,0.6193,0.7797,False,208,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2208,0.6175,25.1498,False,370,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2173,0.6175,25.2538,False,502,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,932,0.6175,25.2772,False,257,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,2214,0.6164,0.8291,False,250,64,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1853,0.6164,10.677,False,1065,8,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,534,0.616,0.3393,False,210,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1800,0.6156,25.0877,False,123,6,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1252,0.6156,3.0428,False,449,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1464,0.615,0.4437,False,188,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,393,0.6148,4.8335,False,394,3,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1010,0.6129,0.9493,False,1261,0,False,True,,conflict
+lf_nli,NLI LF,2,1298,0.6127,0.5091,False,185,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,1896,0.6125,0.3211,False,217,12,True,False,11,ancestry and text agree
+lf_nli,NLI LF,2,471,0.7106,2.9868,False,318,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1029,0.8457,25.2725,False,1194,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1365,0.6256,4.6185,False,604,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1412,0.6171,25.4406,False,687,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1236,0.6148,24.8789,False,291,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,357,0.6171,24.8615,False,133,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,176,0.6148,24.7047,False,111,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2041,0.8482,3.4606,False,279,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,2039,0.7521,25.3712,False,424,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,2,1829,0.7027,15.3868,False,1267,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,3,384,0.8469,24.9268,False,216,0,False,True,,ancestry
+lf_nli,NLI LF,3,2005,0.7532,25.2329,False,1712,0,False,True,,conflict
+lf_nli,NLI LF,3,1449,0.7039,5.199,False,456,16,True,False,,ancestry
+lf_nli,NLI LF,3,1657,0.6239,0.9464,False,200,0,False,True,,ancestry
+lf_nli,NLI LF,4,2551,0.9544,25.9623,False,9245,7,True,False,,conflict
+lf_nli,NLI LF,4,2610,0.954,25.1706,False,8552,7,True,False,,conflict
+lf_nli,NLI LF,4,2614,0.9479,25.1826,False,9243,7,True,False,,conflict
+lf_nli,NLI LF,4,2488,0.9478,25.602,False,4273,7,True,False,,conflict
+lf_nli,NLI LF,4,2684,0.9472,25.1665,False,9252,7,True,False,,conflict
+lf_nli,NLI LF,4,2471,0.9469,25.9197,False,4827,0,False,True,,conflict
+lf_nli,NLI LF,4,1534,0.9447,1.5844,False,578,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,1850,0.9437,2.8307,False,577,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,564,0.8581,2.3298,False,242,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,2686,0.8575,25.1797,False,9246,7,True,False,,conflict
+lf_nli,NLI LF,4,2608,0.8424,25.188,False,15726,0,False,True,,conflict
+lf_nli,NLI LF,4,537,0.7507,25.0149,False,398,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,880,0.7505,0.5095,False,1746,0,False,True,,conflict
+lf_nli,NLI LF,4,2028,0.7493,0.9198,False,49,25,True,False,,conflict
+lf_nli,NLI LF,4,1026,0.7491,25.0312,False,248,7,True,False,11,ancestry and text agree
+lf_nli,NLI LF,4,1343,0.7487,17.8321,False,89,7,True,False,,conflict
+lf_nli,NLI LF,4,1648,0.7102,25.0055,False,180,3,True,False,11,ancestry and text agree
+lf_nli,NLI LF,4,371,0.7095,24.9446,False,289,4,True,False,11,ancestry and text agree
+lf_nli,NLI LF,4,2556,0.708,24.649,False,236,7,True,False,,ancestry
+lf_nli,NLI LF,4,1603,0.7053,7.8147,False,212,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,550,0.7042,25.0211,False,194,0,False,True,,conflict
+lf_nli,NLI LF,4,2569,0.7039,24.7643,False,224,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,2514,0.6258,24.7947,False,51,0,False,True,56,ancestry and text agree
+lf_nli,NLI LF,4,2609,0.6247,25.029,False,15736,0,False,True,,conflict
+lf_nli,NLI LF,4,140,0.6241,26.021,False,5976,0,False,True,,conflict
+lf_nli,NLI LF,4,2321,0.6183,9.6429,False,132,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,875,0.6168,24.8839,False,446,0,False,True,,ancestry
+lf_nli,NLI LF,4,231,0.6156,24.8435,False,229,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,909,0.6144,24.8091,False,1054,25,True,False,,conflict
+lf_nli,NLI LF,4,1395,0.614,25.4516,False,204,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,2726,0.6133,24.0575,False,1056,25,True,False,,conflict
+lf_nli,NLI LF,4,563,0.7519,25.3131,False,454,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,4,2176,0.6247,24.8793,False,506,-1,False,True,11,ancestry and text agree
+lf_nli,NLI LF,5,2308,0.945,25.0582,False,6107,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1937,0.9446,25.0513,False,7914,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2248,0.9443,25.0387,False,6115,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2249,0.9442,24.9665,False,6129,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2349,0.9441,24.6716,False,6110,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1474,0.9441,4.676,False,6117,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1742,0.944,21.0691,False,6124,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2071,0.9436,24.8787,False,7916,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1543,0.9435,24.4951,False,6113,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1471,0.9432,24.8875,False,6110,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1542,0.8581,24.6915,False,6096,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1527,0.8581,24.9173,False,6109,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2411,0.858,25.5854,False,6113,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1665,0.8578,24.7215,False,6118,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2409,0.8577,25.5205,False,6110,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2310,0.8577,24.9836,False,6112,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1960,0.8574,24.8428,False,7911,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1648,0.8571,24.4504,False,6111,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2216,0.8488,2.134,False,6123,0,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1667,0.8488,2.0576,False,6120,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1150,0.8483,24.6037,False,6115,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2179,0.8478,25.3715,False,7917,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1888,0.8473,24.5326,False,6127,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2404,0.8471,25.8566,False,12220,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2403,0.847,26.2454,False,18484,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2343,0.847,24.87,False,18537,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2180,0.8468,24.9867,False,6094,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1249,0.8467,24.4695,False,6126,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1194,0.8462,24.5125,False,6103,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2073,0.8461,24.9893,False,6113,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1591,0.846,24.2779,False,6110,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1325,0.8455,3.2727,False,6109,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1399,0.8454,24.5775,False,6107,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1146,0.8453,24.6582,False,7916,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1397,0.8452,24.4132,False,6114,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,981,0.8444,24.502,False,6111,5,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2342,0.8432,25.1141,False,12376,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2410,0.8425,25.9952,False,12383,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,2405,0.8425,25.8418,False,18489,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,1252,0.842,24.522,False,6117,0,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2282,0.7505,5.309,False,903,0,False,True,,conflict
+lf_nli,NLI LF,5,1049,0.7065,24.0255,False,448,1,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,777,0.7032,24.0224,False,856,0,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,716,0.6378,0.7694,False,1790,0,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,620,0.6378,0.7632,False,1797,0,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2434,0.625,2.1369,False,624,59,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,773,0.6213,24.1907,False,2522,0,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1991,0.6183,4.7452,False,353,0,False,True,,conflict
+lf_nli,NLI LF,5,2245,0.6032,0.9312,False,6313,61,True,False,35,ancestry and text agree
+lf_nli,NLI LF,5,886,0.6239,24.3633,False,3058,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,876,0.6239,24.1042,False,3056,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1251,0.6213,24.4037,False,6120,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,952,0.6254,24.1182,False,3056,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1011,0.6239,24.2199,False,3059,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1244,0.6369,1.0634,False,12239,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,541,0.7071,23.8779,False,1803,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1090,0.7047,5.1372,False,6104,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1647,0.6378,0.917,False,6118,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1007,0.7289,0.9341,False,8450,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1517,0.7096,12.8811,False,12230,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1661,0.6403,0.8524,False,18354,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1659,0.6175,25.067,False,12244,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1250,0.7499,2.5165,False,6119,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1392,0.7289,1.1078,False,12227,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1743,0.6844,24.6477,False,6123,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1740,0.6129,24.7132,False,6120,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1398,0.7519,24.3512,False,6121,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1808,0.7519,25.0157,False,12531,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1321,0.7502,24.6399,False,6112,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1470,0.7499,24.8771,False,6123,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1818,0.7491,24.9923,False,12755,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1538,0.8428,1.4211,False,6265,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1642,0.7522,24.8343,False,18340,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1889,0.7515,24.9956,False,18341,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1885,0.6378,0.9168,False,6117,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1879,0.6175,25.0922,False,12236,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1524,0.7529,9.6612,False,6112,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1721,0.8428,24.5642,False,6263,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1570,0.7531,24.4845,False,6271,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1953,0.7505,25.0007,False,14011,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1954,0.7505,24.6986,False,14042,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1955,0.7193,1.1806,False,12224,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2007,0.7505,25.6485,False,15831,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2008,0.7505,25.3525,False,14025,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1741,0.8438,24.6559,False,6119,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1195,0.8435,14.4227,False,6115,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2062,0.7505,25.2282,False,14022,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2063,0.7505,25.0239,False,14028,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2069,0.6844,24.8127,False,6108,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2154,0.7532,3.3067,False,6108,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2148,0.7505,25.3628,False,14035,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2155,0.8486,2.7801,False,7918,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1959,0.8443,24.6884,False,6088,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,1809,0.844,24.7734,False,19021,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2177,0.8425,24.8945,False,6093,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2171,0.7505,25.3274,False,14003,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2172,0.7505,25.0224,False,14025,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2173,0.7493,5.1014,False,12199,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,5,2309,0.6032,0.8857,False,6307,-1,False,True,35,ancestry and text agree
+lf_nli,NLI LF,6,2138,0.9539,1.4683,False,87,4,True,False,14,ancestry and text agree
+lf_nli,NLI LF,6,2447,0.8116,0.4157,False,425,8,True,False,,ancestry
+lf_nli,NLI LF,6,2348,0.7498,24.6573,False,263,8,True,False,14,ancestry and text agree
+lf_nli,NLI LF,6,56,0.7103,2.2753,False,87,0,False,True,14,ancestry and text agree
+lf_nli,NLI LF,6,1937,0.7073,24.4586,False,219,0,False,True,,conflict
+lf_nli,NLI LF,6,2356,0.6267,2.2845,False,87,4,True,False,14,ancestry and text agree
+lf_nli,NLI LF,6,1941,0.625,1.0946,False,247,0,False,True,14,ancestry and text agree
+lf_nli,NLI LF,6,1240,0.6217,2.5541,False,84,0,False,True,14,ancestry and text agree
+lf_nli,NLI LF,6,1301,0.6187,23.7964,False,81,0,False,True,42,ancestry and text agree
+lf_nli,NLI LF,7,583,0.9552,24.2398,False,269,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,1254,0.9546,24.4886,False,269,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,1990,0.9538,24.5089,False,755,58,True,False,,ancestry
+lf_nli,NLI LF,7,1041,0.9456,2.7206,False,271,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,2191,0.944,23.9949,False,591,37,True,False,,ancestry
+lf_nli,NLI LF,7,1461,0.944,0.5213,False,279,1,True,False,,ancestry
+lf_nli,NLI LF,7,1051,0.8486,0.6674,False,529,1,True,False,12,ancestry and text agree
+lf_nli,NLI LF,7,1692,0.8481,24.0932,False,271,43,True,False,12,ancestry and text agree
+lf_nli,NLI LF,7,2443,0.8468,1.0098,False,271,54,True,False,12,ancestry and text agree
+lf_nli,NLI LF,7,1716,0.8434,2.1649,False,257,1,True,False,,conflict
+lf_nli,NLI LF,7,1549,0.7522,7.0828,False,185,0,False,True,23,ancestry and text agree
+lf_nli,NLI LF,7,1952,0.7507,24.1203,False,292,37,True,False,12,ancestry and text agree
+lf_nli,NLI LF,7,932,0.7507,24.8148,False,274,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,3068,0.7489,24.794,False,571,38,True,False,,conflict
+lf_nli,NLI LF,7,2726,0.7197,0.7116,False,409,82,True,False,,ancestry
+lf_nli,NLI LF,7,911,0.704,24.6406,False,342,0,False,True,,conflict
+lf_nli,NLI LF,7,2207,0.7039,23.8529,False,559,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,1040,0.6861,24.5704,False,383,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,3004,0.6844,2.1758,False,760,94,True,False,,ancestry
+lf_nli,NLI LF,7,1023,0.6842,24.4105,False,533,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,678,0.6842,24.3446,False,207,12,True,False,12,ancestry and text agree
+lf_nli,NLI LF,7,2074,0.684,24.1506,False,605,54,True,False,12,ancestry and text agree
+lf_nli,NLI LF,7,2379,0.625,23.6584,False,236,0,False,True,,ancestry
+lf_nli,NLI LF,7,1143,0.6217,24.5965,False,300,0,False,True,,ancestry
+lf_nli,NLI LF,7,1542,0.6213,24.1978,False,272,0,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,662,0.6133,1.6462,False,384,0,False,True,,ancestry
+lf_nli,NLI LF,7,1421,0.8478,24.4004,False,267,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,787,0.704,0.7853,False,227,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,1131,0.6864,1.2292,False,271,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,807,0.6261,24.724,False,447,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,332,0.6236,1.1237,False,201,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,7,384,0.6164,2.0522,False,639,-1,False,True,,ancestry
+lf_nli,NLI LF,7,2123,0.683,10.5906,False,502,-1,False,True,,conflict
+lf_nli,NLI LF,7,1937,0.625,24.0115,False,215,-1,False,True,12,ancestry and text agree
+lf_nli,NLI LF,8,1920,0.9474,24.1093,False,316,19,True,False,,ancestry
+lf_nli,NLI LF,8,1323,0.9449,3.1734,False,312,0,False,True,,ancestry
+lf_nli,NLI LF,8,2122,0.9433,6.5249,False,315,29,True,False,,ancestry
+lf_nli,NLI LF,8,2281,0.8483,23.9783,False,307,19,True,False,,ancestry
+lf_nli,NLI LF,8,2710,0.8454,24.1554,False,312,19,True,False,,ancestry
+lf_nli,NLI LF,8,1751,0.8423,4.408,False,570,2,True,False,,ancestry
+lf_nli,NLI LF,8,1022,0.75,24.0295,False,246,1,True,False,,ancestry
+lf_nli,NLI LF,8,1878,0.7495,0.2463,False,373,0,False,True,,conflict
+lf_nli,NLI LF,8,1653,0.7493,3.4922,False,432,2,True,False,,ancestry
+lf_nli,NLI LF,8,2043,0.7162,0.3631,False,318,0,False,True,,ancestry
+lf_nli,NLI LF,8,1448,0.7093,24.1446,False,546,0,False,True,,ancestry
+lf_nli,NLI LF,8,2554,0.7092,24.1503,False,405,0,False,True,,ancestry
+lf_nli,NLI LF,8,2205,0.7086,24.3942,False,619,1,True,False,,ancestry
+lf_nli,NLI LF,8,1312,0.7074,24.161,False,454,2,True,False,,ancestry
+lf_nli,NLI LF,8,710,0.7062,23.7288,False,238,0,False,True,,ancestry
+lf_nli,NLI LF,8,2535,0.704,0.8212,False,315,53,True,False,,ancestry
+lf_nli,NLI LF,8,2413,0.684,24.6554,False,430,0,False,True,,ancestry
+lf_nli,NLI LF,8,2275,0.6835,24.1461,False,431,0,False,True,,ancestry
+lf_nli,NLI LF,8,1693,0.6833,20.6218,False,438,0,False,True,,ancestry
+lf_nli,NLI LF,8,893,0.6825,24.3999,False,242,0,False,True,,ancestry
+lf_nli,NLI LF,8,1347,0.625,4.7363,False,451,2,True,False,,ancestry
+lf_nli,NLI LF,8,769,0.6249,2.4675,False,228,1,True,False,,ancestry
+lf_nli,NLI LF,8,2764,0.6247,4.2599,False,444,57,True,False,,conflict
+lf_nli,NLI LF,8,1723,0.6236,24.0158,False,462,19,True,False,,ancestry
+lf_nli,NLI LF,8,1982,0.6234,24.2081,False,307,29,True,False,,ancestry
+lf_nli,NLI LF,8,2534,0.6228,0.862,False,308,0,False,True,,ancestry
+lf_nli,NLI LF,8,1277,0.6221,24.3122,False,307,1,True,False,,ancestry
+lf_nli,NLI LF,8,2407,0.6156,24.7239,False,319,19,True,False,,ancestry
+lf_nli,NLI LF,8,1143,0.6148,23.9222,False,247,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,8,174,0.6144,24.6033,False,112,0,False,True,11,ancestry and text agree
+lf_nli,NLI LF,8,2000,0.614,23.8666,False,86,0,False,True,,conflict
+lf_nli,NLI LF,8,2617,0.6129,24.0892,False,313,21,True,False,,ancestry
+lf_nli,NLI LF,8,1563,0.6129,24.2684,False,586,0,False,True,,ancestry
+lf_nli,NLI LF,8,1244,0.6168,1.0477,False,217,-1,False,True,,ancestry
+lf_nli,NLI LF,9,216,0.9439,24.1328,False,434,0,False,True,,conflict
+lf_nli,NLI LF,9,600,0.9434,3.226,False,432,13,True,False,,conflict
+lf_nli,NLI LF,9,1885,0.8576,24.0308,False,430,13,True,False,,conflict
+lf_nli,NLI LF,9,937,0.8572,23.8527,False,430,13,True,False,,conflict
+lf_nli,NLI LF,9,1465,0.8483,24.165,False,433,13,True,False,,conflict
+lf_nli,NLI LF,9,512,0.8478,23.9678,False,428,0,False,True,,conflict
+lf_nli,NLI LF,9,540,0.7528,23.9367,False,490,0,False,True,,conflict
+lf_nli,NLI LF,9,2696,0.7521,0.9389,False,1155,2,True,False,,ancestry
+lf_nli,NLI LF,9,1116,0.7514,23.9975,False,637,0,False,True,,ancestry
+lf_nli,NLI LF,9,2788,0.7073,23.9718,False,507,2,True,False,,ancestry
+lf_nli,NLI LF,9,1823,0.7067,24.2264,False,420,0,False,True,,conflict
+lf_nli,NLI LF,9,255,0.7055,0.7383,False,275,0,False,True,,ancestry
+lf_nli,NLI LF,9,2262,0.7047,23.8662,False,428,0,False,True,,conflict
+lf_nli,NLI LF,9,511,0.704,23.9297,False,423,13,True,False,,conflict
+lf_nli,NLI LF,9,1645,0.6265,1.256,False,433,13,True,False,,conflict
+lf_nli,NLI LF,9,2819,0.625,23.9958,False,420,0,False,True,,ancestry
+lf_nli,NLI LF,9,2374,0.6232,23.7953,False,195,0,False,True,,conflict
+lf_nli,NLI LF,9,2361,0.6225,23.8647,False,478,0,False,True,,conflict
+lf_nli,NLI LF,9,2164,0.6168,1.4778,False,314,2,True,False,,conflict
+lf_nli,NLI LF,9,1603,0.6164,24.1458,False,438,35,True,False,,conflict
+lf_nli,NLI LF,9,2178,0.6144,24.0557,False,535,0,False,True,,conflict
+lf_nli,NLI LF,9,859,0.614,24.0367,False,432,13,True,False,,conflict
+lf_nli,NLI LF,9,2720,0.6129,23.9632,False,424,0,False,True,,conflict
+inc_nli,NLI Inc,0,62,0.7499,24.7208,False,2027,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,113,0.7533,24.5858,False,2030,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,204,0.946,24.4926,False,340,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,255,0.9435,1.2091,False,544,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,261,0.9451,24.2636,False,341,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,404,0.7055,24.0892,False,109,1,True,False,,conflict
+inc_nli,NLI Inc,0,433,0.7089,4.9435,False,279,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,475,0.7086,24.1469,False,371,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,479,0.8452,0.8768,False,340,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,585,0.6845,11.2589,False,276,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,598,0.7058,8.6623,False,452,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,601,0.6243,6.5892,False,296,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,606,0.6187,5.914,False,202,1,True,False,,conflict
+inc_nli,NLI Inc,0,695,0.8426,6.0446,False,200,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,760,0.6857,24.3049,False,203,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,762,0.6133,4.967,False,209,1,True,False,,conflict
+inc_nli,NLI Inc,0,948,0.6133,2.9721,False,249,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1090,0.6164,0.3259,False,251,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1104,0.7053,0.3368,False,246,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1156,0.8469,23.9171,False,546,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1212,0.7503,23.9199,False,541,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1228,0.8467,0.8859,False,345,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1293,0.6133,4.0102,False,538,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1350,0.6191,24.0557,False,1737,0,False,True,,conflict
+inc_nli,NLI Inc,0,1380,0.6839,23.6997,False,512,1,True,False,,ancestry
+inc_nli,NLI Inc,0,1485,0.7089,23.8844,False,325,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1518,0.7045,4.5154,False,247,0,False,True,56,ancestry and text agree
+inc_nli,NLI Inc,0,1554,0.6123,23.7947,False,247,1,True,False,,conflict
+inc_nli,NLI Inc,0,1717,0.6243,23.9194,False,267,1,True,False,,ancestry
+inc_nli,NLI Inc,0,1734,0.8432,23.9559,False,882,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1739,0.8464,23.8908,False,538,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1740,0.9467,23.929,False,342,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1777,0.9468,23.9756,False,639,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1831,0.946,24.0164,False,843,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1836,0.954,23.9919,False,634,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1876,0.9442,1.6107,False,639,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,1938,0.7087,24.0992,False,1724,1,True,False,,conflict
+inc_nli,NLI Inc,0,2189,0.7053,0.3361,False,252,1,True,False,56,ancestry and text agree
+inc_nli,NLI Inc,0,2227,0.8459,25.1015,False,9774,1,True,False,,conflict
+inc_nli,NLI Inc,0,2355,0.6221,1.7809,False,245,0,False,True,56,ancestry and text agree
+inc_nli,NLI Inc,0,2491,0.707,24.6444,False,1515,0,False,True,,conflict
+inc_nli,NLI Inc,0,2518,0.7067,24.7172,False,1517,0,False,True,,conflict
+inc_nli,NLI Inc,0,2519,0.7108,3.3518,False,1504,0,False,True,,conflict
+inc_nli,NLI Inc,0,2570,0.8428,24.9805,False,1508,0,False,True,,conflict
+inc_nli,NLI Inc,0,2691,0.7103,24.756,False,1509,0,False,True,,conflict
+inc_nli,NLI Inc,0,2742,0.7486,2.9662,False,1509,0,False,True,,conflict
+inc_nli,NLI Inc,0,2786,0.7528,25.0715,False,1509,0,False,True,,conflict
+inc_nli,NLI Inc,0,2798,0.7498,3.182,False,1501,0,False,True,,conflict
+inc_nli,NLI Inc,0,2811,0.8422,24.9863,False,1737,0,False,True,,conflict
+inc_nli,NLI Inc,1,197,0.7087,24.2958,False,255,1,True,False,,ancestry
+inc_nli,NLI Inc,1,252,0.7059,0.6236,False,221,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,1,277,0.6859,24.6287,False,351,1,True,False,,ancestry
+inc_nli,NLI Inc,1,388,0.9436,24.474,False,253,1,True,False,,ancestry
+inc_nli,NLI Inc,1,520,0.8468,24.3998,False,182,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,1,615,0.6254,24.2256,False,264,1,True,False,,ancestry
+inc_nli,NLI Inc,1,699,0.6206,0.747,False,297,0,False,True,12,ancestry and text agree
+inc_nli,NLI Inc,1,745,0.711,3.7266,False,557,1,True,False,,conflict
+inc_nli,NLI Inc,1,782,0.7483,24.8703,False,346,1,True,False,,ancestry
+inc_nli,NLI Inc,1,879,0.7165,0.2707,False,209,1,True,False,,conflict
+inc_nli,NLI Inc,1,1236,0.6254,24.7427,False,301,1,True,False,,ancestry
+inc_nli,NLI Inc,1,1256,0.7517,25.082,False,246,1,True,False,,ancestry
+inc_nli,NLI Inc,1,1374,0.7039,25.1626,False,470,1,True,False,,conflict
+inc_nli,NLI Inc,1,1495,0.8477,24.6645,False,207,1,True,False,,conflict
+inc_nli,NLI Inc,1,1517,0.9446,24.9926,False,359,1,True,False,,conflict
+inc_nli,NLI Inc,1,1524,0.623,2.9732,False,126,0,False,True,31,ancestry and text agree
+inc_nli,NLI Inc,1,1607,0.6133,24.8006,False,362,0,False,True,,conflict
+inc_nli,NLI Inc,1,1655,0.9456,0.7902,False,360,1,True,False,,conflict
+inc_nli,NLI Inc,1,1657,0.7093,24.7665,False,366,1,True,False,,conflict
+inc_nli,NLI Inc,1,1660,0.9438,0.6377,False,476,1,True,False,,conflict
+inc_nli,NLI Inc,1,1674,0.6191,24.4046,False,311,0,False,True,,conflict
+inc_nli,NLI Inc,1,1723,0.7093,24.963,False,364,1,True,False,,conflict
+inc_nli,NLI Inc,1,1742,0.6171,25.1843,False,363,1,True,False,,conflict
+inc_nli,NLI Inc,1,1798,0.7107,24.9068,False,365,1,True,False,,conflict
+inc_nli,NLI Inc,1,1832,0.7082,24.8636,False,208,0,False,True,,conflict
+inc_nli,NLI Inc,1,1867,0.8477,24.6833,False,364,1,True,False,,ancestry
+inc_nli,NLI Inc,1,1870,0.709,2.2662,False,480,1,True,False,,conflict
+inc_nli,NLI Inc,1,1888,0.8483,24.832,False,480,1,True,False,,conflict
+inc_nli,NLI Inc,1,1897,0.6198,24.9632,False,479,1,True,False,,conflict
+inc_nli,NLI Inc,1,1991,0.8426,24.9484,False,363,1,True,False,,conflict
+inc_nli,NLI Inc,1,2039,0.9556,25.0801,False,473,1,True,False,,ancestry
+inc_nli,NLI Inc,1,2125,0.749,0.5703,False,476,1,True,False,,conflict
+inc_nli,NLI Inc,1,2158,0.7053,24.4301,False,756,1,True,False,,ancestry
+inc_nli,NLI Inc,1,2208,0.7508,25.1146,False,491,1,True,False,,ancestry
+inc_nli,NLI Inc,1,2250,0.8424,25.1177,False,475,1,True,False,,ancestry
+inc_nli,NLI Inc,1,2253,0.7099,24.955,False,470,1,True,False,,ancestry
+inc_nli,NLI Inc,1,2348,0.6258,24.9567,False,275,0,False,True,,ancestry
+inc_nli,NLI Inc,1,2362,0.7097,25.2671,False,471,1,True,False,,ancestry
+inc_nli,NLI Inc,1,2367,0.6381,0.8395,False,376,0,False,True,,ancestry
+inc_nli,NLI Inc,1,2423,0.8478,25.0266,False,533,1,True,False,,ancestry
+inc_nli,NLI Inc,2,60,0.9442,24.7899,False,1373,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,96,0.858,24.678,False,1371,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,111,0.9444,1.7573,False,3658,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,117,0.6189,0.2001,False,216,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,150,0.9538,25.1728,False,3665,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,151,0.9477,25.1169,False,3657,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,183,0.7045,2.7359,False,153,1,True,False,,conflict
+inc_nli,NLI Inc,2,202,0.9538,24.6904,False,1022,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,207,0.9442,1.7478,False,3671,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,209,0.9537,25.0418,False,3669,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,270,0.9549,24.9996,False,3657,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,278,0.9551,24.6404,False,3717,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,283,0.9542,24.6744,False,3659,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,285,0.9538,24.669,False,3661,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,287,0.9545,24.6516,False,3628,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,348,0.9543,24.8961,False,3721,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,379,0.9539,25.3519,False,3717,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,434,0.9473,25.4496,False,6931,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,435,0.9481,24.5093,False,1071,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,437,0.9545,24.9493,False,3721,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,439,0.9544,24.8623,False,3673,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,440,0.9541,24.8151,False,3667,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,458,0.7097,2.2185,False,131,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,533,0.944,24.6266,False,1372,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,553,0.946,0.5013,False,1378,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,588,0.8454,24.425,False,160,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,603,0.945,24.6214,False,1372,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,613,0.6144,0.2125,False,130,1,True,False,,conflict
+inc_nli,NLI Inc,2,635,0.9542,24.9123,False,3722,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,644,0.9541,24.628,False,1315,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,694,0.9547,24.9952,False,3712,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,708,0.946,24.9077,False,1378,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,744,0.9539,1.7371,False,3238,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,750,0.9551,24.9787,False,3717,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,751,0.9478,24.9912,False,3664,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,771,0.9543,25.0143,False,1957,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,804,0.9543,25.2133,False,4129,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,807,0.9547,25.0457,False,3719,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,852,0.946,25.0561,False,1377,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,860,0.9447,25.0458,False,1387,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,905,0.9463,25.0269,False,1379,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,912,0.9452,24.9988,False,2754,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,948,0.9539,2.0406,False,3721,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,968,0.947,25.545,False,7997,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,989,0.9538,24.8601,False,3713,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1009,0.8479,24.3101,False,194,1,True,False,,ancestry
+inc_nli,NLI Inc,2,1010,0.9545,24.8268,False,3719,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1100,0.9438,25.1052,False,2746,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1141,0.9463,24.7731,False,1378,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1155,0.9453,24.5401,False,1374,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1225,0.6152,24.4522,False,340,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1257,0.9451,25.1792,False,2754,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1260,0.9465,0.4534,False,1381,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1267,0.8582,24.8983,False,2758,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1271,0.9476,0.4411,False,1383,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1311,0.9464,24.8152,False,1386,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1313,0.7487,3.8705,False,145,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1319,0.8578,24.8436,False,2757,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1322,0.9442,24.6491,False,1379,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1354,0.8489,24.864,False,1385,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1364,0.9454,24.6944,False,1382,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1398,0.9547,25.2576,False,3721,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1400,0.9547,25.2167,False,3700,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1413,0.9433,25.1292,False,1379,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1438,0.9448,25.0205,False,1377,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1467,0.9547,25.2168,False,3716,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1473,0.9546,25.2178,False,3073,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1475,0.9538,25.0392,False,2566,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1479,0.9547,25.2105,False,3724,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1481,0.9549,25.2108,False,3721,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1548,0.8429,0.8066,False,230,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1564,0.9476,0.4631,False,1383,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1572,0.8573,25.0093,False,2765,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1573,0.9455,24.9848,False,3136,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1574,0.8474,25.2372,False,3138,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1575,0.9458,25.4731,False,1388,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1576,0.858,0.4581,False,1384,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1577,0.9473,25.2091,False,1383,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1578,0.8582,25.164,False,1384,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1579,0.9447,25.1213,False,1383,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1585,0.945,25.0056,False,2762,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1590,0.9476,0.463,False,1376,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1620,0.9453,25.3202,False,2756,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1624,0.9476,0.4644,False,1381,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1626,0.8486,25.1418,False,1377,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1642,0.8488,24.9987,False,2765,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1645,0.9435,25.2058,False,1384,6,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1661,0.9459,25.2145,False,2769,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1662,0.9456,25.0416,False,2759,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1663,0.9453,25.1569,False,2759,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1665,0.9476,0.4652,False,1389,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1667,0.8445,24.1265,False,178,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1718,0.6137,6.2197,False,211,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1735,0.7524,25.0259,False,123,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1766,0.9453,26.0128,False,1393,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1807,0.9459,25.8403,False,1386,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1838,0.9476,0.5485,False,1383,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1880,0.9472,26.1155,False,1396,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1881,0.9435,26.0381,False,1395,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1886,0.8482,26.267,False,2781,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1887,0.9439,26.0862,False,2772,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1889,0.9451,26.1441,False,1385,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1890,0.9471,26.1183,False,1396,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1891,0.9438,25.957,False,1394,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1892,0.9464,26.3026,False,1386,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,1932,0.9459,26.3386,False,1394,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1933,0.9476,0.4392,False,1396,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,1943,0.9547,26.4645,False,3716,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1962,0.9473,27.0426,False,6932,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1964,0.9467,26.9835,False,6925,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,1965,0.9475,26.9953,False,6889,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2011,0.9474,26.3289,False,4221,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2013,0.9472,25.7443,False,1265,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2015,0.9547,26.4682,False,3721,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2016,0.9544,26.339,False,3728,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2035,0.9456,26.1665,False,1395,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2048,0.9453,25.9475,False,1394,10,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2078,0.9547,26.4232,False,3723,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2081,0.625,0.8658,False,159,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2092,0.9539,26.3663,False,3719,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2094,0.9548,26.4007,False,3713,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2141,0.9545,26.536,False,4877,1,True,False,,ancestry
+inc_nli,NLI Inc,2,2156,0.9469,26.3485,False,3720,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2166,0.9547,26.4514,False,3713,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2168,0.9478,26.5545,False,3698,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2188,0.7491,26.5713,False,3559,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2229,0.9465,0.4667,False,1381,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2231,0.9452,26.1581,False,1379,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2246,0.9465,0.4691,False,1385,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2256,0.9462,26.6585,False,1380,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2257,0.9462,27.0477,False,1388,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2297,0.9551,2.7446,False,3716,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2314,0.9541,27.0723,False,4689,1,True,False,,ancestry
+inc_nli,NLI Inc,2,2332,0.9547,26.7433,False,3719,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2343,0.9549,26.686,False,3654,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2344,0.9473,26.6564,False,3656,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2346,0.9545,26.7478,False,3632,1,True,False,12,ancestry and text agree
+inc_nli,NLI Inc,2,2383,0.8461,26.3713,False,184,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2401,0.9469,0.4696,False,1376,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2411,0.9448,26.4792,False,1375,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2420,0.9453,25.925,False,1374,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2436,0.9446,0.6583,False,237,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2454,0.946,25.1546,False,1381,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2462,0.947,25.3767,False,1370,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2501,0.9464,25.5563,False,1374,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2537,0.9455,25.3385,False,1366,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2554,0.9469,0.4579,False,1369,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2560,0.944,25.8593,False,3840,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2563,0.9452,25.3504,False,1362,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2606,0.9436,25.4953,False,1379,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2625,0.947,25.6102,False,1371,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2653,0.9449,25.4332,False,1377,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,2,2667,0.6256,25.0152,False,258,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2668,0.9449,3.7472,False,216,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,2,2670,0.9466,25.3125,False,1372,0,False,True,11,ancestry and text agree
+inc_nli,NLI Inc,3,288,0.6261,24.6133,False,1247,1,True,False,,conflict
+inc_nli,NLI Inc,3,479,0.9446,24.1931,False,575,1,True,False,,conflict
+inc_nli,NLI Inc,3,507,0.683,24.2977,False,575,1,True,False,,conflict
+inc_nli,NLI Inc,3,597,0.8441,24.3146,False,1153,1,True,False,,conflict
+inc_nli,NLI Inc,3,699,0.6129,24.1907,False,579,1,True,False,,conflict
+inc_nli,NLI Inc,3,1130,0.9452,24.3503,False,572,1,True,False,,conflict
+inc_nli,NLI Inc,3,1184,0.9452,24.1849,False,566,1,True,False,,conflict
+inc_nli,NLI Inc,3,1275,0.6215,24.8137,False,577,1,True,False,,conflict
+inc_nli,NLI Inc,3,1315,0.8044,0.4731,False,148,1,True,False,,conflict
+inc_nli,NLI Inc,3,1363,0.7026,24.892,False,1801,1,True,False,,conflict
+inc_nli,NLI Inc,3,1497,0.7532,24.4933,False,572,1,True,False,,conflict
+inc_nli,NLI Inc,3,1777,0.7096,24.408,False,569,1,True,False,,conflict
+inc_nli,NLI Inc,3,1782,0.8467,2.2997,False,372,1,True,False,,conflict
+inc_nli,NLI Inc,3,1913,0.8575,24.4799,False,571,1,True,False,,conflict
+inc_nli,NLI Inc,3,1925,0.8463,24.7421,False,571,1,True,False,,conflict
+inc_nli,NLI Inc,3,1991,0.753,23.8468,False,147,1,True,False,,ancestry
+inc_nli,NLI Inc,3,2064,0.8466,24.8189,False,574,1,True,False,,conflict
+inc_nli,NLI Inc,3,2228,0.8465,24.7092,False,144,1,True,False,,conflict
+inc_nli,NLI Inc,3,2314,0.7039,24.5831,False,267,1,True,False,,conflict
+inc_nli,NLI Inc,3,2482,0.6196,24.8479,False,1142,1,True,False,,conflict
+inc_nli,NLI Inc,3,2484,0.8573,1.6516,False,576,1,True,False,,conflict
+inc_nli,NLI Inc,3,2661,0.6232,2.3539,False,566,1,True,False,,conflict
+inc_nli,NLI Inc,3,2688,0.6263,0.6725,False,121,1,True,False,,conflict
+inc_nli,NLI Inc,3,2781,0.858,24.8792,False,1149,1,True,False,,conflict
+inc_nli,NLI Inc,4,788,0.6232,24.6636,False,400,1,True,False,,ancestry
+inc_nli,NLI Inc,4,990,0.9548,0.3218,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1059,0.858,24.9309,False,1082,0,False,True,,conflict
+inc_nli,NLI Inc,4,1061,0.7104,3.3216,False,1072,0,False,True,,conflict
+inc_nli,NLI Inc,4,1129,0.9548,0.3811,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1207,0.9548,0.3216,False,1084,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1319,0.9548,0.4033,False,1079,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1334,0.6851,24.4593,False,83,0,False,True,,conflict
+inc_nli,NLI Inc,4,1404,0.9448,24.6322,False,1084,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1487,0.8435,24.4317,False,1080,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1488,0.9548,0.3137,False,1081,0,False,True,,conflict
+inc_nli,NLI Inc,4,1567,0.9548,0.34,False,1087,0,False,True,,conflict
+inc_nli,NLI Inc,4,1570,0.9441,24.4581,False,1093,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1637,0.9546,0.3987,False,1080,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1640,0.9548,0.3972,False,1092,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1651,0.711,3.506,False,102,1,True,False,,conflict
+inc_nli,NLI Inc,4,1667,0.621,4.593,False,1075,0,False,True,,conflict
+inc_nli,NLI Inc,4,1721,0.954,0.3621,False,1084,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1731,0.9548,0.34,False,1085,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1733,0.9442,24.5978,False,1085,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1783,0.9434,24.8266,False,1092,0,False,True,,conflict
+inc_nli,NLI Inc,4,1848,0.9548,0.3196,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,1851,0.7029,24.9108,False,1078,0,False,True,,conflict
+inc_nli,NLI Inc,4,1914,0.9548,0.3441,False,1085,0,False,True,,conflict
+inc_nli,NLI Inc,4,1930,0.9548,0.3796,False,1085,0,False,True,,conflict
+inc_nli,NLI Inc,4,1935,0.7104,4.6834,False,1076,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2004,0.9548,0.3224,False,1093,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2007,0.7531,4.6716,False,1082,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2056,0.7064,3.335,False,120,1,True,False,,conflict
+inc_nli,NLI Inc,4,2067,0.9548,0.3341,False,1086,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2069,0.9548,0.3331,False,1090,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2148,0.9548,0.4048,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2199,0.8461,24.6254,False,1087,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2200,0.9548,0.3105,False,1091,0,False,True,,conflict
+inc_nli,NLI Inc,4,2268,0.7503,3.3071,False,1082,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2276,0.9548,0.3204,False,1077,0,False,True,,conflict
+inc_nli,NLI Inc,4,2279,0.9548,0.3197,False,1084,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2282,0.8116,0.4946,False,1076,0,False,True,,conflict
+inc_nli,NLI Inc,4,2343,0.711,24.7371,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2390,0.9548,0.3207,False,1077,0,False,True,,conflict
+inc_nli,NLI Inc,4,2404,0.8475,24.9386,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2452,0.8579,25.1056,False,2166,1,True,False,20,ancestry and text agree
+inc_nli,NLI Inc,4,2455,0.9548,0.3395,False,1086,0,False,True,,conflict
+inc_nli,NLI Inc,4,2456,0.9548,0.3107,False,1088,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2457,0.8578,24.851,False,1079,0,False,True,,conflict
+inc_nli,NLI Inc,4,2522,0.7089,3.4641,False,1079,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,4,2535,0.7527,2.4819,False,1086,0,False,True,,conflict
+inc_nli,NLI Inc,4,2613,0.6854,25.0961,False,1082,0,False,True,,conflict
+inc_nli,NLI Inc,4,2626,0.8581,25.6009,False,2750,0,False,True,,ancestry
+inc_nli,NLI Inc,4,2628,0.9451,24.6038,False,1083,0,False,True,20,ancestry and text agree
+inc_nli,NLI Inc,5,129,0.6225,3.6938,False,141,1,True,False,21,ancestry and text agree
+inc_nli,NLI Inc,5,238,0.8437,24.1755,False,132,1,True,False,,conflict
+inc_nli,NLI Inc,5,580,0.6129,4.5155,False,138,1,True,False,21,ancestry and text agree
+inc_nli,NLI Inc,5,716,0.6839,24.3651,False,260,1,True,False,,conflict
+inc_nli,NLI Inc,5,941,0.616,0.4489,False,189,1,True,False,21,ancestry and text agree
+inc_nli,NLI Inc,5,1699,0.7507,2.2668,False,1111,1,True,False,,conflict
+inc_nli,NLI Inc,5,1790,0.7508,2.2334,False,1116,1,True,False,,conflict
+inc_nli,NLI Inc,5,1954,0.9456,24.5084,False,265,1,True,False,,conflict
+inc_nli,NLI Inc,5,1962,0.707,24.2823,False,554,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2028,0.8454,24.4597,False,265,1,True,False,,conflict
+inc_nli,NLI Inc,5,2081,0.8478,24.6005,False,263,1,True,False,,conflict
+inc_nli,NLI Inc,5,2094,0.8433,2.2225,False,1116,1,True,False,,conflict
+inc_nli,NLI Inc,5,2157,0.8469,25.0325,False,1122,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2211,0.8449,2.1283,False,1118,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2332,0.8578,24.4704,False,267,1,True,False,,conflict
+inc_nli,NLI Inc,5,2422,0.7515,2.2354,False,1119,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2463,0.6148,5.7382,False,200,1,True,False,,conflict
+inc_nli,NLI Inc,5,2521,0.9435,24.8967,False,260,1,True,False,,conflict
+inc_nli,NLI Inc,5,2585,0.7519,2.2563,False,1115,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2767,0.7031,2.1501,False,1123,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2788,0.7528,2.288,False,1126,1,True,False,,ancestry
+inc_nli,NLI Inc,5,2800,0.7106,25.3795,False,1109,1,True,False,,conflict
+inc_nli,NLI Inc,5,2841,0.9435,24.6276,False,1711,1,True,False,,conflict
+inc_nli,NLI Inc,6,107,0.8471,3.4907,False,112,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,6,177,0.9444,15.2534,False,156,1,True,False,,conflict
+inc_nli,NLI Inc,6,278,0.6854,3.1645,False,309,1,True,False,,conflict
+inc_nli,NLI Inc,6,488,0.9465,3.0658,False,159,1,True,False,,conflict
+inc_nli,NLI Inc,6,539,0.9439,24.9618,False,164,1,True,False,,conflict
+inc_nli,NLI Inc,6,679,0.7092,5.0509,False,165,1,True,False,,conflict
+inc_nli,NLI Inc,6,867,0.6847,3.3151,False,117,1,True,False,11,ancestry and text agree
+inc_nli,NLI Inc,6,1068,0.8435,4.0031,False,169,1,True,False,,conflict
+inc_nli,NLI Inc,6,1069,0.9449,3.5616,False,170,1,True,False,,conflict
+inc_nli,NLI Inc,6,1297,0.7502,3.0123,False,484,1,True,False,,conflict
+inc_nli,NLI Inc,6,1299,0.9558,24.9597,False,474,1,True,False,,conflict
+inc_nli,NLI Inc,6,1331,0.7528,24.4381,False,314,1,True,False,,conflict
+inc_nli,NLI Inc,6,1387,0.9548,24.5101,False,477,1,True,False,,conflict
+inc_nli,NLI Inc,6,1390,0.6195,1.6216,False,269,1,True,False,,conflict
+inc_nli,NLI Inc,6,1395,0.9472,24.2589,False,289,1,True,False,,conflict
+inc_nli,NLI Inc,6,1481,0.6849,1.5646,False,216,0,False,True,,conflict
+inc_nli,NLI Inc,6,1559,0.8433,24.0639,False,468,1,True,False,,conflict
+inc_nli,NLI Inc,6,1573,0.7189,0.4206,False,471,1,True,False,,conflict
+inc_nli,NLI Inc,6,1584,0.7498,2.4287,False,183,1,True,False,,conflict
+inc_nli,NLI Inc,6,1653,0.621,24.3523,False,232,1,True,False,,conflict
+inc_nli,NLI Inc,6,1655,0.9558,24.4741,False,468,1,True,False,,conflict
+inc_nli,NLI Inc,6,1706,0.6258,3.0839,False,190,1,True,False,,conflict
+inc_nli,NLI Inc,6,1735,0.9477,24.3622,False,477,1,True,False,,conflict
+inc_nli,NLI Inc,6,1800,0.9555,24.4427,False,479,1,True,False,,conflict
+inc_nli,NLI Inc,6,1813,0.7166,0.4977,False,475,1,True,False,,conflict
+inc_nli,NLI Inc,6,1875,0.9746,24.4481,False,469,1,True,False,,conflict
+inc_nli,NLI Inc,6,1925,0.975,24.3137,False,472,1,True,False,,conflict
+inc_nli,NLI Inc,6,1942,0.9552,24.6974,False,472,1,True,False,,conflict
+inc_nli,NLI Inc,6,1944,0.9746,24.5557,False,475,1,True,False,,conflict
+inc_nli,NLI Inc,6,2000,0.9747,24.5584,False,474,1,True,False,,conflict
+inc_nli,NLI Inc,6,2016,0.946,1.8484,False,289,1,True,False,,conflict
+inc_nli,NLI Inc,6,2071,0.9552,24.4859,False,475,1,True,False,,conflict
+inc_nli,NLI Inc,6,2072,0.9744,24.4359,False,474,1,True,False,,conflict
+inc_nli,NLI Inc,6,2076,0.683,24.4047,False,255,1,True,False,,conflict
+inc_nli,NLI Inc,6,2118,0.8455,24.4163,False,201,1,True,False,,conflict
+inc_nli,NLI Inc,6,2141,0.9542,24.4821,False,628,1,True,False,,conflict
+inc_nli,NLI Inc,6,2144,0.9547,24.591,False,477,1,True,False,,conflict
+inc_nli,NLI Inc,6,2147,0.6183,1.2721,False,149,1,True,False,,conflict
+inc_nli,NLI Inc,6,2184,0.6847,1.1349,False,169,1,True,False,,conflict
+inc_nli,NLI Inc,6,2331,0.9748,24.5244,False,480,1,True,False,,conflict
+inc_nli,NLI Inc,6,2361,0.9547,24.4573,False,473,1,True,False,,conflict
+inc_nli,NLI Inc,6,2363,0.6206,24.6312,False,473,1,True,False,,conflict
+inc_nli,NLI Inc,6,2419,0.9745,24.6157,False,474,1,True,False,,conflict
+inc_nli,NLI Inc,6,2434,0.9556,24.4077,False,472,1,True,False,,conflict
+inc_nli,NLI Inc,6,2437,0.8057,1.1137,False,482,1,True,False,,conflict
+inc_nli,NLI Inc,6,2454,0.9745,24.3198,False,282,1,True,False,,conflict
+inc_nli,NLI Inc,6,2551,0.8483,24.5317,False,216,0,False,True,,conflict
+inc_nli,NLI Inc,6,2555,0.6833,0.4953,False,478,0,False,True,,conflict
+inc_nli,NLI Inc,6,2557,0.9444,0.5569,False,187,0,False,True,,conflict
+inc_nli,NLI Inc,6,2558,0.7087,1.0501,False,335,0,False,True,,conflict
+inc_nli,NLI Inc,7,309,0.6171,24.7182,False,274,1,True,False,,ancestry
+inc_nli,NLI Inc,7,412,0.8573,24.7615,False,273,1,True,False,,ancestry
+inc_nli,NLI Inc,7,413,0.614,24.2129,False,277,1,True,False,,ancestry
+inc_nli,NLI Inc,7,695,0.7532,24.826,False,305,1,True,False,,ancestry
+inc_nli,NLI Inc,7,956,0.7079,4.7574,False,156,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1038,0.7107,24.325,False,164,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1075,0.7102,5.1035,False,232,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1086,0.9436,24.7592,False,137,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1128,0.7521,24.7551,False,185,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1182,0.7489,2.4679,False,134,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1242,0.7042,24.1691,False,290,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1460,0.8484,5.1838,False,140,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1480,0.6125,24.8335,False,278,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1490,0.6854,0.993,False,934,1,True,False,,conflict
+inc_nli,NLI Inc,7,1526,0.9449,0.9534,False,175,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1599,0.9432,24.9685,False,166,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1696,0.7211,0.3318,False,408,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1703,0.6212,23.7842,False,561,11,True,False,,ancestry
+inc_nli,NLI Inc,7,1711,0.6129,24.1298,False,138,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1797,0.9542,0.2644,False,163,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1872,0.6252,24.2675,False,312,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1873,0.7061,1.4915,False,283,1,True,False,,ancestry
+inc_nli,NLI Inc,7,1921,0.8123,0.5465,False,227,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2100,0.602,0.5616,False,232,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2172,0.8048,0.4062,False,228,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2198,0.8447,0.9504,False,286,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2285,0.6225,24.2297,False,564,11,True,False,,conflict
+inc_nli,NLI Inc,7,2409,0.6007,0.3574,False,568,11,True,False,,conflict
+inc_nli,NLI Inc,7,2518,0.6864,5.3199,False,253,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2667,0.7058,24.5631,False,689,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2698,0.6156,24.4529,False,231,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2733,0.7042,24.2378,False,274,1,True,False,,ancestry
+inc_nli,NLI Inc,7,2855,0.9439,24.416,False,565,11,True,False,,conflict
+inc_nli,NLI Inc,7,2883,0.6195,24.3702,False,567,0,False,True,,conflict
+inc_nli,NLI Inc,8,439,0.7039,24.0284,False,155,1,True,False,33,ancestry and text agree
+inc_nli,NLI Inc,8,473,0.8571,24.0598,False,227,1,True,False,,conflict
+inc_nli,NLI Inc,8,506,0.9477,23.9522,False,230,1,True,False,,conflict
+inc_nli,NLI Inc,8,577,0.9542,24.0095,False,230,1,True,False,,conflict
+inc_nli,NLI Inc,8,1128,0.9546,23.7711,False,229,1,True,False,,conflict
+inc_nli,NLI Inc,8,1148,0.9456,23.8807,False,408,1,True,False,,ancestry
+inc_nli,NLI Inc,8,1379,0.9474,23.8024,False,457,1,True,False,,conflict
+inc_nli,NLI Inc,8,1619,0.9539,23.8347,False,236,1,True,False,,conflict
+inc_nli,NLI Inc,8,1686,0.6217,24.2697,False,2931,1,True,False,59,ancestry and text agree
+inc_nli,NLI Inc,8,1695,0.6227,24.1756,False,2930,1,True,False,59,ancestry and text agree
+inc_nli,NLI Inc,8,1743,0.6823,23.9328,False,1464,1,True,False,59,ancestry and text agree
+inc_nli,NLI Inc,8,1857,0.6217,23.673,False,319,1,True,False,,ancestry
+inc_nli,NLI Inc,8,2017,0.95,23.9287,False,338,1,True,False,,conflict
+inc_nli,NLI Inc,8,2019,0.9446,23.8948,False,331,1,True,False,,conflict
+inc_nli,NLI Inc,8,2113,0.7026,23.7807,False,340,1,True,False,,conflict
+inc_nli,NLI Inc,8,2115,0.9465,23.8191,False,332,0,False,True,,conflict
+inc_nli,NLI Inc,8,2195,0.8573,23.865,False,372,0,False,True,,ancestry
+inc_nli,NLI Inc,8,2203,0.8042,0.8338,False,335,1,True,False,,conflict
+inc_nli,NLI Inc,8,2221,0.7533,23.7482,False,334,1,True,False,,conflict
+inc_nli,NLI Inc,8,2222,0.9546,23.8727,False,339,1,True,False,,conflict
+inc_nli,NLI Inc,8,2261,0.9558,23.8333,False,338,1,True,False,,conflict
+inc_nli,NLI Inc,8,2292,0.9551,23.7517,False,336,1,True,False,,conflict
+inc_nli,NLI Inc,8,2344,0.621,23.8421,False,416,0,False,True,,conflict
+inc_nli,NLI Inc,8,2350,0.9553,23.7455,False,338,1,True,False,,conflict
+inc_nli,NLI Inc,8,2443,0.8463,23.9289,False,338,1,True,False,,conflict
+inc_nli,NLI Inc,8,2491,0.9541,23.9433,False,339,1,True,False,,conflict
+inc_nli,NLI Inc,8,2492,0.9456,23.7612,False,335,1,True,False,,conflict
+inc_nli,NLI Inc,8,2564,0.9553,23.7297,False,334,1,True,False,,conflict
+inc_nli,NLI Inc,8,2584,0.9553,23.7689,False,339,1,True,False,,conflict
+inc_nli,NLI Inc,8,2632,0.9538,24.0191,False,467,1,True,False,,conflict
+inc_nli,NLI Inc,8,2636,0.9558,23.791,False,336,1,True,False,,conflict
+inc_nli,NLI Inc,8,2637,0.6131,23.8959,False,335,0,False,True,,conflict
+inc_nli,NLI Inc,8,2647,0.9449,5.8878,False,166,0,False,True,,ancestry
+inc_nli,NLI Inc,8,2684,0.9545,23.8155,False,329,1,True,False,,conflict
+inc_nli,NLI Inc,8,2686,0.9543,23.8439,False,335,1,True,False,,conflict
+inc_nli,NLI Inc,8,2731,0.8421,23.783,False,330,0,False,True,,conflict
+inc_nli,NLI Inc,8,2746,0.6206,2.4351,False,331,0,False,True,,conflict
+inc_nli,NLI Inc,8,2804,0.8424,23.7797,False,332,1,True,False,,conflict
+inc_nli,NLI Inc,8,2805,0.9467,23.8392,False,331,1,True,False,,conflict
+inc_nli,NLI Inc,8,2852,0.9448,0.8917,False,329,0,False,True,,conflict
+inc_nli,NLI Inc,8,2853,0.9479,23.8188,False,328,1,True,False,,conflict
+inc_nli,NLI Inc,8,2894,0.9481,23.8795,False,329,1,True,False,,conflict
+inc_nli,NLI Inc,8,2896,0.9477,23.873,False,328,0,False,True,,conflict
+inc_nli,NLI Inc,8,2936,0.9459,0.9417,False,330,0,False,True,,conflict
+inc_nli,NLI Inc,8,2953,0.9544,23.9177,False,331,1,True,False,,conflict
+inc_nli,NLI Inc,8,3005,0.9448,0.8964,False,132,0,False,True,,ancestry
+inc_nli,NLI Inc,8,3040,0.8581,23.8496,False,338,0,False,True,,conflict
+inc_nli,NLI Inc,8,3041,0.9444,23.7716,False,342,1,True,False,,conflict
+inc_nli,NLI Inc,8,3088,0.8487,4.5506,False,327,0,False,True,,conflict
+inc_nli,NLI Inc,8,3097,0.9467,23.8413,False,362,18,True,False,,ancestry
+inc_nli,NLI Inc,8,3105,0.9475,23.8569,False,326,0,False,True,,conflict
+inc_nli,NLI Inc,9,416,0.7511,1.5788,False,1399,4,True,False,,conflict
+inc_nli,NLI Inc,9,460,0.8471,1.0059,False,1400,4,True,False,,conflict
+inc_nli,NLI Inc,9,517,0.6129,3.6801,False,3006,1,True,False,,conflict
+inc_nli,NLI Inc,9,520,0.847,1.2459,False,1397,4,True,False,,conflict
+inc_nli,NLI Inc,9,521,0.7517,23.848,False,1402,4,True,False,,conflict
+inc_nli,NLI Inc,9,523,0.7169,0.993,False,1403,0,False,True,,conflict
+inc_nli,NLI Inc,9,540,0.8423,23.9515,False,1396,4,True,False,,conflict
+inc_nli,NLI Inc,9,552,0.7532,23.9255,False,1402,4,True,False,,conflict
+inc_nli,NLI Inc,9,568,0.8473,0.2741,False,1396,4,True,False,,conflict
+inc_nli,NLI Inc,9,577,0.9438,23.9876,False,1388,4,True,False,,conflict
+inc_nli,NLI Inc,9,578,0.7504,23.9808,False,1396,4,True,False,,conflict
+inc_nli,NLI Inc,9,579,0.7528,23.9651,False,1393,10,True,False,,conflict
+inc_nli,NLI Inc,9,615,0.7082,23.9652,False,2783,1,True,False,,conflict
+inc_nli,NLI Inc,9,617,0.7527,23.8814,False,1397,4,True,False,,conflict
+inc_nli,NLI Inc,9,618,0.8466,23.8562,False,1395,4,True,False,,conflict
+inc_nli,NLI Inc,9,680,0.8468,23.8531,False,1398,7,True,False,,conflict
+inc_nli,NLI Inc,9,697,0.7103,23.8373,False,1392,4,True,False,,conflict
+inc_nli,NLI Inc,9,698,0.752,23.9084,False,1388,0,False,True,,conflict
+inc_nli,NLI Inc,9,699,0.8443,23.909,False,1407,4,True,False,,conflict
+inc_nli,NLI Inc,9,700,0.6236,2.3093,False,1393,4,True,False,,conflict
+inc_nli,NLI Inc,9,703,0.6252,3.1196,False,1394,4,True,False,,conflict
+inc_nli,NLI Inc,9,770,0.7068,2.2348,False,1394,7,True,False,,conflict
+inc_nli,NLI Inc,9,818,0.8436,23.9211,False,1395,7,True,False,,conflict
+inc_nli,NLI Inc,9,844,0.845,24.0128,False,1398,7,True,False,,conflict
+inc_nli,NLI Inc,9,847,0.6826,23.91,False,1408,7,True,False,,conflict
+inc_nli,NLI Inc,9,868,0.7068,23.9626,False,1403,7,True,False,,conflict
+inc_nli,NLI Inc,9,900,0.8474,23.9182,False,1409,7,True,False,,conflict
+inc_nli,NLI Inc,9,932,0.845,23.8707,False,1410,7,True,False,,conflict
+inc_nli,NLI Inc,9,953,0.7044,24.0015,False,2805,1,True,False,,conflict
+inc_nli,NLI Inc,9,960,0.8443,23.8767,False,1405,7,True,False,,conflict
+inc_nli,NLI Inc,9,963,0.6837,23.8784,False,1405,7,True,False,,conflict
+inc_nli,NLI Inc,9,984,0.6864,23.978,False,1410,7,True,False,,conflict
+inc_nli,NLI Inc,9,1056,0.7519,23.8851,False,1391,7,True,False,,conflict
+inc_nli,NLI Inc,9,1057,0.6856,24.1772,False,1400,7,True,False,,conflict
+inc_nli,NLI Inc,9,1079,0.7104,23.9502,False,1399,7,True,False,,conflict
+inc_nli,NLI Inc,9,1117,0.8426,23.8839,False,1401,7,True,False,,conflict
+inc_nli,NLI Inc,9,1187,0.7502,23.9459,False,1405,7,True,False,,conflict
+inc_nli,NLI Inc,9,1239,0.8486,2.5719,False,1411,7,True,False,,conflict
+inc_nli,NLI Inc,9,1261,0.7531,3.053,False,1419,7,True,False,,conflict
+inc_nli,NLI Inc,9,1262,0.7026,1.2261,False,1407,7,True,False,,conflict
+inc_nli,NLI Inc,9,1362,0.71,23.9092,False,1411,7,True,False,,conflict
+inc_nli,NLI Inc,9,1363,0.8465,23.964,False,1419,7,True,False,,conflict
+inc_nli,NLI Inc,9,1364,0.625,23.913,False,1406,7,True,False,,conflict
+inc_nli,NLI Inc,9,1388,0.6221,23.9446,False,1403,0,False,True,,conflict
+inc_nli,NLI Inc,9,1389,0.8428,0.7292,False,1414,7,True,False,,conflict
+inc_nli,NLI Inc,9,1439,0.8488,5.0573,False,1394,10,True,False,,conflict
+inc_nli,NLI Inc,9,1441,0.8473,0.2617,False,1383,10,True,False,,conflict
+inc_nli,NLI Inc,9,1495,0.8429,0.9362,False,1391,10,True,False,,conflict
+inc_nli,NLI Inc,9,1497,0.7285,1.8607,False,1395,10,True,False,,conflict
+inc_nli,NLI Inc,9,1545,0.8423,4.7459,False,1397,10,True,False,,conflict
+inc_nli,NLI Inc,9,1565,0.6842,2.0346,False,1393,10,True,False,,conflict
+inc_nli,NLI Inc,9,1575,0.8483,23.9939,False,1402,10,True,False,,conflict
+inc_nli,NLI Inc,9,1591,0.9538,23.9909,False,1391,10,True,False,,conflict
+inc_nli,NLI Inc,9,1599,0.858,23.9114,False,1405,10,True,False,,conflict
+inc_nli,NLI Inc,9,1600,0.7514,5.0297,False,1396,10,True,False,,conflict
+inc_nli,NLI Inc,9,1601,0.6267,1.7506,False,1400,10,True,False,,conflict
+inc_nli,NLI Inc,9,1617,0.6121,2.7655,False,1396,10,True,False,,conflict
+inc_nli,NLI Inc,9,1618,0.7519,23.9318,False,1407,10,True,False,,conflict
+inc_nli,NLI Inc,9,1619,0.7491,23.9052,False,1398,10,True,False,,conflict
+inc_nli,NLI Inc,9,1640,0.6202,2.918,False,1396,10,True,False,,conflict
+inc_nli,NLI Inc,9,1642,0.9454,24.1515,False,1396,10,True,False,,conflict
+inc_nli,NLI Inc,9,1651,0.6221,2.0163,False,2791,1,True,False,,conflict
+inc_nli,NLI Inc,9,1655,0.6236,23.9889,False,1404,10,True,False,,conflict
+inc_nli,NLI Inc,9,1712,0.803,0.7819,False,1393,10,True,False,,conflict
+inc_nli,NLI Inc,9,1746,0.8577,23.8795,False,1393,10,True,False,,conflict
+inc_nli,NLI Inc,9,1758,0.803,0.7822,False,1390,10,True,False,,conflict
+inc_nli,NLI Inc,9,1759,0.8419,23.6564,False,1388,10,True,False,,conflict
+inc_nli,NLI Inc,9,1761,0.8468,23.9258,False,1393,10,True,False,,conflict
+inc_nli,NLI Inc,9,1786,0.8448,23.9091,False,1401,10,True,False,,conflict
+inc_nli,NLI Inc,9,1808,0.944,23.938,False,1400,10,True,False,,conflict
+inc_nli,NLI Inc,9,1845,0.7061,5.1294,False,1404,10,True,False,,conflict
+inc_nli,NLI Inc,9,1867,0.8576,2.4731,False,1405,10,True,False,,conflict
+inc_nli,NLI Inc,9,1883,0.6247,24.0577,False,2774,1,True,False,,conflict
+inc_nli,NLI Inc,9,1887,0.6148,1.123,False,1394,10,True,False,,conflict
+inc_nli,NLI Inc,9,1890,0.803,0.7695,False,1395,15,True,False,,conflict
+inc_nli,NLI Inc,9,1913,0.7029,23.9486,False,1414,10,True,False,,conflict
+inc_nli,NLI Inc,9,1914,0.9445,24.0163,False,1396,10,True,False,,conflict
+inc_nli,NLI Inc,9,1953,0.8474,0.7438,False,1392,13,True,False,,conflict
+inc_nli,NLI Inc,9,2075,0.7077,1.764,False,1400,13,True,False,,conflict
+inc_nli,NLI Inc,9,2094,0.6202,24.2337,False,2785,1,True,False,,conflict
+inc_nli,NLI Inc,9,2168,0.704,24.2521,False,2771,1,True,False,,conflict
+inc_nli,NLI Inc,9,2174,0.7485,23.8598,False,1399,13,True,False,,conflict
+inc_nli,NLI Inc,9,2198,0.7504,23.934,False,1397,13,True,False,,conflict
+inc_nli,NLI Inc,9,2312,0.9462,23.9701,False,1395,15,True,False,,conflict
+inc_nli,NLI Inc,9,2325,0.7171,0.8425,False,1399,15,True,False,,conflict
+inc_nli,NLI Inc,9,2330,0.8455,23.9966,False,1391,15,True,False,,conflict
+inc_nli,NLI Inc,9,2401,0.8469,1.259,False,1395,15,True,False,,conflict
+inc_nli,NLI Inc,9,2415,0.7099,24.2162,False,2785,1,True,False,,conflict
+inc_nli,NLI Inc,9,2439,0.6168,24.1336,False,2789,1,True,False,,conflict
+inc_nli,NLI Inc,9,2446,0.803,0.7704,False,1398,15,True,False,,conflict
+inc_nli,NLI Inc,9,2449,0.7516,23.8948,False,1396,0,False,True,,conflict
+inc_nli,NLI Inc,9,2451,0.8471,23.8797,False,1394,15,True,False,,conflict
+inc_nli,NLI Inc,9,2511,0.6144,0.4191,False,1386,0,False,True,,conflict
+no_speciation,Global EA,0,1411,0.8484,4.2154,False,148,1,True,False,,conflict
+no_speciation,Global EA,0,1704,0.8484,2.0294,False,142,1,True,False,,conflict
+no_speciation,Global EA,0,923,0.8476,4.8994,False,148,1,True,False,,conflict
+no_speciation,Global EA,0,1698,0.8462,2.9507,False,551,1,True,False,,conflict
+no_speciation,Global EA,0,258,0.8457,4.6159,False,143,1,True,False,,conflict
+no_speciation,Global EA,0,706,0.8445,5.1969,False,138,1,True,False,,conflict
+no_speciation,Global EA,0,2416,0.8443,25.0176,False,212,1,True,False,,conflict
+no_speciation,Global EA,0,1925,0.844,5.118,False,194,1,True,False,,conflict
+no_speciation,Global EA,0,385,0.8439,24.1285,False,240,1,True,False,,conflict
+no_speciation,Global EA,0,1504,0.8439,4.0803,False,180,1,True,False,,conflict
+no_speciation,Global EA,0,386,0.8433,3.6262,False,145,1,True,False,,conflict
+no_speciation,Global EA,0,2400,0.8433,5.486,False,172,1,True,False,,conflict
+no_speciation,Global EA,0,1953,0.8428,6.8615,False,178,1,True,False,,conflict
+no_speciation,Global EA,0,1601,0.8424,5.7593,False,202,1,True,False,,conflict
+no_speciation,Global EA,0,2184,0.8424,3.7959,False,148,1,True,False,,conflict
+no_speciation,Global EA,0,2464,0.7532,25.4032,False,159,1,True,False,,conflict
+no_speciation,Global EA,0,1802,0.751,2.6237,False,152,1,True,False,,conflict
+no_speciation,Global EA,0,1314,0.7509,5.3703,False,149,1,True,False,,conflict
+no_speciation,Global EA,0,254,0.7499,4.2472,False,279,1,True,False,,conflict
+no_speciation,Global EA,0,1044,0.7497,23.7922,False,187,1,True,False,,conflict
+no_speciation,Global EA,0,639,0.7491,4.2691,False,223,1,True,False,,conflict
+no_speciation,Global EA,0,2699,0.7491,5.8531,False,159,1,True,False,,conflict
+no_speciation,Global EA,0,2006,0.7487,4.9859,False,200,1,True,False,,conflict
+no_speciation,Global EA,0,1125,0.7108,5.8249,False,137,1,True,False,,conflict
+no_speciation,Global EA,0,1651,0.7107,4.1933,False,152,1,True,False,,conflict
+no_speciation,Global EA,0,772,0.7102,6.0591,False,230,1,True,False,,conflict
+no_speciation,Global EA,0,320,0.7095,5.4375,False,143,1,True,False,,conflict
+no_speciation,Global EA,0,2287,0.7095,24.8608,False,154,1,True,False,,conflict
+no_speciation,Global EA,0,1777,0.7092,25.2319,False,146,1,True,False,,conflict
+no_speciation,Global EA,0,1309,0.7089,3.7992,False,137,1,True,False,,conflict
+no_speciation,Global EA,0,388,0.7086,4.471,False,190,1,True,False,,conflict
+no_speciation,Global EA,0,992,0.7083,4.685,False,156,1,True,False,,conflict
+no_speciation,Global EA,0,2797,0.7076,5.2479,False,169,1,True,False,,conflict
+no_speciation,Global EA,0,859,0.7068,25.3572,False,141,1,True,False,,conflict
+no_speciation,Global EA,0,2333,0.7067,4.5333,False,146,1,True,False,,conflict
+no_speciation,Global EA,0,2050,0.7064,5.0591,False,148,1,True,False,,conflict
+no_speciation,Global EA,0,557,0.7062,24.1661,False,1617,1,True,False,30,ancestry and text agree
+no_speciation,Global EA,0,1496,0.7056,25.2354,False,149,1,True,False,,conflict
+no_speciation,Global EA,0,678,0.7055,4.5886,False,233,1,True,False,,conflict
+no_speciation,Global EA,0,565,0.7039,21.748,False,541,1,True,False,,conflict
+no_speciation,Global EA,0,530,0.7031,25.5332,False,1633,1,True,False,30,ancestry and text agree
+no_speciation,Global EA,0,1401,0.7026,3.4514,False,152,1,True,False,,conflict
+no_speciation,Global EA,0,2101,0.7026,5.2501,False,161,1,True,False,,conflict
+no_speciation,Global EA,0,515,0.6862,5.3432,False,136,1,True,False,,conflict
+no_speciation,Global EA,0,2765,0.6832,5.3065,False,149,1,True,False,,conflict
+no_speciation,Global EA,0,1668,0.6828,24.822,False,149,1,True,False,,conflict
+no_speciation,Global EA,0,1244,0.6823,3.0661,False,151,1,True,False,,conflict
+no_speciation,Global EA,0,2776,0.6823,4.5425,False,204,1,True,False,,conflict
+no_speciation,Global EA,0,216,0.6267,3.7449,False,154,1,True,False,,conflict
+no_speciation,Global EA,0,219,0.6256,24.9431,False,199,1,True,False,,conflict
+no_speciation,Global EA,0,2645,0.6243,4.9722,False,157,1,True,False,,conflict
+no_speciation,Global EA,0,1019,0.6236,5.2351,False,192,1,True,False,,conflict
+no_speciation,Global EA,0,1556,0.6236,2.9003,False,305,1,True,False,,conflict
+no_speciation,Global EA,0,1014,0.6228,6.3963,False,148,1,True,False,,conflict
+no_speciation,Global EA,0,1701,0.6213,25.5846,False,412,1,True,False,,conflict
+no_speciation,Global EA,0,968,0.621,6.1538,False,157,1,True,False,,conflict
+no_speciation,Global EA,0,1119,0.621,3.2018,False,151,1,True,False,,conflict
+no_speciation,Global EA,0,1122,0.62,25.114,False,168,1,True,False,,conflict
+no_speciation,Global EA,0,1944,0.6189,4.7774,False,157,1,True,False,,conflict
+no_speciation,Global EA,0,764,0.6185,25.1125,False,159,1,True,False,,conflict
+no_speciation,Global EA,0,1088,0.6177,3.5332,False,1322,1,True,False,25,ancestry and text agree
+no_speciation,Global EA,0,2494,0.617,3.6504,False,200,1,True,False,,conflict
+no_speciation,Global EA,0,1657,0.6164,3.7943,False,136,1,True,False,,conflict
+no_speciation,Global EA,0,2705,0.6162,5.5629,False,191,1,True,False,,conflict
+no_speciation,Global EA,0,1554,0.6154,25.1024,False,151,1,True,False,,conflict
+no_speciation,Global EA,0,1040,0.614,5.0108,False,147,1,True,False,,conflict
+no_speciation,Global EA,0,1246,0.6131,4.7416,False,147,1,True,False,,conflict
+no_speciation,Global EA,0,2321,0.6127,3.6175,False,212,1,True,False,,conflict
+no_speciation,Global EA,0,2353,0.6127,2.1181,False,164,1,True,False,,conflict
+no_speciation,Global EA,0,605,0.6125,25.4578,False,231,1,True,False,,conflict
+no_speciation,Global EA,1,1654,0.9436,25.0997,False,140,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,945,0.9433,24.9156,False,135,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1414,0.8468,24.6543,False,218,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1479,0.8449,4.4891,False,125,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1862,0.8058,0.3167,False,115,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,1,1807,0.7517,6.9483,False,135,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,581,0.7508,4.6412,False,129,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1477,0.7487,4.535,False,125,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,285,0.711,25.2029,False,115,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2380,0.7076,25.2842,False,218,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1099,0.7065,25.3025,False,129,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2270,0.7045,4.4444,False,120,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2291,0.7045,4.404,False,366,1,True,False,,ancestry
+no_speciation,Global EA,1,147,0.7042,6.027,False,122,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2055,0.7042,24.7981,False,128,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,933,0.7039,4.742,False,132,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1266,0.7032,3.7653,False,130,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,434,0.7029,25.5626,False,104,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1348,0.7026,25.1941,False,131,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2261,0.6844,3.0551,False,135,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1940,0.683,3.4772,False,136,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,233,0.6265,5.6807,False,112,1,True,False,56,ancestry and text agree
+no_speciation,Global EA,1,328,0.6258,5.2328,False,117,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,775,0.6254,3.7204,False,123,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,557,0.6232,24.9053,False,115,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1860,0.6187,3.9111,False,138,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1512,0.6179,25.289,False,128,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1472,0.6164,24.7775,False,259,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,74,0.6156,4.6209,False,126,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2255,0.6156,25.118,False,132,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,341,0.6144,4.1864,False,114,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1184,0.6137,24.2789,False,134,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,2359,0.6137,6.0737,False,148,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1476,0.6133,25.4079,False,134,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,189,0.6129,25.2328,False,118,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,1,1406,0.6129,24.8413,False,134,1,True,False,21,ancestry and text agree
+no_speciation,Global EA,2,1819,0.9552,27.3406,False,1146,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2164,0.955,27.3993,False,1149,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2586,0.9545,27.1623,False,1147,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2481,0.9541,26.8853,False,1144,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2498,0.954,27.3306,False,1148,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1735,0.9475,26.9517,False,1141,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1166,0.9464,27.7488,False,1135,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2665,0.9443,26.7479,False,1140,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1355,0.9442,27.6977,False,1140,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1425,0.9438,26.7405,False,1134,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1457,0.9433,27.3015,False,1730,1,True,False,,conflict
+no_speciation,Global EA,2,2303,0.8581,27.3823,False,1144,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2336,0.8578,27.5276,False,1129,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1045,0.8481,26.6862,False,1137,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1641,0.8446,26.7293,False,1141,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1954,0.8438,27.6117,False,1141,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2090,0.8434,26.6759,False,1144,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2224,0.8429,26.5759,False,1149,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1878,0.7534,0.3841,False,1141,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1532,0.7523,0.5335,False,1126,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1972,0.7523,26.9617,False,1140,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1714,0.7507,26.7953,False,1133,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2426,0.7107,27.3084,False,1150,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1738,0.7097,0.3552,False,1127,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1974,0.7083,26.9769,False,1144,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1070,0.7079,26.7483,False,1908,1,True,False,53,ancestry and text agree
+no_speciation,Global EA,2,499,0.7062,0.49,False,186,1,True,False,,conflict
+no_speciation,Global EA,2,1897,0.7056,1.4466,False,171,1,True,False,,conflict
+no_speciation,Global EA,2,1975,0.7056,26.9063,False,1137,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,125,0.705,26.9428,False,1903,1,True,False,53,ancestry and text agree
+no_speciation,Global EA,2,2093,0.7035,0.3908,False,1140,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,423,0.6864,9.2194,False,1904,1,True,False,53,ancestry and text agree
+no_speciation,Global EA,2,1279,0.6835,26.5105,False,1137,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2381,0.6247,25.611,False,131,1,True,False,,ancestry
+no_speciation,Global EA,2,2517,0.6247,27.7354,False,1148,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2663,0.6195,26.6065,False,1143,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1643,0.6179,0.3837,False,1132,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,1107,0.617,27.4523,False,1141,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,192,0.6164,27.1945,False,1904,1,True,False,53,ancestry and text agree
+no_speciation,Global EA,2,1427,0.6129,26.7544,False,1134,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,2,2556,0.6129,27.7601,False,1905,1,True,False,53,ancestry and text agree
+no_speciation,Global EA,3,2438,0.9445,27.2486,False,2951,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2218,0.9444,27.4738,False,2946,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2175,0.944,26.816,False,2946,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2352,0.9438,26.8193,False,2906,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1343,0.9437,26.9766,False,2777,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2266,0.9437,27.5511,False,2950,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2436,0.9437,27.1731,False,2953,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1214,0.9436,27.1748,False,2779,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1802,0.9434,27.5176,False,2784,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2433,0.9434,27.7596,False,6828,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2463,0.9431,26.2231,False,1616,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2216,0.8573,27.4949,False,2945,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2263,0.8489,27.4377,False,2948,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1454,0.8488,27.043,False,3712,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2173,0.8484,27.4341,False,4700,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1799,0.8482,27.8168,False,4277,1,True,False,,ancestry
+no_speciation,Global EA,3,2259,0.8482,27.2603,False,4216,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2336,0.8479,26.8008,False,2947,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2439,0.8477,27.0807,False,2780,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1093,0.8475,27.1436,False,2779,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2264,0.8475,27.4138,False,2941,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1041,0.847,28.0324,False,2781,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2432,0.8465,27.2528,False,4206,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2334,0.8462,26.786,False,2945,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1632,0.8458,27.9429,False,5559,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2029,0.8458,27.0867,False,3612,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1636,0.8457,27.2081,False,2770,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2178,0.8455,26.3386,False,2227,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,995,0.8453,26.1636,False,1611,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2073,0.8451,26.2983,False,1609,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1283,0.845,27.0123,False,2781,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1455,0.8446,26.9772,False,3542,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2146,0.8445,27.3983,False,2777,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1099,0.8443,27.3565,False,4857,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1349,0.8443,28.2884,False,4863,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,904,0.8442,26.4251,False,1611,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1880,0.8441,26.9377,False,2775,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2075,0.8435,26.4203,False,1615,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,818,0.8432,3.72,False,1741,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1567,0.8429,26.9724,False,3392,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2043,0.8429,2.6058,False,2773,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2028,0.8426,16.8672,False,5084,1,True,False,,ancestry
+no_speciation,Global EA,3,1956,0.8423,27.4513,False,3622,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1106,0.842,27.1392,False,1749,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2353,0.842,26.5591,False,2051,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1165,0.7533,26.8305,False,2778,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1400,0.7533,26.8449,False,2776,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1975,0.7529,27.5158,False,2778,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1402,0.7528,26.712,False,2782,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2389,0.7523,27.242,False,2783,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1344,0.7522,26.9756,False,2777,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1586,0.7522,26.5714,False,2781,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1105,0.7521,27.3594,False,2772,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2464,0.7521,26.4798,False,1614,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1268,0.7517,26.7434,False,2780,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2229,0.7516,27.4091,False,2790,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2177,0.7514,26.6467,False,2228,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1974,0.7511,27.4119,False,2780,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1709,0.751,27.0681,False,2777,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1572,0.7508,26.6163,False,2783,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1228,0.7505,27.7648,False,2785,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1461,0.7505,26.6734,False,2780,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2046,0.7505,26.8812,False,2777,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2391,0.7505,27.2165,False,2788,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1153,0.7497,27.2496,False,2778,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1814,0.7494,27.4565,False,2784,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1859,0.7494,27.4037,False,2772,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1861,0.7494,27.2888,False,2783,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,895,0.7491,26.6065,False,1747,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1670,0.7491,27.2011,False,2779,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1640,0.7486,27.5714,False,2792,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,897,0.711,26.6049,False,1746,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,943,0.711,26.511,False,2226,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2360,0.7092,8.5534,False,1617,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1948,0.7087,27.2876,False,2780,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1397,0.7085,26.5599,False,2773,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2163,0.7082,27.5533,False,2781,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1342,0.708,27.0321,False,2777,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2040,0.708,26.3639,False,3412,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1904,0.707,26.7385,False,1748,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,651,0.7064,26.8091,False,1737,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1638,0.7056,27.4899,False,2784,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2160,0.7053,27.5199,False,2771,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2337,0.7039,26.4987,False,1744,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2356,0.7032,26.5621,False,1610,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,756,0.6854,27.0527,False,1742,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1046,0.6833,27.6281,False,1608,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,882,0.6825,26.7971,False,1747,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,754,0.6394,0.6624,False,1739,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1682,0.6394,0.6614,False,1733,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,941,0.6261,27.0059,False,2634,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1103,0.6228,26.9465,False,1748,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,524,0.6227,26.746,False,2204,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1749,0.6227,26.0477,False,86,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1492,0.6221,27.3804,False,2208,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,395,0.621,26.6789,False,2201,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,576,0.6206,26.6182,False,2207,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,1513,0.6202,27.5921,False,2198,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,451,0.6187,26.564,False,2202,1,True,False,16,ancestry and text agree
+no_speciation,Global EA,3,2205,0.6166,26.5863,False,204,1,True,False,,conflict
+no_speciation,Global EA,3,674,0.614,26.6352,False,156,1,True,False,,ancestry
+no_speciation,Global EA,4,2538,0.8572,2.9835,False,73,1,True,False,23,ancestry and text agree
+no_speciation,Global EA,4,921,0.7519,24.4888,False,124,1,True,False,,conflict
+no_speciation,Global EA,4,2408,0.7077,3.6822,False,84,1,True,False,,conflict
+no_speciation,Global EA,4,1969,0.6852,24.8356,False,328,1,True,False,,ancestry
+no_speciation,Global EA,4,2581,0.6261,3.5919,False,71,1,True,False,23,ancestry and text agree
+no_speciation,Global EA,4,783,0.6258,23.8426,False,211,1,True,False,,conflict
+no_speciation,Global EA,4,1036,0.6236,24.3751,False,303,1,True,False,,conflict
+no_speciation,Global EA,4,862,0.6225,24.8435,False,216,1,True,False,,conflict
+no_speciation,Global EA,4,2072,0.6196,24.6122,False,299,1,True,False,,ancestry
+no_speciation,Global EA,4,2334,0.6144,24.7969,False,213,1,True,False,,conflict
+no_speciation,Global EA,5,1068,0.8571,1.2317,False,152,1,True,False,,conflict
+no_speciation,Global EA,5,614,0.8421,26.4512,False,220,1,True,False,,ancestry
+no_speciation,Global EA,5,854,0.7029,1.5107,False,218,1,True,False,,ancestry
+no_speciation,Global EA,5,1094,0.6265,25.7109,False,218,1,True,False,,conflict
+no_speciation,Global EA,5,395,0.6168,25.4113,False,216,1,True,False,,ancestry
+no_speciation,Global EA,5,2809,0.6148,26.7061,False,287,1,True,False,,ancestry
+no_speciation,Global EA,6,2591,0.9454,26.6317,False,1714,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2581,0.9446,26.8074,False,1715,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2595,0.9446,26.7166,False,1716,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2654,0.9446,26.592,False,1713,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2357,0.9432,26.9682,False,1716,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2490,0.9432,3.6008,False,1716,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2749,0.8577,27.1439,False,1721,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,1763,0.8488,25.918,False,1725,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2274,0.8488,26.0317,False,1725,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,1426,0.8484,25.4521,False,282,1,True,False,,conflict
+no_speciation,Global EA,6,2664,0.8468,27.0567,False,1712,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2410,0.8455,26.0847,False,1708,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,1933,0.8443,27.3,False,1726,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2098,0.8443,26.7066,False,1728,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,2394,0.8442,27.1275,False,1709,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,816,0.8123,0.8947,False,261,1,True,False,,conflict
+no_speciation,Global EA,6,440,0.7534,25.7504,False,285,1,True,False,,conflict
+no_speciation,Global EA,6,2201,0.7531,25.992,False,267,1,True,False,,ancestry
+no_speciation,Global EA,6,1803,0.7083,27.0915,False,1721,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,1987,0.7026,25.7556,False,224,1,True,False,,conflict
+no_speciation,Global EA,6,2168,0.6234,2.1249,False,1709,1,True,False,15,ancestry and text agree
+no_speciation,Global EA,6,1455,0.6191,26.613,False,154,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,7,2489,0.9454,26.9876,False,491,1,True,False,,ancestry
+no_speciation,Global EA,7,1882,0.9453,2.7795,False,449,1,True,False,,ancestry
+no_speciation,Global EA,7,2206,0.8575,1.1428,False,454,1,True,False,,ancestry
+no_speciation,Global EA,7,1782,0.8574,8.2211,False,448,1,True,False,,ancestry
+no_speciation,Global EA,7,2284,0.8481,3.3111,False,451,1,True,False,,ancestry
+no_speciation,Global EA,7,577,0.8475,26.9779,False,274,1,True,False,,ancestry
+no_speciation,Global EA,7,2330,0.8469,4.521,False,445,1,True,False,,ancestry
+no_speciation,Global EA,7,2134,0.8456,3.9133,False,448,1,True,False,,ancestry
+no_speciation,Global EA,7,1250,0.8448,3.6696,False,211,1,True,False,,conflict
+no_speciation,Global EA,7,1980,0.8432,1.0938,False,675,1,True,False,,ancestry
+no_speciation,Global EA,7,617,0.842,26.5829,False,310,1,True,False,,conflict
+no_speciation,Global EA,7,1984,0.7505,15.0062,False,223,1,True,False,12,ancestry and text agree
+no_speciation,Global EA,7,2802,0.7505,6.1172,False,695,1,True,False,,ancestry
+no_speciation,Global EA,7,2144,0.7504,1.4527,False,451,1,True,False,,ancestry
+no_speciation,Global EA,7,2451,0.7489,0.3894,False,349,1,True,False,,conflict
+no_speciation,Global EA,7,2787,0.7485,27.141,False,487,1,True,False,,ancestry
+no_speciation,Global EA,7,1878,0.7104,25.157,False,754,1,True,False,,ancestry
+no_speciation,Global EA,7,1508,0.6847,26.5459,False,499,1,True,False,,ancestry
+no_speciation,Global EA,7,818,0.6252,26.5634,False,259,1,True,False,,ancestry
+no_speciation,Global EA,7,476,0.625,2.822,False,277,1,True,False,,ancestry
+no_speciation,Global EA,7,2454,0.6227,0.5652,False,285,1,True,False,,conflict
+no_speciation,Global EA,7,2428,0.6206,3.9847,False,450,1,True,False,,ancestry
+no_speciation,Global EA,7,1435,0.6191,3.545,False,178,1,True,False,12,ancestry and text agree
+no_speciation,Global EA,7,764,0.6125,27.3757,False,279,1,True,False,,ancestry
+no_speciation,Global EA,7,2669,0.6125,1.087,False,516,1,True,False,,ancestry
+no_speciation,Global EA,8,1518,0.9548,25.6471,False,199,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1369,0.9547,24.3232,False,202,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1461,0.9543,24.3279,False,198,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1571,0.9538,25.4267,False,197,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2296,0.9538,0.8236,False,317,1,True,False,,ancestry
+no_speciation,Global EA,8,2193,0.9478,25.0846,False,289,1,True,False,,ancestry
+no_speciation,Global EA,8,2703,0.9472,6.2483,False,242,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2662,0.9464,25.8284,False,205,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1881,0.9456,25.3348,False,270,1,True,False,,ancestry
+no_speciation,Global EA,8,2779,0.9455,7.2253,False,195,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1955,0.9451,24.2291,False,668,1,True,False,,ancestry
+no_speciation,Global EA,8,1572,0.9443,25.8806,False,204,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1039,0.9442,3.4738,False,200,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2600,0.9434,4.1274,False,276,1,True,False,,ancestry
+no_speciation,Global EA,8,1732,0.8582,24.1902,False,201,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2192,0.8575,25.0484,False,358,1,True,False,,ancestry
+no_speciation,Global EA,8,1884,0.8573,25.5398,False,202,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1462,0.8571,4.6741,False,361,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1942,0.8489,24.0743,False,310,1,True,False,,ancestry
+no_speciation,Global EA,8,2092,0.8469,5.8905,False,376,1,True,False,,ancestry
+no_speciation,Global EA,8,1477,0.8463,24.3635,False,160,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,8,2456,0.8448,25.2931,False,193,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,465,0.8446,0.5898,False,167,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,8,2048,0.8439,24.4184,False,213,1,True,False,,ancestry
+no_speciation,Global EA,8,1305,0.7503,3.7911,False,201,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,450,0.7083,2.9818,False,216,1,True,False,,conflict
+no_speciation,Global EA,8,1131,0.7051,5.1414,False,395,1,True,False,,ancestry
+no_speciation,Global EA,8,2533,0.7048,3.5797,False,715,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2920,0.6856,26.365,False,239,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1165,0.6265,25.0553,False,393,1,True,False,,ancestry
+no_speciation,Global EA,8,1680,0.6259,24.4429,False,195,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2844,0.6254,24.1354,False,258,1,True,False,,ancestry
+no_speciation,Global EA,8,2901,0.6254,8.2188,False,350,1,True,False,,conflict
+no_speciation,Global EA,8,1379,0.6204,3.3856,False,402,1,True,False,,conflict
+no_speciation,Global EA,8,2361,0.6191,25.5707,False,196,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,1398,0.6179,25.0364,False,205,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,2419,0.6156,24.0892,False,181,1,True,False,,conflict
+no_speciation,Global EA,8,2209,0.6152,3.7814,False,200,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,197,0.6148,24.6975,False,364,1,True,False,,conflict
+no_speciation,Global EA,8,1130,0.6133,25.374,False,398,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,8,623,0.6121,2.4723,False,167,1,True,False,17,ancestry and text agree
+no_speciation,Global EA,9,1197,0.9437,23.763,False,187,1,True,False,,ancestry
+no_speciation,Global EA,9,472,0.8488,23.6353,False,191,1,True,False,,ancestry
+no_speciation,Global EA,9,2362,0.8483,24.5906,False,414,1,True,False,,conflict
+no_speciation,Global EA,9,1886,0.848,24.2434,False,381,1,True,False,,ancestry
+no_speciation,Global EA,9,2656,0.8471,24.6427,False,139,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,9,2578,0.847,5.6712,False,232,1,True,False,,ancestry
+no_speciation,Global EA,9,1308,0.8431,23.9002,False,261,1,True,False,,ancestry
+no_speciation,Global EA,9,2169,0.7514,24.481,False,442,1,True,False,,ancestry
+no_speciation,Global EA,9,1723,0.75,24.3298,False,144,1,True,False,,conflict
+no_speciation,Global EA,9,351,0.7491,3.6424,False,105,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,9,587,0.7079,23.4816,False,314,1,True,False,,conflict
+no_speciation,Global EA,9,1854,0.7044,24.5075,False,259,1,True,False,,ancestry
+no_speciation,Global EA,9,2078,0.7034,24.5227,False,254,1,True,False,,ancestry
+no_speciation,Global EA,9,113,0.6839,3.3037,False,107,1,True,False,11,ancestry and text agree
+no_speciation,Global EA,9,691,0.6238,23.8148,False,193,1,True,False,,ancestry
+no_speciation,Global EA,9,546,0.621,4.4456,False,450,1,True,False,,ancestry
+no_speciation,Global EA,9,1773,0.6191,24.0091,False,502,1,True,False,,ancestry
+no_speciation,Global EA,9,1975,0.6175,24.7358,False,274,1,True,False,,ancestry
+no_speciation,Global EA,9,1827,0.6168,24.6944,False,316,1,True,False,,ancestry
+no_speciation,Global EA,9,2191,0.6152,24.2069,False,425,1,True,False,,ancestry
+no_speciation,Global EA,9,2246,0.6152,24.91,False,528,1,True,False,,ancestry
+no_speciation,Global EA,9,960,0.6144,23.8462,False,387,1,True,False,,ancestry
+no_speciation,Global EA,9,2347,0.614,24.4365,False,371,1,True,False,,ancestry
+no_speciation,Global EA,9,2630,0.6125,0.8419,False,177,1,True,False,,conflict
+no_speciation,Global EA,9,698,0.6121,23.8644,False,265,1,True,False,,ancestry
