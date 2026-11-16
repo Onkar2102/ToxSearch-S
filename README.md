@@ -207,7 +207,7 @@ Details: [`tests/README.md`](tests/README.md).
 | `experiments/` | Analysis **drivers** (Python); do not store bulky outputs here |
 | `results/` | Old generated outputs were removed. Current reports stay under `experiments/evostar_2027/` |
 | `results/manifests/` | Manifest builder for a future tracked result tree |
-| `scripts/` | Helpers (e.g. `validate_run_outputs.py`) |
+| `scripts/` | MPI test runner (`run_mpi_tests.sh`) |
 | `data/outputs/` | Live evolution runs (gitignored) |
 | `verifier/` | Lean formal audit of distance / speciation maths |
 | `docs/` | Speciation and Incremental DBSCAN notes |
